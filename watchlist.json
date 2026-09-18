@@ -1,20 +1,19 @@
 {
   "updated": "2026-09-18",
-  "chain": "ethereum",
-  "rule": "Finder + paper only. Mint slot is observe-only. Cap 12.",
+  "rule": "Finder + paper only. One file drives radar, scouts, and the 07:00 Grok tape. scan=false skips OpenSea on Connect live.",
   "collections": [
-    {"slug": "cryptopunks", "name": "CryptoPunks", "role": "calibration", "mode": "hold"},
-    {"slug": "pudgypenguins", "name": "Pudgy Penguins", "role": "brand", "mode": "hold"},
-    {"slug": "boredapeyachtclub", "name": "Bored Ape Yacht Club", "role": "ape-brand", "mode": "hold"},
-    {"slug": "argonauts", "name": "Argonauts", "role": "active-run", "mode": "swing"},
-    {"slug": "azuki", "name": "Azuki", "role": "mid-book", "mode": "swing"},
-    {"slug": "doodles-official", "name": "Doodles", "role": "brand-mid", "mode": "swing"},
-    {"slug": "milady", "name": "Milady Maker", "role": "culture", "mode": "swing"},
-    {"slug": "mutant-ape-yacht-club", "name": "Mutant Ape Yacht Club", "role": "ape-sat", "mode": "swing"},
-    {"slug": "mfers", "name": "mfers", "role": "culture-cheap", "mode": "swing"},
-    {"slug": "nakamigos", "name": "Nakamigos", "role": "culture-cheap", "mode": "swing"},
-    {"slug": "lilpudgys", "name": "Lil Pudgys", "role": "retail-size", "mode": "swing"},
-    {"slug": "opepen-edition", "name": "Opepen Edition", "role": "art-cheap", "mode": "swing"},
-    {"slug": "qft-quantum-echoes", "name": "Quantum Echoes", "role": "observe-mint", "mode": "observe"}
+    {"slug": "cryptopunks", "name": "CryptoPunks", "chain": "ethereum", "role": "calibration", "mode": "hold", "scan": true, "priority": false, "tags": ["bluechip"]},
+    {"slug": "pudgypenguins", "name": "Pudgy Penguins", "chain": "ethereum", "role": "brand", "mode": "hold", "scan": true, "priority": true, "tags": ["brand", "ip"]},
+    {"slug": "boredapeyachtclub", "name": "Bored Ape Yacht Club", "chain": "ethereum", "role": "ape-brand", "mode": "hold", "scan": true, "priority": false, "tags": ["ape"]},
+    {"slug": "argonauts", "name": "Argonauts", "chain": "ethereum", "role": "active-run", "mode": "swing", "scan": true, "priority": true, "tags": ["run"]},
+    {"slug": "azuki", "name": "Azuki", "chain": "ethereum", "role": "mid-book", "mode": "swing", "scan": true, "priority": false, "tags": ["brand"]},
+    {"slug": "doodles-official", "name": "Doodles", "chain": "ethereum", "role": "brand-mid", "mode": "swing", "scan": true, "priority": false, "tags": ["brand"]},
+    {"slug": "milady", "name": "Milady Maker", "chain": "ethereum", "role": "culture", "mode": "swing", "scan": true, "priority": false, "tags": ["culture"]},
+    {"slug": "mutant-ape-yacht-club", "name": "Mutant Ape Yacht Club", "chain": "ethereum", "role": "ape-sat", "mode": "swing", "scan": true, "priority": false, "tags": ["ape"]},
+    {"slug": "mfers", "name": "mfers", "chain": "ethereum", "role": "culture-cheap", "mode": "swing", "scan": true, "priority": false, "tags": ["culture", "cc0"]},
+    {"slug": "nakamigos", "name": "Nakamigos", "chain": "ethereum", "role": "culture-cheap", "mode": "swing", "scan": true, "priority": false, "tags": ["culture"]},
+    {"slug": "lilpudgys", "name": "Lil Pudgys", "chain": "ethereum", "role": "retail-size", "mode": "swing", "scan": true, "priority": false, "tags": ["pudgy"]},
+    {"slug": "opepen-edition", "name": "Opepen Edition", "chain": "ethereum", "role": "art-cheap", "mode": "swing", "scan": true, "priority": false, "tags": ["art"]},
+    {"slug": "qft-quantum-echoes", "name": "Quantum Echoes", "chain": "ethereum", "role": "observe-mint", "mode": "observe", "scan": false, "priority": false, "tags": ["observe-mint"]}
   ]
 }
