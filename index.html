@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sightline — NFT Finder Desk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <header>
+    <div class="logo">Sight<span>line</span></div>
+    <span class="tag">NFT FINDER DESK</span>
+    <div class="grow"></div>
+    <span id="modeLabel"><span class="status-dot demo"></span>DEMO TAPE</span>
+    <input id="apiKey" type="password" placeholder="OpenSea API key (optional)" autocomplete="off" />
+    <button class="ghost" id="btnDemo">Demo</button>
+    <button id="btnLive">Connect live</button>
+  </header>
+  <main>
+    <aside class="rail">
+      <h2>Scout bots</h2>
+      <div id="bots"></div>
+    </aside>
+    <section class="desk">
+      <div class="tabs">
+        <button class="on" id="tabRadar">Radar · 8</button>
+        <button id="tabBlotter">Paper blotter</button>
+      </div>
+      <div id="radarWrap">
+      <h2>Watchlist</h2>
+      <div class="filters" id="filters"></div>
+      <table>
+        <thead>
+          <tr>
+            <th>Collection</th>
+            <th>Floor</th>
+            <th>24h</th>
+            <th>Vol 24h</th>
+            <th>Sales</th>
+            <th>Holders</th>
+            <th>Listed</th>
+            <th>X human</th>
+            <th>X farm</th>
+            <th>Score</th>
+            <th>Flags</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      </div>
+      <div id="blotterWrap">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <h2 style="margin:0">Paper blotter</h2>
+          <button type="button" id="btnClearBlotter" class="clear-btn">Clear blotter</button>
+        </div>
+        <p class="empty" id="blotterEmpty">No paper trades yet. Open a collection → Paper swing / Paper hold. Marks use bid for exit, ask for entry. Fees 2.5% assumed.</p>
+        <table class="blotter" id="blotterTable" style="display:none">
+          <thead><tr><th>When</th><th>Name</th><th>Side</th><th>Qty</th><th>Entry</th><th>Mark</th><th>P/L</th><th></th></tr></thead>
+          <tbody id="blotterRows"></tbody>
+        </table>
+      </div>
+    </section>
+    <aside class="intel">
+      <h2>CIO tape</h2>
+      <div id="tape"></div>
+      <div id="detail"></div>
+    </aside>
+  </main>
+  <footer>
+    Research desk only — not a mint sniper, not financial advice. Ontario / self-custody profile: alerts and journals, no auto-buy.
+  </footer>
+  <script src="app.js"></script>
+</body>
+</html>
