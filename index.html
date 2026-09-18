@@ -26,7 +26,7 @@
     </aside>
     <section class="desk">
       <div class="tabs">
-        <button class="on" id="tabRadar">Radar · 12</button>
+        <button class="on" id="tabRadar">Radar · 13</button>
         <button id="tabBlotter">Paper blotter</button>
       </div>
       <div id="radarWrap">
@@ -35,17 +35,7 @@
       <table>
         <thead>
           <tr>
-            <th>Collection</th>
-            <th>Floor</th>
-            <th>24h</th>
-            <th>Vol 24h</th>
-            <th>Sales</th>
-            <th>Holders</th>
-            <th>Listed</th>
-            <th>X human</th>
-            <th>X farm</th>
-            <th>Score</th>
-            <th>Flags</th>
+            <th>Collection</th><th>Floor</th><th>24h</th><th>Vol 24h</th><th>Sales</th><th>Holders</th><th>Listed</th><th>X human</th><th>X farm</th><th>Score</th><th>Flags</th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
@@ -56,7 +46,7 @@
           <h2 style="margin:0">Paper blotter</h2>
           <button type="button" id="btnClearBlotter" class="clear-btn">Clear blotter</button>
         </div>
-        <p class="empty" id="blotterEmpty">No paper trades yet. Open a collection → Paper swing / Paper hold. Marks use bid for exit, ask for entry. Fees 2.5% assumed.</p>
+        <p class="empty" id="blotterEmpty">No paper trades yet. Paper swing / hold. Exit vs bid. Fees 2.5%.</p>
         <table class="blotter" id="blotterTable" style="display:none">
           <thead><tr><th>When</th><th>Name</th><th>Side</th><th>Qty</th><th>Entry</th><th>Mark</th><th>P/L</th><th></th></tr></thead>
           <tbody id="blotterRows"></tbody>
@@ -69,9 +59,7 @@
       <div id="detail"></div>
     </aside>
   </main>
-  <footer>
-    Research desk only — not a mint sniper, not financial advice. Ontario / self-custody profile: alerts and journals, no auto-buy.
-  </footer>
+  <footer>Research desk only — no auto-buy.</footer>
   <script src="app.js"></script>
 </body>
 </html>
