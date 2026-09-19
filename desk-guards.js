@@ -20,3 +20,30 @@ paper = function(slug, side){
   }
   return _paper ? _paper.apply(this, arguments) : null;
 };
+function voidPaper(slug){
+  const all = loadBlotter();
+  const rec = all.find(r => r.slug === slug && r.open);
+  if(!rec){ alert("No open paper on this name."); return; }
+  rec.open = false;
+  rec.voided = true;
+  rec.exit = null;
+  rec.pl = null;
+  saveBlotter(all);
+  renderBlotter();
+}
+closePaper = function(slug){
+  const all = loadBlotter();
+  const rec = all.find(r => r.slug === slug && r.open);
+  if(!rec){ alert("No open paper on this name."); return; }
+  const c = (rows && rows.find(x => x.slug === slug)) || rec;
+  const bid = Number(c.bid || 0);
+  if(!bid){
+    if(!confirm("No live bid on " + rec.name + ". VOID this line (not a fill)?")) return;
+    return voidPaper(slug);
+  }
+  rec.open = false;
+  rec.exit = bid;
+  rec.pl = +(((bid - rec.entry) / rec.entry) - 0.05).toFixed(4);
+  saveBlotter(all);
+  renderBlotter();
+};
