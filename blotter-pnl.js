@@ -1,4 +1,5 @@
 function liveMark(r){
+  if(r.voided) return {mark:0, src:"void", ok:false};
   if(!r.open) return {mark:r.exit, src:"exit", ok:!!r.exit};
   const live = rows.find(x => x.slug === r.slug);
   if(live && live.bid > 0) return {mark:live.bid, src:"bid", ok:true};
@@ -32,6 +33,9 @@ function renderBlotter(){
     if(r.side === "pass"){
       return `<tr><td class="slug">${when}</td><td>${r.name}</td><td>pass</td><td>0</td><td>${fmtEth(r.entry)}</td><td class="flat">-</td><td class="flat">-</td><td class="flat">-</td><td></td></tr>`;
     }
+    if(r.voided){
+      return `<tr><td class="slug">${when}</td><td>${r.name}</td><td>void</td><td>${qty}</td><td>${fmtEth(r.entry)}</td><td class="flat">void</td><td class="flat">-</td><td class="flat">-</td><td></td></tr>`;
+    }
     const m = liveMark(r);
     const entry = Number(r.entry) || 0;
     const gEth = m.ok ? (m.mark - entry) * (qty || 1) : null;
@@ -59,12 +63,5 @@ function renderBlotter(){
       sum.innerHTML = `<strong>${openN} open</strong> · ${fmtEth(notion)} ETH in · net <span class="${cls}">${signedEth(ethNet)} ETH</span> · gross <span class="${gcls}">${signedEth(ethGross)} ETH</span> · net = mark minus 5% of entry · Refresh marks`;
     }
   }
-}
-const btnMarks = document.getElementById("btnRefreshMarks");
-if(btnMarks){
-  btnMarks.onclick = function(){
-    if(document.getElementById("apiKey").value.trim()) connectLive();
-    else { alert("Connect live first so marks can use OpenSea."); renderBlotter(); }
-  };
 }
 renderBlotter();
