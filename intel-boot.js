@@ -33,7 +33,7 @@ function applyIntel(data){
 function honestZeros(){
   document.querySelectorAll("#rows tr").forEach(tr => {
     const tds = tr.querySelectorAll("td");
-    if(tds[2] && /^[+−-]?0\.0%$/.test(tds[2].textContent.trim())){
+    if(tds[2] && /^[+\-]?0\.0%$/.test(tds[2].textContent.trim())){
       tds[2].textContent = "n/a";
       tds[2].className = "flat";
     }
@@ -53,6 +53,9 @@ async function bootIntel(){
     if(tape) tape.innerHTML = '<div class="event social"><time>intel</time><b>CIO</b><p>intel.json missing. Read the 07:00 run in Grok Automations.</p></div>';
   }
 }
+renderTape = function(){
+  if(window.INTEL) applyIntel(window.INTEL);
+};
 const _renderTable = typeof renderTable === "function" ? renderTable : null;
 if(_renderTable){
   renderTable = function(){
@@ -62,11 +65,17 @@ if(_renderTable){
   };
 }
 const _connectLive = typeof connectLive === "function" ? connectLive : null;
-if(_connectLive){
-  connectLive = async function(){
-    const r = await _connectLive.apply(this, arguments);
-    if(window.INTEL) applyIntel(window.INTEL);
-    return r;
-  };
-}
+connectLive = async function(){
+  const r = _connectLive ? await _connectLive.apply(this, arguments) : null;
+  if(window.INTEL) applyIntel(window.INTEL);
+  else await bootIntel();
+  return r;
+};
+const liveBtn = document.getElementById("btnLive");
+if(liveBtn) liveBtn.onclick = connectLive;
+const marks = document.getElementById("btnRefreshMarks");
+if(marks) marks.onclick = function(){
+  if(document.getElementById("apiKey").value.trim()) connectLive();
+  else { alert("Connect live first so marks can use OpenSea."); if(typeof renderBlotter === "function") renderBlotter(); }
+};
 bootIntel();
