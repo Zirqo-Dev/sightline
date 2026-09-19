@@ -79,4 +79,8 @@ async function loadIntel(){
 }
 renderTape = function(){ if(window.INTEL) paintIntel(window.INTEL); };
 loadIntel();
-setInterval(function(){ if(window.INTEL) paintIntel(window.INTEL); }, 4000);
+setInterval(function(){
+  if(!window.INTEL) return;
+  paintIntel(window.INTEL);
+  if(typeof renderTable === "function") renderTable();
+}, 4000);
