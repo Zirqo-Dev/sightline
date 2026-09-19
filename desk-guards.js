@@ -47,3 +47,36 @@ closePaper = function(slug){
   saveBlotter(all);
   renderBlotter();
 };
+function paintIntel(data){
+  if(!data) return;
+  window.INTEL = data;
+  const tape = document.getElementById("tape");
+  if(tape){
+    const head = `<div class="event social"><time>${data.source || "intel.json"}</time><b>${data.title || "Morning tape"}</b><p>From intel.json. Not a live X firehose.</p></div>`;
+    const lines = (data.cio || []).map(t => `<div class="event"><time>${(data.asof || "").slice(0,16)}</time><b>CIO</b><p>${t}</p></div>`).join("");
+    tape.innerHTML = head + lines;
+  }
+  const stamp = document.getElementById("intelStamp");
+  if(stamp) stamp.textContent = (data.title || "intel") + " · " + (data.asof || "").replace("T", " ").slice(0,16);
+  const bySlug = {};
+  (data.names || []).forEach(n => { if(n.slug) bySlug[n.slug] = n; });
+  if(Array.isArray(rows)){
+    rows.forEach(c => {
+      const n = bySlug[c.slug];
+      if(!n) return;
+      c.social = Object.assign({}, c.social || {}, { human: n.human, farm: n.farm, note: n.note, tone: n.tone });
+    });
+  }
+}
+async function loadIntel(){
+  try{
+    const res = await fetch("intel.json?ts=" + Date.now());
+    if(!res.ok) return;
+    paintIntel(await res.json());
+    if(typeof renderTable === "function") renderTable();
+    if(typeof renderDetail === "function") renderDetail();
+  }catch(e){}
+}
+renderTape = function(){ if(window.INTEL) paintIntel(window.INTEL); };
+loadIntel();
+setInterval(function(){ if(window.INTEL) paintIntel(window.INTEL); }, 4000);
