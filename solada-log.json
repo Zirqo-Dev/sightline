@@ -1,0 +1,87 @@
+{
+  "asof": "2026-10-15T16:50:00-04:00",
+  "source": "Snek Sentinel",
+  "alerts": [
+    {
+      "name": "Bolt The Striker",
+      "ticker": "BOLT",
+      "age": "~27h",
+      "chain": "Cardano-native (graduated curve -> Minswap)",
+      "mcap": "~455.6k ADA (~CA$149.4k)",
+      "volume_24h": "~343.8k ADA (~CA$112.7k)",
+      "holders": 238,
+      "trades_24h": 855,
+      "change_24h": "+61%",
+      "x_temperature": "Warm, broadest real chatter: @cryptodramz (26k) 'GRADUATED in 25 min', @Fidgetybeast (9.4k), @elcapitankick (1k), @OoEvilEyeoO; official @soladafun top-5 by volume. Some low-follower bot pings at @IOHK_Charles.",
+      "flags": [
+        "Vol/mcap ~0.75 - heavy but not absurd",
+        "Already ran from curve; late entry risk",
+        "Spawning copycats (BABYBOLT, VOLT) = attention peak signal",
+        "Solada custodial"
+      ],
+      "verdict": "Watch",
+      "kill": "Volume halves and holders stall under ~250 while copycats drain flow."
+    },
+    {
+      "name": "Just Q",
+      "ticker": "JUSTQ",
+      "age": "~76h",
+      "chain": "Cross-chain (graduated on Pump.fun, 100% progress)",
+      "mcap": "~52.4k ADA (~CA$17.2k)",
+      "volume_24h": "~45.5k ADA (~CA$14.9k)",
+      "holders": 254,
+      "trades_24h": 155,
+      "change_24h": "-22.5%",
+      "x_temperature": "Mild: @soladafun top-5 volume post, HODLComp poll, small community accounts. No big-account push.",
+      "flags": [
+        "Best holder spread vs mcap in set",
+        "Cooling (-22%)",
+        "Solana-side liquidity thin at ~$12k mcap",
+        "Solada custodial"
+      ],
+      "verdict": "Watch",
+      "kill": "Holders start dropping and 24h trades fall under ~50."
+    },
+    {
+      "name": "CLOVE",
+      "ticker": "CLOVE",
+      "age": "~10h",
+      "chain": "Cardano-native curve",
+      "mcap": "~112.7k ADA (~CA$36.9k)",
+      "volume_24h": "~169.2k ADA (~CA$55.5k)",
+      "holders": 100,
+      "trades_24h": 680,
+      "change_24h": "+3212%",
+      "x_temperature": "Thin: @CryptoSA99 (1k) 'bought 40 ADA, unofficial $ASCEND mascot'; @Ballak983215013 spammy shills.",
+      "flags": [
+        "Volume 1.5x mcap with only 100 holders - churn",
+        "Unofficial mascot of another project",
+        "Vertical +3200% in hours",
+        "Solada custodial"
+      ],
+      "verdict": "Tiny lottery only",
+      "kill": "No second wave of holders after the spike; mcap bleeds back under ~50k ADA."
+    },
+    {
+      "name": "$HIVE",
+      "ticker": "HIVE",
+      "age": "~9h",
+      "chain": "Cardano-native curve (King of the Hill, ~78% to graduate per X)",
+      "mcap": "~25.5k ADA (~CA$8.4k)",
+      "volume_24h": "~80.1k ADA (~CA$26.3k)",
+      "holders": 68,
+      "trades_24h": 394,
+      "change_24h": "+651%",
+      "x_temperature": "Mostly self-promo: @NeonHiveCNFT (47 followers) posting hourly, @The82DMon amplifying. No independent voices.",
+      "flags": [
+        "Volume ~3x mcap with 68 holders - wash/churn shape",
+        "Team-only chatter",
+        "Tied to $WLK fee/APR promises",
+        "Solada custodial"
+      ],
+      "verdict": "Tiny lottery only",
+      "kill": "Fails to graduate the curve in next ~24h or volume collapses after KOTH."
+    }
+  ],
+  "notes": "Data: Solada public JSON endpoints https://www.solada.fun/api/launches (111 launches) and /api/market (90 quotes; USD mcap, 24h vol, trades, holders, createdAt, pump progress). Site HTML is JS-rendered, API was public and readable. Rates: CoinGecko ADA=0.23112 USD / 0.32786 CAD (implied USD->CAD 1.4186) at ~16:50 ET 2026-10-15. Ages from createdAt vs run time. X: search_posts_all for 'solada', candidate tickers + soladafun since Oct 13. Lots of 'solada' noise is Portuguese football slang; DM-solicitation spam (@iSolCryptoo, @Theana174, @realmarc9, @Monerocrypto_, @JouriAlia, @SolanaGurupnl) replies to @DustBunnyada - ignored. Biggest real Cardano voices on Solada: @cryptodramz (26k; '1M ADA volume in four days', BOLT graduation), @angrycryptoshow (19.9k; YT highlight), @Fidgetybeast (9.4k), @gr0selhas (3.1k; $SOLADA #2 mcap on snek.fun). Platform token $SOLADA itself ~1.15M ADA mcap per @CardanoSmartAI bot, ~323 holders. Risk: custodial platform - Solada holds dev portions/bridged supply and settles ADA<->Solana via its own operator (API exposes operator/cold-sweep/recovery endpoints); counterparty and withdrawal risk on every coin. Most launches have <30 holders and volume multiples of mcap = churn. Skipped: BEAST (36h, ~17.7k ADA mcap, vol 4x mcap, 63 holders, -21%): Pass. PCOCK, BABYBOLT, VOLT, DBUN, MILK and other <2h launches: Pass/pure lottery (<30 holders, copycats). CORE (mascot, 142h, ~61.9k ADA mcap, 99 holders, -21%): Pass, stale. Research alert only, not financial advice."
+}
