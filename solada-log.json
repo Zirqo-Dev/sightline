@@ -286,6 +286,14 @@
         "verdict": "Tiny lottery only",
         "kill": "Buy flow fades while the ADA side stays ~7% of mcap; one 3-4% holder exit gaps the price."
       }
+    },
+    {
+      "timestamp": "2026-10-16T14:30:00-04:00",
+      "token": "CLOVE",
+      "check": "onchain top-10 ex-pool",
+      "findings": "Asset c1b89ed48dfc2b82167c1548b88942d367af1e517947c3dd8bdead0b.0014df10434c4f56452d33 (Solada draft-clove-3, graduated). Koios: 115 holders, supply 1e15. Excluded: Minswap V2 pool addr1z84q0d...777e2a (10.36%), Minswap order-script UTXOs addr1z8p79r... x2 (0.13%), Solada curve addr1vx9qel...dqa4y leftover (0.02%). Top-1 5.85%, top-5 23.30%, top-10 38.36% of circ ex-pool (identical by stake key; no top wallets share a stake key). Launcher addr1qyzkcu...slnnq holds ~0.01%. 6h flow top-5: none sold; #4 +21.0T (~doubled), #2 +2.07T, #5 +0.97T, #1/#3 flat.",
+      "verdict": "Tiny lottery",
+      "kill": "Out if top-10 ex-pool crosses 40% or any top-5 wallet sells >50% of its bag into the ~$8.6k pool."
     }
   ],
   "history": [
