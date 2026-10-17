@@ -362,6 +362,14 @@
       "verdict": "Tiny lottery",
       "kill": "Out if top-10 ex-pool crosses 40% or any top-5 wallet sells >50% of its bag into the ~$8.6k pool.",
       "correction_note": "Corrected 2026-10-16 15:20 ET: +21.0T buyer is rank #3 (addr1qxw2z4…), +0.97T is rank #4 (addr1qxdj6w…)."
+    },
+    {
+      "timestamp": "2026-10-16T20:27:00-04:00",
+      "token": "HERO + FEED",
+      "check": "held-coin quick check (Bousky holds both)",
+      "findings": "Both Cardano-side Solada curves (no bridge risk), live ~1.2h, launched 24s apart (FEED 19:13 ET, HERO 19:13 ET), different launchers, holderShareBps 10000. FEED (00e049b5...0014df1046454544 'FEEd BabySNEK'): curve 78.1% (OPEN, crowned 19:38 ET), mcap 35.1k ADA (~CA$11.2k), vol 35.3k ADA (~CA$11.3k), 57 holders (/api/market), 184 trades; Koios 54 stake keys ex-curve, top-1 8.2%, top-3 21.3%, top-10 51.1% of circ ex-curve (37.8% of supply); 158 txs last 1h, 41 last 15m; curve net-absorbing (74% sold). HERO (47478467...0014df104845524f 'Guitar HERO'): curve 46.3% OPEN, mcap 18.2k ADA (~CA$5.8k), vol 19.2k ADA (~CA$6.1k), 32 holders, 120 trades; 33 stake keys ex-curve, top-1 10.4%, top-3 28.9%, top-10 62.5% ex-curve (38.0% of supply); 91 txs last 1h, 27 last 15m. 16 stake keys hold BOTH coins (same small crowd rotating between twin launches). X: no coin-specific posts found; only general Solada chatter. Buy/sell split per trade not decoded; net flow positive (curves rising).",
+      "verdict": "FEED: Watch (breadth OK, nearing graduation); HERO: Tiny lottery only (thin, top-10 62%)",
+      "kill": "FEED: out if holders stall <60 after graduation or any top-3 wallet dumps >50% into the new pool. HERO: out if holders <40 by 21:30 ET or curve progress falls below 40%."
     }
   ],
   "history": [
