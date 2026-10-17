@@ -10,66 +10,7 @@
   "3": "Watch: lots of holders early that stick through first dip",
   "4": "High-conviction lottery: L3 + cross-chain/bigger accounts, improving ADA-side pool, holder growth through first dip, prior similar shapes worked in paper book"
  },
- "open": [
-  {
-   "id": "CLOVE-20261017-1125",
-   "ticker": "CLOVE",
-   "side": "cardano",
-   "asset_id": "c1b89ed48dfc2b82167c1548b88942d367af1e517947c3dd8bdead0b0014df10434c4f56452d33",
-   "opened_at": "2026-10-17T11:25:00-04:00",
-   "window_ends_at": "2026-10-19T11:25:00-04:00",
-   "ticket_ada": 100,
-   "level": 3,
-   "entry": {
-    "mcap_ada": 314750,
-    "price_ada": 0.00031475,
-    "holders": 125,
-    "ada_side": 26452
-   },
-   "thesis_signals": [
-    "+152% 24h, 6h 52 buys/34 sells, +20% h1",
-    "125 holders, ADA side ~26k",
-    "top-10 ex-pool 35.7%, top 5.9% (watch)"
-   ],
-   "stop": {
-    "text": "mcap < 250k ADA or holders < 110",
-    "mcap_ada_below": 250000,
-    "holders_below": 110
-   },
-   "custody": "Cardano native token, non-custodial",
-   "status": "open",
-   "marks": [
-    {
-     "at": "2026-10-17T13:20:00-04:00",
-     "mcap_ada": 296954,
-     "solada_mcap_ada": 275580,
-     "holders": 128,
-     "ada_side": 25710,
-     "pct_vs_entry": -5.7,
-     "top10_ex_pool": 36.4,
-     "top1": 6.06,
-     "gt_h6": "87 buys/41 sells, price -13.3%",
-     "gt_h1": "20 buys/4 sells, price -20.2%",
-     "note": "Above the 250k/110-holder stop. Team airdropped 3M+ CLOVE to holders in the last few hours (@CloveOnAscend 12:25 PM ET), so part of the holder gain is airdrop-driven (rule m). ADA side 25.7k is now just above rule k's 25k floor."
-    },
-    {
-     "at": "2026-10-17T15:30:00-04:00",
-     "mcap_ada": 261678,
-     "solada_mcap_ada": 257349,
-     "holders": 126,
-     "onchain_holders_ex_pool": 116,
-     "ada_side": 24074,
-     "pct_vs_entry": -16.9,
-     "top10_ex_pool": 42.85,
-     "top1": 6.14,
-     "gt_h6": "85 buys/37 sells, price +9.7%",
-     "gt_h1": "5 buys/3 sells, price -9.7%",
-     "note": "Still above the 250k/110-holder stop, about 4.7% over the mcap line. ADA side 24.1k is now under rule k's 25k entry floor. The team's wallet-drop thread is still collecting addresses on X, so holder counts stay airdrop-inflated (rule m). 116 stake keys on-chain ex-pool, still above 110. Repeat buyer addr1q9ac…u9wwut still holds 1.25%. Level cut from L3 to L2; ticket stays open because no kill line has been hit."
-    }
-   ],
-   "level_now": 2
-  }
- ],
+ "open": [],
  "closed": [
   {
    "id": "BOLT-20261017-1125",
@@ -123,6 +64,105 @@
    },
    "rules_applied": [
     "l"
+   ]
+  },
+  {
+   "id": "CLOVE-20261017-1125",
+   "ticker": "CLOVE",
+   "side": "cardano",
+   "asset_id": "c1b89ed48dfc2b82167c1548b88942d367af1e517947c3dd8bdead0b0014df10434c4f56452d33",
+   "opened_at": "2026-10-17T11:25:00-04:00",
+   "window_ends_at": "2026-10-19T11:25:00-04:00",
+   "ticket_ada": 100,
+   "level": 3,
+   "entry": {
+    "mcap_ada": 314750,
+    "price_ada": 0.00031475,
+    "holders": 125,
+    "ada_side": 26452
+   },
+   "thesis_signals": [
+    "+152% 24h, 6h 52 buys/34 sells, +20% h1",
+    "125 holders, ADA side ~26k",
+    "top-10 ex-pool 35.7%, top 5.9% (watch)"
+   ],
+   "stop": {
+    "text": "mcap < 250k ADA or holders < 110",
+    "mcap_ada_below": 250000,
+    "holders_below": 110
+   },
+   "custody": "Cardano native token, non-custodial",
+   "status": "closed",
+   "marks": [
+    {
+     "at": "2026-10-17T13:20:00-04:00",
+     "mcap_ada": 296954,
+     "solada_mcap_ada": 275580,
+     "holders": 128,
+     "ada_side": 25710,
+     "pct_vs_entry": -5.7,
+     "top10_ex_pool": 36.4,
+     "top1": 6.06,
+     "gt_h6": "87 buys/41 sells, price -13.3%",
+     "gt_h1": "20 buys/4 sells, price -20.2%",
+     "note": "Above the 250k/110-holder stop. Team airdropped 3M+ CLOVE to holders in the last few hours (@CloveOnAscend 12:25 PM ET), so part of the holder gain is airdrop-driven (rule m). ADA side 25.7k is now just above rule k's 25k floor."
+    },
+    {
+     "at": "2026-10-17T15:30:00-04:00",
+     "mcap_ada": 261678,
+     "solada_mcap_ada": 257349,
+     "holders": 126,
+     "onchain_holders_ex_pool": 116,
+     "ada_side": 24074,
+     "pct_vs_entry": -16.9,
+     "top10_ex_pool": 42.85,
+     "top1": 6.14,
+     "gt_h6": "85 buys/37 sells, price +9.7%",
+     "gt_h1": "5 buys/3 sells, price -9.7%",
+     "note": "Still above the 250k/110-holder stop, about 4.7% over the mcap line. ADA side 24.1k is now under rule k's 25k entry floor. The team's wallet-drop thread is still collecting addresses on X, so holder counts stay airdrop-inflated (rule m). 116 stake keys on-chain ex-pool, still above 110. Repeat buyer addr1q9ac…u9wwut still holds 1.25%. Level cut from L3 to L2; ticket stays open because no kill line has been hit."
+    },
+    {
+     "at": "2026-10-17T19:18:00-04:00",
+     "mcap_ada": 274894,
+     "solada_mcap_ada": 298567,
+     "holders": 123,
+     "onchain_holders_ex_pool": 114,
+     "ada_side": 24326,
+     "pct_vs_entry": -12.7,
+     "top10_ex_pool": 42.64,
+     "top1": 6.16,
+     "gt_h6": "42 buys/32 sells, price +3.3%",
+     "gt_h1": "2 buys/9 sells, price -28.3%",
+     "note": "Ran from ~240k at 3 PM to a ~397k hourly high at 5 PM ET (+26% over entry), then gave it back: 7 of the last 9 swaps (6:55-7:18 PM) were sells. Solada holders 128 -> 126 -> 123 over three marks, on-chain stake keys 116 -> 114. Price is below entry. The team teased '$SOLADA airdrops to $CLOVE holders?' at 5:59 PM, more airdrop-style promo (rule m). ADA side 24.3k is still under rule k's 25k floor."
+    }
+   ],
+   "level_now": 2,
+   "closed_at": "2026-10-17T19:18:00-04:00",
+   "exit": {
+    "mcap_ada": 274894,
+    "price_ada": 0.000274894,
+    "holders": 123,
+    "onchain_holders_ex_pool": 114,
+    "ada_side": 24326,
+    "source": "on-chain Minswap V2 pool UTxO via Blockfrost (~7:20 PM ET); Solada /api/market 298,567; GeckoTerminal trades"
+   },
+   "exit_reason": "Holders leaving (new rule o): Solada holders fell at two marks in a row (128 -> 126 -> 123, on-chain 116 -> 114) with price below entry, and the 5 PM pop was fading on 2 buys/9 sells in h1. The 250k mcap / 110-holder kill line wasn't hit; closed early under rule o instead.",
+   "pct_change": -12.7,
+   "paper_pnl_ada": -12.7,
+   "signal_review": {
+    "worked": [
+     "Top holders held: no top-5 wallet sold, top-1 6.16% (stake1u9q8ncwj) unchanged",
+     "Pool stayed liquid at ~24k ADA; the 5 PM spike to ~397k showed there were buyers on news"
+    ],
+    "failed": [
+     "Airdrop-inflated holders (rule m) leaked once the airdrop window passed: 128 -> 123",
+     "ADA side drifted 26.5k -> 24.3k, under rule k's floor, while mcap chopped ±30% on a few hundred ADA a swap",
+     "Each pop (1 PM airdrop, 5 PM SOLADA-airdrop tease) came from team promo and faded inside two hours"
+    ]
+   },
+   "rules_applied": [
+    "m",
+    "o"
    ]
   }
  ],
@@ -201,6 +241,12 @@
    "id": "n",
    "rule": "Solana-side snipe hunt: Solada's holder count for Solana-side coins mixes both chains (CORE shows 119 on Solada vs ~35 Solana holders on pump.fun). Score Solana traction on pump.fun/Helius Solana-native holders, excluding the Solada escrow wallet HCYvN1... and deployer A1qaJW....",
    "source": "run 2026-10-17 13:20"
+  },
+  {
+   "added_at": "2026-10-17T19:18:00-04:00",
+   "id": "o",
+   "rule": "Count-based flow and holder leaks: 'buys > sells' counts only if h6 price change is also >= -10% (FTR showed 2,665 buys/1,584 sells over h6 while price fell 34%; BOLT 104/49 at -14.5%). Close an open ticket early when holders fall at two marks in a row and price is below entry, instead of waiting for the kill line: FTR bled 18,434 -> 18,111 -> 17,599 holders into its -34.5% kill, and CLOVE 128 -> 126 -> 123 (closed -12.7%).",
+   "source": "FTR-DFMt-20261017-1340 close (pump arm) + CLOVE-20261017-1125 close"
   }
  ],
  "summaries": [
@@ -288,6 +334,11 @@
    "at": "2026-10-17T15:30:00-04:00",
    "type": "run",
    "note": "Ad-hoc run ('run the tape now'). CLOVE marked -16.9% (261.7k pool mcap, 126 Solada / 116 on-chain holders, ADA side 24.1k). Level cut to L2, ticket open, 4.7% above its 250k kill. No new Solada tickets: no name passes rule k. BTC (40.0k after a 4% holder exited at 3:27 PM, 70 holders, 9.3k ADA side) fails holders and ADA side. Kill lines hit (level only, no tickets): FEED (53-57 holders < 60), GOLFY (49 holders, curve 57.2%), PAWS (on-chain pool mcap 28.4k < 30k). No trade closed, no rule changes."
+  },
+  {
+   "at": "2026-10-17T19:18:00-04:00",
+   "type": "run",
+   "note": "Closed CLOVE at 274.9k pool mcap (-12.7%) under the new rule o: holders fell 128 -> 126 -> 123 with price below entry after the 5 PM pop (~397k) faded. No new Solada tickets. BOLT meets rule k on counts (264 holders, 31.2k ADA side, h6 104/49), but price is -14.5% h6, so it fails rule o's flow test. JUSTQ is the closest Solana-side name (251 Solana-native holders, +21 since 3:30 PM) but its USDC pool side is ~$5.0k (~22.9k ADA), under rule k's 25k floor. BTC kill hit: flip-pair wallet u8a2m6 fully exited and pool mcap is 25.8k. The insider swarm (u8a2m6/u978t4 + u9kp4sxa/u8x8h2hc, snipers uytg09zr/u9w6dd) was early in 12 of 13 new Cardano launches since 3:30 PM. Rule o added."
   }
  ]
 }

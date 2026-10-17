@@ -6,12 +6,12 @@
  "launchpad": "pump.fun",
  "disclaimer": "Paper trades only: research/lottery/NFA. No real execution, no wallet keys, no real sizing. Nothing here is a profit claim.",
  "paper_ticket_ada_equivalent": 100,
- "paper_ticket_sol": 0.21262,
+ "paper_ticket_sol": 0.21259,
  "paper_ticket_conversion": {
-  "at": "2026-10-17T11:40:35-04:00",
-  "ada_usd": 0.220721,
-  "sol_usd": 103.81,
-  "ticket_usd": 22.0721,
+  "at": "2026-10-17T19:18:00-04:00",
+  "ada_usd": 0.219483,
+  "sol_usd": 103.24,
+  "ticket_usd": 21.9483,
   "source": "api.coingecko.com simple/price",
   "note": "Re-convert at each new ticket; existing tickets keep their entry conversion."
  },
@@ -49,68 +49,6 @@
   "selection": "5-10 names per run (recent graduates/near-graduates + GeckoTerminal/pump.fun trending); paper-trade L3+ plus the run's strongest L2; max 2 new tickets per run; no duplicates (one open ticket per mint)."
  },
  "open": [
-  {
-   "id": "FTR-DFMt-20261017-1340",
-   "ticker": "FTR",
-   "name": "Flying Tesla Roadster",
-   "side": "solana",
-   "launchpad": "pump.fun",
-   "mint": "DFMt2FyLpB6ekPNAzVErLXgpSnJ9CRf1VnxBAkTLpump",
-   "pool": "Fk5MuGv2H3Qpt6AxdhS2KHgDL2os424BvfEoqFNTdv9Y",
-   "pool_dex": "pumpswap",
-   "opened_at": "2026-10-17T13:40:00-04:00",
-   "window_ends_at": "2026-10-19T13:40:00-04:00",
-   "ticket_ada_equivalent": 100,
-   "ticket_sol": 0.21267,
-   "ticket_conversion": {
-    "at": "2026-10-17T13:20:00-04:00",
-    "ada_usd": 0.219325,
-    "sol_usd": 103.13,
-    "source": "api.coingecko.com simple/price"
-   },
-   "level": 2,
-   "entry": {
-    "mcap_usd": 3263556,
-    "price_usd": 0.003396,
-    "price_sol": 3.291e-05,
-    "holders": 18434,
-    "pool_quote_sol": 1108.4,
-    "paper_qty_tokens": 6462
-   },
-   "thesis_signals": [
-    "Strongest L2 of run: 18,434 pump.fun holders (GeckoTerminal 18,924, counts agree), 63h old original FTR",
-    "Survived first fade: high ~$7.4M (Oct 16 1 AM ET), low ~30% of high, now ~45% of high and recovering",
-    "h6 4,556 buys/3,686 sells (+6.6%), h1 615/490; liq ~$231k (~7% of mcap), pool quote ~1,108 SOL",
-    "Helius: top-10 ex-pool 14.4%, top-1 ex-pool 2.54%; pump.fun flags 0 snipers/bundlers/dev in top-50"
-   ],
-   "not_l3_because": "No prior holder snapshot to prove holders aren't bleeding through the fade (rule a); first-block check unresolved; several FTR clones (72xN farm-like, 5x6Q) trading at the same time",
-   "stop": {
-    "text": "mcap < $2.28M or holders < 16,590 or pool quote < 776 SOL",
-    "mcap_usd_below": 2284000,
-    "holders_below": 16590,
-    "pool_quote_sol_below": 776
-   },
-   "first_block_check": "unresolved: creator's latest 200 signatures don't reach the create time (16 credits used); pump.fun flags clean",
-   "custody": "SPL token, non-custodial (own Solana wallet); no Solada bridge involved",
-   "status": "open",
-   "marks": [
-    {
-     "at": "2026-10-17T15:30:00-04:00",
-     "mcap_usd": 2722875,
-     "price_usd": 0.002833,
-     "price_sol": 2.726e-05,
-     "holders": 18111,
-     "pool_quote_sol": 1007.4,
-     "pct_vs_entry_mcap": -16.6,
-     "pct_vs_entry_price_sol": -17.2,
-     "top10_ex_pool": 14.2,
-     "top1_ex_pool": 2.44,
-     "flags_top50": 0,
-     "flow": "DexScreener h1 905/226, h6 4,645/3,353; price h1 -3.6%, h6 +13.4%, h24 -21.2%",
-     "note": "Above every kill line: mcap $2.72M vs $2.28M, holders 18,111 vs 16,590, pool 1,007 SOL vs 776. h1 buys:sells is 4:1, but the average h6 fill is ~$96, so no farm flag."
-    }
-   ]
-  },
   {
    "id": "swordcat-5tCj-20261017-1530",
    "ticker": "swordcat",
@@ -153,6 +91,68 @@
     "pool_quote_sol_below": 704
    },
    "first_block_check": "unresolved (19-day-old coin, not worth the archival credits); pump.fun flags clean; Helius 2 requests",
+   "custody": "SPL token, non-custodial (own Solana wallet); no Solada bridge involved",
+   "status": "open",
+   "marks": [
+    {
+     "at": "2026-10-17T19:18:00-04:00",
+     "mcap_usd": 2089315,
+     "price_usd": 0.002176,
+     "price_sol": 2.108e-05,
+     "holders": 9932,
+     "pool_quote_sol": 933.1,
+     "pct_vs_entry_mcap": -12.9,
+     "pct_vs_entry_price_sol": -12.3,
+     "top10_ex_pool": 22.6,
+     "top1_ex_pool": 4.51,
+     "flags_top50": 0,
+     "flow": "DexScreener h1 74/76, h6 893/862; price h1 +2.5%, h6 -1.5%, h24 +11.3%",
+     "note": "Above every kill line: mcap $2.09M vs $1.68M, holders 9,932 vs 8,945, pool 933 vs 704 SOL. Holders -0.07% vs entry, so rule pf-m's early exit (two falling marks) isn't triggered; this is mark 1. Top-1 ex-pool rose to 4.51% (2YaGc2...)."
+    }
+   ]
+  },
+  {
+   "id": "CATE-Ai66-20261017-1918",
+   "ticker": "CATE",
+   "name": "CATE",
+   "side": "solana",
+   "launchpad": "pump.fun",
+   "mint": "Ai66LHZG9MCzg1WKdawwqduVAXpNDUuV8M3uyq5ppump",
+   "pool": "HMzvsEEmtzHhvZNw9uwbaG85HCTmFnkbhzUx16cy7ca3",
+   "pool_dex": "pumpswap",
+   "opened_at": "2026-10-17T19:18:00-04:00",
+   "window_ends_at": "2026-10-19T19:18:00-04:00",
+   "ticket_ada_equivalent": 100,
+   "ticket_sol": 0.21259,
+   "ticket_conversion": {
+    "at": "2026-10-17T19:18:00-04:00",
+    "ada_usd": 0.219483,
+    "sol_usd": 103.24,
+    "source": "api.coingecko.com simple/price"
+   },
+   "level": 2,
+   "entry": {
+    "mcap_usd": 67846121,
+    "price_usd": 0.07036,
+    "price_sol": 0.0006818,
+    "holders": 107869,
+    "pool_quote_sol": 14499,
+    "paper_qty_tokens": 312
+   },
+   "thesis_signals": [
+    "Strongest L2 of the run: 107,869 pump.fun holders (GeckoTerminal 142,879, no mismatch), pool 14,499 SOL (liq ~$3.0M), 83-day-old coin",
+    "Clean concentration: Helius top-10 ex-pool 15.2%, top-1 2.86%; pump.fun 0 sniper/bundler/dev flags in top-50, max 2 identical balances",
+    "Flow passes rule pf-m: DexScreener h6 3,302/2,473 and h1 445/356 with price h6 +1.5%, h24 +10.7%; average h6 fill ~$104 (no tiny-fill farm)",
+    "No spike (pf-l n/a): daily closes recovered from 0.0489 (Oct 12 low) to 0.070; price is ~53% of the 30-day high 0.1307 (Sep 18), above the 40% first-fade floor"
+   ],
+   "not_l3_because": "Liq/mcap 4.4% is under the 5% L3 floor; no prior holder snapshot to prove holders aren't bleeding; first-block check not run (83-day-old coin, not worth archival credits)",
+   "stop": {
+    "text": "mcap < $47.49M or holders < 97,082 or pool quote < 10,149 SOL (default -30%/-10%/-30%); early exit per pf-m if holders fall at two marks in a row with price below entry",
+    "mcap_usd_below": 47492000,
+    "holders_below": 97082,
+    "pool_quote_sol_below": 10149
+   },
+   "first_block_check": "not run (83-day-old coin); pump.fun flags clean; Helius 3 requests (supply, largest accounts, owners)",
    "custody": "SPL token, non-custodial (own Solana wallet); no Solada bridge involved",
    "status": "open"
   }
@@ -222,6 +222,109 @@
    "rules_applied": [
     "pf-l"
    ]
+  },
+  {
+   "id": "FTR-DFMt-20261017-1340",
+   "ticker": "FTR",
+   "name": "Flying Tesla Roadster",
+   "side": "solana",
+   "launchpad": "pump.fun",
+   "mint": "DFMt2FyLpB6ekPNAzVErLXgpSnJ9CRf1VnxBAkTLpump",
+   "pool": "Fk5MuGv2H3Qpt6AxdhS2KHgDL2os424BvfEoqFNTdv9Y",
+   "pool_dex": "pumpswap",
+   "opened_at": "2026-10-17T13:40:00-04:00",
+   "window_ends_at": "2026-10-19T13:40:00-04:00",
+   "ticket_ada_equivalent": 100,
+   "ticket_sol": 0.21267,
+   "ticket_conversion": {
+    "at": "2026-10-17T13:20:00-04:00",
+    "ada_usd": 0.219325,
+    "sol_usd": 103.13,
+    "source": "api.coingecko.com simple/price"
+   },
+   "level": 2,
+   "entry": {
+    "mcap_usd": 3263556,
+    "price_usd": 0.003396,
+    "price_sol": 3.291e-05,
+    "holders": 18434,
+    "pool_quote_sol": 1108.4,
+    "paper_qty_tokens": 6462
+   },
+   "thesis_signals": [
+    "Strongest L2 of run: 18,434 pump.fun holders (GeckoTerminal 18,924, counts agree), 63h old original FTR",
+    "Survived first fade: high ~$7.4M (Oct 16 1 AM ET), low ~30% of high, now ~45% of high and recovering",
+    "h6 4,556 buys/3,686 sells (+6.6%), h1 615/490; liq ~$231k (~7% of mcap), pool quote ~1,108 SOL",
+    "Helius: top-10 ex-pool 14.4%, top-1 ex-pool 2.54%; pump.fun flags 0 snipers/bundlers/dev in top-50"
+   ],
+   "not_l3_because": "No prior holder snapshot to prove holders aren't bleeding through the fade (rule a); first-block check unresolved; several FTR clones (72xN farm-like, 5x6Q) trading at the same time",
+   "stop": {
+    "text": "mcap < $2.28M or holders < 16,590 or pool quote < 776 SOL",
+    "mcap_usd_below": 2284000,
+    "holders_below": 16590,
+    "pool_quote_sol_below": 776
+   },
+   "first_block_check": "unresolved: creator's latest 200 signatures don't reach the create time (16 credits used); pump.fun flags clean",
+   "custody": "SPL token, non-custodial (own Solana wallet); no Solada bridge involved",
+   "status": "closed",
+   "marks": [
+    {
+     "at": "2026-10-17T15:30:00-04:00",
+     "mcap_usd": 2722875,
+     "price_usd": 0.002833,
+     "price_sol": 2.726e-05,
+     "holders": 18111,
+     "pool_quote_sol": 1007.4,
+     "pct_vs_entry_mcap": -16.6,
+     "pct_vs_entry_price_sol": -17.2,
+     "top10_ex_pool": 14.2,
+     "top1_ex_pool": 2.44,
+     "flags_top50": 0,
+     "flow": "DexScreener h1 905/226, h6 4,645/3,353; price h1 -3.6%, h6 +13.4%, h24 -21.2%",
+     "note": "Above every kill line: mcap $2.72M vs $2.28M, holders 18,111 vs 16,590, pool 1,007 SOL vs 776. h1 buys:sells is 4:1, but the average h6 fill is ~$96, so no farm flag."
+    },
+    {
+     "at": "2026-10-17T19:18:00-04:00",
+     "mcap_usd": 2139773,
+     "price_usd": 0.002226,
+     "price_sol": 2.157e-05,
+     "holders": 17599,
+     "pool_quote_sol": 899.9,
+     "pct_vs_entry_mcap": -34.4,
+     "pct_vs_entry_price_sol": -34.5,
+     "top10_ex_pool": 14.9,
+     "top1_ex_pool": 2.45,
+     "flags_top50": 0,
+     "flow": "DexScreener h1 253/241, h6 2,665/1,584; price h1 -7.0%, h6 -34.5%, h24 -54.2%",
+     "note": "Mcap stop hit: $2.14M < $2.284M. Holders (17,599) and pool (900 SOL) are still above their lines."
+    }
+   ],
+   "closed_at": "2026-10-17T19:18:00-04:00",
+   "exit": {
+    "mcap_usd": 2139773,
+    "price_usd": 0.002226,
+    "price_sol": 2.157e-05,
+    "holders": 17599,
+    "pool_quote_sol": 899.9,
+    "source": "DexScreener pumpswap pair; pump.fun top-holders; GeckoTerminal token info (18,924 holders)"
+   },
+   "exit_reason": "Kill line hit: mcap $2.14M < $2.284M stop. Holders (17,599 vs 16,590) and pool quote (900 vs 776 SOL) were still above their lines.",
+   "pct_change": -34.5,
+   "paper_pnl_ada_equiv": -34.5,
+   "signal_review": {
+    "worked": [
+     "Concentration stayed clean: top-10 ex-pool 14.4% -> 14.9%, 0 sniper/bundler flags",
+     "Pool depth held (1,108 -> 900 SOL, still above the 776 line)"
+    ],
+    "failed": [
+     "h6 buy counts beat sells at every mark (4,645/3,353, then 2,665/1,584) while price fell 34% h6, so the sells were bigger. Counts aren't flow.",
+     "Holders bled at both marks (18,434 -> 18,111 -> 17,599) and never got near the -10% line, so the holder stop was too loose to fire before the mcap stop",
+     "Surviving a first fade (rule a) didn't stop a second leg down: h24 -54%"
+    ]
+   },
+   "rules_applied": [
+    "pf-m"
+   ]
   }
  ],
  "rules": [
@@ -278,6 +381,12 @@
    "added_at": "2026-10-17T13:45:00-04:00",
    "rule": "Reactivation spikes don't qualify even as the strongest L2: CyberAxe (+1,271% h1 on a 66h coin) hit its kill within ~2h (-31.7%) even though holders rose 1,512 -> 1,710. Require one full hourly candle holding above the spike's midpoint before ticketing.",
    "source": "CyberAxe-20261017-1141 close"
+  },
+  {
+   "id": "pf-m",
+   "added_at": "2026-10-17T19:18:00-04:00",
+   "rule": "Counts aren't flow: 'h6 buys > sells' only counts if h6 price change is >= -10%. FTR kept a buy-count majority (4,645/3,353, then 2,665/1,584) while falling 34% h6 into its kill. Close a ticket early when holders fall at two marks in a row and price is below entry (FTR 18,434 -> 18,111 -> 17,599) instead of waiting for the -30% line.",
+   "source": "FTR-DFMt-20261017-1340 close"
   }
  ],
  "summaries": [
@@ -403,6 +512,15 @@
    "helius_usage": {
     "requests": 2,
     "credits_estimate": "~2"
+   }
+  },
+  {
+   "at": "2026-10-17T19:18:00-04:00",
+   "type": "run",
+   "note": "Closed FTR (DFMt) at its $2.28M mcap kill ($2.14M, -34.5%) and added rule pf-m. swordcat marked -12.3% ($2.09M, 9,932 holders, 933 SOL), still open. Opened CATE (Ai66...pump) as the strongest L2 at $67.8M. L2, no ticket: blocus (+490% h24 spike, pf-l; 1,339 holders; top-1 is the cross-token wallet DFZYHa), PRIME (+873% h6 spike, pf-l; 119 SOL quote side). L1: YILONGMA (pump.fun 5,097 vs GeckoTerminal 39 holders), Chaton (4,242 vs 41), MINTER (6,165 vs 48, liq 3.6%) and CATPERAZZI (2,413 vs 242) fail the holder-mismatch farm filter; Awkward Dog (~$4 average h6 fill, wash-like); fone (h6 198/220, sells > buys); FTR clone 72xN, XTO, ADP, WOSE, EVERNORTHX, RST, USOS, USDR, USDF, Musk, ConConAI, NODF, SPAX (liq/mcap <3.6%, or cloned ~987/650 txn counts). Research/lottery/NFA.",
+   "helius_usage": {
+    "requests": 7,
+    "credits_estimate": "~7 (getTokenSupply x2, getTokenLargestAccounts x2, getMultipleAccounts x2, getAccountInfo x1)"
    }
   }
  ]
