@@ -1,203 +1,255 @@
 {
- "asof": "2026-10-17T11:25:00-04:00",
- "source": "Snek Sentinel ad-hoc run",
+ "asof": "2026-10-17T13:20:00-04:00",
+ "source": "Snek Sentinel scheduled run (Solada research desk)",
  "rate": {
-  "ADA_USD": 0.2216,
-  "ADA_CAD": 0.3137
+  "ADA_USD": 0.219325,
+  "ADA_CAD": 0.31051,
+  "SOL_USD": 103.13
  },
- "headline": "BOLT and CLOVE are the only names with real holder depth and 6h buy-side flow; L3 paper tickets opened. IAGONAUT/HERO/JUICE/ROBIN fading post-graduation.",
+ "headline": "BOLT paper ticket stopped out at the 450k kill (-20.6%, 421k ADA, holders 264). CLOVE ticket -5.7% (297k pool mcap, 128 holders, team airdrop inflating holders), still open. BTC graduated 11:36 AM and faded -45% h1 (68 holders): L2. STARS has the full insider loop plus 22% launcher bag: Pass. No Solana-side snipe candidate. Pump arm: CyberAxe stopped out (-31.7%), FTR opened as strongest L2.",
  "wallet_snapshot": {
+  "stake": "stake1u8srdh...dwm7rg",
   "ADA": 96.07,
-  "BEAST_ada": 124.8,
-  "BOLT_ada": 123.4,
-  "CLOVE_ada": 37.4,
-  "HIVE_ada": 35.3,
-  "FEED_ada": 24.4,
-  "HERO_ada": 20.0,
-  "GOLFY_ada": 18.2,
-  "JUICE_ada": 11.9,
-  "SOLADA_units": 61183,
-  "MISS": "dust 0.25"
+  "values_ada": {
+   "BEAST": 120.0,
+   "SOLADA": 104.0,
+   "BOLT": 98.0,
+   "FEED": 35.5,
+   "CLOVE": 35.3,
+   "HIVE": 26.0,
+   "GOLFY": 16.6,
+   "HERO": 10.9,
+   "JUICE": 7.0
+  },
+  "SOLADA_raw_units": 61183,
+  "MISS": "dust 0.25",
+  "note": "Balances unchanged since Oct 16; values at current pool/curve prices, not advice."
  },
  "levels": {
-  "BOLT": "L3 closest to high-conviction",
-  "CLOVE": "L3",
-  "FEED": "L2",
-  "HIVE": "L2",
-  "GOLFY": "L2",
-  "BTC": "L2",
-  "CORE": "L2 (Solana, bridge risk)",
+  "CLOVE": "L3 (paper open)",
+  "BOLT": "L2 (paper closed at kill)",
   "SOLADA": "L2 hold",
+  "FEED": "L2",
+  "BTC": "L2",
+  "GOLFY": "L2 (on its kill edge)",
+  "JUSTQ": "L2 (Solana, bridge risk; closest Solana-side name)",
+  "CORE": "L2 (Solana, bridge risk)",
+  "PAWS": "L2",
+  "HIVE": "L1",
   "BEAST": "L1",
-  "HERO": "L1",
-  "JUICE": "L1",
   "IAGONAUT": "L1",
+  "STARS": "L1 (insider loop)",
+  "JUICE": "L1",
+  "HERO": "L1",
   "ROBIN": "L1",
-  "MISS": "L1 dust"
+  "MISS": "L1 dust",
+  "new_tiny": "TOM, VOXEL, LEIOS, FUD, CANON, ADA, RDSTR, FYOU: L1"
  },
+ "kill_lines": {
+  "CLOVE": "pool mcap <250k ADA or holders <110 (airdrop-adjusted)",
+  "BOLT": "holders <250 or ADA side <28k -> L1",
+  "SOLADA": "pool ADA side <80k or mcap <1.5M",
+  "FEED": "mcap <40k or holders <60",
+  "BTC": "mcap <25k, holders <60, or u8a2m6 exits",
+  "GOLFY": "holders <50 or curve <60%",
+  "CORE": "curve <75% or Solada holders <110",
+  "JUSTQ": "Solana holders <220 or 24h trades <80",
+  "PAWS": "mcap <30k or holders <70"
+ },
+ "onchain": {
+  "BOLT": {
+   "pool_ada": 30598,
+   "pool_mcap_ada": 421252,
+   "top10_ex_pool": 26.0,
+   "top1": 3.15,
+   "gt_h6": "48 buys/40 sells, -27.6%"
+  },
+  "CLOVE": {
+   "pool_ada": 25710,
+   "pool_mcap_ada": 296954,
+   "top10_ex_pool": 36.4,
+   "top1": 6.06,
+   "gt_h6": "87/41, -13.3%"
+  },
+  "FEED": {
+   "pool_ada": 11309,
+   "pool_mcap_ada": 57413,
+   "top10_ex_pool": 39.3,
+   "gt_h6": "54/57, +46.9%"
+  },
+  "BTC": {
+   "pool_ada": 8683,
+   "pool_mcap_ada": 34219,
+   "top10_ex_pool": 34.4,
+   "graduated": "2026-10-17T11:36-04:00",
+   "gt_h1": "58/40, -45.2%"
+  },
+  "IAGONAUT": {
+   "pool_ada": 6028,
+   "pool_mcap_ada": 16770
+  },
+  "BEAST": {
+   "pool_ada": 7306,
+   "pool_mcap_ada": 24783
+  },
+  "SOLADA": {
+   "pool_ada": 94206,
+   "mcap_ada": 1699475
+  }
+ },
+ "insider_loop": {
+  "BTC": "launcher u8px0zdx first buy; u8a2m6 in 2nd public buy block, still 1.0%",
+  "STARS": "u8a2m6 + 3 others in first public block; still holding: launcher uxqnt224 22.2%, uyyyjqps 4.48%, uytg09zr 2.67%, u8a2m6 1.0%",
+  "IAGONAUT": "u8a2m6 has now exited; uyyyjqps 2.3% left",
+  "TOM": "no tracked snipers in first blocks"
+ },
+ "solana_side_snapshot": {
+  "at": "2026-10-17T13:20:00-04:00",
+  "note": "Solada holders mix chains; pump.fun Solana-native counts where checked (rule n). Compared with 11:09 AM ET market snapshot.",
+  "names": {
+   "JUSTQ": {
+    "solada_holders": 254,
+    "prev": 258,
+    "pumpfun_holders": 233,
+    "curve_bps": 10000,
+    "mcap_usd": 13229,
+    "trades24h": 111
+   },
+   "CORE": {
+    "solada_holders": 119,
+    "prev": 122,
+    "pumpfun_holders": 35,
+    "curve_bps": 7902,
+    "prev_curve_bps": 7965,
+    "mcap_usd": 23126
+   },
+   "MISS": {
+    "solada_holders": 80,
+    "prev": 83,
+    "curve_bps": 5604,
+    "prev_curve_bps": 5687
+   },
+   "DUX": {
+    "solada_holders": 31,
+    "prev": 31,
+    "curve_bps": 3292
+   },
+   "DAVE": {
+    "solada_holders": 21,
+    "prev": 21,
+    "curve_bps": 1952
+   },
+   "STARS": {
+    "solada_holders": 8,
+    "prev": 11,
+    "curve_bps": 307,
+    "prev_curve_bps": 1170
+   },
+   "BATMAN": {
+    "solada_holders": 4,
+    "prev": 16,
+    "curve_bps": 32,
+    "prev_curve_bps": 1731
+   },
+   "MONEY": {
+    "solada_holders": 6,
+    "prev": 8,
+    "curve_bps": 187,
+    "prev_curve_bps": 502
+   },
+   "LOCK": {
+    "solada_holders": 8,
+    "curve_bps": 327
+   },
+   "KILLUA": {
+    "solada_holders": 5,
+    "curve_bps": 55
+   }
+  }
+ },
+ "snipe_candidate": null,
+ "closest": "JUSTQ: biggest Solana-native base (233) but holders flat/bleeding and trades falling; no KOL or bridge-flow signal",
+ "x": {
+  "real_voices": [
+   "@fblthp_cryp (1.1k, on list): shilling $SOLADA $PAWS $CORE $BEAST to DexHunter"
+  ],
+  "team_promo": [
+   "@CloveOnAscend: 3M+ CLOVE airdropped to holders, wallet-drop thread",
+   "@FEEdBabySNEK: 50 ADA/day DCA until 100k mcap",
+   "@CasinoStarsX: 1,000 ADA STARS dev buy",
+   "@sharepaws, @HODLComp (Solada tokens on HODLComp)"
+  ],
+  "spam": [
+   "@MrrBitcoinBull, @88i90_, @SolPumpFunTiger, @CZwhaleX, @pumpfunexpert26, @gems_whale5: 'DM me' collab spam"
+  ]
+ },
+ "cross_chain_signals": "None real. Only @diogocastro1993 (377) asking DexHunter to support Solana wallets; Solana-named accounts replying are DM/promo spam. Pump.fun whale wallet DFZYHa... (CyberAxe top-1) also holds JUSTQ on Solana.",
  "paper_actions": [
-  "open BOLT L3 @530k ADA",
-  "open CLOVE L3 @315k ADA"
+  "close BOLT @421k ADA -20.6% (kill)",
+  "mark CLOVE @297k -5.7%",
+  "pump: close CyberAxe -31.7% (kill)",
+  "pump: open FTR (DFMt) L2 @ $3.26M"
  ],
  "rules_added": [
-  "j",
-  "k"
+  "l",
+  "m",
+  "n",
+  "pf-l"
  ],
- "new_list_candidates": [
-  "perpsonx",
-  "Darkvlade2",
-  "Lovelace6260911"
- ],
- "followups": [
+ "new_list_candidates": [],
+ "helius_credits_est": "~16-25",
+ "history": [
   {
-   "asof": "2026-10-15T16:58:00-04:00",
-   "peer_notes": "KING and Hoodscout asked for on-chain checks on BOLT (holder concentration, Minswap liquidity vs mcap, dev/Solada selling, copycat drain) and JUSTQ (holder quality, where liquidity sits, buy/sell split). Flip rules: top-10 >40% -> Pass/Tiny lottery; pool liquidity <10% of mcap -> Tiny lottery only.",
-   "verified": {
-    "BOLT": {
-     "top10_excl_pool_pct": 25.77,
-     "top_holder_pct": 3.87,
-     "minswap_pool_pct_of_supply": "6.83% (Solada API) / 67.25B units on-chain via Koios",
-     "dev_wallet_pct": 1.618,
-     "solada_platform_wallets": "Curve address addr1vx9qelnrd87h6u54u6z2kttw3a3rnz3mk5lll0nc3mr8qvc6dqa4y (graduated, ~0.02% leftover tokens); Solada records ~8,389 ADA harvested from LP fees",
-     "pool_liquidity_total_usd": 14891,
-     "pool_liquidity_pct_mcap": "~14% total, ~7% ADA side (~32k ADA)",
-     "mcap_usd": 105306,
-     "dev_sells": "No dev-flagged trades in last 200 Minswap trades (~4h). Largest recent sells 1.7k-3.3k ADA from non-dev wallets",
-     "last_4h_minswap": "122 buys/~54k ADA vs 78 sells/~51k ADA, 107 unique wallets",
-     "geckoterminal_24h": "510 buys/341 sells, 183 buyers/136 sellers, ~$77.8k vol",
-     "copycats": "BABYBOLT ~5.4k ADA over 6.6h (its dev sold ~329 ADA); VOLT ~5.5k ADA in 0.8h, sell-heavy. Together <10% of BOLT flow - not draining it yet"
-    },
-    "JUSTQ": {
-     "solana_pool": "PumpSwap 7kfgVqiVsfvCnWe2ZwuGDuB7ctXsSzBc7pJDnDe8PCzU, liquidity ~$9.06k (~75% of $12.1k mcap)",
-     "cardano_side": "Minswap v2 pool seeded with 3,520 ADA / 38.5M tokens; no GeckoTerminal listing; no Solada-side trades in ~51h",
-     "bridge": "~80.9M tokens released Cardano->Solana, ~919M in Cardano reserve (custodial)",
-     "solana_24h": "75 buys/78 sells; 78 unique wallets across last 153 trades; top 3 wallets 9 trades each (bot-like repetition)",
-     "holder_quality": "NOT verified: funding-wallet/airdrop/bundling analysis needs Solscan/Birdeye auth; Solada holders endpoint returns 'no curve' for this coin"
-    }
+   "asof": "2026-10-17T11:25:00-04:00",
+   "source": "Snek Sentinel ad-hoc run",
+   "rate": {
+    "ADA_USD": 0.2216,
+    "ADA_CAD": 0.3137
    },
-   "unverified": [
-    "BOLT exact ADA in its pool UTxO (it sits in the shared Minswap script address; ADA side estimated as half of GeckoTerminal reserve)",
-    "JUSTQ holder funding/bundling",
-    "JUSTQ Minswap pool current reserves"
+   "headline": "BOLT and CLOVE are the only names with real holder depth and 6h buy-side flow; L3 paper tickets opened. IAGONAUT/HERO/JUICE/ROBIN fading post-graduation.",
+   "wallet_snapshot": {
+    "ADA": 96.07,
+    "BEAST_ada": 124.8,
+    "BOLT_ada": 123.4,
+    "CLOVE_ada": 37.4,
+    "HIVE_ada": 35.3,
+    "FEED_ada": 24.4,
+    "HERO_ada": 20.0,
+    "GOLFY_ada": 18.2,
+    "JUICE_ada": 11.9,
+    "SOLADA_units": 61183,
+    "MISS": "dust 0.25"
+   },
+   "levels": {
+    "BOLT": "L3 closest to high-conviction",
+    "CLOVE": "L3",
+    "FEED": "L2",
+    "HIVE": "L2",
+    "GOLFY": "L2",
+    "BTC": "L2",
+    "CORE": "L2 (Solana, bridge risk)",
+    "SOLADA": "L2 hold",
+    "BEAST": "L1",
+    "HERO": "L1",
+    "JUICE": "L1",
+    "IAGONAUT": "L1",
+    "ROBIN": "L1",
+    "MISS": "L1 dust"
+   },
+   "paper_actions": [
+    "open BOLT L3 @530k ADA",
+    "open CLOVE L3 @315k ADA"
    ],
-   "updated_verdicts": {
-    "BOLT": {
-     "verdict": "Tiny lottery only",
-     "kill": "ADA-side liquidity stays ~7% of mcap and the 50k+ ADA/4h buy flow stops; any 3-4% holder exit gaps price."
-    },
-    "JUSTQ": {
-     "verdict": "Watch",
-     "kill": "Solana trade count keeps falling into a few repeat bot wallets with no new buyers, and the Cardano side stays at zero trades."
-    }
-   }
-  },
-  {
-   "asof": "2026-10-15T18:40:00-04:00",
-   "request": "Bousky asked for a $BEAST re-check (was Pass earlier today).",
-   "rate": "CoinGecko ADA=0.230641 USD / 0.327339 CAD",
-   "alert": {
-    "name": "Beast",
-    "ticker": "BEAST",
-    "age": "~38h (graduated to Minswap ~20h ago)",
-    "chain": "Cardano-native",
-    "mcap": "~13.6k ADA (~CA$4.5k), down from ~17.7k ADA",
-    "volume_24h": "Solada ~70.1k ADA (~CA$23k, includes pre-graduation curve trades); GeckoTerminal Minswap 24h ~$12.7k (~55k ADA); last 6h only ~$1.4k (~6.2k ADA), last 1h ~$306",
-    "holders": 59,
-    "trades_24h": "285 (Solada); Minswap 24h 114 buys/106 sells, 70 buyers/73 sellers",
-    "top10_ex_pool_dev_pct": 26.87,
-    "pool_pct_supply": 39.97,
-    "dev_pct": 2.53,
-    "liquidity": "Minswap pool ~$2,480 total (~10.7k ADA, ~5.4k ADA side), about 79% of mcap total / ~40% ADA side",
-    "last_50_trades": "~9.6h: 22 buys/~3.8k ADA vs 28 sells/~5.4k ADA, 33 wallets",
-    "deployer": "Dev wallet holds 2.53%; only 2 dev buys of 100 ADA each (0.7h and 9.3h ago), no dev sells seen. @Beast_solada says the dev allocation was sent to Solada custody - not verified on-chain",
-    "x_temperature": "Cooling. Peak was @cryptodramz (26k) 'BEAST HAS BONDED' around 9:22 PM ET Oct 14 and the @soladafun top-5 post. Since then it's mostly the official @Beast_solada (9 followers), @OddballsCNFT (creator) and reply spam (@Ballak983215013). Named for @beastives_.",
-    "flags": [
-     "Holders shrank 63->59 and mcap fell ~23% since the earlier check",
-     "Volume is collapsing: last 6h is ~11% of the 24h figure",
-     "Sell-leaning recent flow",
-     "Liquidity is healthy relative to a tiny mcap, so the problem is demand, not exits",
-     "Solada custodial (dev allocation reportedly held by Solada)"
-    ],
-    "verdict": "Pass",
-    "kill": "Already fading: no new buyers since graduation and holders falling."
-   },
-   "changed": "Since the earlier Pass: it graduated to Minswap, mcap fell 17.7k->13.6k ADA, holders fell 63->59, and the headline volume is mostly old curve trading. Real pool flow over the last 6h is ~6k ADA.",
-   "unverified": [
-    "Whether the 2.53% dev wallet is Solada custody as claimed",
-    "Exact pool reserves on-chain (taken from GeckoTerminal)",
-    "Holder funding/bundling"
+   "rules_added": [
+    "j",
+    "k"
+   ],
+   "new_list_candidates": [
+    "perpsonx",
+    "Darkvlade2",
+    "Lovelace6260911"
    ]
   },
-  {
-   "asof": "2026-10-15T19:25:00-04:00",
-   "request": "Bousky: quick extra check on $MISS (Miss Jak) and exact $BOLT Minswap ADA reserve.",
-   "rate": "CoinGecko ADA=0.229055 USD / 0.32511 CAD",
-   "MISS": {
-    "name": "Miss Jak",
-    "ticker": "MISS",
-    "age": "~2.6h",
-    "chain": "Cross-chain (Pump.fun curve, ~74% to graduation)",
-    "mint": "HspCMGCBSMFChFaGieU8kRs1UR3YXffYej7x2KHSz1Mv",
-    "mcap": "~85.6k ADA (~CA$27.8k) [Solada market $19.6k]",
-    "volume": "~59.7k ADA (~CA$19.4k) since launch",
-    "holders": 106,
-    "trades": 240,
-    "flow_verified": "GeckoTerminal pump curve: 186 buys/54 sells, 132 buyers/37 sellers since launch; last 1h 38 buys/7 sells. Solada-side (ADA-routed) last 50 trades in ~1.2h: 45 buys ~10.3k ADA vs 5 sells ~2.2k ADA",
-    "deployer": "One deployer-flagged buy of 500 ADA ~40 min before check; no deployer sells seen in Solada-side trades",
-    "platform_split": "Solada holds ~503.1M tokens (50.3%) in its Cardano reserve; ~496.9M released to the Pump side (custodial bridge)",
-    "repeat_wallets": "Top Solana wallets made 6-8 trades each and are also the top sellers ($300-490 each). Flipper/bot-like, but no proof of bundling",
-    "top10_ex_curve_platform": "NOT VERIFIED - Solana public RPC getTokenLargestAccounts rate-limited (429) on 3 tries; publicnode/drpc require keys; Solada holders endpoint says 'no curve' for cross-chain coins",
-    "funding_bundling": "NOT VERIFIED (needs Solscan/Birdeye/Helius auth)",
-    "verdict": "Tiny lottery only",
-    "kill": "Fails to graduate the curve, or a concentration check shows top-10 >40% as the repeat flippers rotate out."
-   },
-   "BOLT": {
-    "pool_utxo": "fc0f3f2b6116abfa78f832b118883202f941dc4b842fa832f8b054be9fd4dff9#1 (LP unit matches Solada lpUnit)",
-    "ada_reserve_verified": 32620.73,
-    "token_reserve": "66.22B units (6.62% supply)",
-    "mcap": "~480.4k ADA (~CA$156k)",
-    "ada_side_pct_mcap": 6.79,
-    "total_liq": "~65.2k ADA (~13.6%); GeckoTerminal ~$15.0k",
-    "flow": "GeckoTerminal: 1h 26 buys/12 sells; 6h 179 buys/95 sells (97 buyers/61 sellers), ~$29.4k; 24h 500/315, ~$76.2k",
-    "verdict": "Tiny lottery only",
-    "kill": "Buy flow fades while the ADA side stays ~7% of mcap; one 3-4% holder exit gaps the price."
-   }
-  },
-  {
-   "timestamp": "2026-10-16T14:30:00-04:00",
-   "token": "CLOVE",
-   "check": "onchain top-10 ex-pool",
-   "findings": "Asset c1b89ed48dfc2b82167c1548b88942d367af1e517947c3dd8bdead0b.0014df10434c4f56452d33 (Solada draft-clove-3, graduated). Koios: 115 holders, supply 1e15. Excluded: Minswap V2 pool addr1z84q0d...777e2a (10.36%), Minswap order-script UTXOs addr1z8p79r... x2 (0.13%), Solada curve addr1vx9qel...dqa4y leftover (0.02%). Top-1 5.85%, top-5 23.30%, top-10 38.36% of circ ex-pool (identical by stake key; no top wallets share a stake key). Launcher addr1qyzkcu...slnnq holds ~0.01%. 6h flow top-5: none sold; #3 (addr1qxw2z4…) +21.0T (~doubled), #2 +2.07T, #4 (addr1qxdj6w…) +0.97T, #1/#5 flat.",
-   "verdict": "Tiny lottery",
-   "kill": "Out if top-10 ex-pool crosses 40% or any top-5 wallet sells >50% of its bag into the ~$8.6k pool.",
-   "correction_note": "Corrected 2026-10-16 15:20 ET: +21.0T buyer is rank #3 (addr1qxw2z4…), +0.97T is rank #4 (addr1qxdj6w…)."
-  },
-  {
-   "timestamp": "2026-10-16T20:27:00-04:00",
-   "token": "HERO + FEED",
-   "check": "held-coin quick check (Bousky holds both)",
-   "findings": "Both Cardano-side Solada curves (no bridge risk), live ~1.2h, launched 24s apart (FEED 19:13 ET, HERO 19:13 ET), different launchers, holderShareBps 10000. FEED (00e049b5...0014df1046454544 'FEEd BabySNEK'): curve 78.1% (OPEN, crowned 19:38 ET), mcap 35.1k ADA (~CA$11.2k), vol 35.3k ADA (~CA$11.3k), 57 holders (/api/market), 184 trades; Koios 54 stake keys ex-curve, top-1 8.2%, top-3 21.3%, top-10 51.1% of circ ex-curve (37.8% of supply); 158 txs last 1h, 41 last 15m; curve net-absorbing (74% sold). HERO (47478467...0014df104845524f 'Guitar HERO'): curve 46.3% OPEN, mcap 18.2k ADA (~CA$5.8k), vol 19.2k ADA (~CA$6.1k), 32 holders, 120 trades; 33 stake keys ex-curve, top-1 10.4%, top-3 28.9%, top-10 62.5% ex-curve (38.0% of supply); 91 txs last 1h, 27 last 15m. 16 stake keys hold BOTH coins (same small crowd rotating between twin launches). X: no coin-specific posts found; only general Solada chatter. Buy/sell split per trade not decoded; net flow positive (curves rising).",
-   "verdict": "FEED: Watch (breadth OK, nearing graduation); HERO: Tiny lottery only (thin, top-10 62%)",
-   "kill": "FEED: out if holders stall <60 after graduation or any top-3 wallet dumps >50% into the new pool. HERO: out if holders <40 by 21:30 ET or curve progress falls below 40%."
-  },
-  {
-   "timestamp": "2026-10-16T21:55:00-04:00",
-   "token": "MONEY (Old money)",
-   "check": "Creator check: 'A tribute to the Art of Trix' / pump username WaveTrickyOval",
-   "findings": "{\"name\": \"Old money\", \"ticker\": \"MONEY\", \"pumpMint\": \"5aqUoHURRbdWm841TYu3R7xY4jzXboFDjBXuDrUkzZB7\", \"policyId\": \"f08643012d42ad0a1adb90a831789186cd26d4a7e52d735f7bcbaf15\", \"solada_live\": \"2026-10-16 21:28 ET\", \"chain\": \"Solana-side pump curve (USDC quote) via Solada\", \"mcap\": \"~$4.7k (DexScreener), 9 buys/5 sells, ~$665 vol first hour\", \"holderShareBps\": 5000} | WaveTrickyOval is the pump.fun auto-username of A1qaJWQDfC9T7AcSRNwfxgiJrHUzhpJ3f8qTDUMVVcXQ, which signed the CreateV2 tx. Same wallet created GPIG (another Solada launch from a different Cardano launcher) and has 1000+ txs since 2026-10-15: it is Solada's shared Solana deployer, not an individual dev. 'Popping coins' = every Solada Solana-side launch. Its MONEY flows (5.57M dev buy, then 10.92M/2.17M in/out to HCYvN1uk...) look like Solada bridge/escrow mechanics, not a dev dump. Real launcher: Cardano addr1q9h5w5rl...q0r70hn, 1 launch on Solada. Launch sniped by bots (sssss..., FZU56d9i, EYJYnVno). X: 0 results.",
-   "verdict": "Creator: platform deployer (not judgeable as a dev); real launcher unknown/first-time. Coin: Pass (micro, sniped, no socials). Bridge risk applies.",
-   "kill": "Holders/volume not building past ~$10k mcap by next run, or snipers exit."
-  },
-  {
-   "timestamp": "2026-10-16T22:45:00-04:00",
-   "token": "Solada board (cross-launch)",
-   "check": "Insider-loop / mini-cabal scan: repeat launchers, cross-launch early buyers (first 20 non-curve txs per coin, grouped by stake key, Blockfrost), funding links, X promo network",
-   "findings": "24 Cardano-side LIVE coins scanned (BEAST returned no asset txs). Repeat launchers by stake key: stake1u9quneqv (GPIG,ROBIN,ATM,404,RUG), stake1uypf403t (MARVIN,ADA,TRIPLET,AERIE,PROPERTY), stake1u9hpucfs (GENZ,CLOVE,PRIVACY,STABLE), stake1u8lezuxm (WOOD,SAD,BEAST), stake1u8w46s6e (MINT,GOLFY,TEST), stake1uxkr9stc (POFFY,PAWS), stake1u9rarrf7 (GOODCAT,PAYNODE); JUICE/FEED/HERO/DAVE/MONEY launchers single-launch. Cross-launch early buyers: 24 stake keys early in 3+ launches. Top: stake1u8a2m6 early in 14 (sold 8, est -325 ADA in window), stake1u978t4 early in 11 (sold 10, est -1.3k ADA), stake1u9w6dd early in 9 incl JUICE/FEED/HERO (sold 7, est +343 ADA; also launcher of CHARLAL), stake1uxqcj8 6 (FEED,HERO,HIVE,MISS,HOSKITO,CHARLETT), stake1u8ght8 6 (JUICE,FEED,HERO,GOLFY,PAWS,AERIE). LINKED (on-chain): stake1u978t4 first funded by cluster wallet stake1u8a2m6 (tx df107558...8294, 2026-10-14 19:26 ET); no direct transfers between them in u978t4's last 50 txs. No other common funders among top 10. Most cluster keys are early-in/early-out flippers with negative or small est. P&L, i.e., snipe bots rather than profitable insiders. Best performers (window-limited est.) are early BOLT/CLOVE/CORE/GOLFY/PAWS holders (stake1uyz05y ~+14.8k ADA across CORE/GOLFY/PAWS/CLOVE, still holding). X: no multi-ticker promo network; posts are single-coin launcher/community accounts (@CardanoJones JUICE, @daveonada1 DAVE, @FEEdBabySNEK FEED, @Charlette_ADA CHARLETT, @dgarza867 HERO). Bousky's stake not in cluster.",
-   "verdict": "Co-occurring snipe-bot cluster across launches (1 linked pair); no evidence of a coordinated launcher+buyer+promo insider loop. Confidence: medium-low (first 40 txs/coin only).",
-   "kill": "Upgrade to 'loop forming' if cluster keys (u8a2m6/u978t4/u9w6dd) appear in the first block of a new launch from a repeat-launcher stake, or launcher wallets fund cluster keys."
-  }
- ],
- "history": [
   {
    "asof": "2026-10-17T08:35:00-04:00",
    "source": "Snek Sentinel (off-schedule overnight pass)",
@@ -3216,6 +3268,155 @@
     "FEED": "Pass -> Tiny lottery; new line: under 40k ADA or holders under 64",
     "IAGONAUT": "graduated; new line: under 40k ADA, holders under 60, or top holder uytg09zr exits"
    }
+  }
+ ],
+ "followups": [
+  {
+   "asof": "2026-10-15T16:58:00-04:00",
+   "peer_notes": "KING and Hoodscout asked for on-chain checks on BOLT (holder concentration, Minswap liquidity vs mcap, dev/Solada selling, copycat drain) and JUSTQ (holder quality, where liquidity sits, buy/sell split). Flip rules: top-10 >40% -> Pass/Tiny lottery; pool liquidity <10% of mcap -> Tiny lottery only.",
+   "verified": {
+    "BOLT": {
+     "top10_excl_pool_pct": 25.77,
+     "top_holder_pct": 3.87,
+     "minswap_pool_pct_of_supply": "6.83% (Solada API) / 67.25B units on-chain via Koios",
+     "dev_wallet_pct": 1.618,
+     "solada_platform_wallets": "Curve address addr1vx9qelnrd87h6u54u6z2kttw3a3rnz3mk5lll0nc3mr8qvc6dqa4y (graduated, ~0.02% leftover tokens); Solada records ~8,389 ADA harvested from LP fees",
+     "pool_liquidity_total_usd": 14891,
+     "pool_liquidity_pct_mcap": "~14% total, ~7% ADA side (~32k ADA)",
+     "mcap_usd": 105306,
+     "dev_sells": "No dev-flagged trades in last 200 Minswap trades (~4h). Largest recent sells 1.7k-3.3k ADA from non-dev wallets",
+     "last_4h_minswap": "122 buys/~54k ADA vs 78 sells/~51k ADA, 107 unique wallets",
+     "geckoterminal_24h": "510 buys/341 sells, 183 buyers/136 sellers, ~$77.8k vol",
+     "copycats": "BABYBOLT ~5.4k ADA over 6.6h (its dev sold ~329 ADA); VOLT ~5.5k ADA in 0.8h, sell-heavy. Together <10% of BOLT flow - not draining it yet"
+    },
+    "JUSTQ": {
+     "solana_pool": "PumpSwap 7kfgVqiVsfvCnWe2ZwuGDuB7ctXsSzBc7pJDnDe8PCzU, liquidity ~$9.06k (~75% of $12.1k mcap)",
+     "cardano_side": "Minswap v2 pool seeded with 3,520 ADA / 38.5M tokens; no GeckoTerminal listing; no Solada-side trades in ~51h",
+     "bridge": "~80.9M tokens released Cardano->Solana, ~919M in Cardano reserve (custodial)",
+     "solana_24h": "75 buys/78 sells; 78 unique wallets across last 153 trades; top 3 wallets 9 trades each (bot-like repetition)",
+     "holder_quality": "NOT verified: funding-wallet/airdrop/bundling analysis needs Solscan/Birdeye auth; Solada holders endpoint returns 'no curve' for this coin"
+    }
+   },
+   "unverified": [
+    "BOLT exact ADA in its pool UTxO (it sits in the shared Minswap script address; ADA side estimated as half of GeckoTerminal reserve)",
+    "JUSTQ holder funding/bundling",
+    "JUSTQ Minswap pool current reserves"
+   ],
+   "updated_verdicts": {
+    "BOLT": {
+     "verdict": "Tiny lottery only",
+     "kill": "ADA-side liquidity stays ~7% of mcap and the 50k+ ADA/4h buy flow stops; any 3-4% holder exit gaps price."
+    },
+    "JUSTQ": {
+     "verdict": "Watch",
+     "kill": "Solana trade count keeps falling into a few repeat bot wallets with no new buyers, and the Cardano side stays at zero trades."
+    }
+   }
+  },
+  {
+   "asof": "2026-10-15T18:40:00-04:00",
+   "request": "Bousky asked for a $BEAST re-check (was Pass earlier today).",
+   "rate": "CoinGecko ADA=0.230641 USD / 0.327339 CAD",
+   "alert": {
+    "name": "Beast",
+    "ticker": "BEAST",
+    "age": "~38h (graduated to Minswap ~20h ago)",
+    "chain": "Cardano-native",
+    "mcap": "~13.6k ADA (~CA$4.5k), down from ~17.7k ADA",
+    "volume_24h": "Solada ~70.1k ADA (~CA$23k, includes pre-graduation curve trades); GeckoTerminal Minswap 24h ~$12.7k (~55k ADA); last 6h only ~$1.4k (~6.2k ADA), last 1h ~$306",
+    "holders": 59,
+    "trades_24h": "285 (Solada); Minswap 24h 114 buys/106 sells, 70 buyers/73 sellers",
+    "top10_ex_pool_dev_pct": 26.87,
+    "pool_pct_supply": 39.97,
+    "dev_pct": 2.53,
+    "liquidity": "Minswap pool ~$2,480 total (~10.7k ADA, ~5.4k ADA side), about 79% of mcap total / ~40% ADA side",
+    "last_50_trades": "~9.6h: 22 buys/~3.8k ADA vs 28 sells/~5.4k ADA, 33 wallets",
+    "deployer": "Dev wallet holds 2.53%; only 2 dev buys of 100 ADA each (0.7h and 9.3h ago), no dev sells seen. @Beast_solada says the dev allocation was sent to Solada custody - not verified on-chain",
+    "x_temperature": "Cooling. Peak was @cryptodramz (26k) 'BEAST HAS BONDED' around 9:22 PM ET Oct 14 and the @soladafun top-5 post. Since then it's mostly the official @Beast_solada (9 followers), @OddballsCNFT (creator) and reply spam (@Ballak983215013). Named for @beastives_.",
+    "flags": [
+     "Holders shrank 63->59 and mcap fell ~23% since the earlier check",
+     "Volume is collapsing: last 6h is ~11% of the 24h figure",
+     "Sell-leaning recent flow",
+     "Liquidity is healthy relative to a tiny mcap, so the problem is demand, not exits",
+     "Solada custodial (dev allocation reportedly held by Solada)"
+    ],
+    "verdict": "Pass",
+    "kill": "Already fading: no new buyers since graduation and holders falling."
+   },
+   "changed": "Since the earlier Pass: it graduated to Minswap, mcap fell 17.7k->13.6k ADA, holders fell 63->59, and the headline volume is mostly old curve trading. Real pool flow over the last 6h is ~6k ADA.",
+   "unverified": [
+    "Whether the 2.53% dev wallet is Solada custody as claimed",
+    "Exact pool reserves on-chain (taken from GeckoTerminal)",
+    "Holder funding/bundling"
+   ]
+  },
+  {
+   "asof": "2026-10-15T19:25:00-04:00",
+   "request": "Bousky: quick extra check on $MISS (Miss Jak) and exact $BOLT Minswap ADA reserve.",
+   "rate": "CoinGecko ADA=0.229055 USD / 0.32511 CAD",
+   "MISS": {
+    "name": "Miss Jak",
+    "ticker": "MISS",
+    "age": "~2.6h",
+    "chain": "Cross-chain (Pump.fun curve, ~74% to graduation)",
+    "mint": "HspCMGCBSMFChFaGieU8kRs1UR3YXffYej7x2KHSz1Mv",
+    "mcap": "~85.6k ADA (~CA$27.8k) [Solada market $19.6k]",
+    "volume": "~59.7k ADA (~CA$19.4k) since launch",
+    "holders": 106,
+    "trades": 240,
+    "flow_verified": "GeckoTerminal pump curve: 186 buys/54 sells, 132 buyers/37 sellers since launch; last 1h 38 buys/7 sells. Solada-side (ADA-routed) last 50 trades in ~1.2h: 45 buys ~10.3k ADA vs 5 sells ~2.2k ADA",
+    "deployer": "One deployer-flagged buy of 500 ADA ~40 min before check; no deployer sells seen in Solada-side trades",
+    "platform_split": "Solada holds ~503.1M tokens (50.3%) in its Cardano reserve; ~496.9M released to the Pump side (custodial bridge)",
+    "repeat_wallets": "Top Solana wallets made 6-8 trades each and are also the top sellers ($300-490 each). Flipper/bot-like, but no proof of bundling",
+    "top10_ex_curve_platform": "NOT VERIFIED - Solana public RPC getTokenLargestAccounts rate-limited (429) on 3 tries; publicnode/drpc require keys; Solada holders endpoint says 'no curve' for cross-chain coins",
+    "funding_bundling": "NOT VERIFIED (needs Solscan/Birdeye/Helius auth)",
+    "verdict": "Tiny lottery only",
+    "kill": "Fails to graduate the curve, or a concentration check shows top-10 >40% as the repeat flippers rotate out."
+   },
+   "BOLT": {
+    "pool_utxo": "fc0f3f2b6116abfa78f832b118883202f941dc4b842fa832f8b054be9fd4dff9#1 (LP unit matches Solada lpUnit)",
+    "ada_reserve_verified": 32620.73,
+    "token_reserve": "66.22B units (6.62% supply)",
+    "mcap": "~480.4k ADA (~CA$156k)",
+    "ada_side_pct_mcap": 6.79,
+    "total_liq": "~65.2k ADA (~13.6%); GeckoTerminal ~$15.0k",
+    "flow": "GeckoTerminal: 1h 26 buys/12 sells; 6h 179 buys/95 sells (97 buyers/61 sellers), ~$29.4k; 24h 500/315, ~$76.2k",
+    "verdict": "Tiny lottery only",
+    "kill": "Buy flow fades while the ADA side stays ~7% of mcap; one 3-4% holder exit gaps the price."
+   }
+  },
+  {
+   "timestamp": "2026-10-16T14:30:00-04:00",
+   "token": "CLOVE",
+   "check": "onchain top-10 ex-pool",
+   "findings": "Asset c1b89ed48dfc2b82167c1548b88942d367af1e517947c3dd8bdead0b.0014df10434c4f56452d33 (Solada draft-clove-3, graduated). Koios: 115 holders, supply 1e15. Excluded: Minswap V2 pool addr1z84q0d...777e2a (10.36%), Minswap order-script UTXOs addr1z8p79r... x2 (0.13%), Solada curve addr1vx9qel...dqa4y leftover (0.02%). Top-1 5.85%, top-5 23.30%, top-10 38.36% of circ ex-pool (identical by stake key; no top wallets share a stake key). Launcher addr1qyzkcu...slnnq holds ~0.01%. 6h flow top-5: none sold; #3 (addr1qxw2z4…) +21.0T (~doubled), #2 +2.07T, #4 (addr1qxdj6w…) +0.97T, #1/#5 flat.",
+   "verdict": "Tiny lottery",
+   "kill": "Out if top-10 ex-pool crosses 40% or any top-5 wallet sells >50% of its bag into the ~$8.6k pool.",
+   "correction_note": "Corrected 2026-10-16 15:20 ET: +21.0T buyer is rank #3 (addr1qxw2z4…), +0.97T is rank #4 (addr1qxdj6w…)."
+  },
+  {
+   "timestamp": "2026-10-16T20:27:00-04:00",
+   "token": "HERO + FEED",
+   "check": "held-coin quick check (Bousky holds both)",
+   "findings": "Both Cardano-side Solada curves (no bridge risk), live ~1.2h, launched 24s apart (FEED 19:13 ET, HERO 19:13 ET), different launchers, holderShareBps 10000. FEED (00e049b5...0014df1046454544 'FEEd BabySNEK'): curve 78.1% (OPEN, crowned 19:38 ET), mcap 35.1k ADA (~CA$11.2k), vol 35.3k ADA (~CA$11.3k), 57 holders (/api/market), 184 trades; Koios 54 stake keys ex-curve, top-1 8.2%, top-3 21.3%, top-10 51.1% of circ ex-curve (37.8% of supply); 158 txs last 1h, 41 last 15m; curve net-absorbing (74% sold). HERO (47478467...0014df104845524f 'Guitar HERO'): curve 46.3% OPEN, mcap 18.2k ADA (~CA$5.8k), vol 19.2k ADA (~CA$6.1k), 32 holders, 120 trades; 33 stake keys ex-curve, top-1 10.4%, top-3 28.9%, top-10 62.5% ex-curve (38.0% of supply); 91 txs last 1h, 27 last 15m. 16 stake keys hold BOTH coins (same small crowd rotating between twin launches). X: no coin-specific posts found; only general Solada chatter. Buy/sell split per trade not decoded; net flow positive (curves rising).",
+   "verdict": "FEED: Watch (breadth OK, nearing graduation); HERO: Tiny lottery only (thin, top-10 62%)",
+   "kill": "FEED: out if holders stall <60 after graduation or any top-3 wallet dumps >50% into the new pool. HERO: out if holders <40 by 21:30 ET or curve progress falls below 40%."
+  },
+  {
+   "timestamp": "2026-10-16T21:55:00-04:00",
+   "token": "MONEY (Old money)",
+   "check": "Creator check: 'A tribute to the Art of Trix' / pump username WaveTrickyOval",
+   "findings": "{\"name\": \"Old money\", \"ticker\": \"MONEY\", \"pumpMint\": \"5aqUoHURRbdWm841TYu3R7xY4jzXboFDjBXuDrUkzZB7\", \"policyId\": \"f08643012d42ad0a1adb90a831789186cd26d4a7e52d735f7bcbaf15\", \"solada_live\": \"2026-10-16 21:28 ET\", \"chain\": \"Solana-side pump curve (USDC quote) via Solada\", \"mcap\": \"~$4.7k (DexScreener), 9 buys/5 sells, ~$665 vol first hour\", \"holderShareBps\": 5000} | WaveTrickyOval is the pump.fun auto-username of A1qaJWQDfC9T7AcSRNwfxgiJrHUzhpJ3f8qTDUMVVcXQ, which signed the CreateV2 tx. Same wallet created GPIG (another Solada launch from a different Cardano launcher) and has 1000+ txs since 2026-10-15: it is Solada's shared Solana deployer, not an individual dev. 'Popping coins' = every Solada Solana-side launch. Its MONEY flows (5.57M dev buy, then 10.92M/2.17M in/out to HCYvN1uk...) look like Solada bridge/escrow mechanics, not a dev dump. Real launcher: Cardano addr1q9h5w5rl...q0r70hn, 1 launch on Solada. Launch sniped by bots (sssss..., FZU56d9i, EYJYnVno). X: 0 results.",
+   "verdict": "Creator: platform deployer (not judgeable as a dev); real launcher unknown/first-time. Coin: Pass (micro, sniped, no socials). Bridge risk applies.",
+   "kill": "Holders/volume not building past ~$10k mcap by next run, or snipers exit."
+  },
+  {
+   "timestamp": "2026-10-16T22:45:00-04:00",
+   "token": "Solada board (cross-launch)",
+   "check": "Insider-loop / mini-cabal scan: repeat launchers, cross-launch early buyers (first 20 non-curve txs per coin, grouped by stake key, Blockfrost), funding links, X promo network",
+   "findings": "24 Cardano-side LIVE coins scanned (BEAST returned no asset txs). Repeat launchers by stake key: stake1u9quneqv (GPIG,ROBIN,ATM,404,RUG), stake1uypf403t (MARVIN,ADA,TRIPLET,AERIE,PROPERTY), stake1u9hpucfs (GENZ,CLOVE,PRIVACY,STABLE), stake1u8lezuxm (WOOD,SAD,BEAST), stake1u8w46s6e (MINT,GOLFY,TEST), stake1uxkr9stc (POFFY,PAWS), stake1u9rarrf7 (GOODCAT,PAYNODE); JUICE/FEED/HERO/DAVE/MONEY launchers single-launch. Cross-launch early buyers: 24 stake keys early in 3+ launches. Top: stake1u8a2m6 early in 14 (sold 8, est -325 ADA in window), stake1u978t4 early in 11 (sold 10, est -1.3k ADA), stake1u9w6dd early in 9 incl JUICE/FEED/HERO (sold 7, est +343 ADA; also launcher of CHARLAL), stake1uxqcj8 6 (FEED,HERO,HIVE,MISS,HOSKITO,CHARLETT), stake1u8ght8 6 (JUICE,FEED,HERO,GOLFY,PAWS,AERIE). LINKED (on-chain): stake1u978t4 first funded by cluster wallet stake1u8a2m6 (tx df107558...8294, 2026-10-14 19:26 ET); no direct transfers between them in u978t4's last 50 txs. No other common funders among top 10. Most cluster keys are early-in/early-out flippers with negative or small est. P&L, i.e., snipe bots rather than profitable insiders. Best performers (window-limited est.) are early BOLT/CLOVE/CORE/GOLFY/PAWS holders (stake1uyz05y ~+14.8k ADA across CORE/GOLFY/PAWS/CLOVE, still holding). X: no multi-ticker promo network; posts are single-coin launcher/community accounts (@CardanoJones JUICE, @daveonada1 DAVE, @FEEdBabySNEK FEED, @Charlette_ADA CHARLETT, @dgarza867 HERO). Bousky's stake not in cluster.",
+   "verdict": "Co-occurring snipe-bot cluster across launches (1 linked pair); no evidence of a coordinated launcher+buyer+promo insider loop. Confidence: medium-low (first 40 txs/coin only).",
+   "kill": "Upgrade to 'loop forming' if cluster keys (u8a2m6/u978t4/u9w6dd) appear in the first block of a new launch from a repeat-launcher stake, or launcher wallets fund cluster keys."
   }
  ]
 }

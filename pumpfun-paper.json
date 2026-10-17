@@ -1,252 +1,338 @@
 {
-  "schema_version": 1,
-  "desk": "Snek Sentinel",
-  "arm": "pump.fun comparison arm (mirrors solada-paper.json rules)",
-  "chain": "solana",
-  "launchpad": "pump.fun",
-  "disclaimer": "Paper trades only: research/lottery/NFA. No real execution, no wallet keys, no real sizing. Nothing here is a profit claim.",
-  "paper_ticket_ada_equivalent": 100,
-  "paper_ticket_sol": 0.21262,
-  "paper_ticket_conversion": {
-    "at": "2026-10-17T11:40:35-04:00",
-    "ada_usd": 0.220721,
-    "sol_usd": 103.81,
-    "ticket_usd": 22.0721,
-    "source": "api.coingecko.com simple/price",
-    "note": "Re-convert at each new ticket; existing tickets keep their entry conversion."
+ "schema_version": 1,
+ "desk": "Snek Sentinel",
+ "arm": "pump.fun comparison arm (mirrors solada-paper.json rules)",
+ "chain": "solana",
+ "launchpad": "pump.fun",
+ "disclaimer": "Paper trades only: research/lottery/NFA. No real execution, no wallet keys, no real sizing. Nothing here is a profit claim.",
+ "paper_ticket_ada_equivalent": 100,
+ "paper_ticket_sol": 0.21262,
+ "paper_ticket_conversion": {
+  "at": "2026-10-17T11:40:35-04:00",
+  "ada_usd": 0.220721,
+  "sol_usd": 103.81,
+  "ticket_usd": 22.0721,
+  "source": "api.coingecko.com simple/price",
+  "note": "Re-convert at each new ticket; existing tickets keep their entry conversion."
+ },
+ "default_window_hours": 48,
+ "levels": {
+  "1": "Pass/ignore",
+  "2": "Tiny lottery only",
+  "3": "Watch: lots of holders early that stick through first dip",
+  "4": "High-conviction lottery: L3 + cross-platform/bigger accounts, improving SOL-side pool, holder growth through first dip, prior similar shapes worked in paper book"
+ },
+ "thresholds": {
+  "status": "initial guesses, to be learned from the paper book; revise only with a dated rule entry",
+  "scale_note": "Pump.fun runs ~5-15x Solada's holder counts and ~4-8x its pool depth in USD terms; thresholds scaled accordingly.",
+  "L3": {
+   "holders_min": 1500,
+   "pool_quote_sol_min": 200,
+   "top10_ex_pool_pct_max": 25,
+   "top1_ex_pool_pct_max": 5,
+   "flagged_sniper_bundler_pct_max": 5,
+   "first_block_bundle_pct_max": 20,
+   "liq_to_mcap_pct_min": 5,
+   "mcap_usd_min": 100000,
+   "age_hours_min": 2,
+   "flow": "h6 buys > sells AND h1 buys >= sells",
+   "first_fade": "has had a >=30% pullback from post-graduation high, price still >=40% of that high, holders not bleeding (>=-3% vs prior snapshot)"
   },
-  "default_window_hours": 48,
-  "levels": {
-    "1": "Pass/ignore",
-    "2": "Tiny lottery only",
-    "3": "Watch: lots of holders early that stick through first dip",
-    "4": "High-conviction lottery: L3 + cross-platform/bigger accounts, improving SOL-side pool, holder growth through first dip, prior similar shapes worked in paper book"
+  "L2": {
+   "holders_min": 500,
+   "pool_quote_sol_min": 85,
+   "top10_ex_pool_pct_max": 35,
+   "flow": "h6 buys > sells"
   },
-  "thresholds": {
-    "status": "initial guesses, to be learned from the paper book; revise only with a dated rule entry",
-    "scale_note": "Pump.fun runs ~5-15x Solada's holder counts and ~4-8x its pool depth in USD terms; thresholds scaled accordingly.",
-    "L3": {
-      "holders_min": 1500,
-      "pool_quote_sol_min": 200,
-      "top10_ex_pool_pct_max": 25,
-      "top1_ex_pool_pct_max": 5,
-      "flagged_sniper_bundler_pct_max": 5,
-      "first_block_bundle_pct_max": 20,
-      "liq_to_mcap_pct_min": 5,
-      "mcap_usd_min": 100000,
-      "age_hours_min": 2,
-      "flow": "h6 buys > sells AND h1 buys >= sells",
-      "first_fade": "has had a >=30% pullback from post-graduation high, price still >=40% of that high, holders not bleeding (>=-3% vs prior snapshot)"
-    },
-    "L2": {
-      "holders_min": 500,
-      "pool_quote_sol_min": 85,
-      "top10_ex_pool_pct_max": 35,
-      "flow": "h6 buys > sells"
-    },
-    "farm_filter_L1": "Any of: >=10 identical balances among pump.fun top-50; GeckoTerminal holder count <10% of pump.fun count (or vice versa); liq/mcap <2%; h6 buy:sell count >5:1 with sub-$1 fills; clone txn counts across tickers => Pass (sybil/wash).",
-    "kill_line_default": "mcap -30% from entry OR holders -10% from entry OR pool quote side -30% from entry OR full exit by any identified first-block sniper/bundler wallet",
-    "selection": "5-10 names per run (recent graduates/near-graduates + GeckoTerminal/pump.fun trending); paper-trade L3+ plus the run's strongest L2; max 2 new tickets per run; no duplicates (one open ticket per mint)."
+  "farm_filter_L1": "Any of: >=10 identical balances among pump.fun top-50; GeckoTerminal holder count <10% of pump.fun count (or vice versa); liq/mcap <2%; h6 buy:sell count >5:1 with sub-$1 fills; clone txn counts across tickers => Pass (sybil/wash).",
+  "kill_line_default": "mcap -30% from entry OR holders -10% from entry OR pool quote side -30% from entry OR full exit by any identified first-block sniper/bundler wallet",
+  "selection": "5-10 names per run (recent graduates/near-graduates + GeckoTerminal/pump.fun trending); paper-trade L3+ plus the run's strongest L2; max 2 new tickets per run; no duplicates (one open ticket per mint)."
+ },
+ "open": [
+  {
+   "id": "FTR-DFMt-20261017-1340",
+   "ticker": "FTR",
+   "name": "Flying Tesla Roadster",
+   "side": "solana",
+   "launchpad": "pump.fun",
+   "mint": "DFMt2FyLpB6ekPNAzVErLXgpSnJ9CRf1VnxBAkTLpump",
+   "pool": "Fk5MuGv2H3Qpt6AxdhS2KHgDL2os424BvfEoqFNTdv9Y",
+   "pool_dex": "pumpswap",
+   "opened_at": "2026-10-17T13:40:00-04:00",
+   "window_ends_at": "2026-10-19T13:40:00-04:00",
+   "ticket_ada_equivalent": 100,
+   "ticket_sol": 0.21267,
+   "ticket_conversion": {
+    "at": "2026-10-17T13:20:00-04:00",
+    "ada_usd": 0.219325,
+    "sol_usd": 103.13,
+    "source": "api.coingecko.com simple/price"
+   },
+   "level": 2,
+   "entry": {
+    "mcap_usd": 3263556,
+    "price_usd": 0.003396,
+    "price_sol": 3.291e-05,
+    "holders": 18434,
+    "pool_quote_sol": 1108.4,
+    "paper_qty_tokens": 6462
+   },
+   "thesis_signals": [
+    "Strongest L2 of run: 18,434 pump.fun holders (GeckoTerminal 18,924, counts agree), 63h old original FTR",
+    "Survived first fade: high ~$7.4M (Oct 16 1 AM ET), low ~30% of high, now ~45% of high and recovering",
+    "h6 4,556 buys/3,686 sells (+6.6%), h1 615/490; liq ~$231k (~7% of mcap), pool quote ~1,108 SOL",
+    "Helius: top-10 ex-pool 14.4%, top-1 ex-pool 2.54%; pump.fun flags 0 snipers/bundlers/dev in top-50"
+   ],
+   "not_l3_because": "No prior holder snapshot to prove holders aren't bleeding through the fade (rule a); first-block check unresolved; several FTR clones (72xN farm-like, 5x6Q) trading at the same time",
+   "stop": {
+    "text": "mcap < $2.28M or holders < 16,590 or pool quote < 776 SOL",
+    "mcap_usd_below": 2284000,
+    "holders_below": 16590,
+    "pool_quote_sol_below": 776
+   },
+   "first_block_check": "unresolved: creator's latest 200 signatures don't reach the create time (16 credits used); pump.fun flags clean",
+   "custody": "SPL token, non-custodial (own Solana wallet); no Solada bridge involved",
+   "status": "open"
+  }
+ ],
+ "closed": [
+  {
+   "id": "CyberAxe-20261017-1141",
+   "ticker": "CyberAxe",
+   "side": "solana",
+   "launchpad": "pump.fun",
+   "mint": "2Srf6mhufzWJKZ5nniVXgwamLmDJWXPQBmddJ1MMpump",
+   "pool": "AJE7eWHJMBjvwib78dGwS8iZxb7bGx7NXLZVXX6xMHn6",
+   "pool_dex": "pumpswap",
+   "opened_at": "2026-10-17T11:41:00-04:00",
+   "window_ends_at": "2026-10-19T11:41:00-04:00",
+   "ticket_ada_equivalent": 100,
+   "ticket_sol": 0.21262,
+   "level": 2,
+   "entry": {
+    "mcap_usd": 714092,
+    "mcap_sol": 6879,
+    "mcap_ada_equiv": 3235270,
+    "price_usd": 0.0007303,
+    "price_sol": 7.04e-06,
+    "holders": 1512,
+    "pool_quote_sol": 410.2,
+    "paper_qty_tokens": 30202
+   },
+   "thesis_signals": [
+    "Strongest L2 of run: holders grew 1,386 -> 1,512 (+9%) between 11:35 and 11:40 while price rose (not flat-holder pump, rule h ok)",
+    "h1 2,809 buys / 2,110 sells; h6 2,926 / 2,223; pool quote ~410 SOL",
+    "top-10 ex-pool 23.3%, top-1 ex-pool 3.82% (DFZYHa...), pump.fun flags 0 snipers/bundlers/dev in top-50",
+    "Not L3: +1,271% h1 reactivation spike on a 66h-old coin that had bled ~60%; no first fade survived yet (rule a)"
+   ],
+   "stop": {
+    "text": "mcap < $500k or holders < 1,360 or pool quote side < 287 SOL",
+    "mcap_usd_below": 500000,
+    "holders_below": 1360,
+    "pool_quote_sol_below": 287,
+    "wallet_watch": "DFZYHaTZiRFWo23q5NQZCBTxXGZi36ZwVNP62iyB2Vmj (top-1 ex-pool, 3.82%): note if it exits (watch, not kill)"
+   },
+   "first_block_check": "not resolved within credit budget (3 sig pages reached +3s after create); pump.fun flags show 0 snipers/bundlers in current top-50",
+   "custody": "SPL token, non-custodial (paper only)",
+   "status": "closed",
+   "closed_at": "2026-10-17T13:20:00-04:00",
+   "exit": {
+    "mcap_usd": 484911,
+    "price_usd": 0.0004959,
+    "price_sol": 4.806e-06,
+    "holders": 1710,
+    "pool_quote_sol": 329.66,
+    "source": "DexScreener pumpswap pair; pump.fun top-holders"
+   },
+   "exit_reason": "Kill line hit: mcap $485k < $500k stop. Holders (1,710) and pool quote (330 SOL) were still above their lines.",
+   "pct_change": -31.7,
+   "paper_pnl_ada_equiv": -31.7,
+   "signal_review": {
+    "worked": [
+     "Holder growth was real: 1,512 -> 1,710 (+13%)",
+     "No sniper/bundler flags; pool stayed >287 SOL"
+    ],
+    "failed": [
+     "Reactivation spike (+1,271% h1 on a 66h coin) faded: h1 -20.7%, flow flipped to 1,055 buys/1,068 sells",
+     "No first fade survived before entry (rule a was the warning)"
+    ]
+   },
+   "rules_applied": [
+    "pf-l"
+   ]
+  }
+ ],
+ "rules": [
+  {
+   "id": "a",
+   "added_at": "2026-10-17T11:41:00-04:00",
+   "rule": "Watch (L3) needs early holder density that holds through the first fade (>=1,500 holders after a >=30% pullback, no holder bleed); an mcap spike alone isn't enough.",
+   "source": "mirrored from solada-paper.json"
   },
-  "open": [
+  {
+   "id": "f",
+   "added_at": "2026-10-17T11:41:00-04:00",
+   "rule": "Graduation alone isn't a signal; on Pump.fun most graduates bleed or are farmed. Score the post-migration PumpSwap pool, not the graduation event.",
+   "source": "mirrored from solada-paper.json"
+  },
+  {
+   "id": "h",
+   "added_at": "2026-10-17T11:41:00-04:00",
+   "rule": "Price rising with flat holders = Tiny lottery (L2) at best.",
+   "source": "mirrored from solada-paper.json"
+  },
+  {
+   "id": "i",
+   "added_at": "2026-10-17T11:41:00-04:00",
+   "rule": "First-block snipers/bundles (same-slot-as-create buyers, or pump.fun isSniper/isBundler flags) = rotation risk; >20% of supply bought in the create slot caps the name at L2.",
+   "source": "mirrored from solada-paper.json"
+  },
+  {
+   "id": "j",
+   "added_at": "2026-10-17T11:41:00-04:00",
+   "rule": "First-block sniper/bundle full exit = kill trigger; if already hit before entry, no ticket (a paper entry shouldn't open below its own kill line).",
+   "source": "mirrored from solada-paper.json; FTR 5x6Q Oct 17"
+  },
+  {
+   "id": "k",
+   "added_at": "2026-10-17T11:41:00-04:00",
+   "rule": "Paper tickets need a meaningful holder base (>=500 L2 / >=1,500 L3), pool depth (>=85 / >=200 SOL quote side) and buys > sells over h6 (and h1 for L3). Names with h6 price down >40% are Pass regardless of 24h headline gains.",
+   "source": "mirrored from solada-paper.json, scaled to Pump.fun"
+  },
+  {
+   "id": "pf1",
+   "added_at": "2026-10-17T11:41:00-04:00",
+   "rule": "Sybil/wash farm filter: identical balances across many top holders, holder-count mismatch between sources, liq/mcap <2% or lopsided tiny-fill buy counts = Pass. RST, TRUTH, SARP (and GDF/XBC/GOIF/DNA/UDTF/FTR-fire clones) showed this on Oct 17.",
+   "source": "run 2026-10-17 11:41"
+  },
+  {
+   "id": "pf2",
+   "added_at": "2026-10-17T11:41:00-04:00",
+   "rule": "Copycat tickers (several FTR mints live) mark peak attention for the original; don't ticket a copy because the original ran.",
+   "source": "run 2026-10-17 11:41"
+  },
+  {
+   "id": "pf-l",
+   "added_at": "2026-10-17T13:45:00-04:00",
+   "rule": "Reactivation spikes don't qualify even as the strongest L2: CyberAxe (+1,271% h1 on a 66h coin) hit its kill within ~2h (-31.7%) even though holders rose 1,512 -> 1,710. Require one full hourly candle holding above the spike's midpoint before ticketing.",
+   "source": "CyberAxe-20261017-1141 close"
+  }
+ ],
+ "summaries": [
+  {
+   "at": "2026-10-17T11:41:00-04:00",
+   "type": "run",
+   "note": "First Pump.fun arm scan. 10 names checked, 0 qualified for L3. Opened 1 L2 paper ticket (CyberAxe, strongest L2). Research/lottery/NFA.",
+   "data_sources": [
+    "frontend-api-v3.pump.fun/coins (complete=true, currently-live), /coins/top-holders/<mint>",
+    "api.dexscreener.com/tokens/v1/solana/<mints>",
+    "api.geckoterminal.com networks/solana trending_pools, dexes/pumpswap/pools, tokens/<mint>/info, pools/<pool>/ohlcv/hour",
+    "Helius RPC: getTokenSupply, getTokenLargestAccounts, getMultipleAccounts, getSignaturesForAddress, getBlock, getTokenAccountsByOwner",
+    "api.coingecko.com simple/price (ADA, SOL)"
+   ],
+   "helius_usage": {
+    "requests": 40,
+    "credits_estimate": "~50 at 1-credit archival pricing, 166 worst-case at 10-credit archival pricing"
+   },
+   "candidates": [
     {
-      "id": "CyberAxe-20261017-1141",
-      "ticker": "CyberAxe",
-      "side": "solana",
-      "launchpad": "pump.fun",
-      "mint": "2Srf6mhufzWJKZ5nniVXgwamLmDJWXPQBmddJ1MMpump",
-      "pool": "AJE7eWHJMBjvwib78dGwS8iZxb7bGx7NXLZVXX6xMHn6",
-      "pool_dex": "pumpswap",
-      "opened_at": "2026-10-17T11:41:00-04:00",
-      "window_ends_at": "2026-10-19T11:41:00-04:00",
-      "ticket_ada_equivalent": 100,
-      "ticket_sol": 0.21262,
-      "level": 2,
-      "entry": {
-        "mcap_usd": 714092,
-        "mcap_sol": 6879,
-        "mcap_ada_equiv": 3235270,
-        "price_usd": 0.0007303,
-        "price_sol": 7.04e-06,
-        "holders": 1512,
-        "pool_quote_sol": 410.2,
-        "paper_qty_tokens": 30202
-      },
-      "thesis_signals": [
-        "Strongest L2 of run: holders grew 1,386 -> 1,512 (+9%) between 11:35 and 11:40 while price rose (not flat-holder pump, rule h ok)",
-        "h1 2,809 buys / 2,110 sells; h6 2,926 / 2,223; pool quote ~410 SOL",
-        "top-10 ex-pool 23.3%, top-1 ex-pool 3.82% (DFZYHa...), pump.fun flags 0 snipers/bundlers/dev in top-50",
-        "Not L3: +1,271% h1 reactivation spike on a 66h-old coin that had bled ~60%; no first fade survived yet (rule a)"
-      ],
-      "stop": {
-        "text": "mcap < $500k or holders < 1,360 or pool quote side < 287 SOL",
-        "mcap_usd_below": 500000,
-        "holders_below": 1360,
-        "pool_quote_sol_below": 287,
-        "wallet_watch": "DFZYHaTZiRFWo23q5NQZCBTxXGZi36ZwVNP62iyB2Vmj (top-1 ex-pool, 3.82%): note if it exits (watch, not kill)"
-      },
-      "first_block_check": "not resolved within credit budget (3 sig pages reached +3s after create); pump.fun flags show 0 snipers/bundlers in current top-50",
-      "custody": "SPL token, non-custodial (paper only)",
-      "status": "open"
+     "ticker": "RST",
+     "mint": "6zxrymdprDZ1TCWozKsejGWRKRrqsgmPm64fffhzpump",
+     "mcap_usd": 165451368,
+     "holders": 2711,
+     "pool_quote_sol": 5273,
+     "level": 1,
+     "reason": "Farm: 49/50 top holders at ~498k identical balances, liq/mcap 0.7%, h6 6,530 buys / 390 sells (rule pf1)."
+    },
+    {
+     "ticker": "TRUTH",
+     "mint": "DRSMWUgnjZmftF7icdvkfoiU1nf39iUHPuuDny9kpump",
+     "mcap_usd": 11806660,
+     "holders": 2202,
+     "pool_quote_sol": 1398,
+     "level": 1,
+     "reason": "Farm: identical ~491k balances, h6 14,767 buys / 220 sells (rule pf1)."
+    },
+    {
+     "ticker": "SARP",
+     "mint": "13zvx81TFdEGRmaqjCAiF17gDcMfHssLuHbKEK74pump",
+     "mcap_usd": 6024072,
+     "holders": "4,033 pump.fun vs 27 GeckoTerminal",
+     "pool_quote_sol": 996,
+     "level": 1,
+     "reason": "Farm: identical balances, GT top-10 100%, $0.02 dust buys (rule pf1)."
+    },
+    {
+     "ticker": "Eternia",
+     "mint": "CY27QvCQBCmLBuz3V7c8snEeD4z67iyoSTkwo35Ypump",
+     "mcap_usd": 919257,
+     "holders": 470,
+     "pool_quote_sol": 473,
+     "top10_ex_pool_pct": 7.9,
+     "level": 1,
+     "reason": "h6 -75%, ~79% below $4.33M ATH, only 470 holders vs 51k trades/24h (rule k)."
+    },
+    {
+     "ticker": "FTR",
+     "mint": "5x6QQvpRpd1PsFTTTJe6sJFFSqrA21H1j3GZLmo2pump",
+     "mcap_usd": 1044704,
+     "holders": 8734,
+     "pool_quote_sol": 435,
+     "top10_ex_pool_pct": 2.0,
+     "level": 2,
+     "reason": "Helius: create, buys and PumpSwap migration all in slot 457733476 (bundled launch, ~80% of supply to ~19 wallets); top-7 bundle wallets now hold 0% -> rule j kill already hit, no ticket. Holders flat while h6 +57% (rule h). Copycat of FTR DFMt (rule pf2)."
+    },
+    {
+     "ticker": "MAKERS",
+     "mint": "3XEqNHe3jHTRWAZCTHbb1UwpSfNbJL9oU1ErsM86pump",
+     "mcap_usd": 410258,
+     "holders": 2099,
+     "pool_quote_sol": 275,
+     "top10_ex_pool_pct": 30.4,
+     "level": 2,
+     "reason": "Fade held at ~60% of high but top-1 ex-pool 11.0% (6mLfJY...) and top-10 30% exceed L3 caps; holders slipping 2,123->2,099; 1 bundler flag (0.49%)."
+    },
+    {
+     "ticker": "CyberAxe",
+     "mint": "2Srf6mhufzWJKZ5nniVXgwamLmDJWXPQBmddJ1MMpump",
+     "mcap_usd": 714092,
+     "holders": 1512,
+     "pool_quote_sol": 410,
+     "top10_ex_pool_pct": 23.3,
+     "level": 2,
+     "reason": "Strongest L2: holder growth with price, buys > sells; spike without a survived fade keeps it below L3. TICKET OPENED."
+    },
+    {
+     "ticker": "Kavantissa",
+     "mint": "7VzWURCfosjxvT7KKM9gib5CzqnCg4vKU2UobGp3pump",
+     "mcap_usd": 110445,
+     "holders": 1275,
+     "pool_quote_sol": 134,
+     "top10_ex_pool_pct": 22.1,
+     "level": 2,
+     "reason": "Below L3 holder (1,500) and pool (200 SOL) floors; 1 flagged sniper at 1.56%."
+    },
+    {
+     "ticker": "索拉纳",
+     "mint": "FeSqDFg1vMsB7dsWXE3UWURwUVksJArWWWynnhgiaaQ6",
+     "mcap_usd": 256751,
+     "holders": 3466,
+     "pool_quote_sol": 226,
+     "top10_ex_pool_pct": 18.9,
+     "level": 1,
+     "reason": "Failing first fade live: ~70% below $859k ATH (below the 40% floor), h1 -62%, holders bleeding 3,641->3,466 in ~6 min; 2 bundler flags (1.3%)."
     }
-  ],
-  "closed": [],
-  "rules": [
-    {
-      "id": "a",
-      "added_at": "2026-10-17T11:41:00-04:00",
-      "rule": "Watch (L3) needs early holder density that holds through the first fade (>=1,500 holders after a >=30% pullback, no holder bleed); an mcap spike alone isn't enough.",
-      "source": "mirrored from solada-paper.json"
-    },
-    {
-      "id": "f",
-      "added_at": "2026-10-17T11:41:00-04:00",
-      "rule": "Graduation alone isn't a signal; on Pump.fun most graduates bleed or are farmed. Score the post-migration PumpSwap pool, not the graduation event.",
-      "source": "mirrored from solada-paper.json"
-    },
-    {
-      "id": "h",
-      "added_at": "2026-10-17T11:41:00-04:00",
-      "rule": "Price rising with flat holders = Tiny lottery (L2) at best.",
-      "source": "mirrored from solada-paper.json"
-    },
-    {
-      "id": "i",
-      "added_at": "2026-10-17T11:41:00-04:00",
-      "rule": "First-block snipers/bundles (same-slot-as-create buyers, or pump.fun isSniper/isBundler flags) = rotation risk; >20% of supply bought in the create slot caps the name at L2.",
-      "source": "mirrored from solada-paper.json"
-    },
-    {
-      "id": "j",
-      "added_at": "2026-10-17T11:41:00-04:00",
-      "rule": "First-block sniper/bundle full exit = kill trigger; if already hit before entry, no ticket (a paper entry shouldn't open below its own kill line).",
-      "source": "mirrored from solada-paper.json; FTR 5x6Q Oct 17"
-    },
-    {
-      "id": "k",
-      "added_at": "2026-10-17T11:41:00-04:00",
-      "rule": "Paper tickets need a meaningful holder base (>=500 L2 / >=1,500 L3), pool depth (>=85 / >=200 SOL quote side) and buys > sells over h6 (and h1 for L3). Names with h6 price down >40% are Pass regardless of 24h headline gains.",
-      "source": "mirrored from solada-paper.json, scaled to Pump.fun"
-    },
-    {
-      "id": "pf1",
-      "added_at": "2026-10-17T11:41:00-04:00",
-      "rule": "Sybil/wash farm filter: identical balances across many top holders, holder-count mismatch between sources, liq/mcap <2% or lopsided tiny-fill buy counts = Pass. RST, TRUTH, SARP (and GDF/XBC/GOIF/DNA/UDTF/FTR-fire clones) showed this on Oct 17.",
-      "source": "run 2026-10-17 11:41"
-    },
-    {
-      "id": "pf2",
-      "added_at": "2026-10-17T11:41:00-04:00",
-      "rule": "Copycat tickers (several FTR mints live) mark peak attention for the original; don't ticket a copy because the original ran.",
-      "source": "run 2026-10-17 11:41"
-    }
-  ],
-  "summaries": [
-    {
-      "at": "2026-10-17T11:41:00-04:00",
-      "type": "run",
-      "note": "First Pump.fun arm scan. 10 names checked, 0 qualified for L3. Opened 1 L2 paper ticket (CyberAxe, strongest L2). Research/lottery/NFA.",
-      "data_sources": [
-        "frontend-api-v3.pump.fun/coins (complete=true, currently-live), /coins/top-holders/<mint>",
-        "api.dexscreener.com/tokens/v1/solana/<mints>",
-        "api.geckoterminal.com networks/solana trending_pools, dexes/pumpswap/pools, tokens/<mint>/info, pools/<pool>/ohlcv/hour",
-        "Helius RPC: getTokenSupply, getTokenLargestAccounts, getMultipleAccounts, getSignaturesForAddress, getBlock, getTokenAccountsByOwner",
-        "api.coingecko.com simple/price (ADA, SOL)"
-      ],
-      "helius_usage": {
-        "requests": 40,
-        "credits_estimate": "~50 at 1-credit archival pricing, 166 worst-case at 10-credit archival pricing"
-      },
-      "candidates": [
-        {
-          "ticker": "RST",
-          "mint": "6zxrymdprDZ1TCWozKsejGWRKRrqsgmPm64fffhzpump",
-          "mcap_usd": 165451368,
-          "holders": 2711,
-          "pool_quote_sol": 5273,
-          "level": 1,
-          "reason": "Farm: 49/50 top holders at ~498k identical balances, liq/mcap 0.7%, h6 6,530 buys / 390 sells (rule pf1)."
-        },
-        {
-          "ticker": "TRUTH",
-          "mint": "DRSMWUgnjZmftF7icdvkfoiU1nf39iUHPuuDny9kpump",
-          "mcap_usd": 11806660,
-          "holders": 2202,
-          "pool_quote_sol": 1398,
-          "level": 1,
-          "reason": "Farm: identical ~491k balances, h6 14,767 buys / 220 sells (rule pf1)."
-        },
-        {
-          "ticker": "SARP",
-          "mint": "13zvx81TFdEGRmaqjCAiF17gDcMfHssLuHbKEK74pump",
-          "mcap_usd": 6024072,
-          "holders": "4,033 pump.fun vs 27 GeckoTerminal",
-          "pool_quote_sol": 996,
-          "level": 1,
-          "reason": "Farm: identical balances, GT top-10 100%, $0.02 dust buys (rule pf1)."
-        },
-        {
-          "ticker": "Eternia",
-          "mint": "CY27QvCQBCmLBuz3V7c8snEeD4z67iyoSTkwo35Ypump",
-          "mcap_usd": 919257,
-          "holders": 470,
-          "pool_quote_sol": 473,
-          "top10_ex_pool_pct": 7.9,
-          "level": 1,
-          "reason": "h6 -75%, ~79% below $4.33M ATH, only 470 holders vs 51k trades/24h (rule k)."
-        },
-        {
-          "ticker": "FTR",
-          "mint": "5x6QQvpRpd1PsFTTTJe6sJFFSqrA21H1j3GZLmo2pump",
-          "mcap_usd": 1044704,
-          "holders": 8734,
-          "pool_quote_sol": 435,
-          "top10_ex_pool_pct": 2.0,
-          "level": 2,
-          "reason": "Helius: create, buys and PumpSwap migration all in slot 457733476 (bundled launch, ~80% of supply to ~19 wallets); top-7 bundle wallets now hold 0% -> rule j kill already hit, no ticket. Holders flat while h6 +57% (rule h). Copycat of FTR DFMt (rule pf2)."
-        },
-        {
-          "ticker": "MAKERS",
-          "mint": "3XEqNHe3jHTRWAZCTHbb1UwpSfNbJL9oU1ErsM86pump",
-          "mcap_usd": 410258,
-          "holders": 2099,
-          "pool_quote_sol": 275,
-          "top10_ex_pool_pct": 30.4,
-          "level": 2,
-          "reason": "Fade held at ~60% of high but top-1 ex-pool 11.0% (6mLfJY...) and top-10 30% exceed L3 caps; holders slipping 2,123->2,099; 1 bundler flag (0.49%)."
-        },
-        {
-          "ticker": "CyberAxe",
-          "mint": "2Srf6mhufzWJKZ5nniVXgwamLmDJWXPQBmddJ1MMpump",
-          "mcap_usd": 714092,
-          "holders": 1512,
-          "pool_quote_sol": 410,
-          "top10_ex_pool_pct": 23.3,
-          "level": 2,
-          "reason": "Strongest L2: holder growth with price, buys > sells; spike without a survived fade keeps it below L3. TICKET OPENED."
-        },
-        {
-          "ticker": "Kavantissa",
-          "mint": "7VzWURCfosjxvT7KKM9gib5CzqnCg4vKU2UobGp3pump",
-          "mcap_usd": 110445,
-          "holders": 1275,
-          "pool_quote_sol": 134,
-          "top10_ex_pool_pct": 22.1,
-          "level": 2,
-          "reason": "Below L3 holder (1,500) and pool (200 SOL) floors; 1 flagged sniper at 1.56%."
-        },
-        {
-          "ticker": "索拉纳",
-          "mint": "FeSqDFg1vMsB7dsWXE3UWURwUVksJArWWWynnhgiaaQ6",
-          "mcap_usd": 256751,
-          "holders": 3466,
-          "pool_quote_sol": 226,
-          "top10_ex_pool_pct": 18.9,
-          "level": 1,
-          "reason": "Failing first fade live: ~70% below $859k ATH (below the 40% floor), h1 -62%, holders bleeding 3,641->3,466 in ~6 min; 2 bundler flags (1.3%)."
-        }
-      ],
-      "vs_solada": "Solada book: BOLT L3 (530k ADA mcap, 277 holders, ~35k ADA pool side) + CLOVE L3 (315k ADA, 125 holders). Pump.fun arm: 1 L2 (CyberAxe ~3.24M ADA-equiv mcap, 1,512 holders, ~410 SOL = ~193k ADA-equiv pool side). Pump.fun names carry ~5-12x the holders and ~5x the pool depth but none passed the L3 fade test; 3 of 10 sampled were sybil farms, a failure mode not seen on Solada."
-    }
-  ]
+   ],
+   "vs_solada": "Solada book: BOLT L3 (530k ADA mcap, 277 holders, ~35k ADA pool side) + CLOVE L3 (315k ADA, 125 holders). Pump.fun arm: 1 L2 (CyberAxe ~3.24M ADA-equiv mcap, 1,512 holders, ~410 SOL = ~193k ADA-equiv pool side). Pump.fun names carry ~5-12x the holders and ~5x the pool depth but none passed the L3 fade test; 3 of 10 sampled were sybil farms, a failure mode not seen on Solada."
+  },
+  {
+   "at": "2026-10-17T13:45:00-04:00",
+   "type": "run",
+   "note": "Closed CyberAxe at its $500k kill (-31.7%). Opened FTR (DFMt...pump) as strongest L2 at $3.26M. Farms dropped: ARF, XTO (3rF2), RCSC (49 identical top-50 balances); USDF, ADP, GDF, UER, ATFS (buys >20:1); USWR/SOS/NOS/XTO-ky3P (cloned txn counts). VEIL and swordcat L2, no ticket. Research/lottery/NFA.",
+   "helius_usage": {
+    "requests": 7,
+    "credits_estimate": "~16-25"
+   }
+  }
+ ]
 }
