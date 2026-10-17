@@ -92,6 +92,68 @@
    },
    "first_block_check": "unresolved: creator's latest 200 signatures don't reach the create time (16 credits used); pump.fun flags clean",
    "custody": "SPL token, non-custodial (own Solana wallet); no Solada bridge involved",
+   "status": "open",
+   "marks": [
+    {
+     "at": "2026-10-17T15:30:00-04:00",
+     "mcap_usd": 2722875,
+     "price_usd": 0.002833,
+     "price_sol": 2.726e-05,
+     "holders": 18111,
+     "pool_quote_sol": 1007.4,
+     "pct_vs_entry_mcap": -16.6,
+     "pct_vs_entry_price_sol": -17.2,
+     "top10_ex_pool": 14.2,
+     "top1_ex_pool": 2.44,
+     "flags_top50": 0,
+     "flow": "DexScreener h1 905/226, h6 4,645/3,353; price h1 -3.6%, h6 +13.4%, h24 -21.2%",
+     "note": "Above every kill line: mcap $2.72M vs $2.28M, holders 18,111 vs 16,590, pool 1,007 SOL vs 776. h1 buys:sells is 4:1, but the average h6 fill is ~$96, so no farm flag."
+    }
+   ]
+  },
+  {
+   "id": "swordcat-5tCj-20261017-1530",
+   "ticker": "swordcat",
+   "name": "swordcat",
+   "side": "solana",
+   "launchpad": "pump.fun",
+   "mint": "5tCju6YNxHq5zrA6tGndr6F7TK42mpUFmeE31cSFpump",
+   "pool": "8ewuF2o8ACro7fqWepZ3tKhkbBjndZU4Ldk9scRPw83d",
+   "pool_dex": "pumpswap",
+   "opened_at": "2026-10-17T15:30:00-04:00",
+   "window_ends_at": "2026-10-19T15:30:00-04:00",
+   "ticket_ada_equivalent": 100,
+   "ticket_sol": 0.21366,
+   "ticket_conversion": {
+    "at": "2026-10-17T15:30:00-04:00",
+    "ada_usd": 0.22197,
+    "sol_usd": 103.89,
+    "source": "api.coingecko.com simple/price"
+   },
+   "level": 2,
+   "entry": {
+    "mcap_usd": 2399084,
+    "price_usd": 0.002499,
+    "price_sol": 2.405e-05,
+    "holders": 9939,
+    "pool_quote_sol": 1005.4,
+    "paper_qty_tokens": 8882
+   },
+   "thesis_signals": [
+    "Strongest L2 of the run: 9,939 pump.fun holders, pool ~1,005 SOL, liq ~8.8% of mcap, coin is 19 days old",
+    "Steady grind with no spike: hourly closes ~$1.80-2.60e-3 over 48h, h6 +19%, h24 +28% (pf-l doesn't apply)",
+    "Top-10 ex-pool 21.7%, top-1 ex-pool 3.67% on pump.fun (Helius largest accounts: ~20.6% / 2.86% by token account); 0 sniper/bundler/dev flags in top-50, no identical-balance cluster",
+    "Flow: DexScreener h6 933/909, GeckoTerminal h6 2,811/1,782"
+   ],
+   "not_l3_because": "No prior holder snapshot to show holders aren't bleeding; the first-fade test can't be checked inside the 48h of OHLCV pulled; DexScreener h1 376/403 has sells > buys (L3 needs h1 buys >= sells); first-block check unresolved",
+   "stop": {
+    "text": "mcap < $1.68M or holders < 8,945 or pool quote < 704 SOL (default -30%/-10%/-30%)",
+    "mcap_usd_below": 1679000,
+    "holders_below": 8945,
+    "pool_quote_sol_below": 704
+   },
+   "first_block_check": "unresolved (19-day-old coin, not worth the archival credits); pump.fun flags clean; Helius 2 requests",
+   "custody": "SPL token, non-custodial (own Solana wallet); no Solada bridge involved",
    "status": "open"
   }
  ],
@@ -332,6 +394,15 @@
    "helius_usage": {
     "requests": 7,
     "credits_estimate": "~16-25"
+   }
+  },
+  {
+   "at": "2026-10-17T15:30:00-04:00",
+   "type": "run",
+   "note": "Ad-hoc run. FTR marked -16.6% ($2.72M, 18,111 holders, 1,007 SOL), still open. Opened swordcat (5tCj...pump) as the strongest L2 at $2.40M. L2, no ticket: HeyGrok (graduated 1:13 PM, +502% h6, fails pf-l because the 2 PM candle low 171 sat under the ~285 spike midpoint; TG caller promo); hi (+294% h6 reactivation, h1 sells > buys, pf-l); JEANPHIL (19.4k holders, 1,946 SOL, but h1 65/81 and flat); VEIL (h6 -24.6%, h24 -55.6%). L1: SI276 (h6 6,349/2,365 buys with price -14% at ~$5 average fills, wash-like); MAKERS, Kavantissa, 索拉纳 (h6 -73% to -79%, rule k). CLAUDIA skipped: the DexScreener pump mint was a dead 46-holder clone. No trade closed, no rule changes. Research/lottery/NFA.",
+   "helius_usage": {
+    "requests": 2,
+    "credits_estimate": "~2"
    }
   }
  ]
