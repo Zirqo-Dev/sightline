@@ -10,7 +10,65 @@
     "3": "Watch: lots of holders early that stick through first dip",
     "4": "High-conviction lottery: L3 + cross-chain/bigger accounts, improving ADA-side pool, holder growth through first dip, prior similar shapes worked in paper book"
   },
-  "open": [],
+  "open": [
+    {
+      "id": "BOLT-20261017-1125",
+      "ticker": "BOLT",
+      "side": "cardano",
+      "asset_id": "14628c260a749e78e69e58acca32d0baa09808d50388c84fa7e1ae470014df10424f4c54",
+      "opened_at": "2026-10-17T11:25:00-04:00",
+      "window_ends_at": "2026-10-19T11:25:00-04:00",
+      "ticket_ada": 100,
+      "level": 3,
+      "entry": {
+        "mcap_ada": 530461,
+        "price_ada": 0.000530461,
+        "holders": 277,
+        "ada_side": 34834
+      },
+      "thesis_signals": [
+        "277 holders, top-10 ex-pool 26%, no cluster >3.2%",
+        "6h 46 buys/25 sells, +13.5% h6",
+        "ADA side ~35k (up from ~32k Oct 15)",
+        "SpiritSigma (5.2k) said wants to bridge for $BOLT"
+      ],
+      "stop": {
+        "text": "mcap < 450k ADA or holders < 250 or ADA side < 28k",
+        "mcap_ada_below": 450000,
+        "holders_below": 250
+      },
+      "custody": "Cardano native token, non-custodial",
+      "status": "open"
+    },
+    {
+      "id": "CLOVE-20261017-1125",
+      "ticker": "CLOVE",
+      "side": "cardano",
+      "asset_id": "c1b89ed48dfc2b82167c1548b88942d367af1e517947c3dd8bdead0b0014df10434c4f56452d33",
+      "opened_at": "2026-10-17T11:25:00-04:00",
+      "window_ends_at": "2026-10-19T11:25:00-04:00",
+      "ticket_ada": 100,
+      "level": 3,
+      "entry": {
+        "mcap_ada": 314750,
+        "price_ada": 0.00031475,
+        "holders": 125,
+        "ada_side": 26452
+      },
+      "thesis_signals": [
+        "+152% 24h, 6h 52 buys/34 sells, +20% h1",
+        "125 holders, ADA side ~26k",
+        "top-10 ex-pool 35.7%, top 5.9% (watch)"
+      ],
+      "stop": {
+        "text": "mcap < 250k ADA or holders < 110",
+        "mcap_ada_below": 250000,
+        "holders_below": 110
+      },
+      "custody": "Cardano native token, non-custodial",
+      "status": "open"
+    }
+  ],
   "closed": [],
   "rules": [
     {
@@ -57,6 +115,18 @@
       "added_at": "2026-10-17T11:05:00-04:00",
       "rule": "Linked flip pair u8a2m6+u978t4 and snipers u9w6dd/uytg09zr/uyyyjqps in the first block = rotation risk; watch whether they sell into the run.",
       "source": "desk history Oct 15-17"
+    },
+    {
+      "added_at": "2026-10-17T11:25:00-04:00",
+      "id": "j",
+      "rule": "First-block sniper full exit = kill trigger; IAGONAUT faded 47.8k→32.2k within ~45 min after top sniper uytg09zr sold out (Oct 17).",
+      "source": "IAGONAUT Oct 17"
+    },
+    {
+      "added_at": "2026-10-17T11:25:00-04:00",
+      "id": "k",
+      "rule": "Holding-tier shape: only names with 120+ holders, ADA-side ≥25k and 6h buys > sells qualify for paper tickets; post-graduation names under ~11k ADA side with 6h price down >40% (HERO -76%, JUICE -41%, ROBIN -55%) are Pass regardless of 24h headline gains.",
+      "source": "run 2026-10-17 11:10"
     }
   ],
   "summaries": [
@@ -129,6 +199,11 @@
           "reason": "Its shape no longer looks strongest-in-class. The bounce to ~55k faded to 40.1k, right on the stop line. Sells outnumber buys 20 to 16 over 6h, and holders are flat at 69. Rules (f), (g) and (h) applied."
         }
       ]
+    },
+    {
+      "at": "2026-10-17T11:25:00-04:00",
+      "type": "run",
+      "note": "Opened BOLT and CLOVE L3 paper tickets (100 ADA each). Passed IAGONAUT (below kill, rule j), HERO/JUICE/ROBIN (rule k). FEED stays L2 at its 40k line, no ticket."
     }
   ]
 }
