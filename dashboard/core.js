@@ -124,21 +124,30 @@ window.S = (function () {
     }
     return Array.isArray(spec.data) ? out : out[0].json;
   }
+  /* A table panel aimed at the pulse radar list draws the radar cards. Bots keep their panels.json. */
+  function panelAsRadar(desk, spec) {
+    if (!spec || spec.type !== "table" || String(spec.path || "") !== "radar") return false;
+    const list = spec.data == null ? [] : (Array.isArray(spec.data) ? spec.data : [spec.data]);
+    return list.some(p => isPulseRef(desk, p));
+  }
   async function renderPanel(desk, spec) {
-    const def = registry[spec.type];
+    const asRadar = panelAsRadar(desk, spec);
+    const type = asRadar ? "radar" : spec.type;
+    const def = registry[type];
     const span = spec.span || (def && def.span) || 12;
+    const dataSpec = asRadar ? Object.assign({}, spec, { path: "" }) : spec;
     let body;
     if (!def) {
       body = `<div class="placeholder"><b>“${esc(spec.type)}” not installed</b> · add <code>dashboard/panels/${esc(spec.type)}.js</code></div>`;
     } else {
       try {
-        body = await def.render({ desk, spec, opt: spec.options || {}, data: await loadData(desk, spec) });
+        body = await def.render({ desk, spec, opt: spec.options || {}, data: await loadData(desk, dataSpec) });
       } catch (e) {
         body = `<div class="placeholder">This panel couldn't load (${esc(e.message)}).</div>`;
       }
     }
     const slim = !def || (def && def.slim) ? " slim" : "";
-    return `<section class="panel span-${span}${slim}" data-type="${esc(spec.type)}"><h3><span class="ttl">${esc(spec.title || spec.type)}</span><span class="tag">${esc(spec.type)}</span></h3>${body}</section>`;
+    return `<section class="panel span-${span}${slim}" data-type="${esc(type)}"><h3><span class="ttl">${esc(spec.title || type)}</span><span class="tag">${esc(type)}</span></h3>${body}</section>`;
   }
 
   async function desks() {
@@ -518,7 +527,7 @@ window.S = (function () {
   return {
     get, pick, esc, rich, walletTag, walletLabel, walletHue, fmt, pct, pnlNum, pnlClass, when, join, register, registry,
     renderPanel, desks, panelsFor, bookFiles, briefsOf, score, avgRet, pnlCards,
-    metricCards, unitNote, killDistance, allOpen, pointsFor, pulsePath,
+    metricCards, unitNote, killDistance, allOpen, pointsFor, pulsePath, panelAsRadar,
     ageInfo, freshestAt, ageTag, ago, runButton,
     loadIcons, coinIcon, nftIcon, chainIcon, assetIcon, mono, unitTag, spark, seriesOf, pnlBar, scoreBar, killMeter, pill
   };

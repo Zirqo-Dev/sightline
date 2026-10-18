@@ -48,7 +48,16 @@
     "rule": {
       "type": "object",
       "required": ["rule"],
-      "properties": {"id": {"type": "string"}, "added_at": {"type": "string"}, "rule": {"type": "string"}, "source": {"type": "string"}},
+      "properties": {
+        "id": {"type": "string"},
+        "added_at": {"type": "string"},
+        "rule": {"type": "string"},
+        "source": {"type": "string"},
+        "title": {"type": "string"},
+        "category": {"type": "string"},
+        "evidence": {"type": "array", "items": {"type": "string"}},
+        "mirrors": {"type": "string"}
+      },
       "additionalProperties": true
     }
   }

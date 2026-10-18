@@ -17,8 +17,8 @@ for d in json.load(open("desks.json"))["desks"]:
     arch=os.path.join(base,"archive")
     if os.path.isdir(arch):
         jobs+= [(f,"pulse") for f in sorted(glob.glob(os.path.join(arch,"pulse-*.json")))]
-fix="scripts/fixtures/pulse-example.json"
-if os.path.exists(fix): jobs.append((fix,"pulse"))
+for fix in ("scripts/fixtures/pulse-example.json", "scripts/fixtures/pulse-factors.json"):
+    if os.path.exists(fix): jobs.append((fix,"pulse"))
 bad=0
 for f,k in jobs:
     if not os.path.exists(f): print(f"MISSING {f}"); bad+=1; continue

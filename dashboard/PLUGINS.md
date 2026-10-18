@@ -36,11 +36,11 @@ One file each in `dashboard/panels/`. Each calls `S.register`.
 | Type | What it draws |
 |---|---|
 | `headline` | Latest run headline and time. |
-| `radar` | Early runners from the desk pulse file, ranked by score. Quiet line when the file is missing. |
+| `radar` | Early-runner cards: heat ring, metric tiles, sparkline, age, warning badges, momentum map. Quiet line when the file is missing. A `table` panel whose `data` is the pulse file and whose `path` is `radar` draws this same view. |
 | `scoreboard` | Open, closed, win rate, and realized P&L **per unit**, plus one row per book. |
 | `tickets` | Open tickets, closest to the kill line first. |
 | `closed` | Closed tickets with percent and P&L in that ticket's unit. |
-| `rules` | Rules learned, newest first. `options.limit` caps the list. |
+| `rules` | Rules learned, newest first. Plain title, category, book, evidence chips. `options.limit` hides the rest behind Show all (Solada uses 8). |
 | `briefs` | Daily briefs for the desk. Reads the build-generated `briefs/index.json`. |
 | `table` | Any list of objects, or a key/value object. `options.columns`, `labels`, `limit`, `badge`. |
 | `stat-cards` | One card per field of an object. |
@@ -57,7 +57,7 @@ Distance to kill uses numeric fields on `kill_line` when they match a current re
 
 ## Pulse, data age, and Run now
 
-Bots may write the pulse file named by `pulse` in `desks.json`, or `<desk>/pulse.json` when that field is absent (schema `schema/pulse.schema.json`): an hourly window of `{t, ticker, metrics}` points plus a `radar` list. A desk page can also show that file with the `table` panel (`path` `latest` or `radar`). Older months can sit in `<desk>/archive/pulse-YYYY-MM.json` with the same shape. Both are optional. A missing file does not fail the build or the page.
+Bots may write the pulse file named by `pulse` in `desks.json`, or `<desk>/pulse.json` when that field is absent (schema `schema/pulse.schema.json`): an hourly window of `{t, ticker, metrics}` points plus a `radar` list. Optional `factors`, `score_max`, and `flags` on each radar row drive the cards; without them the page parses `signals[]`. A `table` panel with `path` `latest` stays a table. `path` `radar` on that same file draws the radar cards, so the desk does not have to change `panels.json`. Older months can sit in `<desk>/archive/pulse-YYYY-MM.json` with the same shape. Both are optional. A missing file does not fail the build or the page.
 
 The header and each desk show `updated 12m ago` from the newer of `log.asof` and `pulse.updated_at`. It turns amber after 90 minutes and red after 6 hours, and the browser updates the wording on its own.
 

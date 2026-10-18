@@ -1,0 +1,69 @@
+{
+  "schema_version": 2,
+  "desk": "example",
+  "updated_at": "2026-10-18T18:00:00Z",
+  "example": true,
+  "points": [
+    {"t": "2026-10-18T17:00:00Z", "ticker": "FACT", "chain": "cardano", "metrics": {"holders": 10}},
+    {"t": "2026-10-18T18:00:00Z", "ticker": "FACT", "chain": "cardano", "metrics": {"holders": 12}}
+  ],
+  "radar": [
+    {
+      "ticker": "FACT",
+      "chain": "cardano",
+      "first_seen": "2026-10-18T12:00:00Z",
+      "score": 20,
+      "score_max": 40,
+      "signals": ["on-chain holders 10->31 since 12:00 (+21.3/h)"],
+      "note": "structured factors win",
+      "flags": [
+        {"code": "swarm-holding", "tone": "warn"},
+        {"code": "mystery_flag", "tone": "bad"}
+      ],
+      "factors": {
+        "holders": 12,
+        "holders_prev": 10,
+        "holders_basis": "onchain",
+        "holders_per_h": 1.5,
+        "accel_per_h": null,
+        "graduated": "minswap-v2",
+        "curve_pct": null,
+        "buys_h1": 0,
+        "sells_h1": 0,
+        "price_h1_pct": 3.2,
+        "swarm": 2,
+        "swarm_keys": ["uabcde", "ufghij"]
+      }
+    },
+    {
+      "ticker": "YOUNG",
+      "chain": "solana",
+      "first_seen": "2026-10-18T17:20:00Z",
+      "score": 8,
+      "score_max": 40,
+      "signals": ["curve 31% in its first minutes"],
+      "flags": [],
+      "factors": {
+        "curve_pct": 31.6,
+        "price_h1_pct": 4,
+        "snipers": null,
+        "native_share_pct": null
+      }
+    },
+    {
+      "ticker": "FLAT",
+      "chain": "cardano",
+      "first_seen": "2026-10-18T10:00:00Z",
+      "score": 4,
+      "score_max": 40,
+      "signals": ["holders unchanged"],
+      "flags": [],
+      "factors": {
+        "holders_per_h": 0,
+        "accel_per_h": 0,
+        "buys_h1": 0,
+        "sells_h1": 2
+      }
+    }
+  ]
+}
