@@ -161,6 +161,19 @@
      "flags_top50": 0,
      "flow": "DexScreener h1 416/334, h6 2,664/2,116, h24 12,553/9,886; price h1 -1.6%, h6 -7.2%, h24 +3.6%",
      "note": "Hourly pulse mark. Above every kill line ($68.8M vs $47.5M, 109,045 vs 97,082 holders, 14,684 vs 10,149 SOL). Holders +4 since the 12:51 mark (109,041), so pf-m's early exit isn't triggered. pump.fun top-holders/coins-v2 + DexScreener; no Helius used."
+    },
+    {
+     "at": "2026-10-18T13:20:00-04:00",
+     "mcap_usd": 68416198,
+     "price_usd": 0.07095,
+     "price_sol": 0.0006941,
+     "holders": 109045,
+     "pool_quote_sol": 14683,
+     "pct_vs_entry_mcap": 0.8,
+     "pct_vs_entry_price_sol": 1.8,
+     "flow": "DexScreener pumpswap h1 402/323, h6 2,648/2,101, h24 12,504/9,877; price h1 -1.4%, h6 -7.6%, h24 +3.1%",
+     "source": "desk afternoon: DexScreener + GeckoTerminal; holders from 13:15 pulse (109,045)",
+     "note": "Desk mark after 13:15 pulse. Above every kill line ($68.4M vs $47.5M, 109,045 vs 97,082, ~14.7k vs 10.1k SOL). Flat vs pulse holders. No new pump tickets."
     }
    ]
   }
@@ -621,7 +634,7 @@
      "reason": "Below L3 holder (1,500) and pool (200 SOL) floors; 1 flagged sniper at 1.56%."
     },
     {
-     "ticker": "索拉纳",
+     "ticker": "\u7d22\u62c9\u7eb3",
      "mint": "FeSqDFg1vMsB7dsWXE3UWURwUVksJArWWWynnhgiaaQ6",
      "mcap_usd": 256751,
      "holders": 3466,
@@ -645,7 +658,7 @@
   {
    "at": "2026-10-17T15:30:00-04:00",
    "type": "run",
-   "note": "Ad-hoc run. FTR marked -16.6% ($2.72M, 18,111 holders, 1,007 SOL), still open. Opened swordcat (5tCj...pump) as the strongest L2 at $2.40M. L2, no ticket: HeyGrok (graduated 1:13 PM, +502% h6, fails pf-l because the 2 PM candle low 171 sat under the ~285 spike midpoint; TG caller promo); hi (+294% h6 reactivation, h1 sells > buys, pf-l); JEANPHIL (19.4k holders, 1,946 SOL, but h1 65/81 and flat); VEIL (h6 -24.6%, h24 -55.6%). L1: SI276 (h6 6,349/2,365 buys with price -14% at ~$5 average fills, wash-like); MAKERS, Kavantissa, 索拉纳 (h6 -73% to -79%, rule k). CLAUDIA skipped: the DexScreener pump mint was a dead 46-holder clone. No trade closed, no rule changes. Research/lottery/NFA.",
+   "note": "Ad-hoc run. FTR marked -16.6% ($2.72M, 18,111 holders, 1,007 SOL), still open. Opened swordcat (5tCj...pump) as the strongest L2 at $2.40M. L2, no ticket: HeyGrok (graduated 1:13 PM, +502% h6, fails pf-l because the 2 PM candle low 171 sat under the ~285 spike midpoint; TG caller promo); hi (+294% h6 reactivation, h1 sells > buys, pf-l); JEANPHIL (19.4k holders, 1,946 SOL, but h1 65/81 and flat); VEIL (h6 -24.6%, h24 -55.6%). L1: SI276 (h6 6,349/2,365 buys with price -14% at ~$5 average fills, wash-like); MAKERS, Kavantissa, \u7d22\u62c9\u7eb3 (h6 -73% to -79%, rule k). CLAUDIA skipped: the DexScreener pump mint was a dead 46-holder clone. No trade closed, no rule changes. Research/lottery/NFA.",
    "helius_usage": {
     "requests": 2,
     "credits_estimate": "~2"
@@ -695,6 +708,11 @@
     }
    },
    "vs_solada": "Solada: 1 open (BOLT L2, 406k ADA mcap, 263 holders, 32.2k ADA side, ~8% of mcap). Pump.fun: 1 open (CATE +4.6%, ~$70.6M, ~109k holders, 14.8k SOL side, ~4.3% of mcap). Pump.fun's only green ticket is its deepest, most widely held name; on Solada only BOLT passes rule k. Junk rates are similar: 28 of 30 new Cardano launches were swarm-touched, and about 20 of the ~40 pump.fun names checked were farms."
+  },
+  {
+   "at": "2026-10-18T13:20:00-04:00",
+   "type": "run",
+   "note": "Marked CATE at $68.4M (+0.8% vs entry mcap, +3.9% vs entry price in SOL). No new pump tickets (max 2 slot unused). Comparison: CATE remains the only open name; live livestream coins are sub-$70k with thin books; completed recent trades are either mega-caps already owned-class or sub-threshold farms."
   }
  ]
 }
