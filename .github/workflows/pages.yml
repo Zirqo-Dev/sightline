@@ -34,6 +34,11 @@ jobs:
           python3 scripts/validate-desks.py
       - name: Dashboard smoke checks
         run: node scripts/smoke-dashboard.mjs
+      - name: Fill missing icons (best effort)
+        continue-on-error: true
+        run: |
+          pip install --quiet pillow
+          timeout 120 python3 tools/resolve-icons.py . || true
       - name: Build static site
         run: python3 scripts/build-site.py
       - name: Upload Pages artifact

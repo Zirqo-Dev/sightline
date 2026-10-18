@@ -22,6 +22,54 @@ window.S = (function () {
     return String(path).split(".").reduce((o, k) => (o == null ? o : o[k]), obj);
   }
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  /* Third-party wallets, stake keys, fragments and mints stay visible.
+     Long snippets become a compact tag (first 7 + … + last 4). The owner's
+     wallet is not handled here; scripts/privacy-guard.sh blocks that before deploy. */
+  const WALLET_RE = new RegExp(
+    "\\b(?:" +
+    [
+      "(?:addr|stake)(?:_test)?1[0-9a-z]{2,}(?:(?:\\.{2,3}|…)[0-9a-z]+)?(?:\\.{2,3})?",
+      "0x[0-9a-f]{6,}",
+      "[0-9a-f]{56,}",
+      "[0-9a-f]{8,}(?:\\.{2,3}|…)",
+      "[1-9A-HJ-NP-Za-km-z]{32,44}",
+      "u[89xy][0-9a-z]{4,10}"
+    ].join("|") +
+    ")(?!\\w)",
+    "gi"
+  );
+  function walletBody(raw) { return String(raw).trim().replace(/[.…]+/g, ""); }
+  function walletNorm(raw) { return walletBody(raw).toLowerCase(); }
+  function walletLabel(raw) {
+    const body = walletBody(raw);
+    if (body.length <= 12) return String(raw).trim();
+    return body.slice(0, 7) + "…" + body.slice(-4);
+  }
+  function walletHue(raw) {
+    const s = walletNorm(raw);
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return (h >>> 0) % 360;
+  }
+  function walletTag(raw) {
+    const full = String(raw);
+    const label = walletLabel(full);
+    return `<span class="wtag" style="--h:${walletHue(full)}" tabindex="0" role="button" title="${esc(full)}" data-full="${esc(full)}" data-short="${esc(label)}">${esc(label)}</span>`;
+  }
+  function rich(s) {
+    const text = String(s ?? "");
+    const re = new RegExp(WALLET_RE.source, "gi");
+    let out = "", i = 0, m;
+    while ((m = re.exec(text))) {
+      out += esc(text.slice(i, m.index)) + walletTag(m[0]);
+      i = m.index + m[0].length;
+      if (!m[0].length) re.lastIndex++;
+    }
+    return out + esc(text.slice(i));
+  }
   const fmt = (n, d = 1) => (n == null || isNaN(n) ? "–" : Number(n).toLocaleString("en-US", { maximumFractionDigits: d }));
   const pct = n => (n == null || isNaN(n) ? "–" : `<span class="${n >= 0 ? "up" : "down"}">${n > 0 ? "+" : ""}${fmt(n)}%</span>`);
   function pnlNum(n) {
@@ -68,7 +116,7 @@ window.S = (function () {
     const span = spec.span || (def && def.span) || 12;
     let body;
     if (!def) {
-      body = `<div class="placeholder"><b>Panel type "${esc(spec.type)}" isn't installed yet.</b><br>Add <code>dashboard/panels/${esc(spec.type)}.js</code> (it calls <code>S.register</code>). The next build includes it. The rest of this page still works.</div>`;
+      body = `<div class="placeholder"><b>“${esc(spec.type)}” not installed</b> · add <code>dashboard/panels/${esc(spec.type)}.js</code></div>`;
     } else {
       try {
         body = await def.render({ desk, spec, opt: spec.options || {}, data: await loadData(desk, spec) });
@@ -76,7 +124,8 @@ window.S = (function () {
         body = `<div class="placeholder">This panel couldn't load (${esc(e.message)}).</div>`;
       }
     }
-    return `<section class="panel span-${span}"><h3>${esc(spec.title || spec.type)}<span class="tag">${esc(spec.type)}</span></h3>${body}</section>`;
+    const slim = !def || (def && def.slim) ? " slim" : "";
+    return `<section class="panel span-${span}${slim}" data-type="${esc(spec.type)}"><h3><span class="ttl">${esc(spec.title || spec.type)}</span><span class="tag">${esc(spec.type)}</span></h3>${body}</section>`;
   }
 
   async function desks() {
@@ -168,20 +217,20 @@ window.S = (function () {
     const entries = Object.entries(sc.byUnit);
     if (!entries.length) return `<div class="card"><div class="k">P&amp;L</div><div class="v muted">–</div></div>`;
     return entries.map(([unit, row]) =>
-      `<div class="card"><div class="k">P&amp;L · ${esc(unit)}</div><div class="v ${pnlClass(row.pnl)}">${pnlNum(row.pnl)}</div></div>`
+      `<div class="card pnl"><div class="k">P&amp;L ${unitTag(unit)}</div><div class="v ${pnlClass(row.pnl)}">${pnlNum(row.pnl)}</div>${pnlBar(row.pnl, 100)}</div>`
     ).join("");
   }
   function metricCards(sc) {
     const win = sc.winRate == null ? "–" : fmt(sc.winRate, 0) + "%";
     return `<div class="card"><div class="k">Open</div><div class="v">${sc.open}</div></div>
       <div class="card"><div class="k">Closed</div><div class="v">${sc.closed}</div></div>
-      <div class="card"><div class="k">Win rate</div><div class="v">${win}</div></div>
+      <div class="card"><div class="k">Win</div><div class="v">${win}</div>${sc.winRate == null ? "" : `<span class="wbar"><i style="width:${sc.winRate}%"></i></span>`}</div>
       ${pnlCards(sc)}`;
   }
   function unitNote(sc) {
     const units = Object.keys(sc.byUnit);
     if (units.length < 2) return "";
-    return `<p class="muted small unit-note">Totals are per unit (${units.map(esc).join(", ")}). Different units are not added together.</p>`;
+    return `<p class="unit-note">Σ per unit (${units.map(esc).join(" · ")}); units are never added together.</p>`;
   }
 
   function currentMetrics(t) {
@@ -303,9 +352,70 @@ window.S = (function () {
     return out.sort((a, b) => (a.kd?.pct ?? 999) - (b.kd?.pct ?? 999));
   }
 
+  /* Icons come from dashboard/icons/icons.json. The browser never calls a third party. */
+  let ICONS = { coins: {}, nfts: {}, chains: {}, nft_names: {} };
+  async function loadIcons() { const j = await get("dashboard/icons/icons.json"); if (j) ICONS = j; return ICONS; }
+  function hue(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
+  function mono(label, cls) {
+    const w = String(label || "?").match(/[A-Za-z0-9]+/g) || ["?"];
+    const ini = (w.length > 1 ? w[0][0] + w[1][0] : w[0].slice(0, 2)).toUpperCase();
+    return `<span class="ico mono ${cls || ""}" style="--h:${hue(label)}">${esc(ini)}</span>`;
+  }
+  function img(src, label, cls) { return `<img class="ico ${cls || ""}" src="${esc(src)}" alt="" title="${esc(label)}" loading="lazy">`; }
+  function coinIcon(t, cls) { const e = ICONS.coins[String(t || "").toUpperCase()]; return e ? img(e.src, t, cls) : mono(t, cls); }
+  function nftIcon(key, cls) {
+    const k = String(key || "");
+    const e = ICONS.nfts[k] || ICONS.nfts[(ICONS.nft_names || {})[k.toLowerCase()]];
+    return e ? img(e.src, e.name || k, cls) : mono(k, cls);
+  }
+  const CHAIN_ALIAS = { eth: "ethereum", sol: "solana", ada: "cardano", matic: "polygon", btc: "bitcoin", "solana-side": "solana" };
+  function chainIcon(ch, cls) {
+    const c = CHAIN_ALIAS[String(ch || "").toLowerCase()] || String(ch || "").toLowerCase();
+    if (!c) return "";
+    return `<img class="chain ${cls || ""}" src="dashboard/icons/chains/${esc(c in (ICONS.chains || {}) ? c : "multi")}.svg" alt="${esc(c)}" title="${esc(c)}">`;
+  }
+  function assetIcon(key, cls) {
+    const k = String(key || "");
+    if (ICONS.nfts[k] || (ICONS.nft_names || {})[k.toLowerCase()]) return nftIcon(k, cls);
+    return coinIcon(k, cls);
+  }
+  function unitTag(u) {
+    const short = { "ADA-equivalent": "ADA-eq" };
+    return `<span class="unit" title="${esc(u)}">${esc(short[u] || u)}</span>`;
+  }
+  function spark(vals, opt = {}) {
+    const v = vals.filter(x => typeof x === "number" && isFinite(x));
+    if (v.length < 2) return "";
+    const w = opt.w || 64, h = opt.h || 18, lo = Math.min(...v), hi = Math.max(...v);
+    const pts = v.map((y, i) => `${(i / (v.length - 1) * (w - 2) + 1).toFixed(1)},${(h - 2 - (y - lo) / (hi - lo || 1) * (h - 4)).toFixed(1)}`);
+    const up = v[v.length - 1] >= v[0];
+    return `<svg class="spark ${up ? "up" : "down"}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><polyline points="${pts.join(" ")}"/><circle cx="${pts[pts.length - 1].split(",")[0]}" cy="${pts[pts.length - 1].split(",")[1]}" r="1.8"/></svg>`;
+  }
+  const SERIES = ["mcap_ada", "mcap_usd", "floor_eth", "floor", "price_usd", "price_ada"];
+  function seriesOf(t) {
+    const rows = [t.entry || {}].concat(Array.isArray(t.marks) ? t.marks : [], t.exit ? [t.exit] : []);
+    const key = SERIES.find(k => rows.some(r => typeof r[k] === "number"));
+    if (!key) return [];
+    const alt = { floor_eth: "floor", floor: "floor_eth" }[key];
+    return rows.map(r => typeof r[key] === "number" ? r[key] : (alt && typeof r[alt] === "number" ? r[alt] : null)).filter(x => x != null);
+  }
+  function pnlBar(p, scale = 40) {
+    if (typeof p !== "number") return "";
+    const w = Math.min(50, Math.abs(p) / scale * 50);
+    return `<span class="pbar"><i class="${p < 0 ? "neg" : "pos"}" style="width:${w.toFixed(1)}%"></i></span>`;
+  }
+  function killMeter(pct) {
+    if (pct == null) return `<span class="meter na" title="not machine-readable"></span>`;
+    const n = Math.max(1, Math.min(20, Math.round(pct / 2.5)));
+    const z = pct < 10 ? "hot" : pct < 25 ? "warm" : "cool";
+    return `<span class="meter ${z}">${Array.from({ length: 20 }, (_, i) => `<i class="${i < n ? "on" : ""}"></i>`).join("")}</span>`;
+  }
+  function pill(text, cls) { return `<span class="pill ${esc(cls || String(text).toLowerCase().replace(/[^a-z0-9]+/g, "-"))}">${esc(text)}</span>`; }
+
   return {
-    get, pick, esc, fmt, pct, pnlNum, pnlClass, when, join, register, registry,
+    get, pick, esc, rich, walletTag, walletLabel, walletHue, fmt, pct, pnlNum, pnlClass, when, join, register, registry,
     renderPanel, desks, panelsFor, bookFiles, briefsOf, score, avgRet, pnlCards,
-    metricCards, unitNote, killDistance, allOpen
+    metricCards, unitNote, killDistance, allOpen,
+    loadIcons, coinIcon, nftIcon, chainIcon, assetIcon, mono, unitTag, spark, seriesOf, pnlBar, killMeter, pill
   };
 })();
