@@ -5712,7 +5712,51 @@
     "swarm keys holding now: uytg09zr, u9q3xusf"
    ],
    "note": "Open L2 paper ticket slipped back just under entry (-1.2%) as the 4 PM volume spike died. On-chain holders held at 266, so rule o is not triggered; one more on-chain drop with price under entry would close it.",
-   "velocity_h": 0.0
+   "velocity_h": 0.0,
+   "score_max": 40,
+   "factors": {
+    "holders": 266,
+    "holders_basis": "onchain",
+    "holders_prev": 266,
+    "holders_per_h": 0.0,
+    "accel_per_h": 2.9,
+    "graduated": "minswap-v2",
+    "vol_h1": 371,
+    "vol_x": 0.22,
+    "vol_unit": "ADA",
+    "buys_h1": 0,
+    "sells_h1": 3,
+    "price_h1_pct": -1.5,
+    "price_h6_pct": 10.7,
+    "ada_side": 31926,
+    "ada_side_pct": -1.4,
+    "swarm": 2,
+    "swarm_keys": [
+     "u9q3xusf",
+     "uytg09zr"
+    ],
+    "one_sided": false,
+    "top10_pct": 26.39,
+    "top1_pct": 4.99
+   },
+   "flags": [
+    {
+     "code": "swarm-holding",
+     "tone": "warn"
+    },
+    {
+     "code": "volume-faded",
+     "tone": "warn"
+    },
+    {
+     "code": "holders-flat",
+     "tone": "warn"
+    },
+    {
+     "code": "above-kill-lines",
+     "tone": "good"
+    }
+   ]
   },
   {
    "ticker": "MISS",
@@ -5729,7 +5773,49 @@
     "native 24 of 125 Solada-count holders (19%), rule n"
    ],
    "note": "Push toward graduation kept going with more native buyers and fewer flagged wallets, but the native base is still under a fifth of the Solada count, so most of the move is Cardano-side buying through the bridge.",
-   "velocity_h": 6.5
+   "velocity_h": 6.5,
+   "score_max": 40,
+   "factors": {
+    "holders": 24,
+    "holders_basis": "native",
+    "holders_prev": 18,
+    "holders_per_h": 6.5,
+    "accel_per_h": -0.3,
+    "curve_pct": 89.59,
+    "curve_pts_per_h": 5.1,
+    "graduated": null,
+    "vol_h1": 15986,
+    "vol_x": 4.86,
+    "vol_unit": "ADA-eq",
+    "buys_h1": 45,
+    "sells_h1": 10,
+    "price_h1_pct": 37.0,
+    "price_h6_pct": 47.4,
+    "ada_side": 19292,
+    "ada_side_pct": 13.6,
+    "snipers": 2,
+    "native_share_pct": 19.2,
+    "one_sided": false,
+    "top10_pct": 7.11
+   },
+   "flags": [
+    {
+     "code": "holders-rising",
+     "tone": "good"
+    },
+    {
+     "code": "volume-spike",
+     "tone": "warn"
+    },
+    {
+     "code": "sniper-flags",
+     "tone": "warn"
+    },
+    {
+     "code": "low-native-share",
+     "tone": "bad"
+    }
+   ]
   },
   {
    "ticker": "SER",
@@ -5746,7 +5832,55 @@
     "swarm keys rotated: u9kp4sxa, u9w6dd, uxz6fvju out; u944xqrv, u9q3xusf, uxfernv7 holding now; early buyer ux7dlxp9dw also bought BUY early"
    ],
    "note": "The rule p rotation dump flagged last pulse arrived: first-wave swarm keys sold into the Minswap pool and holders turned down. Drops off unless holders recover.",
-   "velocity_h": -3.3
+   "velocity_h": -3.3,
+   "score_max": 40,
+   "factors": {
+    "holders": 66,
+    "holders_basis": "onchain",
+    "holders_prev": 69,
+    "holders_per_h": -3.3,
+    "accel_per_h": -24.6,
+    "graduated": "minswap-v2",
+    "vol_h1": 26838,
+    "vol_x": 3.05,
+    "vol_unit": "ADA",
+    "buys_h1": 49,
+    "sells_h1": 35,
+    "price_h1_pct": -34.7,
+    "ada_side": 12053,
+    "ada_side_pct": -16.0,
+    "swarm": 3,
+    "swarm_keys": [
+     "u944xqrv",
+     "u9q3xusf",
+     "uxfernv7"
+    ],
+    "repeat_first_buyers": [
+     5,
+     11
+    ],
+    "one_sided": false,
+    "top10_pct": 40.57,
+    "top1_pct": 5.67
+   },
+   "flags": [
+    {
+     "code": "swarm-rotation",
+     "tone": "bad"
+    },
+    {
+     "code": "swarm-holding",
+     "tone": "bad"
+    },
+    {
+     "code": "pre-seeded-pool",
+     "tone": "warn"
+    },
+    {
+     "code": "holders-falling",
+     "tone": "bad"
+    }
+   ]
   },
   {
    "ticker": "CLOVE",
@@ -5763,7 +5897,53 @@
     "swarm keys holding now: u9q3xusf, uytg09zr, uyyyjqps; rule m: Oct 17 team airdrop inflates holder base"
    ],
    "note": "Bounced after last pulse's drop, with holders ticking up; still down about a third in 24h and under rule k depth. Closed ticket, watch only.",
-   "velocity_h": 3.3
+   "velocity_h": 3.3,
+   "score_max": 40,
+   "factors": {
+    "holders": 131,
+    "holders_basis": "onchain",
+    "holders_prev": 128,
+    "holders_per_h": 3.3,
+    "accel_per_h": 4.3,
+    "graduated": "minswap-v2",
+    "vol_h1": 5440,
+    "vol_x": 1.15,
+    "vol_unit": "ADA",
+    "buys_h1": 12,
+    "sells_h1": 6,
+    "price_h1_pct": 21.5,
+    "price_h6_pct": -5.1,
+    "ada_side": 22004,
+    "ada_side_pct": 4.9,
+    "swarm": 3,
+    "swarm_keys": [
+     "u9q3xusf",
+     "uytg09zr",
+     "uyyyjqps"
+    ],
+    "one_sided": false,
+    "airdrop": true,
+    "top10_pct": 38.6,
+    "top1_pct": 6.18
+   },
+   "flags": [
+    {
+     "code": "team-airdrop",
+     "tone": "warn"
+    },
+    {
+     "code": "swarm-holding",
+     "tone": "warn"
+    },
+    {
+     "code": "holders-rising",
+     "tone": "good"
+    },
+    {
+     "code": "below-rule-k-depth",
+     "tone": "warn"
+    }
+   ]
   },
   {
    "ticker": "QBITS",
@@ -5779,7 +5959,38 @@
     "curve side ~3.0k ADA-eq (half of pump.fun liquidity, estimate)"
    ],
    "note": "Fastest new curve of the hour with a better native share than the other Solana-side names, but it is under an hour old with 8 natives, so it needs a second mark.",
-   "velocity_h": null
+   "velocity_h": null,
+   "score_max": 40,
+   "factors": {
+    "holders": 8,
+    "holders_basis": "native",
+    "curve_pct": 31.62,
+    "graduated": null,
+    "vol_h1": 10303,
+    "vol_unit": "ADA-eq",
+    "buys_h1": 39,
+    "sells_h1": 10,
+    "price_h1_pct": 66.3,
+    "ada_side": 3001,
+    "snipers": 2,
+    "native_share_pct": 32.0,
+    "one_sided": false,
+    "top10_pct": 9.93
+   },
+   "flags": [
+    {
+     "code": "new-launch",
+     "tone": "warn"
+    },
+    {
+     "code": "sniper-flags",
+     "tone": "warn"
+    },
+    {
+     "code": "buyers-lead-h1",
+     "tone": "good"
+    }
+   ]
   },
   {
    "ticker": "PAWS",
@@ -5794,7 +6005,44 @@
     "pool ADA side 10,910->10,567 (-3.1%); mcap 55.5k->52.0k"
    ],
    "note": "Slow bleed continues on almost no trading; ADA side far under rule k depth.",
-   "velocity_h": -1.1
+   "velocity_h": -1.1,
+   "score_max": 40,
+   "factors": {
+    "holders": 83,
+    "holders_basis": "onchain",
+    "holders_prev": 84,
+    "holders_per_h": -1.1,
+    "accel_per_h": -0.1,
+    "graduated": "minswap-v2",
+    "vol_h1": 336,
+    "vol_x": 0.51,
+    "vol_unit": "ADA",
+    "buys_h1": 0,
+    "sells_h1": 2,
+    "price_h1_pct": -3.3,
+    "price_h6_pct": -19.6,
+    "ada_side": 10567,
+    "ada_side_pct": -3.1,
+    "swarm": 0,
+    "swarm_keys": [],
+    "one_sided": false,
+    "top10_pct": 34.25,
+    "top1_pct": 4.55
+   },
+   "flags": [
+    {
+     "code": "thin-pool",
+     "tone": "bad"
+    },
+    {
+     "code": "holders-falling",
+     "tone": "warn"
+    },
+    {
+     "code": "sellers-lead-h1",
+     "tone": "warn"
+    }
+   ]
   },
   {
    "ticker": "CORE",
@@ -5810,7 +6058,45 @@
     "native 34 of 136 Solada-count holders (25%)"
    ],
    "note": "Slipping back down the curve with natives leaving; fails rule q.",
-   "velocity_h": -2.2
+   "velocity_h": -2.2,
+   "score_max": 40,
+   "factors": {
+    "holders": 34,
+    "holders_basis": "native",
+    "holders_prev": 36,
+    "holders_per_h": -2.2,
+    "accel_per_h": -2.2,
+    "curve_pct": 84.05,
+    "curve_pts_per_h": -1.9,
+    "graduated": null,
+    "vol_h1": 2434,
+    "vol_x": 3.94,
+    "vol_unit": "ADA-eq",
+    "buys_h1": 1,
+    "sells_h1": 3,
+    "price_h1_pct": -6.5,
+    "price_h6_pct": -1.9,
+    "ada_side": 16140,
+    "ada_side_pct": -7.4,
+    "snipers": 0,
+    "native_share_pct": 25.0,
+    "one_sided": false,
+    "top10_pct": 15.04
+   },
+   "flags": [
+    {
+     "code": "holders-falling",
+     "tone": "bad"
+    },
+    {
+     "code": "curve-reversing",
+     "tone": "bad"
+    },
+    {
+     "code": "low-native-share",
+     "tone": "bad"
+    }
+   ]
   },
   {
    "ticker": "BUY",
@@ -5826,7 +6112,49 @@
     "swarm keys holding now: ux3cvv58, uxfernv7; first buys had u8a2m6, u9kp4sxa, paired buyers, uxfernv7, ux3cvv58, ux9da0mc"
    ],
    "note": "Fading: holders and curve both reversed as early buyers sold. Likely drops next pulse.",
-   "velocity_h": -4.4
+   "velocity_h": -4.4,
+   "score_max": 40,
+   "factors": {
+    "holders": 18,
+    "holders_basis": "onchain",
+    "holders_prev": 22,
+    "holders_per_h": -4.4,
+    "accel_per_h": -6.3,
+    "curve_pct": 24.66,
+    "curve_pts_per_h": -8.4,
+    "graduated": null,
+    "ada_side": 2552,
+    "ada_side_pct": -23.8,
+    "swarm": 2,
+    "swarm_keys": [
+     "ux3cvv58",
+     "uxfernv7"
+    ],
+    "repeat_first_buyers": [
+     5,
+     9
+    ],
+    "top10_pct": 37.14,
+    "top1_pct": 7.56
+   },
+   "flags": [
+    {
+     "code": "holders-falling",
+     "tone": "bad"
+    },
+    {
+     "code": "curve-reversing",
+     "tone": "bad"
+    },
+    {
+     "code": "swarm-holding",
+     "tone": "bad"
+    },
+    {
+     "code": "swarm-first-buyers",
+     "tone": "bad"
+    }
+   ]
   },
   {
    "ticker": "JUSTQ",
@@ -5841,7 +6169,43 @@
     "native 222 of 249 Solada-count holders (89%)"
    ],
    "note": "Native base holding at 222, but sellers still lead over 6h; ~$12.1k mcap.",
-   "velocity_h": 0.0
+   "velocity_h": 0.0,
+   "score_max": 40,
+   "factors": {
+    "holders": 222,
+    "holders_basis": "native",
+    "holders_prev": 222,
+    "holders_per_h": 0.0,
+    "accel_per_h": 0.0,
+    "graduated": "pumpswap",
+    "vol_h1": 1093,
+    "vol_x": 1.87,
+    "vol_unit": "ADA-eq",
+    "buys_h1": 3,
+    "sells_h1": 2,
+    "price_h1_pct": -1.1,
+    "price_h6_pct": -14.6,
+    "ada_side": 15026,
+    "ada_side_pct": -3.3,
+    "snipers": 0,
+    "native_share_pct": 89.2,
+    "one_sided": false,
+    "top10_pct": 18.96
+   },
+   "flags": [
+    {
+     "code": "native-majority",
+     "tone": "good"
+    },
+    {
+     "code": "holders-flat",
+     "tone": "warn"
+    },
+    {
+     "code": "sellers-lead-h6",
+     "tone": "bad"
+    }
+   ]
   },
   {
    "ticker": "STRUMP",
@@ -5856,7 +6220,37 @@
     "pump.fun flagged wallets in top holders: 4"
    ],
    "note": "Minutes old with four flagged wallets already in the top holders; watch only.",
-   "velocity_h": null
+   "velocity_h": null,
+   "score_max": 40,
+   "factors": {
+    "holders": 6,
+    "holders_basis": "native",
+    "curve_pct": 6.69,
+    "graduated": null,
+    "vol_h1": 925,
+    "vol_unit": "ADA-eq",
+    "buys_h1": 5,
+    "sells_h1": 0,
+    "price_h1_pct": 4.6,
+    "ada_side": 512,
+    "snipers": 4,
+    "one_sided": true,
+    "top10_pct": 4.77
+   },
+   "flags": [
+    {
+     "code": "new-launch",
+     "tone": "warn"
+    },
+    {
+     "code": "sniper-flags",
+     "tone": "bad"
+    },
+    {
+     "code": "one-sided",
+     "tone": "warn"
+    }
+   ]
   }
  ],
  "dropped": [

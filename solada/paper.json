@@ -323,107 +323,197 @@
   {
    "added_at": "2026-10-17T11:05:00-04:00",
    "rule": "Watch (L3) needs early holder density that holds through the first fade; an mcap spike alone isn't enough.",
-   "source": "desk history Oct 15-17"
+   "source": "desk history Oct 15-17",
+   "title": "Watch needs holder density that survives the first fade",
+   "category": "entry",
+   "evidence": []
   },
   {
    "added_at": "2026-10-17T11:05:00-04:00",
    "rule": "KOTH loss + curve progress reversing + holder bleed = Pass (L1).",
-   "source": "desk history Oct 15-17"
+   "source": "desk history Oct 15-17",
+   "title": "Pass on a KOTH loss with curve and holders reversing",
+   "category": "entry",
+   "evidence": []
   },
   {
    "added_at": "2026-10-17T11:05:00-04:00",
    "rule": "Copycats appearing often mark peak attention for the original.",
-   "source": "desk history Oct 15-17"
+   "source": "desk history Oct 15-17",
+   "title": "Copycats mark peak attention for the original",
+   "category": "entry",
+   "evidence": []
   },
   {
    "added_at": "2026-10-17T11:05:00-04:00",
    "rule": "Solada headline 24h volume can be stale post-graduation; check real pool flow over the last 6h.",
-   "source": "desk history Oct 15-17"
+   "source": "desk history Oct 15-17",
+   "title": "Check real pool flow, not stale headline volume",
+   "category": "liq",
+   "evidence": []
   },
   {
    "added_at": "2026-10-17T11:05:00-04:00",
    "rule": "Holders > trades suggests airdrop/bridge/bundle distribution.",
-   "source": "desk history Oct 15-17"
+   "source": "desk history Oct 15-17",
+   "title": "More holders than trades points to airdrop or bundles",
+   "category": "sybil",
+   "evidence": []
   },
   {
    "added_at": "2026-10-17T11:05:00-04:00",
    "rule": "Graduation alone isn't a signal: JUICE, FEED, HERO, BEAST all faded to 19-30k ADA with 60-80 holders after pools opened.",
-   "source": "desk history Oct 15-17"
+   "source": "desk history Oct 15-17",
+   "title": "Graduation alone is not a signal",
+   "category": "entry",
+   "evidence": [
+    "JUICE",
+    "FEED",
+    "HERO",
+    "BEAST"
+   ]
   },
   {
    "added_at": "2026-10-17T11:05:00-04:00",
    "rule": "Pools with an ADA side under ~11k swing 30-80% on a handful of wallets; holder count is the signal.",
-   "source": "desk history Oct 15-17"
+   "source": "desk history Oct 15-17",
+   "title": "Pools under ~11k ADA side swing on a few wallets",
+   "category": "liq",
+   "evidence": []
   },
   {
    "added_at": "2026-10-17T11:05:00-04:00",
    "rule": "Price rising with flat holders = Tiny lottery (L2) at best.",
-   "source": "desk history Oct 15-17"
+   "source": "desk history Oct 15-17",
+   "title": "Rising price on flat holders caps at Tiny lottery",
+   "category": "entry",
+   "evidence": []
   },
   {
    "added_at": "2026-10-17T11:05:00-04:00",
    "rule": "Linked flip pair u8a2m6+u978t4 and snipers u9w6dd/uytg09zr/uyyyjqps in the first block = rotation risk; watch whether they sell into the run.",
-   "source": "desk history Oct 15-17"
+   "source": "desk history Oct 15-17",
+   "title": "Flip pair and first-block snipers mean rotation risk",
+   "category": "swarm",
+   "evidence": []
   },
   {
    "added_at": "2026-10-17T11:25:00-04:00",
    "id": "j",
    "rule": "First-block sniper full exit = kill trigger; IAGONAUT faded 47.8k→32.2k within ~45 min after top sniper uytg09zr sold out (Oct 17).",
-   "source": "IAGONAUT Oct 17"
+   "source": "IAGONAUT Oct 17",
+   "title": "Exit when the first-block sniper sells out",
+   "category": "kill",
+   "evidence": [
+    "IAGONAUT"
+   ]
   },
   {
    "added_at": "2026-10-17T11:25:00-04:00",
    "id": "k",
    "rule": "Holding-tier shape: only names with 120+ holders, ADA-side ≥25k and 6h buys > sells qualify for paper tickets; post-graduation names under ~11k ADA side with 6h price down >40% (HERO -76%, JUICE -41%, ROBIN -55%) are Pass regardless of 24h headline gains.",
-   "source": "run 2026-10-17 11:10"
+   "source": "run 2026-10-17 11:10",
+   "title": "Holding tier: 120+ holders, 25k ADA side, 6h flow up",
+   "category": "entry",
+   "evidence": [
+    "HERO",
+    "JUICE",
+    "ROBIN"
+   ]
   },
   {
    "added_at": "2026-10-17T13:45:00-04:00",
    "id": "l",
    "rule": "Promo-pop entries: don't ticket a name whose last 6h gain came from a promo/perk announcement on flat holders. Wait for the pullback and a re-hold. BOLT opened at 530k right after the copy-trade-bot promo (+12%) and hit its 450k kill within ~2h (-20.6%) while holders barely moved.",
-   "source": "BOLT-20261017-1125 close"
+   "source": "BOLT-20261017-1125 close",
+   "title": "Skip promo-pop gains on flat holders",
+   "category": "entry",
+   "evidence": [
+    "BOLT"
+   ]
   },
   {
    "added_at": "2026-10-17T13:45:00-04:00",
    "id": "m",
    "rule": "Team airdrops inflate holder counts: holders gained during a team airdrop window (CLOVE 3M+ airdrop, Oct 17) don't count toward rule k or L3 holder growth.",
-   "source": "CLOVE Oct 17"
+   "source": "CLOVE Oct 17",
+   "title": "Team airdrop holders don't count as growth",
+   "category": "sybil",
+   "evidence": [
+    "CLOVE"
+   ]
   },
   {
    "added_at": "2026-10-17T13:45:00-04:00",
    "id": "n",
    "rule": "Solana-side snipe hunt: Solada's holder count for Solana-side coins mixes both chains (CORE shows 119 on Solada vs ~35 Solana holders on pump.fun). Score Solana traction on pump.fun/Helius Solana-native holders, excluding the Solada escrow wallet HCYvN1... and deployer A1qaJW....",
-   "source": "run 2026-10-17 13:20"
+   "source": "run 2026-10-17 13:20",
+   "title": "Score Solana-side coins on native holders",
+   "category": "sybil",
+   "evidence": [
+    "CORE"
+   ]
   },
   {
    "added_at": "2026-10-17T19:18:00-04:00",
    "id": "o",
    "rule": "Count-based flow and holder leaks: 'buys > sells' counts only if h6 price change is also >= -10% (FTR showed 2,665 buys/1,584 sells over h6 while price fell 34%; BOLT 104/49 at -14.5%). Close an open ticket early when holders fall at two marks in a row and price is below entry, instead of waiting for the kill line: FTR bled 18,434 -> 18,111 -> 17,599 holders into its -34.5% kill, and CLOVE 128 -> 126 -> 123 (closed -12.7%).",
-   "source": "FTR-DFMt-20261017-1340 close (pump arm) + CLOVE-20261017-1125 close"
+   "source": "FTR-DFMt-20261017-1340 close (pump arm) + CLOVE-20261017-1125 close",
+   "title": "Exit after two holder drops below entry",
+   "category": "kill",
+   "evidence": [
+    "FTR",
+    "BOLT",
+    "CLOVE"
+   ]
   },
   {
    "added_at": "2026-10-17T21:18:00-04:00",
    "id": "p",
    "rule": "Swarm launchers: early-swarm keys now launch coins themselves. uyt8xs9q (early in CRAWJI) launched PPC at 8:37 PM with u9w6dd/uxfernv7/uxz6fvju in its first blocks; u9rwdkfjtr launched HUMAN and DINO 8 min apart and uxz5cts5ww launched RED and RBULL 6 min apart, with flip pair u8a2m6+u978t4 early in all four. A launch whose launcher is a swarm key, or with 2+ swarm keys in its first 10 buyers, is L1 until it shows 60+ holders outside the swarm list.",
-   "source": "run 2026-10-17 21:18 (9 of 9 new Cardano launches swarm-sniped, all back to 0-1 holders)"
+   "source": "run 2026-10-17 21:18 (9 of 9 new Cardano launches swarm-sniped, all back to 0-1 holders)",
+   "title": "Swarm-launched coins stay Pass until 60 outside holders",
+   "category": "swarm",
+   "evidence": [
+    "CRAWJI",
+    "PPC",
+    "HUMAN",
+    "DINO",
+    "RED",
+    "RBULL"
+   ]
   },
   {
    "added_at": "2026-10-17T21:18:00-04:00",
    "id": "q",
    "rule": "Solana-side snipe hunt: team-driven King/Queen-of-the-hill pushes move the curve and Solada's mixed holder count, not Solana-native holders. MISS went 68.8% -> 83.7% curve and 90 -> 106 Solada holders on its own team's 'Queen of the hill' posts, but only 8 -> 17 Solana-native holders. An early-snipe ticket needs 50+ Solana-native holders (rule n) and 20%+ native growth between two runs, not curve % alone.",
-   "source": "MISS 2026-10-17 19:18 -> 21:18"
+   "source": "MISS 2026-10-17 19:18 -> 21:18",
+   "title": "Curve pushes need native holder growth, not curve %",
+   "category": "entry",
+   "evidence": [
+    "MISS"
+   ]
   },
   {
    "added_at": "2026-10-17T21:18:00-04:00",
    "id": "r",
    "rule": "Wallet tracking: Solada holder-reward claims add tokens (a single claim can return the platform token plus several reward tokens for a small net ADA cost). Check whether a balance increase came from a reward-claim tx before calling it a buy.",
-   "source": "desk observation 2026-10-17"
+   "source": "desk observation 2026-10-17",
+   "title": "Rule out reward claims before reading a balance increase",
+   "category": "review",
+   "evidence": []
   },
   {
    "added_at": "2026-10-17T21:18:00-04:00",
    "id": "daily-2026-10-17",
    "rule": "Day review: 2 Solada paper closes (BOLT -20.6%, CLOVE -12.7%), both opened at L3 after a 6h pop and both lost to holders that didn't grow. Every ticket today was entered after a run-up; the next ticket should come after a pullback that holders survive (rule l), and rule o's two-mark holder exit cut CLOVE's loss. Graduates keep fading to 20-35k ADA unless holders keep climbing.",
-   "source": "daily rule update, last run of 2026-10-17"
+   "source": "daily rule update, last run of 2026-10-17",
+   "title": "Oct 17 review: wait for a pullback that holders survive",
+   "category": "review",
+   "evidence": [
+    "BOLT",
+    "CLOVE"
+   ]
   }
  ],
  "summaries": [

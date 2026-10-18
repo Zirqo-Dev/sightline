@@ -529,79 +529,158 @@
    "id": "a",
    "added_at": "2026-10-17T11:41:00-04:00",
    "rule": "Watch (L3) needs early holder density that holds through the first fade (>=1,500 holders after a >=30% pullback, no holder bleed); an mcap spike alone isn't enough.",
-   "source": "mirrored from solada-paper.json"
+   "source": "mirrored from solada-paper.json",
+   "title": "Watch needs 1,500+ holders after a 30% pullback",
+   "category": "entry",
+   "evidence": [
+    "CyberAxe",
+    "FTR"
+   ],
+   "mirrors": "solada:a"
   },
   {
    "id": "f",
    "added_at": "2026-10-17T11:41:00-04:00",
    "rule": "Graduation alone isn't a signal; on Pump.fun most graduates bleed or are farmed. Score the post-migration PumpSwap pool, not the graduation event.",
-   "source": "mirrored from solada-paper.json"
+   "source": "mirrored from solada-paper.json",
+   "title": "Score the PumpSwap pool, not the graduation",
+   "category": "entry",
+   "evidence": [],
+   "mirrors": "solada:f"
   },
   {
    "id": "h",
    "added_at": "2026-10-17T11:41:00-04:00",
    "rule": "Price rising with flat holders = Tiny lottery (L2) at best.",
-   "source": "mirrored from solada-paper.json"
+   "source": "mirrored from solada-paper.json",
+   "title": "Rising price on flat holders caps at Tiny lottery",
+   "category": "entry",
+   "evidence": [],
+   "mirrors": "solada:h"
   },
   {
    "id": "i",
    "added_at": "2026-10-17T11:41:00-04:00",
    "rule": "First-block snipers/bundles (same-slot-as-create buyers, or pump.fun isSniper/isBundler flags) = rotation risk; >20% of supply bought in the create slot caps the name at L2.",
-   "source": "mirrored from solada-paper.json"
+   "source": "mirrored from solada-paper.json",
+   "title": "Create-slot snipers and bundles cap a name at L2",
+   "category": "swarm",
+   "evidence": [],
+   "mirrors": "solada:i"
   },
   {
    "id": "j",
    "added_at": "2026-10-17T11:41:00-04:00",
    "rule": "First-block sniper/bundle full exit = kill trigger; if already hit before entry, no ticket (a paper entry shouldn't open below its own kill line).",
-   "source": "mirrored from solada-paper.json; FTR 5x6Q Oct 17"
+   "source": "mirrored from solada-paper.json; FTR 5x6Q Oct 17",
+   "title": "Exit when first-block snipers or bundles sell out",
+   "category": "kill",
+   "evidence": [
+    "FTR"
+   ],
+   "mirrors": "solada:j"
   },
   {
    "id": "k",
    "added_at": "2026-10-17T11:41:00-04:00",
    "rule": "Paper tickets need a meaningful holder base (>=500 L2 / >=1,500 L3), pool depth (>=85 / >=200 SOL quote side) and buys > sells over h6 (and h1 for L3). Names with h6 price down >40% are Pass regardless of 24h headline gains.",
-   "source": "mirrored from solada-paper.json, scaled to Pump.fun"
+   "source": "mirrored from solada-paper.json, scaled to Pump.fun",
+   "title": "Tickets need holder base, pool depth and h6 flow",
+   "category": "entry",
+   "evidence": [],
+   "mirrors": "solada:k"
   },
   {
    "id": "pf1",
    "added_at": "2026-10-17T11:41:00-04:00",
    "rule": "Sybil/wash farm filter: identical balances across many top holders, holder-count mismatch between sources, liq/mcap <2% or lopsided tiny-fill buy counts = Pass. RST, TRUTH, SARP (and GDF/XBC/GOIF/DNA/UDTF/FTR-fire clones) showed this on Oct 17.",
-   "source": "run 2026-10-17 11:41"
+   "source": "run 2026-10-17 11:41",
+   "title": "Identical balances or source mismatches mean sybil farm",
+   "category": "sybil",
+   "evidence": [
+    "RST",
+    "TRUTH",
+    "SARP",
+    "GDF",
+    "XBC",
+    "GOIF",
+    "DNA",
+    "UDTF",
+    "FTR"
+   ]
   },
   {
    "id": "pf2",
    "added_at": "2026-10-17T11:41:00-04:00",
    "rule": "Copycat tickers (several FTR mints live) mark peak attention for the original; don't ticket a copy because the original ran.",
-   "source": "run 2026-10-17 11:41"
+   "source": "run 2026-10-17 11:41",
+   "title": "Copycat tickers mark peak attention for the original",
+   "category": "entry",
+   "evidence": [
+    "FTR"
+   ],
+   "mirrors": "solada:c"
   },
   {
    "id": "pf-l",
    "added_at": "2026-10-17T13:45:00-04:00",
    "rule": "Reactivation spikes don't qualify even as the strongest L2: CyberAxe (+1,271% h1 on a 66h coin) hit its kill within ~2h (-31.7%) even though holders rose 1,512 -> 1,710. Require one full hourly candle holding above the spike's midpoint before ticketing.",
-   "source": "CyberAxe-20261017-1141 close"
+   "source": "CyberAxe-20261017-1141 close",
+   "title": "Reactivation spikes need a held hourly candle first",
+   "category": "entry",
+   "evidence": [
+    "CyberAxe"
+   ],
+   "mirrors": "solada:l"
   },
   {
    "id": "pf-m",
    "added_at": "2026-10-17T19:18:00-04:00",
    "rule": "Counts aren't flow: 'h6 buys > sells' only counts if h6 price change is >= -10%. FTR kept a buy-count majority (4,645/3,353, then 2,665/1,584) while falling 34% h6 into its kill. Close a ticket early when holders fall at two marks in a row and price is below entry (FTR 18,434 -> 18,111 -> 17,599) instead of waiting for the -30% line.",
-   "source": "FTR-DFMt-20261017-1340 close"
+   "source": "FTR-DFMt-20261017-1340 close",
+   "title": "Exit after two holder drops below entry",
+   "category": "kill",
+   "evidence": [
+    "FTR",
+    "swordcat"
+   ],
+   "mirrors": "solada:o"
   },
   {
    "added_at": "2026-10-17T21:18:00-04:00",
    "id": "pf-n",
    "rule": "Sybil holder band: on a coin under 24h old, 10+ of the top-12 non-pool holders sitting within about +/-10% of each other is a sybil/bundled distribution even when balances aren't exactly identical. MINTER (4h old, 7,512 holders, $3.8M) had all top-12 at 0.24-0.27% (Helius). Treat it as L1, whatever the holder count.",
-   "source": "run 2026-10-17 21:18"
+   "source": "run 2026-10-17 21:18",
+   "title": "Tight top-holder balance band means sybil distribution",
+   "category": "sybil",
+   "evidence": [
+    "MINTER"
+   ]
   },
   {
    "added_at": "2026-10-17T21:18:00-04:00",
    "id": "pf-o",
    "rule": "Old coins need fresh holders: on coins older than 7 days, the strongest-L2 ticket also needs holder growth of 2%+ between two snapshots. swordcat (19 days old) went 9,939 -> 9,932 -> 9,930 holders and closed -11.6% under pf-m.",
-   "source": "swordcat-5tCj-20261017-1530 close"
+   "source": "swordcat-5tCj-20261017-1530 close",
+   "title": "Coins older than 7 days need fresh holder growth",
+   "category": "entry",
+   "evidence": [
+    "swordcat"
+   ]
   },
   {
    "added_at": "2026-10-17T21:50:00-04:00",
    "id": "pf-daily-2026-10-17",
    "rule": "Day review: 3 Pump.fun closes, all losses (CyberAxe -31.7% reactivation spike, pf-l; FTR -34.5% buy counts while price fell, pf-m; swordcat -11.6% stale holders on a 19-day coin, pf-o). The only green ticket is CATE (+5.8% at the 9:18 PM mark), the deepest and most widely held name (~108k holders, ~14.9k SOL pool side, top-10 ex-pool 15%). Every $0.5-3M L2 entered after a spike lost; for the strongest-L2 slot, prefer an established holder base that is still growing over a spike name. One day of data, so no threshold change yet.",
-   "source": "daily learning brief 2026-10-17"
+   "source": "daily learning brief 2026-10-17",
+   "title": "Oct 17 review: prefer a growing established holder base",
+   "category": "review",
+   "evidence": [
+    "CyberAxe",
+    "FTR",
+    "swordcat",
+    "CATE"
+   ]
   }
  ],
  "summaries": [
