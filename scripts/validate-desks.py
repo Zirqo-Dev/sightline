@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+"""Validate every desk file listed in desks.json against schema/. Needs: pip install jsonschema"""
+import json,os,sys,glob
+from jsonschema import Draft202012Validator
+os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)),".."))
+S={k:Draft202012Validator(json.load(open(f"schema/{k}.schema.json"))) for k in("paper-book","run-log","brief")}
+for v in S.values(): v.check_schema(v.schema)
+jobs=[]
+for d in json.load(open("desks.json"))["desks"]:
+    if d.get("log"): jobs.append((d["log"],"run-log"))
+    for b in d.get("books",[]): jobs.append((b["paper"],"paper-book"))
+    if d.get("briefs"): jobs+= [(f,"brief") for f in sorted(glob.glob(os.path.join(d["briefs"],"*.json"))) if not f.endswith("index.json")]
+bad=0
+for f,k in jobs:
+    if not os.path.exists(f): print(f"MISSING {f}"); bad+=1; continue
+    errs=list(S[k].iter_errors(json.load(open(f))))
+    for e in errs[:20]: print(f"INVALID {f} ({k}) at /{'/'.join(map(str,e.path))}: {e.message[:200]}")
+    bad+=bool(errs)
+    if not errs: print(f"ok {f} ({k})")
+sys.exit(1 if bad else 0)

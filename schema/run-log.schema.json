@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zirqo-dev.github.io/sightline/schema/run-log.schema.json",
+  "title": "Sightline run log v2",
+  "type": "object",
+  "required": ["schema_version", "desk", "asof", "headline"],
+  "properties": {
+    "schema_version": {"const": 2},
+    "desk": {"type": "string"},
+    "asof": {"type": "string"},
+    "headline": {"type": "string"},
+    "levels": {"type": "object"},
+    "kill_lines": {},
+    "paper_actions": {},
+    "rules_added": {},
+    "followups": {"type": "array"},
+    "sources": {},
+    "history": {"type": "array", "items": {"type": "object", "required": ["asof"], "additionalProperties": true}}
+  },
+  "additionalProperties": true
+}

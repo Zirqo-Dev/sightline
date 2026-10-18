@@ -1,8 +1,11 @@
 {
- "schema_version": 1,
+ "schema_version": 2,
  "desk": "Snek Sentinel",
+ "book": "solada",
+ "chain": "cardano",
+ "unit": "ADA",
  "disclaimer": "Paper trades only: research/lottery/NFA. No real execution.",
- "paper_ticket_ada": 100,
+ "ticket_size": 100,
  "default_window_hours": 48,
  "levels": {
   "1": "Pass/ignore",
@@ -19,7 +22,7 @@
    "asset_id": "14628c260a749e78e69e58acca32d0baa09808d50388c84fa7e1ae470014df10424f4c54",
    "opened_at": "2026-10-17T11:25:00-04:00",
    "window_ends_at": "2026-10-19T11:25:00-04:00",
-   "ticket_ada": 100,
+   "size": 100,
    "level": 3,
    "entry": {
     "mcap_ada": 530461,
@@ -27,13 +30,13 @@
     "holders": 277,
     "ada_side": 34834
    },
-   "thesis_signals": [
+   "thesis": [
     "277 holders, top-10 ex-pool 26%, no cluster >3.2%",
     "6h 46 buys/25 sells, +13.5% h6",
     "ADA side ~35k (up from ~32k Oct 15)",
     "SpiritSigma (5.2k) said wants to bridge for $BOLT"
    ],
-   "stop": {
+   "kill_line": {
     "text": "mcap < 450k ADA or holders < 250 or ADA side < 28k",
     "mcap_ada_below": 450000,
     "holders_below": 250
@@ -49,9 +52,12 @@
     "source": "on-chain Minswap V2 pool UTxO via Blockfrost; Solada /api/market 421,311"
    },
    "exit_reason": "Kill line hit: pool mcap 421k ADA < 450k stop. Holders (264) and ADA side (30.6k) were still above their lines.",
-   "pct_change": -20.6,
-   "paper_pnl_ada": -20.6,
-   "signal_review": {
+   "result": {
+    "unit": "ADA",
+    "pct": -20.6,
+    "pnl": -20.6
+   },
+   "review": {
     "worked": [
      "Holder depth held: 277 -> 264, still above the 250 line",
      "ADA side held ~30.6k (above 28k)"
@@ -73,7 +79,7 @@
    "asset_id": "c1b89ed48dfc2b82167c1548b88942d367af1e517947c3dd8bdead0b0014df10434c4f56452d33",
    "opened_at": "2026-10-17T11:25:00-04:00",
    "window_ends_at": "2026-10-19T11:25:00-04:00",
-   "ticket_ada": 100,
+   "size": 100,
    "level": 3,
    "entry": {
     "mcap_ada": 314750,
@@ -81,12 +87,12 @@
     "holders": 125,
     "ada_side": 26452
    },
-   "thesis_signals": [
+   "thesis": [
     "+152% 24h, 6h 52 buys/34 sells, +20% h1",
     "125 holders, ADA side ~26k",
     "top-10 ex-pool 35.7%, top 5.9% (watch)"
    ],
-   "stop": {
+   "kill_line": {
     "text": "mcap < 250k ADA or holders < 110",
     "mcap_ada_below": 250000,
     "holders_below": 110
@@ -147,9 +153,12 @@
     "source": "on-chain Minswap V2 pool UTxO via Blockfrost (~7:20 PM ET); Solada /api/market 298,567; GeckoTerminal trades"
    },
    "exit_reason": "Holders leaving (new rule o): Solada holders fell at two marks in a row (128 -> 126 -> 123, on-chain 116 -> 114) with price below entry, and the 5 PM pop was fading on 2 buys/9 sells in h1. The 250k mcap / 110-holder kill line wasn't hit; closed early under rule o instead.",
-   "pct_change": -12.7,
-   "paper_pnl_ada": -12.7,
-   "signal_review": {
+   "result": {
+    "unit": "ADA",
+    "pct": -12.7,
+    "pnl": -12.7
+   },
+   "review": {
     "worked": [
      "Top holders held: no top-5 wallet sold, top-1 6.16% (stake1u9q8ncwj) unchanged",
      "Pool stayed liquid at ~24k ADA; the 5 PM spike to ~397k showed there were buyers on news"

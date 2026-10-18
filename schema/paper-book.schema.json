@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zirqo-dev.github.io/sightline/schema/paper-book.schema.json",
+  "title": "Sightline paper book v2",
+  "type": "object",
+  "required": ["schema_version", "desk", "book", "open", "closed", "rules"],
+  "properties": {
+    "schema_version": {"const": 2},
+    "desk": {"type": "string"},
+    "book": {"type": "string"},
+    "chain": {"type": "string"},
+    "unit": {"type": "string"},
+    "disclaimer": {"type": "string"},
+    "ticket_size": {"type": "number"},
+    "default_window_hours": {"type": "number"},
+    "levels": {"type": "object"},
+    "open": {"type": "array", "items": {"$ref": "#/$defs/ticket"}},
+    "closed": {"type": "array", "items": {"allOf": [{"$ref": "#/$defs/ticket"}, {"required": ["closed_at"]}]}},
+    "rules": {"type": "array", "items": {"$ref": "#/$defs/rule"}},
+    "summaries": {"type": "array", "items": {"type": "object", "properties": {"at": {"type": "string"}, "type": {"type": "string"}, "note": {"type": "string"}}}}
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "ticket": {
+      "type": "object",
+      "required": ["id", "ticker", "opened_at"],
+      "properties": {
+        "id": {"type": "string"},
+        "ticker": {"type": "string"},
+        "name": {"type": "string"},
+        "status": {"type": "string"},
+        "opened_at": {"type": "string"},
+        "window_ends_at": {"type": "string"},
+        "closed_at": {"type": "string"},
+        "level": {"type": "number"},
+        "size": {"type": "number"},
+        "entry": {"type": "object"},
+        "exit": {"type": "object"},
+        "exit_reason": {"type": "string"},
+        "kill_line": {"type": ["object", "string"]},
+        "thesis": {"type": ["array", "string"]},
+        "marks": {"type": "array"},
+        "result": {"type": "object", "properties": {"pnl": {"type": "number"}, "pct": {"type": "number"}, "unit": {"type": "string"}}},
+        "review": {}
+      },
+      "additionalProperties": true
+    },
+    "rule": {
+      "type": "object",
+      "required": ["rule"],
+      "properties": {"id": {"type": "string"}, "added_at": {"type": "string"}, "rule": {"type": "string"}, "source": {"type": "string"}},
+      "additionalProperties": true
+    }
+  }
+}

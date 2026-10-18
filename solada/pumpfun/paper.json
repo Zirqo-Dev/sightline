@@ -1,11 +1,13 @@
 {
- "schema_version": 1,
+ "schema_version": 2,
  "desk": "Snek Sentinel",
- "arm": "pump.fun comparison arm (mirrors solada-paper.json rules)",
+ "book": "pumpfun",
  "chain": "solana",
+ "unit": "ADA-equivalent",
+ "arm": "pump.fun comparison arm (mirrors solada-paper.json rules)",
  "launchpad": "pump.fun",
  "disclaimer": "Paper trades only: research/lottery/NFA. No real execution, no wallet keys, no real sizing. Nothing here is a profit claim.",
- "paper_ticket_ada_equivalent": 100,
+ "ticket_size": 100,
  "paper_ticket_sol": 0.21268,
  "paper_ticket_conversion": {
   "at": "2026-10-17T21:18:00-04:00",
@@ -60,7 +62,7 @@
    "pool_dex": "pumpswap",
    "opened_at": "2026-10-17T19:18:00-04:00",
    "window_ends_at": "2026-10-19T19:18:00-04:00",
-   "ticket_ada_equivalent": 100,
+   "size": 100,
    "ticket_sol": 0.21259,
    "ticket_conversion": {
     "at": "2026-10-17T19:18:00-04:00",
@@ -77,14 +79,14 @@
     "pool_quote_sol": 14499,
     "paper_qty_tokens": 312
    },
-   "thesis_signals": [
+   "thesis": [
     "Strongest L2 of the run: 107,869 pump.fun holders (GeckoTerminal 142,879, no mismatch), pool 14,499 SOL (liq ~$3.0M), 83-day-old coin",
     "Clean concentration: Helius top-10 ex-pool 15.2%, top-1 2.86%; pump.fun 0 sniper/bundler/dev flags in top-50, max 2 identical balances",
     "Flow passes rule pf-m: DexScreener h6 3,302/2,473 and h1 445/356 with price h6 +1.5%, h24 +10.7%; average h6 fill ~$104 (no tiny-fill farm)",
     "No spike (pf-l n/a): daily closes recovered from 0.0489 (Oct 12 low) to 0.070; price is ~53% of the 30-day high 0.1307 (Sep 18), above the 40% first-fade floor"
    ],
    "not_l3_because": "Liq/mcap 4.4% is under the 5% L3 floor; no prior holder snapshot to prove holders aren't bleeding; first-block check not run (83-day-old coin, not worth archival credits)",
-   "stop": {
+   "kill_line": {
     "text": "mcap < $47.49M or holders < 97,082 or pool quote < 10,149 SOL (default -30%/-10%/-30%); early exit per pf-m if holders fall at two marks in a row with price below entry",
     "mcap_usd_below": 47492000,
     "holders_below": 97082,
@@ -123,7 +125,7 @@
    "pool_dex": "pumpswap",
    "opened_at": "2026-10-17T11:41:00-04:00",
    "window_ends_at": "2026-10-19T11:41:00-04:00",
-   "ticket_ada_equivalent": 100,
+   "size": 100,
    "ticket_sol": 0.21262,
    "level": 2,
    "entry": {
@@ -136,13 +138,13 @@
     "pool_quote_sol": 410.2,
     "paper_qty_tokens": 30202
    },
-   "thesis_signals": [
+   "thesis": [
     "Strongest L2 of run: holders grew 1,386 -> 1,512 (+9%) between 11:35 and 11:40 while price rose (not flat-holder pump, rule h ok)",
     "h1 2,809 buys / 2,110 sells; h6 2,926 / 2,223; pool quote ~410 SOL",
     "top-10 ex-pool 23.3%, top-1 ex-pool 3.82% (DFZYHa...), pump.fun flags 0 snipers/bundlers/dev in top-50",
     "Not L3: +1,271% h1 reactivation spike on a 66h-old coin that had bled ~60%; no first fade survived yet (rule a)"
    ],
-   "stop": {
+   "kill_line": {
     "text": "mcap < $500k or holders < 1,360 or pool quote side < 287 SOL",
     "mcap_usd_below": 500000,
     "holders_below": 1360,
@@ -162,9 +164,12 @@
     "source": "DexScreener pumpswap pair; pump.fun top-holders"
    },
    "exit_reason": "Kill line hit: mcap $485k < $500k stop. Holders (1,710) and pool quote (330 SOL) were still above their lines.",
-   "pct_change": -31.7,
-   "paper_pnl_ada_equiv": -31.7,
-   "signal_review": {
+   "result": {
+    "unit": "ADA-equivalent",
+    "pct": -31.7,
+    "pnl": -31.7
+   },
+   "review": {
     "worked": [
      "Holder growth was real: 1,512 -> 1,710 (+13%)",
      "No sniper/bundler flags; pool stayed >287 SOL"
@@ -189,7 +194,7 @@
    "pool_dex": "pumpswap",
    "opened_at": "2026-10-17T13:40:00-04:00",
    "window_ends_at": "2026-10-19T13:40:00-04:00",
-   "ticket_ada_equivalent": 100,
+   "size": 100,
    "ticket_sol": 0.21267,
    "ticket_conversion": {
     "at": "2026-10-17T13:20:00-04:00",
@@ -206,14 +211,14 @@
     "pool_quote_sol": 1108.4,
     "paper_qty_tokens": 6462
    },
-   "thesis_signals": [
+   "thesis": [
     "Strongest L2 of run: 18,434 pump.fun holders (GeckoTerminal 18,924, counts agree), 63h old original FTR",
     "Survived first fade: high ~$7.4M (Oct 16 1 AM ET), low ~30% of high, now ~45% of high and recovering",
     "h6 4,556 buys/3,686 sells (+6.6%), h1 615/490; liq ~$231k (~7% of mcap), pool quote ~1,108 SOL",
     "Helius: top-10 ex-pool 14.4%, top-1 ex-pool 2.54%; pump.fun flags 0 snipers/bundlers/dev in top-50"
    ],
    "not_l3_because": "No prior holder snapshot to prove holders aren't bleeding through the fade (rule a); first-block check unresolved; several FTR clones (72xN farm-like, 5x6Q) trading at the same time",
-   "stop": {
+   "kill_line": {
     "text": "mcap < $2.28M or holders < 16,590 or pool quote < 776 SOL",
     "mcap_usd_below": 2284000,
     "holders_below": 16590,
@@ -264,9 +269,12 @@
     "source": "DexScreener pumpswap pair; pump.fun top-holders; GeckoTerminal token info (18,924 holders)"
    },
    "exit_reason": "Kill line hit: mcap $2.14M < $2.284M stop. Holders (17,599 vs 16,590) and pool quote (900 vs 776 SOL) were still above their lines.",
-   "pct_change": -34.5,
-   "paper_pnl_ada_equiv": -34.5,
-   "signal_review": {
+   "result": {
+    "unit": "ADA-equivalent",
+    "pct": -34.5,
+    "pnl": -34.5
+   },
+   "review": {
     "worked": [
      "Concentration stayed clean: top-10 ex-pool 14.4% -> 14.9%, 0 sniper/bundler flags",
      "Pool depth held (1,108 -> 900 SOL, still above the 776 line)"
@@ -292,7 +300,7 @@
    "pool_dex": "pumpswap",
    "opened_at": "2026-10-17T15:30:00-04:00",
    "window_ends_at": "2026-10-19T15:30:00-04:00",
-   "ticket_ada_equivalent": 100,
+   "size": 100,
    "ticket_sol": 0.21366,
    "ticket_conversion": {
     "at": "2026-10-17T15:30:00-04:00",
@@ -309,14 +317,14 @@
     "pool_quote_sol": 1005.4,
     "paper_qty_tokens": 8882
    },
-   "thesis_signals": [
+   "thesis": [
     "Strongest L2 of the run: 9,939 pump.fun holders, pool ~1,005 SOL, liq ~8.8% of mcap, coin is 19 days old",
     "Steady grind with no spike: hourly closes ~$1.80-2.60e-3 over 48h, h6 +19%, h24 +28% (pf-l doesn't apply)",
     "Top-10 ex-pool 21.7%, top-1 ex-pool 3.67% on pump.fun (Helius largest accounts: ~20.6% / 2.86% by token account); 0 sniper/bundler/dev flags in top-50, no identical-balance cluster",
     "Flow: DexScreener h6 933/909, GeckoTerminal h6 2,811/1,782"
    ],
    "not_l3_because": "No prior holder snapshot to show holders aren't bleeding; the first-fade test can't be checked inside the 48h of OHLCV pulled; DexScreener h1 376/403 has sells > buys (L3 needs h1 buys >= sells); first-block check unresolved",
-   "stop": {
+   "kill_line": {
     "text": "mcap < $1.68M or holders < 8,945 or pool quote < 704 SOL (default -30%/-10%/-30%)",
     "mcap_usd_below": 1679000,
     "holders_below": 8945,
@@ -367,9 +375,12 @@
     "source": "DexScreener pumpswap pair; pump.fun top-holders; GeckoTerminal token info (10,435 holders)"
    },
    "exit_reason": "Rule pf-m early exit: holders fell at two marks in a row (9,939 -> 9,932 -> 9,930) with price below entry. No kill line was hit (mcap $2.12M vs $1.68M, holders 9,930 vs 8,945, pool 944 vs 704 SOL).",
-   "pct_change": -11.6,
-   "paper_pnl_ada_equiv": -11.6,
-   "signal_review": {
+   "result": {
+    "unit": "ADA-equivalent",
+    "pct": -11.6,
+    "pnl": -11.6
+   },
+   "review": {
     "worked": [
      "Clean concentration and no sniper/bundler flags kept it from a fast collapse",
      "pf-m early exit closed it at -11.6% instead of riding to the -30% line"
