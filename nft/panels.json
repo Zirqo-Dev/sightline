@@ -5,6 +5,8 @@
     {"type": "headline", "title": "Latest tape", "data": "log.json"},
     {"type": "stat-cards", "title": "Book", "data": "briefs/2026-10-18.json", "path": "scoreboard"},
     {"type": "tickets", "title": "Open tickets", "data": "paper.json"},
+    {"type": "table", "title": "Pulse: tracked names (hourly)", "data": "pulse.json", "path": "latest", "options": {"columns": ["ticker", "chain", "role", "floor", "unit", "top_offer", "sales_1h", "buyers_1h", "listings"], "labels": {"ticker": "Collection", "top_offer": "Top offer", "sales_1h": "Sales 1h", "buyers_1h": "Buyers 1h", "listings": "Listings*"}, "badge": "role"}},
+    {"type": "table", "title": "Early-runner radar (hourly, research only)", "data": "pulse.json", "path": "radar", "options": {"columns": ["ticker", "chain", "score", "first_seen", "note"], "labels": {"ticker": "Collection", "first_seen": "First seen"}, "limit": 10}},
     {"type": "table", "title": "Floor watch", "data": "log.json", "path": "runs.0.watchlist", "options": {"columns": ["name", "chain", "status", "last_checked"], "labels": {"name": "Collection", "last_checked": "Checked"}, "badge": "status"}},
     {"type": "briefs", "title": "Daily briefs", "data": "briefs/"},
     {"type": "rules", "title": "Rules learned", "data": "paper.json"},
