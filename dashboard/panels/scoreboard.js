@@ -6,12 +6,12 @@ S.register("scoreboard", { render({ data }) {
     const s = S.score([j]);
     const unitRow = Object.entries(s.byUnit)[0];
     const pnl = unitRow
-      ? `<span class="${S.pnlClass(unitRow[1].pnl)}">${S.pnlNum(unitRow[1].pnl)}</span> <span class="muted small">${S.esc(unitRow[0])}</span>`
+      ? `<span class="${S.pnlClass(unitRow[1].pnl)}">${S.pnlNum(unitRow[1].pnl)}</span> ${S.unitTag(unitRow[0])}`
       : "–";
     const avg = S.avgRet(j);
-    return `<tr><td><b>${S.esc(j.book || b.path || "")}</b> <span class="muted small">${S.esc(j.chain || "")}</span></td><td>${s.open}</td><td>${s.closed}</td><td>${s.winRate == null ? "–" : S.fmt(s.winRate, 0) + "%"}</td><td>${S.pct(avg)}</td><td>${pnl}</td></tr>`;
+    return `<tr><td class="c-main">${S.chainIcon(j.chain === "multi" ? (j.chains || ["multi"])[0] : j.chain, "sm")}<b>${S.esc(j.book || b.path || "")}</b></td><td class="num">${s.open}</td><td class="num">${s.closed}</td><td class="num">${s.winRate == null ? "–" : S.fmt(s.winRate, 0) + "%"}</td><td class="num">${S.pct(avg)} ${S.pnlBar(avg)}</td><td class="num">${pnl}</td></tr>`;
   }).join("");
   const t = S.score(books.map(b => b.json));
   return `<div class="cards">${S.metricCards(t)}</div>${S.unitNote(t)}
-    <div class="scroll" style="margin-top:12px"><table><tr><th>Book</th><th>Open</th><th>Closed</th><th>Win</th><th>Avg ret</th><th>P&amp;L</th></tr>${rows}</table></div>`;
+    <table class="tbl books"><tr><th>Book</th><th class="num">Open</th><th class="num">Closed</th><th class="num">Win</th><th class="num">Avg ret</th><th class="num">P&amp;L</th></tr>${rows}</table>`;
 }});

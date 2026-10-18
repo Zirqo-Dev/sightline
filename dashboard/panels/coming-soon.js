@@ -1,3 +1,3 @@
-S.register("coming-soon", { render({ opt }) {
-  return `<div class="placeholder"><b>Plugin slot</b><br>${S.esc(opt.text || "A future component goes here.")}</div>`;
+S.register("coming-soon", { slim: true, render({ opt }) {
+  return `<div class="placeholder"><b>slot</b> · ${S.rich(opt.text || "A future component goes here.")}</div>`;
 }});

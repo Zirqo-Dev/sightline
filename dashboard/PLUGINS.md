@@ -45,7 +45,7 @@ One file each in `dashboard/panels/`. Each calls `S.register`.
 | `stat-cards` | One card per field of an object. |
 | `notes` | A string, or an object of named sections. |
 | `chart` | A simple line. `options.x` (default `t` or `at`) and `options.y`. |
-| `embed` | Another page. `options.url` is relative to the site root (`nft/site/`) or absolute. `options.preview` is an image in the desk folder, shown until clicked. `options.height` is pixels. |
+| `embed` | Another page, collapsed to one line (`details`). `options.url` is relative to the site root (`nft/site/`) or absolute. `options.preview` is an image in the desk folder, shown until the panel is opened and the preview is clicked. `options.height` is pixels. |
 | `coming-soon` | A reserved slot. `options.text` is the message. |
 
 ## P&L and distance to kill
@@ -70,7 +70,17 @@ S.register("floor-chart", {
 
 Do not edit `index.html`. The build lists every `dashboard/panels/*.js` file and adds the script tags. After the next build, any desk can use `"type": "floor-chart"` in its `panels.json`.
 
-If a desk lists a type that is not installed, that panel shows a short "isn't installed yet" box and the rest of the page works. Solada's sample layout does this with `heatmap`.
+If a desk lists a type that is not installed, that panel shows a short "not installed" line and the rest of the page works. Solada's sample layout does this with `heatmap`.
+
+Two panels on the same desk with the same `type`, `data` and `path` are drawn once. The duplicate is counted in the desk subtitle.
+
+## Icons, phone rows, wallet tags
+
+Icons are local files under `dashboard/icons/`, listed in `dashboard/icons/icons.json`. The browser does not call an icon API. `tools/resolve-icons.py` fills anything missing and leaves a committed image in place unless you pass `--refresh`. A failed fetch does not replace a good file, and the site build does not run the resolver. CoinGecko coin search is only used for the platform token SOLADA, matched by name and symbol, not by a generic ticker.
+
+On a phone (600px and under), tables become two-line rows. Level and status pills stay on one line. Long cells ellipsize; tap the row to read the rest.
+
+Wallet addresses, stake keys, key fragments and mints in notes, headlines, rules and other prose render as a compact tag: the first 7 characters, an ellipsis, then the last 4 (`addr1q9…wwut`). A fragment of 12 characters or fewer, such as `u8a2m6`, stays whole. The tag color is a hash of the normalized value, so the same wallet looks the same on every desk. Hover or tap shows the snippet exactly as it is stored. Tags do not wrap. The owner's wallet is not masked here; `scripts/privacy-guard.sh` still blocks it before a deploy.
 
 ## Build and hosting
 

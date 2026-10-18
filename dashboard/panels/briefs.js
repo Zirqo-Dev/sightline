@@ -1,6 +1,9 @@
-S.briefHTML = (b, desk) => `<div class="brief"><div class="d">${S.esc(b.date)}${desk ? ` · ${S.esc(desk)}` : ""}</div><b>${S.esc(b.headline)}</b>${b.highlights ? `<ul class="small muted" style="margin:6px 0 0;padding-left:18px">${b.highlights.slice(0, 4).map(h => `<li>${S.esc(h)}</li>`).join("")}</ul>` : ""}${b.next_watch && b.next_watch.length ? `<div class="small" style="margin-top:6px"><span class="warn">Next:</span> ${S.esc(b.next_watch[0])}</div>` : ""}</div>`;
+S.briefHTML = (b, desk) => `<article class="brief" data-x><div class="bh"><span class="d">${S.esc(b.date)}</span>${desk ? `<span class="desk">${S.esc(desk)}</span>` : ""}</div><div class="bt clamp">${S.rich(b.headline)}</div>${b.highlights ? `<ul class="hi">${b.highlights.slice(0, 6).map(h => {
+  const m = String(h).match(/^(.*?)\s*\(([^)]+)\):\s*(\w+)\s*$/);
+  return m ? `<li>${S.assetIcon(m[1], "sm")}<span class="ell">${S.rich(m[1])}</span>${S.chainIcon(m[2], "xs")}${S.pill(m[3])}</li>` : `<li><span class="ell">${S.rich(h)}</span></li>`;
+}).join("")}</ul>` : ""}${b.next_watch && b.next_watch.length ? `<div class="next"><span class="k">NEXT</span><span class="ell">${S.rich(b.next_watch[0])}</span></div>` : ""}</article>`;
 S.register("briefs", { async render({ desk }) {
   const list = await S.briefsOf(desk);
   if (!list.length) return `<p class="muted">No daily briefs published yet${desk.briefs ? ` (<code>${S.esc(desk.briefs)}</code> is empty)` : ""}.</p>`;
-  return list.map(b => S.briefHTML(b)).join("");
+  return `<div class="briefs">${list.map(b => S.briefHTML(b)).join("")}</div>`;
 }});

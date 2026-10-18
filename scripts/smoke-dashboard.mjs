@@ -65,7 +65,7 @@ assert(Math.abs(summed - (-111.1)) < 0.02, "fixture units still sum to -111.1 if
 const cards = S.metricCards(sc);
 assert(!cards.includes("-111") && !cards.includes("111.1"), "cards must not show a mixed total");
 assert(cards.includes("ADA-equivalent") && cards.includes("USD"), "cards label each unit");
-assert(S.unitNote(sc).includes("not added together"), "mixed units get an explanation");
+assert(S.unitNote(sc).includes("never added together"), "mixed units get an explanation");
 
 const cate = ticket(fx.books, "CATE");
 const kd = S.killDistance(cate);
@@ -98,9 +98,34 @@ const none = S.killDistance({ ticker: "X", kill_line: { text: "exit if the tape 
 assert(none == null, "prose with no comparison stays unparsed");
 
 const html = await S.renderPanel({ id: "solada", dir: "solada/" }, { type: "heatmap", title: "Swarm heatmap" });
-assert(html.includes("isn't installed yet"), "unknown panel placeholder");
+assert(html.includes("not installed"), "unknown panel placeholder");
 assert(html.includes("dashboard/panels/heatmap.js"), "placeholder names the missing file");
 assert(html.includes("Swarm heatmap"), "placeholder keeps the title");
+
+const snippet = "addr1q9ac..u9wwut";
+const snippetEllipsis = "addr1q9ac…u9wwut";
+const fragment = "u8a2m6";
+assert(S.walletLabel(snippet) === "addr1q9…wwut", "long snippet compacts to first 7, ellipsis, last 4, got " + S.walletLabel(snippet));
+assert(S.walletLabel(snippet) === S.walletLabel(snippetEllipsis), "dot and ellipsis forms share a tag label");
+assert(S.walletHue(snippet) === S.walletHue(snippetEllipsis), "normalized forms share a color");
+assert(S.walletHue(snippet) === S.walletHue(snippet.toUpperCase()), "color ignores case");
+assert(S.walletTag(snippet) === S.walletTag(snippet), "same value renders the same tag");
+const tagA = S.walletTag(snippet);
+const tagB = S.walletTag(snippetEllipsis);
+const hueA = tagA.match(/--h:(\d+)/);
+const hueB = tagB.match(/--h:(\d+)/);
+assert(hueA && hueB && hueA[1] === hueB[1], "tag color is stable across the same wallet");
+assert(tagA.includes("addr1q9…wwut") && tagB.includes("addr1q9…wwut"), "both tags show the compact text");
+assert(tagA.includes("title=\"" + snippet + "\""), "hover title is the snippet as it appears");
+assert(tagB.includes("title=\"" + snippetEllipsis + "\""), "ellipsis form keeps its own full snippet");
+assert(S.walletLabel(fragment) === fragment, "bare fragment stays whole");
+assert(!S.walletTag(fragment).includes("…"), "short fragment is not shortened");
+assert(S.walletHue(fragment) === S.walletHue(fragment.toUpperCase()), "fragment color ignores case");
+const prose = S.rich("repeat buyer " + snippet + " and " + fragment + " still hold");
+assert(prose.includes("addr1q9…wwut") && prose.includes(fragment), "prose tags the address and keeps the fragment");
+assert(!prose.includes("‹") && S.esc(snippet) === snippet, "esc does not mask third-party snippets");
+const css = fs.readFileSync(path.join(root, "dashboard/app.css"), "utf8");
+assert(/\.wtag\{[^}]*white-space:\s*nowrap/.test(css), "wallet tags do not wrap mid-tag");
 
 const card = S.ticketCard(argo, kdA, "<span>nft</span>");
 assert(card.includes("11.7%") || card.includes(S.fmt(kdA.pct)), "ticket card shows the distance");
@@ -150,7 +175,7 @@ function assertLiveShape(books, label) {
   try { rendered = S.metricCards(scLive) + S.unitNote(scLive); }
   catch (e) { throw new Error(label + ": scoreboard render threw: " + e.message); }
   for (const unit of units) assert(rendered.includes(unit), label + ": scoreboard omitted " + unit);
-  if (units.length >= 2) assert(rendered.includes("not added together"), label + ": mixed units were not labeled");
+  if (units.length >= 2) assert(rendered.includes("never added together"), label + ": mixed units were not labeled");
   for (const b of books) {
     for (const t of b.json.open) {
       let kdLive;

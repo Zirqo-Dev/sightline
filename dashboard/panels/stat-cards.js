@@ -8,7 +8,7 @@ S.register("stat-cards", { render({ data, opt }) {
     if (typeof v === "number") {
       if (k === "pnl") { shown = S.pnlNum(v); cls = S.pnlClass(v); }
       else shown = S.fmt(v, Number.isInteger(v) ? 0 : 1);
-    } else shown = S.esc(v);
+    } else shown = S.rich(v);
     return `<div class="card"><div class="k">${S.esc(L[k] || k)}</div><div class="v ${cls}">${shown}</div></div>`;
   }).join("")}</div>`;
 }});
