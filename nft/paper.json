@@ -13,12 +13,13 @@
   "default_window_hours": 48,
   "open_rules": "Open when scoring puts a name at highest conviction (call), plus the run's single strongest watch if clearly best and above its kill line. One open ticket per name. Window 48h.",
   "close_rules": "Close at kill line, window end, or thesis break. Early exit: holders fall on two consecutive marks while mark < entry, OR CS/GlintLore sellers > buyers on 3 consecutive marks while mark < entry. Mark to OpenSea/GlintLore floor; prefer real sale prices where available.",
-  "open": [
+  "open": [],
+  "closed": [
     {
       "id": "P001",
       "ticker": "argonauts",
       "name": "Argonauts",
-      "status": "open",
+      "status": "closed",
       "opened_at": "2026-10-18T08:55:00-04:00",
       "window_ends_at": "2026-10-20T08:55:00-04:00",
       "size": 100,
@@ -55,11 +56,28 @@
           "floor": 0.785,
           "holders": 2363,
           "note": "Desk mark: OS stats floor 0.785 (best listing 0.785), top offer 0.745, 1d 41 sales / 46.15 ETH; Blockscout 24h receivers 53 vs senders 43. Under entry 0.793 (-1.0%); no kill (0.70/0.55), holders up, buyers ahead onchain, so no early-exit rule fires. Stays open to 20 Oct 08:55."
+        },
+        {
+          "t": "2026-10-18T19:45:04-04:00",
+          "floor": 0.67769999,
+          "holders": 2365,
+          "note": "exit mark (pulse)"
         }
-      ]
+      ],
+      "closed_at": "2026-10-18T19:45:04-04:00",
+      "exit": {
+        "floor_eth": 0.67769999,
+        "top_offer_eth": 0.661,
+        "source": "OpenSea API (KING pulse)"
+      },
+      "exit_reason": "kill hit: OS floor < 0.70 ETH (pulse read floor 0.6777 vs 0.7, OpenSea API, confirmed on second read)",
+      "result": {
+        "pnl": -14.54,
+        "pct": -14.54,
+        "unit": "USD"
+      }
     }
   ],
-  "closed": [],
   "rules": [
     {
       "id": "R001",
@@ -70,6 +88,17 @@
         "argonauts"
       ],
       "rule": "Seed: never open after a pump; an entry after 3 straight lower floors is a counter-trend test and is logged as such.",
+      "source": "KING"
+    },
+    {
+      "id": "R002",
+      "added_at": "2026-10-18",
+      "title": "Confirmed hourly kill closes the ticket; 48h cool-off on argonauts",
+      "category": "kill",
+      "evidence": [
+        "argonauts"
+      ],
+      "rule": "P001 argonauts hit its kill (floor 0.6777 vs 0.7) 11h into the window at -14.54%. An hourly pulse kill confirmed on a second read is final: close at the pulse mark, and do not reopen the name for 48h unless the kill metric holds back above the line on two consecutive pulses.",
       "source": "KING"
     }
   ],
