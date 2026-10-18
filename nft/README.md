@@ -1,6 +1,6 @@
 # NFT desk (KING)
 
-KING's all-chain NFT research desk. Status: **pending**, no files yet.
+KING's all-chain NFT research desk. Status: **active** (paper book, run log, daily briefs).
 Paper trades and research only. No real execution, and never owner wallet addresses, real holdings, balances or real transactions (see ../PRIVACY.md).
 
 Files go here in the shared format (field guide: ../schema/README.md):

@@ -1,0 +1,70 @@
+{
+  "schema_version": 2,
+  "desk": "nft",
+  "book": "nft",
+  "chain": "multi",
+  "chains": [
+    "ethereum"
+  ],
+  "unit": "USD",
+  "ticket_size": 100,
+  "disclaimer": "KING NFT paper book — paper only, NFA. No real execution, keys, or sizing.",
+  "unit_note": "1 paper unit = $100 notional at entry floor, fixed for every ticket; never sized by conviction",
+  "default_window_hours": 48,
+  "open_rules": "Open when scoring puts a name at highest conviction (call), plus the run's single strongest watch if clearly best and above its kill line. One open ticket per name. Window 48h.",
+  "close_rules": "Close at kill line, window end, or thesis break. Early exit: holders fall on two consecutive marks while mark < entry, OR CS/GlintLore sellers > buyers on 3 consecutive marks while mark < entry. Mark to OpenSea/GlintLore floor; prefer real sale prices where available.",
+  "open": [
+    {
+      "id": "P001",
+      "ticker": "argonauts",
+      "name": "Argonauts",
+      "status": "open",
+      "opened_at": "2026-10-18T08:55:00-04:00",
+      "window_ends_at": "2026-10-20T08:55:00-04:00",
+      "size": 100,
+      "chain": "ethereum",
+      "venue": "OpenSea (GlintLore check)",
+      "conviction": "watch (strongest of run)",
+      "entry": {
+        "floor_eth": 0.793,
+        "top_offer_eth": 0.743,
+        "source": "18 Oct 07:42 ET tape (OS+GlintLore agree)"
+      },
+      "kill_line": {
+        "text": "OS floor < 0.70 ETH, or OS top collection offer < 0.55"
+      },
+      "thesis": [
+        "bid depth spread over many wallets (16 Oct: 21 units/14 wallets >=0.55)",
+        "onchain receivers 48 vs senders 40 (first buyer lead in 4 tapes)",
+        "against: floor down 3 tapes 0.856>0.835>0.793, holders 2,360>2,353"
+      ],
+      "target": {
+        "text": "floor >= 0.856 (back to 16 Oct level) inside window"
+      },
+      "probability": 0.25,
+      "risk": "custody: self-custody via OS; marketplace: Blur/Blend wind-down 12 Nov thins ETH bids; no bridge",
+      "marks": [
+        {
+          "t": "2026-10-18T07:42:00-04:00",
+          "floor": 0.793,
+          "holders": null,
+          "note": "entry mark"
+        }
+      ]
+    }
+  ],
+  "closed": [],
+  "rules": [
+    {
+      "id": "R001",
+      "added_at": "2026-10-18",
+      "rule": "Seed: never open after a pump; an entry after 3 straight lower floors is a counter-trend test and is logged as such.",
+      "source": "KING"
+    }
+  ],
+  "forecast_stats": {
+    "by_level": {},
+    "by_signal": {}
+  },
+  "summaries": []
+}

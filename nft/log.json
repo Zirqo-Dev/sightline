@@ -1,0 +1,258 @@
+{
+  "schema_version": 2,
+  "desk": "nft",
+  "asof": "2026-10-18T09:50:08-04:00",
+  "headline": "Tape 18 Oct 07:42 ET (Sunday): nothing actionable. Weekend tape: ETH raw $1.41M (-48% d/d).",
+  "levels": {
+    "pudgy-penguins": "pass",
+    "courtyard": "pass",
+    "retardio-cousins-classic": "pass",
+    "argonauts": "watch",
+    "beezie": "pass",
+    "claus": "pass",
+    "credits": "pass",
+    "cambria-charters": "pass",
+    "birds-marfa": "pass",
+    "milady-maker": "pass"
+  },
+  "kill_lines": {
+    "argonauts": "OS floor < 0.70 ETH, or OS top collection offer < 0.55"
+  },
+  "paper_actions": [
+    "open P001 argonauts @ 0.793 ETH floor, size 100 USD paper"
+  ],
+  "followups": [
+    "next routine: Desk pass at 2026-10-18T13:00:00-04:00"
+  ],
+  "sources": "CryptoSlam, OpenSea, GlintLore, Blockscout, Magic Eden, Wayup, X (public market data only)",
+  "runs": [
+    {
+      "asof": "2026-10-18T07:42:00-04:00",
+      "tape": "2026-10-18T07:42:00-04:00",
+      "type": "tape",
+      "headline": "Tape 18 Oct 07:42 ET (Sunday): nothing actionable. Weekend tape: ETH raw $1.41M (-48% d/d).",
+      "last_checked_note": "Tape 18 Oct 07:42 ET (Sunday): nothing actionable. Weekend tape: ETH raw $1.41M (-48% d/d). Argonauts 0.793 (-5%), offer 0.743, onchain receivers ahead 48/40 but transfers halved; CS dropped Argonauts from its top 100. Cambria Charters post-reveal scored: stays pass. Milady/Pudgy reopen tests fail.",
+      "levels": {
+        "pudgy-penguins": "pass",
+        "courtyard": "pass",
+        "retardio-cousins-classic": "pass",
+        "argonauts": "watch",
+        "beezie": "pass",
+        "claus": "pass",
+        "credits": "pass",
+        "cambria-charters": "pass",
+        "birds-marfa": "pass",
+        "milady-maker": "pass"
+      },
+      "watchlist": [
+        {
+          "name": "Pudgy Penguins",
+          "slug": "pudgy-penguins",
+          "chain": "ethereum",
+          "status": "pass",
+          "last_checked": "2026-10-18T07:42:00-04:00",
+          "kill": "FIRED 2026-10-08 07:36 ET: OpenSea floor 2.8495 ETH and Blur 2.8494 ETH, both under the 2.95 line.",
+          "today": "Still pass. OS stats floor 2.45 (best listings 2.493, 2.494, 2.5139), GlintLore 2.45 (-1.8%). Top collection offer 2.35 ([addr]). OS 1d 49.5 ETH / 18 sales; owners 5,003. GL B/S 14/14 (stale, 15h). CS $158,133 / 27 tx / 19 buyers / 21 sellers. Reopen (buyers>sellers AND floor >2.50 dual) fails again. X: holder frustration over Abstract shutdown and toy revenue not reaching holders."
+        },
+        {
+          "name": "Courtyard",
+          "slug": "courtyard",
+          "chain": "polygon",
+          "status": "pass",
+          "last_checked": "2026-10-15T13:10:00-04:00",
+          "kill": "n/a: passed 2026-10-15 Desk as explicit miss. No collection-level kill can be written: OS floor is a 5.39 USDC slab (mixed graded cards), OS collection offers disabled, no GlintLore page."
+        },
+        {
+          "name": "Retardio Cousins Classic",
+          "slug": "retardio-cousins-classic",
+          "chain": "solana",
+          "status": "pass",
+          "last_checked": "2026-10-06T12:31:00-04:00",
+          "kill": "FIRED 2026-10-06 12:31 ET: Tensor floor 1.19 SOL and Magic Eden 1.194 SOL agree below the 1.39 band."
+        },
+        {
+          "name": "Argonauts",
+          "slug": "argonauts",
+          "chain": "ethereum",
+          "status": "watch",
+          "last_checked": "2026-10-18T07:42:00-04:00",
+          "kill": "OS floor under 0.70 ETH (GlintLore sanity dual-check), or OS top collection offer under 0.55 (readable again via OS free agent key, 16 Oct Desk), or OS 24h under $30K, or CS buyers under 15. Retired: Blur top-bid kill; Blur dual-floor suspended.",
+          "today": "Repeat buyers/bid: offer 0.743 holds ~6% under a falling floor; onchain receivers beat senders but on half the turnover. Unique holders flat (2,352-2,359). Organic X: warm, art-collector tone, a derivative mint riding it. Founder shipping: nothing new verified. Second marketplace: OS and GlintLore agree at 0.793. Kill distance: floor 0.793 vs 0.70 (~12%, closing from ~19%), offer 0.743 vs 0.55, OS 24h ~$106k vs $30k, CS buyers unread. Verdict: stays watch, not a call. Floor walked down 0.856 to 0.835 to 0.793 in three tapes; the one breadth read that improved did so on thin weekend volume."
+        },
+        {
+          "name": "Beezie",
+          "slug": "beezie",
+          "chain": "base",
+          "status": "pass",
+          "last_checked": "2026-10-05T11:03:00-04:00",
+          "kill": "n/a — passed"
+        },
+        {
+          "name": "Claus",
+          "slug": "claus",
+          "chain": "ethereum",
+          "status": "pass",
+          "last_checked": "2026-10-15T07:40:00-04:00",
+          "kill": "FIRED 2026-10-09 07:40 ET: hook upgraded 8 times since 8 Oct 14:03 ET and NFT_FEE_PIPS changed from 3,500 to 7,000 (impl FwaRewardBoostHook [addr], 07:12 ET). Written kill was any upgrade that changes the 3,500 share. Floor and volume kills not fired."
+        },
+        {
+          "name": "Credits (Jack Butcher / Visualize Value)",
+          "slug": "credits",
+          "chain": "ethereum",
+          "status": "pass",
+          "last_checked": "2026-10-15T07:40:00-04:00",
+          "kill": "FIRED 2026-10-09 07:42 ET: OpenSea 24h volume $29.7K, under the $30K line (marginal). Floor 0.0089 still above the 0.0064 low; top offer ~4% under floor."
+        },
+        {
+          "name": "Cambria Charters",
+          "slug": "cambria-charters",
+          "chain": "ethereum",
+          "status": "pass",
+          "last_checked": "2026-10-18T07:42:00-04:00",
+          "kill": "FIRED 2026-10-10 07:41 ET: CryptoSlam 24h buyers 82, under the 100 line (82 buyers vs 166 sellers). Onchain agrees: 358 transfers, 91 receivers vs 178 senders in 24h. Floor (0.0789 > 0.06 mint) and offer (~8% under floor) kills not fired. Written by KING 9 Oct.",
+          "today": "Attention: high for a day, reveal-driven. Liquidity: real (352 OS sales) but floor pinned at mint with offer ~5% under. Holders: falling (1,171 to 1,124). Community: engaged gamers rolling traits. Team/IP: shipping a reveal and testnet, token TGE still not live. Macro fit: poor. Failure mode: reveal flip, sellers outnumber buyers 215/149 and dump commons into the mint price; rare traits trade OTC, not at the floor. Verdict: stays pass. Reopen only if CS buyers beat sellers for two tapes with floor above 0.07."
+        },
+        {
+          "name": "Birds, Marfa",
+          "slug": "birds-marfa",
+          "chain": "ethereum",
+          "status": "pass",
+          "last_checked": "2026-10-16T07:40:00-04:00",
+          "kill": "n/a: passed. 100 pieces and 73 owners cannot carry a floor kill; no second-venue bid (GlintLore has no page)."
+        },
+        {
+          "name": "Milady Maker",
+          "slug": "milady-maker",
+          "chain": "ethereum",
+          "status": "pass",
+          "last_checked": "2026-10-18T07:42:00-04:00",
+          "kill": "n/a: passed 17 Oct tape. Reopen as watch only if OS and GlintLore floors hold at or above 0.67 for two tapes, buyers beat sellers without the [addr] seller, and holders rise above 5,160.",
+          "today": "Still pass. OS floor 0.73 (+9% from 0.67; next listings 0.758, 0.758), top collection offer 0.69 ([addr]), 1d 24.4 ETH / 30 sales, owners 5,151. CS $48,160 / 24 tx / 22 buyers / 22 sellers. Reopen test: floor >=0.67 two tapes on OS yes (GlintLore not read today), buyers beat sellers no (22/22 tie), holders >5,160 no (5,151). Stays pass."
+        }
+      ],
+      "chains": [
+        {
+          "chain": "Ethereum",
+          "status": "alive",
+          "sales_24h_usd": 1407086,
+          "wash_pct": 2.29,
+          "buyers": 2251,
+          "tx": 7333,
+          "last_checked": "2026-10-18T07:42:00-04:00",
+          "note": "CS 18 Oct (07:04 ET snapshot, Sunday): raw $1.41M (-48% vs $2.72M), wash 2.3%, buyers 2,251 / sellers 1,876 / tx 7,333. Strip single trades and 1-2 seller rows (Punks $77k 1 tx, DongBTC ID $40k 1 seller, NFTSettlementRouter $21k, others) and real secondary is ~$1.20M (vs ~$1.66M stripped 17 Oct). No LP-position or BITCOIN CARD rows today. Top real names: Pudgy $158k, Cambria Charters $88k (reveal), Killa Chronicles $79k, MAYC $68k, BAYC $59k, Milady $48k. Argonauts missing from CS top 100 (OS shows ~$106k)."
+        },
+        {
+          "chain": "Polygon",
+          "status": "quiet_for_desk",
+          "sales_24h_usd": 3388015,
+          "wash_pct": 68.73,
+          "buyers": 6208,
+          "tx": 26846,
+          "last_checked": "2026-10-18T07:42:00-04:00",
+          "note": "CS 18 Oct: raw $3.39M, wash 68.7%, buyers 6,208; Courtyard $949k (-20%), house pack/buyback flow. quiet_for_desk stands."
+        },
+        {
+          "chain": "Base",
+          "status": "quiet_for_desk",
+          "sales_24h_usd": 3577028,
+          "wash_pct": 80.98,
+          "buyers": 162,
+          "tx": 33500,
+          "last_checked": "2026-10-18T07:42:00-04:00",
+          "note": "CS 18 Oct: raw $3.58M, wash 81.0%, buyers 162 / tx 33,500. Buyer-dead. quiet_for_desk stands."
+        },
+        {
+          "chain": "Bitcoin",
+          "status": "quiet_for_desk",
+          "sales_24h_usd": 1135726,
+          "wash_pct": 0.55,
+          "buyers": 1592,
+          "tx": 2514,
+          "last_checked": "2026-10-18T07:42:00-04:00",
+          "note": "CS 18 Oct raw $1.14M; BRC-20 + Uncategorized rows ~$1.03M, so collectibles ~$105k (~9% of stripped ETH $1.20M, under 10%). X: Honey Badgers sweep anecdote only. No reopen."
+        },
+        {
+          "chain": "Solana",
+          "status": "quiet",
+          "sales_24h_usd": 260984,
+          "wash_pct": 1.45,
+          "buyers": 1996,
+          "tx": 11027,
+          "last_checked": "2026-10-18T07:42:00-04:00",
+          "note": "CS 18 Oct $261k (+43% vs $183k) but only 5 Solana rows in CS top 100 (Lucky Emmy is 1-seller issuer flow). Magic Eden stats search 1d top 50 = 523 SOL (~$54k at $103.95), lower than 17 Oct's 635 SOL; leaders Mad Lads 72 SOL / 8 tx, SMB Gen2 58.7 / 5, Tomorrowland 47.5 / 1, Transdimensional Fox 32 / 30. CS total and ME disagree ~5x; nothing with breadth. Stays quiet."
+        },
+        {
+          "chain": "Cardano",
+          "status": "quiet_for_desk",
+          "sales_24h_usd": 6155,
+          "wash_pct": 0,
+          "buyers": 63,
+          "tx": 167,
+          "last_checked": "2026-10-18T07:42:00-04:00",
+          "note": "CS 18 Oct $6.2k / 63 buyers / 167 tx. Stays quiet_for_desk."
+        },
+        {
+          "chain": "Immutable",
+          "status": "off_desk",
+          "sales_24h_usd": 299509,
+          "wash_pct": 0,
+          "buyers": 469,
+          "tx": 3796,
+          "last_checked": "2026-10-18T07:42:00-04:00",
+          "note": "CS 18 Oct $300k / 469 buyers. Off desk, no wallet."
+        },
+        {
+          "chain": "Panini",
+          "status": "off_desk",
+          "sales_24h_usd": 47284,
+          "wash_pct": 0,
+          "buyers": 214,
+          "tx": 1982,
+          "last_checked": "2026-10-18T07:42:00-04:00",
+          "note": "CS 18 Oct $47k / 214 buyers. Off desk, no wallet."
+        },
+        {
+          "chain": "BNB",
+          "status": "quiet_for_desk",
+          "sales_24h_usd": 271140,
+          "wash_pct": 0,
+          "buyers": 1103,
+          "tx": 1360,
+          "last_checked": "2026-10-18T07:42:00-04:00",
+          "note": "CS 18 Oct $271k (-32% vs $401k) / 1,360 tx / 1,103 buyers / 464 sellers. Top rows still issuer/router flow (NFTSettlementRouter 9 sellers, BlindBox 7 sellers, KJ Miner 1 seller). Explicit miss stands."
+        },
+        {
+          "chain": "Flow",
+          "status": "quiet",
+          "sales_24h_usd": 18584,
+          "wash_pct": 0,
+          "buyers": 455,
+          "tx": 2713,
+          "last_checked": "2026-10-18T07:42:00-04:00",
+          "note": "CS 18 Oct $18.6k; ~1.5% of stripped ETH."
+        },
+        {
+          "chain": "Arbitrum",
+          "status": "quiet",
+          "sales_24h_usd": 8789,
+          "wash_pct": 0,
+          "buyers": 136,
+          "tx": 290,
+          "last_checked": "2026-10-18T07:42:00-04:00",
+          "note": "CS 18 Oct $8.8k; well under 1% of ETH."
+        },
+        {
+          "chain": "Abstract",
+          "status": "dead_closing",
+          "last_checked": "2026-10-08T07:45:00-04:00",
+          "note": "Igloo shuts the chain 15 Dec 2026; bridge assets off via official Migration Hub (migrate.abs.xyz) or native bridge (3h delay). Not on CS chain table. Fake @ChainAbsrtact claims an Oct 20 date: scam. ~$76M still bridged (CoinDesk/DefiLlama)."
+        }
+      ],
+      "paper_open": [
+        "P001 argonauts"
+      ],
+      "research_only": true
+    }
+  ],
+  "history": []
+}
