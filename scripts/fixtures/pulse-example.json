@@ -1,0 +1,20 @@
+{
+  "schema_version": 2,
+  "desk": "example",
+  "updated_at": "2026-10-18T15:48:00Z",
+  "window_days": 7,
+  "example": true,
+  "points": [
+    {"t": "2026-10-18T13:00:00Z", "ticker": "CATE", "chain": "solana", "metrics": {"holders": 120000}},
+    {"t": "2026-10-18T14:00:00Z", "ticker": "CATE", "chain": "solana", "metrics": {"holders": 110000}},
+    {"t": "2026-10-18T15:00:00Z", "ticker": "CATE", "chain": "solana", "metrics": {"holders": 100000}},
+    {"t": "2026-10-18T14:00:00Z", "ticker": "NEW", "chain": "solana", "metrics": {"mcap_usd": 4}},
+    {"t": "2026-10-18T15:00:00Z", "ticker": "NEW", "chain": "solana", "metrics": {"mcap_usd": 6.5}},
+    {"t": "2026-10-18T12:00:00Z", "ticker": "OLD", "chain": "cardano", "metrics": {"mcap_ada": 20}},
+    {"t": "2026-10-18T15:00:00Z", "ticker": "OLD", "chain": "cardano", "metrics": {"mcap_ada": 18}}
+  ],
+  "radar": [
+    {"ticker": "NEW", "chain": "solana", "first_seen": "2026-10-18T12:00:00Z", "score": 81, "signals": ["burst", "new pool"], "note": "example tape"},
+    {"ticker": "OLD", "chain": "cardano", "asset_id": "policy.example", "first_seen": "2026-10-17T12:00:00Z", "score": 40, "signals": ["quiet"], "note": "lower score"}
+  ]
+}

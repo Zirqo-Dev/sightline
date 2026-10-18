@@ -1,0 +1,25 @@
+name: Run NFT
+
+# If the routine panel's Authorization header field includes the 'Authorization:' prefix,
+# paste only the part after the colon into *_RUN_WEBHOOK_AUTH.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask KING to run
+        env:
+          URL: ${{ secrets.NFT_RUN_WEBHOOK_URL }}
+          AUTH: ${{ secrets.NFT_RUN_WEBHOOK_AUTH }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          if [ -z "${URL}" ] || [ -z "${AUTH}" ]; then
+            echo "NFT_RUN_WEBHOOK_URL or NFT_RUN_WEBHOOK_AUTH is not set. No request was sent."
+            exit 0
+          fi
+          body=$(jq -n --arg actor "$ACTOR" '{source:"sightline-run-nft",requested_by:$actor}')
+          curl -fsS -X POST "$URL" -H "Authorization: $AUTH" -H 'Content-Type: application/json' -d "$body"
+          echo "NFT run requested."

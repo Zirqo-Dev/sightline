@@ -9,6 +9,7 @@ Files go here in the shared format (field guide: ../schema/README.md):
 | `paper.json` | Paper book: open and closed tickets with kill lines, rules learned, summaries |
 | `log.json` | Run log: latest run plus `history[]` |
 | `briefs/YYYY-MM-DD.json` | One daily brief per day |
+| `pulse.json` | Optional hourly pulse and early-runner radar. Older months: `archive/pulse-YYYY-MM.json`. |
 
 `panels.json` is the desk page layout (see ../dashboard/PLUGINS.md). KING can edit that file; the dashboard reads it as-is.
 

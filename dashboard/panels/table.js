@@ -18,7 +18,7 @@ S.register("table", { render({ data, opt }) {
     if (v == null) return "";
     if (c === opt.badge) return S.pill(v);
     if (c === "chain") return `${S.chainIcon(v)}<span class="chain-name">${S.esc(v)}</span>`;
-    if (/(_at|checked|asof)$/.test(c) && (typeof v === "string" || typeof v === "number")) return S.when(v);
+    if ((/(_at|_seen|checked|asof)$/.test(c)) && (typeof v === "string" || typeof v === "number")) return S.when(v);
     const txt = typeof v === "object" ? JSON.stringify(v) : String(v);
     if (c === main) return `${S.assetIcon(r.slug || txt)}<b class="ell">${S.rich(txt)}</b>`;
     // Leading level / kill-hit tokens become pills: "L2, kill hit (…)" -> [L2][KILL HIT] …
