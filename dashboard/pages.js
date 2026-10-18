@@ -16,6 +16,14 @@
       if (row && open) row.classList.add("open");
       return;
     }
+    const run = e.target.closest("a.run-now");
+    if (run) {
+      const id = run.dataset.desk || "";
+      try { sessionStorage.setItem("sightline-run:" + id, String(Date.now())); } catch (err) {}
+      const hint = run.parentElement && run.parentElement.querySelector(".run-hint");
+      if (hint) hint.hidden = false;
+      return;
+    }
     const box = e.target.closest(".embed-preview");
     if (box && box.dataset.frame) { box.outerHTML = box.dataset.frame; return; }
     if (e.target.closest("a,summary,iframe")) return;
@@ -38,26 +46,44 @@
       + a("#/briefs", "BRIEFS", route === "briefs");
   }
 
+  function runPending(id) {
+    try {
+      const t = Number(sessionStorage.getItem("sightline-run:" + id));
+      return Number.isFinite(t) && Date.now() - t < 15 * 60 * 1000;
+    } catch (err) { return false; }
+  }
+  function paintAges() {
+    const now = Date.now();
+    document.querySelectorAll("[data-age]").forEach(el => {
+      const info = S.ageInfo(el.getAttribute("data-age"), now);
+      el.classList.remove("age-fresh", "age-amber", "age-red", "age-muted");
+      el.classList.add(info.cls);
+      el.textContent = info.text;
+    });
+  }
   async function stamp() {
     let best = null;
     for (const d of desks) {
-      if (!d.log) continue;
-      const log = await S.get(d.log);
-      const dt = log && log.asof ? new Date(log.asof) : null;
-      if (dt && !isNaN(dt) && (!best || dt > best)) best = dt;
+      const log = d.log ? await S.get(d.log) : null;
+      const pulse = await S.get(d.dir + "pulse.json");
+      const at = S.freshestAt(log, pulse);
+      const ms = at ? new Date(at).getTime() : NaN;
+      if (isFinite(ms) && (best == null || ms > new Date(best).getTime())) best = at;
     }
     const el = document.getElementById("stamp");
-    if (el) el.innerHTML = best ? `<span class="live"></span>DATA ${S.when(best.toISOString())}` : "";
+    if (el) el.innerHTML = `<span class="live"></span>${S.ageTag(best)}`;
   }
 
-  function deskCard(d, books, log) {
+  function deskCard(d, books, log, pulse) {
     const s = S.score(books);
-    return `<a class="panel span-6 desk-card" data-desk="${S.esc(d.id)}" href="#/desk/${d.id}">
-      <div class="row">${deskIcon(d)}<span class="name"><span class="dot ${d.status !== "active" ? "pending" : ""}"></span>${S.esc(d.name)}</span><span class="bot">${S.esc(d.bot || "")} ▸</span></div>
-      <div class="hl clamp2">${S.rich(log?.headline || "No run yet.")}</div>
+    const at = S.freshestAt(log, pulse);
+    return `<section class="panel span-6 desk-card" data-desk="${S.esc(d.id)}">
+      <div class="row">${deskIcon(d)}<a class="name" href="#/desk/${d.id}"><span class="dot ${d.status !== "active" ? "pending" : ""}"></span>${S.esc(d.name)}</a><span class="bot">${S.esc(d.bot || "")} ▸</span></div>
+      ${S.runButton(d, { pending: runPending(d.id) })}
+      <a class="hl clamp2" href="#/desk/${d.id}">${S.rich(log?.headline || "No run yet.")}</a>
       <div class="cards">${S.metricCards(s)}</div>
-      <div class="foot-row"><span>${books.length} book${books.length === 1 ? "" : "s"}</span><span>last run ${S.when(log?.asof)}</span></div>
-    </a>`;
+      <div class="foot-row"><span>${books.length} book${books.length === 1 ? "" : "s"}</span>${S.ageTag(at)}</div>
+    </section>`;
   }
   const sec = (span, title, tag, body, desk) => `<section class="panel span-${span}"${desk ? ` data-desk="${desk}"` : ""}><h3><span class="ttl">${title}</span><span class="tag">${tag}</span></h3>${body}</section>`;
 
@@ -72,10 +98,11 @@
       const books = await S.bookFiles(d);
       allBooks = allBooks.concat(books);
       const log = d.log ? await S.get(d.log) : null;
+      const pulse = await S.get(d.dir + "pulse.json");
       const b = (await S.briefsOf(d))[0];
       if (b) briefs.push({ b, d });
       books.forEach(bk => (bk.json.rules || []).forEach(r => rules.push({ ...r, desk: d.id, book: bk.json.book })));
-      cards.push(deskCard(d, books, log));
+      cards.push(deskCard(d, books, log, pulse));
     }
     const open = await S.allOpen(desks);
     rules.sort((a, b) => String(b.added_at || "").localeCompare(String(a.added_at || "")));
@@ -84,7 +111,7 @@
       : `<p class="muted">Scoreboard panel isn't installed.</p>`;
     const tickets = open.length
       ? `<div class="tickets">${open.map(x => S.ticketCard
-        ? S.ticketCard(x.t, x.kd, `<span class="book" data-desk="${S.esc(x.desk.id)}">${S.esc(x.book.json.book && x.book.json.book !== x.desk.id ? x.desk.id + "·" + x.book.json.book : x.desk.id)}</span>`)
+        ? S.ticketCard(x.t, x.kd, `<span class="book" data-desk="${S.esc(x.desk.id)}">${S.esc(x.book.json.book && x.book.json.book !== x.desk.id ? x.desk.id + "·" + x.book.json.book : x.desk.id)}</span>`, x.pulse)
         : "").join("")}</div>`
       : `<p class="muted">No open tickets.</p>`;
     const briefBlock = (briefs.length ? briefs.map(x => S.briefHTML(x.b, x.d.id)).join("") : `<p class="muted">No briefs yet.</p>`)
@@ -114,13 +141,15 @@
     navHTML(id);
     if (!d) { document.title = "Sightline"; view.innerHTML = `<p class="muted">Unknown desk.</p>`; return; }
     document.title = "Sightline · " + d.name;
+    const log = d.log ? await S.get(d.log) : null;
+    const pulse = await S.get(d.dir + "pulse.json");
     const got = await S.panelsFor(d);
     const { out: panels, dropped } = dedupe(got.panels);
     const html = await Promise.all(panels.map(p => S.renderPanel(d, p)));
     const layout = got.custom
       ? `<code>${S.esc(d.dir)}panels.json</code> · ${panels.length} panels${dropped ? ` · ${dropped} duplicate hidden` : ""}`
       : "default layout";
-    view.innerHTML = `<div class="pagehead">${deskIcon(d)}<h1>${S.esc(d.name)}</h1><span class="sub">run by ${S.esc(d.bot || "—")} · ${layout}</span></div>
+    view.innerHTML = `<div class="pagehead">${deskIcon(d)}<div class="titles"><h1>${S.esc(d.name)}</h1><span class="sub">run by ${S.esc(d.bot || "—")} · ${layout}</span></div>${S.ageTag(S.freshestAt(log, pulse))}${S.runButton(d, { pending: runPending(d.id) })}</div>
       <div class="grid">${html.join("")}</div>`;
   }
 
@@ -152,8 +181,10 @@
       view.innerHTML = `<p class="placeholder">This page couldn't load (${S.esc(e.message)}).</p>`;
     }
     await stamp();
+    paintAges();
     document.body.dataset.ready = "1";
   }
+  setInterval(paintAges, 15000);
   window.addEventListener("hashchange", route);
   route();
 })();

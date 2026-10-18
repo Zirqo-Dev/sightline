@@ -233,13 +233,27 @@ window.S = (function () {
     return `<p class="unit-note">Σ per unit (${units.map(esc).join(" · ")}); units are never added together.</p>`;
   }
 
-  function currentMetrics(t) {
+  function pointsFor(pulse, ticker) {
+    if (!pulse || !Array.isArray(pulse.points) || ticker == null || ticker === "") return [];
+    const key = String(ticker).toUpperCase();
+    return pulse.points.filter(p => p && String(p.ticker || "").toUpperCase() === key)
+      .slice()
+      .sort((a, b) => String(a.t || "").localeCompare(String(b.t || "")));
+  }
+  function currentMetrics(t, pulse) {
     const marks = Array.isArray(t.marks) ? t.marks : [];
     const last = marks.length ? marks[marks.length - 1] : {};
     const merged = Object.assign({}, t.entry || {}, last || {});
     const out = {};
     for (const [k, v] of Object.entries(merged)) {
       if (typeof v === "number" && isFinite(v)) out[k] = v;
+    }
+    const pts = pointsFor(pulse, t && t.ticker);
+    if (pts.length) {
+      const latest = pts[pts.length - 1].metrics || {};
+      for (const [k, v] of Object.entries(latest)) {
+        if (typeof v === "number" && isFinite(v)) out[k] = v;
+      }
     }
     return out;
   }
@@ -329,9 +343,9 @@ window.S = (function () {
   }
   /* Numeric kill fields win when any of them match a current reading.
      Otherwise the kill line's text is parsed ("floor < 0.70", "holders < 250", "mcap < 450k"). */
-  function killDistance(t) {
+  function killDistance(t, pulse) {
     if (!t) return null;
-    const cur = currentMetrics(t);
+    const cur = currentMetrics(t, pulse);
     const k = t.kill_line;
     let ds = numericDistances(k, cur);
     if (!ds.length) {
@@ -345,8 +359,9 @@ window.S = (function () {
   async function allOpen(dlist) {
     const out = [];
     for (const d of dlist) {
+      const pulse = await get(d.dir + "pulse.json");
       for (const b of await bookFiles(d)) {
-        for (const t of b.json.open || []) out.push({ desk: d, book: b, t, kd: killDistance(t) });
+        for (const t of b.json.open || []) out.push({ desk: d, book: b, t, pulse, kd: killDistance(t, pulse) });
       }
     }
     return out.sort((a, b) => (a.kd?.pct ?? 999) - (b.kd?.pct ?? 999));
@@ -392,12 +407,87 @@ window.S = (function () {
     return `<svg class="spark ${up ? "up" : "down"}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><polyline points="${pts.join(" ")}"/><circle cx="${pts[pts.length - 1].split(",")[0]}" cy="${pts[pts.length - 1].split(",")[1]}" r="1.8"/></svg>`;
   }
   const SERIES = ["mcap_ada", "mcap_usd", "floor_eth", "floor", "price_usd", "price_ada"];
-  function seriesOf(t) {
-    const rows = [t.entry || {}].concat(Array.isArray(t.marks) ? t.marks : [], t.exit ? [t.exit] : []);
+  function seriesFromRows(rows) {
     const key = SERIES.find(k => rows.some(r => typeof r[k] === "number"));
     if (!key) return [];
     const alt = { floor_eth: "floor", floor: "floor_eth" }[key];
     return rows.map(r => typeof r[key] === "number" ? r[key] : (alt && typeof r[alt] === "number" ? r[alt] : null)).filter(x => x != null);
+  }
+  function seriesOf(t, pulse) {
+    const pts = pointsFor(pulse, t && t.ticker);
+    if (pts.length >= 2) {
+      const metrics = pts.map(p => p.metrics || {});
+      const fromPulse = seriesFromRows(metrics);
+      if (fromPulse.length >= 2) return fromPulse;
+      const counts = {};
+      for (const row of metrics) {
+        for (const [k, v] of Object.entries(row)) {
+          if (typeof v === "number" && isFinite(v)) counts[k] = (counts[k] || 0) + 1;
+        }
+      }
+      const best = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+      if (best && best[1] >= 2) return metrics.map(r => r[best[0]]).filter(x => typeof x === "number");
+    }
+    const rows = [(t && t.entry) || {}].concat(Array.isArray(t && t.marks) ? t.marks : [], t && t.exit ? [t.exit] : []);
+    return seriesFromRows(rows);
+  }
+  function ageInfo(at, now) {
+    const clock = now == null ? Date.now() : (now instanceof Date ? now.getTime() : new Date(now).getTime());
+    const t = at == null || at === "" ? NaN : (at instanceof Date ? at.getTime() : new Date(at).getTime());
+    if (!isFinite(t) || !isFinite(clock)) return { text: "updated —", cls: "age-muted", ms: null };
+    const ms = Math.max(0, clock - t);
+    const mins = Math.floor(ms / 60000);
+    let text;
+    if (mins < 1) text = "updated just now";
+    else if (mins < 60) text = `updated ${mins}m ago`;
+    else if (mins < 60 * 48) {
+      const h = Math.floor(mins / 60);
+      const rem = mins % 60;
+      text = rem ? `updated ${h}h ${rem}m ago` : `updated ${h}h ago`;
+    } else text = `updated ${Math.floor(mins / 1440)}d ago`;
+    let cls = "age-fresh";
+    if (ms >= 6 * 60 * 60 * 1000) cls = "age-red";
+    else if (ms >= 90 * 60 * 1000) cls = "age-amber";
+    return { text, cls, ms };
+  }
+  function freshestAt(log, pulse) {
+    const cands = [];
+    if (log && log.asof) cands.push(new Date(log.asof).getTime());
+    if (pulse && pulse.updated_at) cands.push(new Date(pulse.updated_at).getTime());
+    const ok = cands.filter(n => isFinite(n));
+    if (!ok.length) return null;
+    return new Date(Math.max.apply(null, ok)).toISOString();
+  }
+  function ageTag(at, now) {
+    const info = ageInfo(at, now);
+    const attr = at ? ` data-age="${esc(typeof at === "string" ? at : new Date(at).toISOString())}"` : "";
+    return `<span class="age ${info.cls}"${attr} title="${esc(at || "")}">${esc(info.text)}</span>`;
+  }
+  function ago(iso, now) {
+    const clock = now == null ? Date.now() : (now instanceof Date ? now.getTime() : new Date(now).getTime());
+    const t = new Date(iso).getTime();
+    if (!isFinite(t) || !isFinite(clock)) return "";
+    const mins = Math.floor(Math.max(0, clock - t) / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return mins + "m ago";
+    const h = Math.floor(mins / 60);
+    if (h < 48) return h + "h ago";
+    return Math.floor(h / 24) + "d ago";
+  }
+  function scoreBar(score) {
+    if (typeof score !== "number" || !isFinite(score)) return `<span class="sbar na"></span>`;
+    const w = Math.max(0, Math.min(100, score));
+    return `<span class="sbar" title="${esc(String(score))}"><i style="width:${w.toFixed(1)}%"></i></span>`;
+  }
+  function runButton(desk, opt) {
+    const run = (desk && desk.run) || {};
+    const label = run.label || "RUN NOW";
+    const pending = opt && opt.pending;
+    const hint = `<span class="run-hint"${pending ? "" : " hidden"}>run requested, refresh in a few minutes</span>`;
+    if (!run.url) {
+      return `<span class="run-wrap"><button type="button" class="run-now" disabled title="not wired yet">${esc(label)}</button>${hint}</span>`;
+    }
+    return `<span class="run-wrap"><a class="run-now" href="${esc(run.url)}" target="_blank" rel="noopener noreferrer" data-desk="${esc((desk && desk.id) || "")}">${esc(label)}</a>${hint}</span>`;
   }
   function pnlBar(p, scale = 40) {
     if (typeof p !== "number") return "";
@@ -415,7 +505,8 @@ window.S = (function () {
   return {
     get, pick, esc, rich, walletTag, walletLabel, walletHue, fmt, pct, pnlNum, pnlClass, when, join, register, registry,
     renderPanel, desks, panelsFor, bookFiles, briefsOf, score, avgRet, pnlCards,
-    metricCards, unitNote, killDistance, allOpen,
-    loadIcons, coinIcon, nftIcon, chainIcon, assetIcon, mono, unitTag, spark, seriesOf, pnlBar, killMeter, pill
+    metricCards, unitNote, killDistance, allOpen, pointsFor,
+    ageInfo, freshestAt, ageTag, ago, runButton,
+    loadIcons, coinIcon, nftIcon, chainIcon, assetIcon, mono, unitTag, spark, seriesOf, pnlBar, scoreBar, killMeter, pill
   };
 })();

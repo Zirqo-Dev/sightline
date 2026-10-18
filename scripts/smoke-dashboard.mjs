@@ -134,6 +134,75 @@ assert(!card.includes("stake1") && !card.includes("addr1"), "ticket card does no
 assert(S.when("2026-10-18") === "Oct 18", "date-only stays on that calendar day, got " + S.when("2026-10-18"));
 assert(S.when("2026-10-18T09:50:08-04:00") === "Oct 18, 9:50 AM ET", "timestamp keeps ET, got " + S.when("2026-10-18T09:50:08-04:00"));
 
+const pulse = load("scripts/fixtures/pulse-example.json");
+const now = Date.parse("2026-10-18T16:00:00Z");
+const fresh = S.ageInfo("2026-10-18T15:48:00Z", now);
+assert(fresh.text === "updated 12m ago", "12m age text, got " + fresh.text);
+assert(fresh.cls === "age-fresh", "12m stays fresh");
+const amber = S.ageInfo(new Date(now - 90 * 60 * 1000).toISOString(), now);
+assert(amber.cls === "age-amber", "90m is amber, got " + amber.cls);
+const red = S.ageInfo(new Date(now - 6 * 60 * 60 * 1000).toISOString(), now);
+assert(red.cls === "age-red", "6h is red, got " + red.cls);
+assert(S.ageInfo(null, now).text === "updated —", "missing stamp");
+assert(S.ageInfo(new Date(now - 89 * 60 * 1000).toISOString(), now).cls === "age-fresh", "89m stays fresh");
+const newest = S.freshestAt({ asof: "2026-10-18T10:00:00Z" }, { updated_at: "2026-10-18T15:48:00Z" });
+assert(newest === new Date("2026-10-18T15:48:00Z").toISOString(), "freshest is the newer of log and pulse, got " + newest);
+assert(S.freshestAt(null, null) == null, "no stamps");
+assert(S.freshestAt({ asof: "not-a-date" }, null) == null, "bad stamp is ignored");
+
+const kdPulse = S.killDistance(cate, pulse);
+assert(kdPulse && kdPulse.cur === 100000 && kdPulse.lim === 97082, "pulse metrics override the mark, got " + JSON.stringify(kdPulse));
+assert(/holder/.test(kdPulse.what), "pulse still names the holders kill");
+assert(JSON.stringify(S.seriesOf(cate, pulse)) === JSON.stringify([120000, 110000, 100000]), "sparkline uses pulse points, got " + S.seriesOf(cate, pulse));
+assert(S.killDistance(cate).cur === 108078, "without pulse the mark is unchanged");
+const pulseCard = S.ticketCard(cate, kdPulse, "", pulse);
+assert(pulseCard.includes("spark"), "pulse ticket draws a sparkline");
+assert(pulseCard.includes(S.fmt(100000, 4)), "pulse ticket shows the pulse reading");
+
+const radarHtml = await S.registry.radar.render({
+  desk: { id: "example", dir: "example/" },
+  data: pulse,
+  opt: { now },
+  spec: {}
+});
+assert(radarHtml.indexOf(">NEW<") !== -1 && radarHtml.indexOf(">NEW<") < radarHtml.indexOf(">OLD<"), "radar ranks the higher score first");
+assert(radarHtml.includes("burst") && radarHtml.includes("new pool"), "radar shows signal chips");
+assert(radarHtml.includes("sbar") && radarHtml.includes("81"), "radar draws a score bar");
+assert(radarHtml.includes("seen 4h ago"), "radar shows first-seen age, got snippet missing");
+assert(radarHtml.includes(">example<"), "example pulse is labelled");
+assert(radarHtml.includes("spark"), "radar sparkline uses pulse points");
+const quiet = await S.registry.radar.render({ desk: { id: "solada", dir: "solada/" }, data: null, opt: {}, spec: {} });
+assert(quiet.includes("No early runners yet"), "missing pulse degrades quietly");
+assert(!quiet.includes("example"), "missing pulse is not labelled example");
+
+const wired = S.runButton({ id: "solada", run: { url: "https://github.com/Zirqo-Dev/sightline/actions/workflows/run-solada.yml", label: "RUN NOW" } });
+assert(wired.includes('target="_blank"') && wired.includes("run-solada.yml"), "run button opens the workflow");
+assert(!/WEBHOOK|SOLADA_RUN|NFT_RUN|Authorization|secret/i.test(wired), "run button embeds no secret");
+assert(wired.includes("hidden"), "hint stays hidden until the click");
+const asked = S.runButton({ id: "solada", run: { url: "https://example.invalid/run", label: "RUN NOW" } }, { pending: true });
+assert(asked.includes("run requested, refresh in a few minutes") && !asked.includes("hidden"), "pending run shows the hint");
+const unwired = S.runButton({ id: "later" });
+assert(unwired.includes("disabled") && unwired.includes("not wired yet"), "missing run.url is disabled");
+assert(!unwired.includes("href="), "disabled run button is not a link");
+
+const desksIdx = load("desks.json");
+const byId = Object.fromEntries(desksIdx.desks.map(d => [d.id, d]));
+assert(byId.solada.run.url.endsWith("/run-solada.yml"), "solada run url");
+assert(byId.nft.run.url.endsWith("/run-nft.yml"), "nft run url");
+for (const name of ["run-solada.yml", "run-nft.yml"]) {
+  const yml = fs.readFileSync(path.join(root, ".github/workflows", name), "utf8");
+  assert(yml.includes("workflow_dispatch"), name + " is manual");
+  assert(!yml.includes("pull_request") && !yml.includes("push:"), name + " does not run on its own");
+  assert(yml.includes('Authorization: $AUTH'), name + " sends the auth header");
+  assert(yml.includes("exit 0"), name + " exits cleanly when unset");
+  assert(yml.includes("Authorization:' prefix"), name + " documents the header paste");
+  assert(!yml.includes("X-Webhook-Key"), name + " does not use the old header");
+}
+assert(fs.readFileSync(path.join(root, ".github/workflows/run-solada.yml"), "utf8").includes("SOLADA_RUN_WEBHOOK_URL"));
+assert(fs.readFileSync(path.join(root, ".github/workflows/run-solada.yml"), "utf8").includes("SOLADA_RUN_WEBHOOK_AUTH"));
+assert(fs.readFileSync(path.join(root, ".github/workflows/run-nft.yml"), "utf8").includes("NFT_RUN_WEBHOOK_URL"));
+assert(fs.readFileSync(path.join(root, ".github/workflows/run-nft.yml"), "utf8").includes("NFT_RUN_WEBHOOK_AUTH"));
+
 function liveBooks() {
   const idx = load("desks.json");
   if (!idx || !Array.isArray(idx.desks)) throw new Error("desks.json has no desks array");

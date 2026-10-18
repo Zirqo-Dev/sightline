@@ -3,6 +3,7 @@
   "note": "Panels Snek Sentinel wants on its desk page, in order. Paths are relative to solada/. The bot owns this file after the first commit.",
   "panels": [
     {"type": "headline", "title": "Latest run", "data": "log.json"},
+    {"type": "radar", "title": "Early runners", "data": "pulse.json"},
     {"type": "scoreboard", "title": "Paper scoreboard", "data": ["paper.json", "pumpfun/paper.json"]},
     {"type": "tickets", "title": "Open tickets", "data": ["paper.json", "pumpfun/paper.json"]},
     {"type": "table", "title": "Kill lines (from run log)", "data": "log.json", "path": "kill_lines", "options": {"columns": ["key", "value"], "labels": {"key": "Coin", "value": "Kill line"}}},

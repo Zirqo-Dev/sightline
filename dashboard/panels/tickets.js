@@ -1,10 +1,10 @@
 /* v2: one dense row per ticket. Line 1: icon, ticker, level, book, kill meter, room %. Line 2: kill text (ellipsis). Tap to expand thesis. */
-S.ticketCard = function (t, kd, extra = "") {
+S.ticketCard = function (t, kd, extra = "", pulse) {
   const k = t.kill_line ? (typeof t.kill_line === "string" ? t.kill_line : t.kill_line.text) : "no kill line set";
   const level = t.level != null ? "L" + t.level : String(t.conviction || t.status || "open").split(" ")[0];
   const near = !kd ? "muted" : kd.pct < 10 ? "down" : kd.pct < 25 ? "warn" : "up";
   const chain = t.chain || t.side;
-  const sp = S.spark(S.seriesOf(t));
+  const sp = S.spark(S.seriesOf(t, pulse));
   const thesis = [].concat(t.thesis || []);
   return `<div class="ticket" data-x>
     <div class="row1">${S.assetIcon(t.ticker)}<b class="t">${S.esc(t.ticker)}</b>${S.chainIcon(chain, "sm")}${S.pill(level, "lvl")}${extra}
@@ -13,11 +13,12 @@ S.ticketCard = function (t, kd, extra = "") {
     <div class="more"><div class="when">opened ${S.when(t.opened_at)} · ends ${S.when(t.window_ends_at)}</div>${thesis.length ? `<ul>${thesis.map(x => `<li>${S.rich(x)}</li>`).join("")}</ul>` : ""}</div>
   </div>`;
 };
-S.register("tickets", { render({ data }) {
+S.register("tickets", { async render({ desk, data }) {
   const books = (Array.isArray(data) ? data : [{ json: data }]).filter(b => b && b.json);
+  const pulse = desk ? await S.get((desk.dir || (desk.id ? desk.id + "/" : "")) + "pulse.json") : null;
   const all = [];
-  books.forEach(b => (b.json.open || []).forEach(t => all.push({ t, b, kd: S.killDistance(t) })));
+  books.forEach(b => (b.json.open || []).forEach(t => all.push({ t, b, kd: S.killDistance(t, pulse) })));
   if (!all.length) return `<p class="muted">No open paper tickets.</p>`;
   return `<div class="tickets">${all.sort((a, b) => (a.kd?.pct ?? 999) - (b.kd?.pct ?? 999))
-    .map(x => S.ticketCard(x.t, x.kd, `<span class="book">${S.esc(x.b.json.book || "")}</span>`)).join("")}</div>`;
+    .map(x => S.ticketCard(x.t, x.kd, `<span class="book">${S.esc(x.b.json.book || "")}</span>`, pulse)).join("")}</div>`;
 }});

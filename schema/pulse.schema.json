@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zirqo-dev.github.io/sightline/schema/pulse.schema.json",
+  "title": "Sightline hourly pulse v2",
+  "type": "object",
+  "required": ["schema_version", "desk", "updated_at"],
+  "properties": {
+    "schema_version": {"const": 2},
+    "desk": {"type": "string"},
+    "updated_at": {"type": "string"},
+    "window_days": {"type": "number"},
+    "example": {"type": "boolean"},
+    "points": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["t", "ticker"],
+        "properties": {
+          "t": {"type": "string"},
+          "ticker": {"type": "string"},
+          "chain": {"type": "string"},
+          "asset_id": {"type": "string"},
+          "metrics": {"type": "object", "additionalProperties": true}
+        },
+        "additionalProperties": true
+      }
+    },
+    "radar": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ticker"],
+        "properties": {
+          "ticker": {"type": "string"},
+          "chain": {"type": "string"},
+          "asset_id": {"type": "string"},
+          "first_seen": {"type": "string"},
+          "score": {"type": "number"},
+          "signals": {"type": "array", "items": {"type": "string"}},
+          "note": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

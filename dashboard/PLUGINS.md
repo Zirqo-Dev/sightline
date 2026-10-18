@@ -36,6 +36,7 @@ One file each in `dashboard/panels/`. Each calls `S.register`.
 | Type | What it draws |
 |---|---|
 | `headline` | Latest run headline and time. |
+| `radar` | Early runners from `<desk>/pulse.json`, ranked by score. Quiet line when the file is missing. |
 | `scoreboard` | Open, closed, win rate, and realized P&L **per unit**, plus one row per book. |
 | `tickets` | Open tickets, closest to the kill line first. |
 | `closed` | Closed tickets with percent and P&L in that ticket's unit. |
@@ -52,7 +53,15 @@ One file each in `dashboard/panels/`. Each calls `S.register`.
 
 Realized P&L is summed **inside one unit only**. ADA, ADA-equivalent and USD each get their own total. The dashboard never adds those together.
 
-Distance to kill uses numeric fields on `kill_line` when they match a current reading. A field named `holders_below` (also `_under`, `_lt`, and `_above` / `_over` / `_gt`) is compared with the same name on the latest mark, falling back to entry. The closest line is the one with the least room left. If no numeric field matches, the text is parsed for comparisons such as `floor < 0.70`, `holders < 97,082` or `mcap < 450k`.
+Distance to kill uses numeric fields on `kill_line` when they match a current reading. A field named `holders_below` (also `_under`, `_lt`, and `_above` / `_over` / `_gt`) is compared with the same name on the latest mark, falling back to entry. When `<desk>/pulse.json` has points for that ticker, the latest pulse metrics override those readings, and the open-ticket sparkline uses the pulse series. The closest line is the one with the least room left. If no numeric field matches, the text is parsed for comparisons such as `floor < 0.70`, `holders < 97,082` or `mcap < 450k`.
+
+## Pulse, data age, and Run now
+
+Bots may write `<desk>/pulse.json` (schema `schema/pulse.schema.json`): an hourly window of `{t, ticker, metrics}` points plus a `radar` list. Older months can sit in `<desk>/archive/pulse-YYYY-MM.json` with the same shape. Both are optional. A missing file does not fail the build or the page.
+
+The header and each desk show `updated 12m ago` from the newer of `log.asof` and `pulse.updated_at`. It turns amber after 90 minutes and red after 6 hours, and the browser updates the wording on its own.
+
+Each desk page, and each desk on Home, has a Run now button. `desks.json` supplies `run.url` and `run.label`. The button opens that URL in a new tab. It does not contain a token or secret, and it does not call a webhook from the browser. If `run.url` is missing the button is disabled and its tooltip says `not wired yet`. After a click the page shows `run requested, refresh in a few minutes` until reload. The default URLs are the desk's GitHub Actions workflow (`run-solada.yml`, `run-nft.yml`), which only a logged-in user with permission can dispatch.
 
 ## Daily briefs index
 

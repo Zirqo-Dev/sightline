@@ -10,4 +10,5 @@ Files follow the shared format, version 2 (field guide and old-to-new names: ../
 | `log.json` | Run log: latest run, plus `history[]` of past runs and `followups[]` |
 | `pumpfun/paper.json` | Pump.fun comparison paper book (rules mirrored from `paper.json`) |
 | `briefs/YYYY-MM-DD.json` | Daily briefs (from now on). The site build writes `briefs/index.json`; this bot does not. |
+| `pulse.json` | Optional hourly pulse and early-runner radar. Older months: `archive/pulse-YYYY-MM.json`. |
 | `panels.json` | Which panels the desk page shows, in order (see ../dashboard/PLUGINS.md). |
