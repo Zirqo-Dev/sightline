@@ -130,6 +130,18 @@
      "flow": "GeckoTerminal h1 3/4 buys/sells (-11.3%), h6 27/10 but price h6 -18.4% (rule o: counts do not count), h24 -9.3%; last full hour (3 PM) 1,226 ADA vs 1,766 avg prior 5h",
      "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 350,164",
      "note": "Still above every kill line, but close: 345.7k vs 340k mcap (~1.7% away), 269 vs 250 on-chain holders, 29,651 vs 28,000 ADA side. Price -14.9% vs entry. On-chain holders fell 271 -> 269 (Solada 279 flat), the first down-mark after the 15:15 tick up, so rule o is one mark from an early exit."
+    },
+    {
+     "at": "2026-10-18T17:12:00-04:00",
+     "mcap_ada": 411871,
+     "price_ada": 0.000411871,
+     "holders": 275,
+     "onchain_holders_ex_pool": 266,
+     "ada_side": 32370,
+     "pct_vs_entry_mcap": 1.4,
+     "flow": "GeckoTerminal h1 11/3 buys/sells (+22.8%), h6 34/13 (+8.4%), h24 +2.9%; last full hour (4 PM) 6,268 ADA vs 1,896 avg prior 5h",
+     "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 411,748",
+     "note": "Above every kill line (411.9k vs 340k mcap, 266 vs 250 on-chain holders, 32,370 vs 28,000 ADA side). Price back above entry (+1.4%). Holders fell at a second mark in a row (on-chain 271 -> 269 -> 266, Solada 279 -> 275), but rule o also needs price below entry, so no early exit. Rule h warning: the bounce came with falling holders."
     }
    ]
   }
