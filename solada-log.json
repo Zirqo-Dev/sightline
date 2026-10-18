@@ -1,340 +1,658 @@
 {
-  "asof": "2026-10-17T19:18:00-04:00",
-  "source": "Snek Sentinel desk run (Sat evening), data half; Discord pass merged separately",
+  "asof": "2026-10-17T21:18:00-04:00",
+  "source": "Snek Sentinel desk run (Sat 9 PM, last run of the day)",
   "rate": {
-    "ADA_USD": 0.219483,
-    "ADA_CAD": 0.310734,
-    "SOL_USD": 103.24
+    "ADA_USD": 0.22051,
+    "ADA_CAD": 0.312188,
+    "SOL_USD": 103.68
   },
-  "headline": "CLOVE paper ticket closed at -12.7% (274.9k pool mcap) under new rule o after a 5 PM pop to ~397k faded and holders fell 128 -> 126 -> 123. BTC kill hit: flip-pair wallet u8a2m6 fully exited and pool mcap sits at 25.8k on the 25k line, so it's now L1. SOLADA ran +35% since 3:30 PM to ~2.23M ADA (~CA$692k), pool ADA side 106.7k. 45 identical 68.3-ADA buys look like a programmatic buyer; without them, swaps are 59 buys to 56 sells. Closest Solana-side name: JUSTQ, with 251 Solana-native holders (+21) and +52% h6 on a team post plus a synchronized 19-wallet burst at 6:16 PM. Its ~$5.0k USDC pool side (~22.9k ADA) is under rule k's 25k floor, so no ticket. The insider swarm was early in 12 of 13 new Cardano launches; a repeat launcher (ux739ulujk: FUCK, WHALE, BOLTY) plus cluster keys meets the 'loop forming' trigger. Pump arm: FTR closed at its kill (-34.5%), swordcat -12.3% open, CATE opened as strongest L2.",
+  "headline": "Quiet-to-soft evening. Bousky's wallet bought JUSTQ (Cardano leg, 250,838 units for ~27.4 ADA at 8:03 PM) and claimed Solada holder rewards at 8:06 PM (SOLADA +11,928 plus ASCEND/STRIKE/BabySNEK/NIGHT and others). SOLADA slipped -13% to ~1.94M ADA (pool ADA side 99.5k) on 400-2.1k ADA sells after 7:57 PM. JUSTQ now passes rule k depth (~$5.8k USDC side, ~26.4k ADA) but Solana-native holders fell 251 -> 244 and price sits under the 2.11e-5 trigger, so still no snipe ticket. MISS hit 83.7% curve ('Queen of the hill') on team posts, with only 17 Solana-native holders. 9 of 9 new Cardano launches were swarm-sniped; swarm keys are now launching coins themselves (rule p). Pump arm: swordcat closed -11.6% (pf-m), CATE +5.8% open, MINTER flagged as a sybil band (pf-n).",
   "wallet_snapshot": {
     "stake": "stake1u8srdh...dwm7rg",
-    "ADA": 96.07,
+    "ADA": 68.47,
     "values_ada": {
-      "SOLADA": 136.2,
-      "BEAST": 102.23,
-      "BOLT": 89.19,
-      "CLOVE": 32.68,
-      "FEED": 30.91,
-      "HIVE": 24.33,
-      "GOLFY": 10.68,
-      "JUICE": 8.94,
+      "SOLADA": 141.63,
+      "BEAST": 98.82,
+      "BOLT": 78.96,
+      "FEED": 40.18,
+      "CLOVE": 35.94,
+      "JUSTQ": 25.88,
+      "HIVE": 23.85,
+      "GOLFY": 10.58,
+      "JUICE": 9.64,
       "HERO": 8.12
     },
-    "SOLADA_raw_units": 61183,
+    "SOLADA_raw_units": 73111,
+    "JUSTQ_raw_units": 250838,
     "MISS": "dust 0.25",
-    "total_ada_incl_tokens": 539.3,
-    "total_cad": 167.6,
-    "note": "Balances unchanged since Oct 16 (Blockfrost, 228 assets). Values use on-chain Minswap V2 pool prices (SOLADA from its addr1x89ksjnf pool UTxO), or the Solada curve mcap for HIVE and GOLFY. Spot, no slippage. Not advice."
+    "total_ada_incl_tokens": 542.1,
+    "total_cad": 169.2,
+    "changes_since_1918": [
+      "8:03 PM: sent 29.4 ADA to Solada contract addr1z8p79r...; 8:04 PM received 250,838 JUSTQ (Cardano leg, no decimals) + 2 ADA back => JUSTQ buy ~27.4 ADA",
+      "8:05-8:06 PM: holder-reward claim via addr1vyrgesr... (paid 8.75 ADA, got 8.55 ADA back) returning SOLADA +11,928, ASCEND 244,295, STRIKE 601,052, NIGHT 6,614,552, BabySNEK 28,024, plus two small reward tokens"
+    ],
+    "note": "Blockfrost, 233 assets. Values use on-chain Minswap pool prices (SOLADA from its addr1x89ksjnf pool; JUSTQ from its Cardano Minswap pool 3,769 ADA / 36.5M units), or the Solada curve mcap for HIVE and GOLFY. Reward tokens not valued. Spot, no slippage. Not advice."
   },
   "levels": {
-    "JUSTQ": "L2 (Solana, bridge risk; closest to high-conviction on the Solana side; fails rule k pool depth)",
-    "SOLADA": "L2 hold (+35% since 3:30 PM)",
-    "BOLT": "L2 (meets rule k counts, fails rule o: h6 price -14.5%)",
-    "CLOVE": "L2 (paper closed -12.7%, rule o)",
-    "CORE": "L2 (Solana, bridge risk; KOTH 79.7%, recovering off its kill edge)",
-    "MISS": "L2 (Solana, bridge risk; team staking promo, rule l)",
-    "IAGONAUT": "L2 (+86% h6 bounce on flat holders 59 -> 60; fails rule k)",
-    "BTC": "L1 (kill hit: u8a2m6 fully exited; mcap 25.8k on the 25k line)",
-    "FEED": "L1 (holders 57/53 < 60)",
-    "PAWS": "L1 (bounced to 39.2k, holders flat 70 -> 72, 9.2k ADA side)",
-    "TOM": "L1 watch (top holder u9534d4g is a repeat early buyer)",
-    "HIVE": "L1",
-    "GOLFY": "L1",
-    "BEAST": "L1",
-    "JUICE": "L1",
-    "HERO": "L1",
+    "JUSTQ": "L2 (Solana side + Cardano leg, bridge risk; held by Bousky since 8:03 PM; closest Solana-side name; depth now passes rule k, holders and price trigger don't)",
+    "SOLADA": "L2 hold (-13% since 7:18 PM, still above its kill)",
+    "CLOVE": "L2 (+10% to 302k; holders airdrop-inflated (rule m), h6 unique buyers 18 vs sellers 19)",
+    "MISS": "L2 (Solana, bridge risk; team-promo Queen-of-the-hill push, 17 Solana-native holders, rules l and q)",
+    "BOLT": "L2 (339k, ADA side 29.5k just above its 28k kill; fails rule o, h6 -12.5%)",
+    "CORE": "L2 (Solana, bridge risk; curve 79.3%, 123 Solada / 34 native holders, flat)",
+    "FEED": "L1 held, kill hit (+59% h6 to 66k on flat 52-56 holders)",
+    "IAGONAUT": "L1 (31.4k, 59 holders, 1.4k ADA above its 30k kill)",
+    "BTC": "L1 (h6 -38.7%, 30.0k)",
+    "PAWS": "L1",
+    "TOM": "L1",
     "ROBIN": "L1",
-    "STARS": "L1 (insider loop)",
+    "HIVE": "L1 held, kill hit",
+    "GOLFY": "L1 held, kill hit",
+    "BEAST": "L1 held, kill hit",
+    "JUICE": "L1 held, kill hit",
+    "HERO": "L1 held, kill hit",
     "DUX": "L1 (Solana)",
-    "DAVE": "L1 (Solana; curve 19% -> 15%)",
-    "new_tiny": "CRAWJI, SHRIMP, POKY, BOLTI, BOLTY, WHALE, FUCK, GRAVE, STARE, GATTO, CHADDY (all swarm-sniped, most back to 0-6 holders), MODR, VIBE (one wallet holds ~37%), PAUL, BATMAN (Cardano), BALINA (Solana, 4 native holders): L1"
+    "DAVE": "L1 (Solana)",
+    "new_tiny": "COCKY, WHITE, PPC, PAT, WHAT, HUMAN, DINO, RED, RBULL (Cardano, all swarm-sniped, back to 0-1 holders) and MBOT (Solana, 8:43 PM, 4 native holders, curve 5.6%): L1 under rule p"
   },
   "kill_lines": {
-    "JUSTQ": "Solana-native holders < 230 or mcap < $16.0k (~73k ADA). Entry trigger: USDC pool side >= ~$5.5k (25k ADA) with holders >= 251 and a full hourly close above ~2.11e-5 (the 6 PM spike midpoint)",
+    "JUSTQ": "Solana-native holders < 230 or mcap < $16.0k (~72.6k ADA). Entry trigger unchanged: native holders >= 251 with a full hourly close above ~2.11e-5; depth now OK",
     "SOLADA": "pool ADA side < 80k or mcap < 1.5M",
+    "CLOVE": "pool mcap < 250k or on-chain holders < 110",
+    "MISS": "curve < 70% or Solada holders < 90 (tightened from 60%/80% after the push)",
     "BOLT": "holders < 250 or ADA side < 28k",
     "CORE": "curve < 75% or Solada holders < 110",
-    "MISS": "curve < 60% or Solada holders < 80",
     "IAGONAUT": "mcap < 30k or holders < 55",
     "TOM": "curve < 15% or holders < 15"
   },
-  "kill_hits": {
-    "BTC": "u8a2m6 (0.5% at 3:30 PM) is no longer a holder (Koios). Pool mcap 25.8k is on the 25k line, h6 -31%. On-chain holders 63, Solada 70.",
-    "CLOVE_ticket": "closed early under rule o (holders 128 -> 126 -> 123, price below entry); the 250k/110 kill line itself wasn't hit"
-  },
+  "kill_hits": {},
   "onchain": {
-    "CLOVE": {
-      "pool_ada": 24326,
-      "pool_mcap_ada": 274894,
-      "holders_ex_pool": 114,
-      "top10_ex_pool": 42.64,
-      "top1": 6.16,
-      "gt_h6": "42/32, +3.3%",
-      "gt_h1": "2/9, -28.3%",
-      "hourly_high": "~397k at 5 PM ET"
-    },
     "BOLT": {
-      "pool_ada": 31210,
-      "pool_mcap_ada": 383389,
-      "holders_ex_pool": 264,
-      "top10_ex_pool": 28.44,
-      "top1": 4.25,
-      "gt_h6": "104/49, -14.5%",
-      "gt_h1": "2/2, -5.0%"
+      "pool_ada": 29525,
+      "pool_mcap_ada": 339421,
+      "holders_ex_pool": 263,
+      "top10_ex_pool": 28.84,
+      "top1": 4.39,
+      "gt_h6": "102/53, -12.5%",
+      "gt_h1": "14/7, -1.3%",
+      "insiders": "uytg09zr 0; repeat buyer addr1q9ac..u9wwut 1.34%"
     },
-    "BTC": {
-      "pool_ada": 7500,
-      "pool_mcap_ada": 25832,
-      "holders_ex_pool": 63,
-      "top10_ex_pool": 45.57,
-      "top1": "5.47 (launcher u8px0zdx)",
-      "gt_h6": "70/46, -31.0%",
-      "note": "u8a2m6 fully exited"
+    "CLOVE": {
+      "pool_ada": 25413,
+      "pool_mcap_ada": 302260,
+      "holders_ex_pool": 117,
+      "top10_ex_pool": 42.46,
+      "top1": 6.16,
+      "gt_h6": "29/20 (unique 18/19), +15.2%",
+      "gt_h1": "0/0"
     },
     "FEED": {
-      "pool_ada": 10446,
-      "pool_mcap_ada": 50763,
-      "holders_ex_pool": 53,
-      "top10_ex_pool": 63.15,
-      "gt_h6": "23/23, -8.9%"
+      "pool_ada": 11930,
+      "pool_mcap_ada": 65989,
+      "holders_ex_pool": 52,
+      "top10_ex_pool": 62.35,
+      "gt_h6": "24/10, +59.3%"
+    },
+    "BTC": {
+      "pool_ada": 8020,
+      "pool_mcap_ada": 30036,
+      "holders_ex_pool": 64,
+      "top10_ex_pool": 44.41,
+      "gt_h6": "31/25, -38.7%"
     },
     "IAGONAUT": {
-      "pool_ada": 8780,
-      "pool_mcap_ada": 35789,
-      "holders_ex_pool": 60,
-      "top10_ex_pool": 41.06,
-      "gt_h6": "47/19, +85.7%"
+      "pool_ada": 8212,
+      "pool_mcap_ada": 31377,
+      "holders_ex_pool": 59,
+      "top10_ex_pool": 40.42,
+      "gt_h6": "15/10, -9.7%"
     },
     "PAWS": {
-      "pool_ada": 9188,
-      "pool_mcap_ada": 39165,
-      "holders_ex_pool": 72,
-      "top10_ex_pool": 44.15,
-      "gt_h6": "23/18, +1.1%"
+      "pool_ada": 8359,
+      "pool_mcap_ada": 32568,
+      "holders_ex_pool": 71,
+      "top10_ex_pool": 45.48,
+      "gt_h6": "11/4, +26.5%"
     },
     "BEAST": {
-      "pool_ada": 6726,
-      "pool_mcap_ada": 21115,
-      "gt_h6": "4/4, -7.0%"
+      "pool_ada": 6613,
+      "pool_mcap_ada": 20409
     },
     "ROBIN": {
-      "pool_ada": 6377,
-      "pool_mcap_ada": 18940
+      "pool_ada": 6372,
+      "pool_mcap_ada": 18912
     },
     "JUICE": {
-      "pool_ada": 5163,
-      "pool_mcap_ada": 12161,
-      "gt_h6": "5/13, +27.5%"
+      "pool_ada": 5329,
+      "pool_mcap_ada": 13112
     },
     "HERO": {
       "pool_ada": 3242,
-      "pool_mcap_ada": 4763,
-      "gt_h6": "1/7, -19.0%"
+      "pool_mcap_ada": 4763
     },
     "SOLADA": {
-      "pool_ada": 106684,
-      "mcap_ada": 2225392,
-      "pool_txs_6h": 271,
-      "swaps_6h": "105 buys/56 sells, net +11.3k ADA into pool; 45 identical 68.3-ADA buys (programmatic, likely fee buybacks) -> 59/56 without them; >=1k ADA swaps 15 buys/24 sells",
-      "note": "single pool UTxO at addr1x89ksjnf...; flow decoded from pool UTxO deltas via Blockfrost"
+      "pool_ada": 99495,
+      "mcap_ada": 1937211,
+      "swaps_6h": "83 buys/46 sells, net +7.5k ADA into pool over 6h, but 9 of the last 12 swaps (7:57-9:14 PM) were sells of 400-2,120 ADA"
+    },
+    "JUSTQ_cardano_leg": {
+      "pool_ada": 3769,
+      "pool_units": 36533437,
+      "price_ada_per_unit": 0.00010317,
+      "implied_mcap_ada": 103174,
+      "holders": 23
     },
     "HIVE": {
-      "curve_pct": 57.4,
-      "holders_ex_curve": 69,
-      "top10_ex_curve": 46.61
+      "curve_pct": 56.5,
+      "solada_holders": 75
     },
     "GOLFY": {
-      "curve_pct": 40.9,
-      "holders_ex_curve": 45,
-      "top10_ex_curve": 52.54
+      "curve_pct": 40.5,
+      "solada_holders": 44
     },
     "TOM": {
-      "curve_pct": 30.6,
-      "holders_ex_curve": 26,
-      "top10_ex_curve": 64.06,
-      "top1": "5.65 (u9534d4g, repeat early buyer)"
+      "curve_pct": 29.8,
+      "solada_holders": 25
     }
   },
   "insider_loop": {
-    "swarm": "Early-buyer swarm in 12 of 13 new Cardano launches since 3:30 PM (first 10 buyer outputs via Blockfrost): flip pair u8a2m6+u978t4 in BOLTI, BOLTY, SHRIMP, CRAWJI, GRAVE, WHALE, FUCK, STARE, GATTO; sniper uytg09zr in SHRIMP, POKY, CRAWJI; sniper u9w6dd in CHADDY, POKY, CRAWJI, WHALE; u8x8h2hc in 10 of them.",
-    "same_block": "CRAWJI: 9 of its first 10 buyers in one block (u9kp4sxa, u8a2m6, u978t4, u9w6dd, uytg09zr, u8x8h2hc, uyt8xs9q, u944xqrv, uyhcfzlz). SHRIMP: 9 in one block incl. u8a2m6, u978t4, uytg09zr.",
-    "exits": "Most swarm-sniped launches are back to 0-6 holders and ~3.4k ADA curve mcap, so the snipers fully exited (rule j kill) within minutes.",
-    "loop_forming": "Repeat launcher stake1ux739ulujk launched FUCK (3:20 PM), WHALE (3:30) and BOLTY (3:39), and cluster keys u8a2m6/u978t4/u8x8h2hc were in all three early blocks. That meets the Oct 16 'loop forming' upgrade trigger. Funding links between the launcher and cluster keys weren't checked.",
-    "new_tracked": "stake1u9kp4sxa (early in 9: BOLTI, BOLTY, SHRIMP, CRAWJI, GRAVE, WHALE, FUCK, STARE, GATTO); stake1uxz6fvju (6); stake1uxfernv7 (4); stake1u944xqrv (4); stake1uyhcfzlz, uyvns79x, uyt8xs9q (3 each); stake1u9534d4g (BOLTY, MODR, VIBE, GRAVE, FUCK; also TOM top-1 at 5.65%)",
-    "BTC": "u8a2m6 fully exited (kill)",
-    "BOLT": "uytg09zr 0; repeat buyer addr1q9ac…u9wwut still 1.34%",
-    "CLOVE": "no tracked snipers; repeat buyer addr1q9ac…u9wwut still 1.25%",
-    "copycats": "BOLTI and BOLTY are BOLT copycats (rule: copycats mark peak attention)",
-    "solana": "DFZYHaTZ... (a plain system wallet holding ~0.52 SOL) is top-1 ex-pool in JUSTQ (4.18%, unchanged since 3:30 PM), blocus (3.8%) and was CyberAxe's top-1 (3.82%). It's a cross-token holder; watch for an exit, not a kill line."
+    "swarm": "9 of 9 new Cardano launches since 7:18 PM had swarm keys in their first 10 buyers (Blockfrost): flip pair u8a2m6+u978t4 in WHAT, HUMAN, DINO, RED, RBULL; sniper u9w6dd in PPC, PAT, WHAT, RBULL; u9kp4sxa in HUMAN, DINO, RED, RBULL; u944xqrv in COCKY, WHITE, WHAT, RBULL; u8x8h2hc in HUMAN, DINO, RBULL; uxz6fvju in PPC, RBULL; uxfernv7 in PPC. All are back to 0-1 Solada holders, so the swarm exited (rule j).",
+    "launchers": "PPC was launched by uyt8xs9q, itself an early swarm buyer in CRAWJI. Repeat launchers u9rwdkfjtr (HUMAN 7:55, DINO 7:47) and uxz5cts5ww (RED 7:46, RBULL 7:40). ux739ulujk didn't launch this window.",
+    "new_tracked": "stake1uy67ymp9 (early in PAT, WHAT, HUMAN, DINO, RED, RBULL); stake1uxvz79z4 (WHITE, WHAT, RED; 4.4-4.8% each); stake1u9q3xusf (PPC, WHAT); stake1ux9da0mc (WHITE, PPC)",
+    "holdings": "No tracked sniper keys in BOLT/CLOVE/FEED/BTC/IAGONAUT/PAWS top holders; repeat buyer addr1q9ac..u9wwut still 1.34% BOLT, 1.25% CLOVE"
   },
   "solana_side_snapshot": {
-    "at": "2026-10-17T19:18:00-04:00",
-    "note": "Solana-native = pump.fun totalHolders minus escrow HCYvN1 and deployer A1qaJW (rule n). prev = 15:30 run. JUSTQ escrow balance unchanged (~98.6M, 10.34%), so there was no bridge flow; the gain is Solana-side buying.",
+    "at": "2026-10-17T21:18:00-04:00",
+    "note": "Solana-native = pump.fun totalHolders minus escrow HCYvN1 and deployer A1qaJW (rule n). prev = 19:18 run.",
     "names": {
       "JUSTQ": {
-        "solada_holders": 276,
-        "prev": 253,
-        "pumpfun_native": 251,
-        "prev_pumpfun": 230,
+        "solada_holders": 270,
+        "prev": 276,
+        "pumpfun_native": 244,
+        "prev_pumpfun": 251,
         "curve_bps": 10000,
-        "mcap_usd": 20172,
-        "mcap_ada": 91880,
-        "trades24h": 164,
-        "pool_usdc_side": 5027,
-        "ds_h6": "66/41, +52.5%",
-        "ds_h1": "17/16, -10.4%",
-        "gt_h6_unique": "54 buyers/36 sellers",
-        "top10_ex_pool_escrow_deployer_pct_supply": 22.1,
-        "note": "Synchronized burst at 6:16-6:18 PM ET: ~19 wallets bought within 2 minutes, at least 9 sold within 30 min. Team account @QuantumSnek posted the mint at 4:51 PM."
-      },
-      "CORE": {
-        "solada_holders": 124,
-        "prev": 117,
-        "pumpfun_native": 35,
-        "prev_pumpfun": 32,
-        "curve_bps": 7973,
-        "prev_curve_bps": 7624,
-        "mcap_usd": 23721,
-        "ds_h6": "21/11, +2.6%",
-        "koth": true
+        "mcap_usd": 18052,
+        "mcap_ada": 81866,
+        "pool_usdc_side": 5812,
+        "ds_h6": "68/48, +46.1%",
+        "ds_h1": "4/7, -8.8%",
+        "gt_h6_unique": "54 buyers/41 sellers",
+        "price_usd": 1.878e-05
       },
       "MISS": {
-        "solada_holders": 90,
+        "solada_holders": 106,
         "prev": 90,
-        "pumpfun_native": 8,
-        "prev_pumpfun": 10,
-        "curve_bps": 6881,
-        "prev_curve_bps": 6682,
-        "mcap_usd": 16568,
-        "ds_h6": "35/12, +42.1%",
-        "note": "WojakBlueADA 'pumpers ready' posts at 6:17-6:19 PM tagging @Pumpfun"
+        "pumpfun_native": 17,
+        "prev_pumpfun": 8,
+        "curve_bps": 8368,
+        "prev_curve_bps": 6881,
+        "mcap_usd": 27490,
+        "ds_h1": "27/3, +68.8%",
+        "ds_h6": "44/11, +76.0%",
+        "note": "Team @WojakBlueADA 'Queen of the hill achieved, next up getting bonded' 9:02 PM"
+      },
+      "CORE": {
+        "solada_holders": 123,
+        "prev": 124,
+        "pumpfun_native": 34,
+        "prev_pumpfun": 35,
+        "curve_bps": 7927,
+        "prev_curve_bps": 7973,
+        "mcap_usd": 23332,
+        "ds_h6": "27/13, +17.3%"
       },
       "DUX": {
-        "solada_holders": 28,
-        "prev": 31,
+        "solada_holders": 27,
+        "prev": 28,
         "pumpfun_native": 8,
-        "prev_pumpfun": 9,
-        "curve_bps": 3063,
-        "prev_curve_bps": 3292
+        "prev_pumpfun": 8,
+        "curve_bps": 2843,
+        "prev_curve_bps": 3063
       },
       "DAVE": {
         "solada_holders": 19,
-        "prev": 21,
+        "prev": 19,
         "pumpfun_native": 6,
-        "prev_pumpfun": 7,
-        "curve_bps": 1516,
-        "prev_curve_bps": 1897
+        "prev_pumpfun": 6,
+        "curve_bps": 1516
+      },
+      "MBOT": {
+        "solada_holders": 12,
+        "pumpfun_native": 4,
+        "curve_bps": 563,
+        "live": "2026-10-17T20:43-04:00"
       },
       "FUSH": {
         "solada_holders": 12,
         "pumpfun_native": 2,
-        "curve_bps": 1004
+        "curve_bps": 1278
       },
       "SPERPS": {
         "solada_holders": 12,
         "pumpfun_native": 3,
         "curve_bps": 248
       },
-      "LOCK": {
-        "solada_holders": 8,
-        "prev": 8,
-        "pumpfun_native": 1,
-        "prev_pumpfun": 1,
-        "curve_bps": 327
-      },
       "BALINA": {
         "solada_holders": 8,
         "pumpfun_native": 4,
-        "curve_bps": 127,
-        "live": "2026-10-17T16:08-04:00"
+        "curve_bps": 127
+      },
+      "LOCK": {
+        "solada_holders": 8,
+        "pumpfun_native": 1,
+        "curve_bps": 327
+      },
+      "DANZO": {
+        "solada_holders": 8,
+        "pumpfun_native": 1,
+        "curve_bps": 635
       },
       "STARS": {
         "solada_holders": 7,
-        "prev": 8,
         "pumpfun_native": 1,
-        "prev_pumpfun": 1,
         "curve_bps": 123
-      },
-      "MONEY": {
-        "solada_holders": 6,
-        "prev": 6,
-        "curve_bps": 187
-      },
-      "RAIN": {
-        "solada_holders": 6,
-        "prev": 8,
-        "curve_bps": 20,
-        "prev_curve_bps": 51
-      },
-      "KILLUA": {
-        "solada_holders": 5,
-        "prev": 5,
-        "curve_bps": 55
-      },
-      "BATMAN": {
-        "solada_holders": 3,
-        "prev": 3,
-        "curve_bps": 1
       }
     }
   },
   "snipe_candidate": null,
-  "closest": "JUSTQ: 251 Solana-native holders (230 at 3:30 PM, +9%), GeckoTerminal h6 54 unique buyers vs 36 sellers, +52% h6, ~$20.2k mcap (~91.9k ADA, ~CA$28.5k). It's missing pool depth: the USDC side is ~$5.0k (~22.9k ADA), under rule k's 25k floor. The push came from the team account's mint post (@QuantumSnek, 4:51 PM) plus a synchronized 19-wallet burst at 6:16 PM that half-flipped within 30 min. Entry trigger: USDC side >= ~$5.5k with holders >= 251 and a full hourly close above ~2.11e-5.",
+  "closest": "JUSTQ: 244 Solana-native holders (251 at 7:18 PM), ~$18.1k mcap (~81.9k ADA, ~CA$25.6k), USDC pool side ~$5.8k (~26.4k ADA) now clears rule k's 25k floor. Missing: holders back to 251+ and a full hourly close above ~2.11e-5 (now ~1.88e-5, h1 -9%). Runner-up MISS has the momentum but only 17 Solana-native holders (rule q).",
   "x": {
     "real_voices": [
-      "@cryptodramz (26.2k, on list): 'Have you @soladafun yet today?' (4:14 PM, 20 likes); replies at 6:56 PM say '@soladafun taking off'",
-      "@Protocoolc (994): Solada 'generating half of Cardano's total trading volume', 60k ADA rewarded to holders (4:52 PM reply to IOHK_Charles, 10 likes)",
-      "@fblthp_cryp (1.1k, on list): '250k seems like a safe estimate', cheering FEED",
-      "@diogocastro1993 (377): '24h 50% volume came from @soladafun'"
+      "@PepeanoCardano (876, ANOlaunch team, so not a list candidate): '@soladafun is reviving Cardano... bringing real volume' (8:49 PM, 5 likes)",
+      "@Yabba900 (on list): 'as long as @soladafun is a place where people are happy making 29 $Ada on a token, the dapp eventually dies' (8:03 PM)",
+      "@WylanCoffman (3.8k): 'This dapp needs to fix the solana side of things to handle speeds that exist outside of cardano' (8:04 PM)",
+      "@SnekSignal (60): SOLADA past 2M ADA mcap, pays SNEK rewards (8:24 PM)"
     ],
     "team_promo": [
-      "@QuantumSnek (JUSTQ team, on list): 'Are we back?' with the JUSTQ Solana mint (4:51 PM, 16 likes)",
-      "@CloveOnAscend: 'Should we do some $SOLADA airdrops to $CLOVE holders?' (5:59 PM, 19 likes); 'The pumps chase $CLOVE'",
-      "@WojakBlueADA: MISS 50% APY staking (4:48 PM) and 'pumpers ready to pump this Misses' tagging @Pumpfun (6:17-6:19 PM)",
-      "@FEEdBabySNEK: bought ~1M SOLADA and 50k COCK, floor/burn posts",
-      "@ModularGridADA: MODR launch post"
+      "@WojakBlueADA (MISS team): 'Lets bond the $MISS' 8:44 PM; 'Queen of the hill achieved' 9:02 PM, tagging @Pumpfun",
+      "@QuantumSnek (JUSTQ team): 'Send it $MISS' 8:45 PM; replies tagging @Pumpfun @solana",
+      "@ZanteusWorld (24): MBOT launch post"
     ],
     "spam": [
-      "@poolflowapp: 6+ templated '$SOLADA ... track with PoolFlow' replies",
-      "@BigTitCoinada, @9ayL0rd, @Bonzai_Bruce one-liners"
+      "@saltapp_xyz, @DylanCrypto77, @1YA50 reply spam under CLOVE/cryptodramz",
+      "@LootNscootin cheering MISS"
     ],
-    "temperature": "Warmer than 3:30 PM. About 50 Solada posts from 1:20 to 7:25 PM ET. The '@soladafun = half of Cardano volume' narrative is spreading in Charles's replies (Charles himself didn't mention Solada), and that lines up with SOLADA's +35%. Still mostly the Cardano crowd plus team accounts."
+    "temperature": "Cooler than the afternoon: ~25 Solada posts 7:20-9:20 PM, mostly team and reply spam. The one fresh theme is a critique (small wins, Solana side too slow)."
   },
-  "cross_chain_signals": "Weak. No Solana-native KOL or known trader mentioned Solada or a ticker. The Solana pushes are team-side: @QuantumSnek (Cardano JUSTQ team) posted the JUSTQ Solana mint, and @WojakBlueADA tagged @Pumpfun for MISS. JUSTQ's Solana buying was real (+21 native holders, escrow unchanged, so no bridge flow), but it came in a synchronized burst, not from a caller. @SpiritSigma (5.2k) posted Solana memes ($Jotchua) but nothing on Solada. @coinmun's earlier 'Top 10 Today' JUSTQ listing is vote/listing promo.",
+  "cross_chain_signals": "Weak again. No Solana-native KOL or known trader mentioned Solada or a ticker. The Solana-side pushes are Cardano team accounts tagging @Pumpfun (WojakBlueADA for MISS, QuantumSnek). MISS's Solana-native holders doubled (8 -> 17) but from a tiny base; JUSTQ's fell (251 -> 244) with escrow unchanged. @WylanCoffman's 'fix the Solana side' complaint is the only cross-chain comment from a non-team account.",
   "paper_actions": [
-    "close CLOVE @274.9k ADA -12.7% (rule o: holders leaving)",
-    "no new Solada tickets (JUSTQ fails rule k pool depth; BOLT fails rule o flow)",
-    "pump: close FTR (DFMt) @$2.14M -34.5% (kill)",
-    "pump: mark swordcat @$2.09M -12.3% (open)",
-    "pump: open CATE (Ai66) L2 @ $67.8M"
+    "Solada: no open tickets, none opened (JUSTQ fails holders and price trigger; CLOVE rule m and flat unique buyers; BOLT rule o)",
+    "pump: close swordcat @$2.12M -11.6% (pf-m early exit)",
+    "pump: mark CATE @$72.1M +5.8% (open)",
+    "pump: no new ticket (MINTER pf-n, Chaton farm filter, YILONGMA flat band + h1 -24%, MeiMei pf-l)"
   ],
   "rules_added": [
-    "o",
-    "pf-m"
+    "p",
+    "q",
+    "r",
+    "daily-2026-10-17",
+    "pf-n",
+    "pf-o"
   ],
+  "paper_book_summary": {
+    "solada": "2 closed, 0 wins / 2 losses (BOLT -20.6%, CLOVE -12.7%), average -16.7%, 0 open",
+    "pumpfun": "3 closed, 0 wins / 3 losses (CyberAxe -31.7%, FTR -34.5%, swordcat -11.6%), average -25.9%, 1 open (CATE +5.8%)",
+    "read": "Both books lost every closed ticket on day one; the early holder-leak exits (rule o / pf-m) gave the two smallest losses. Solada's rules held up a bit better (smaller average loss)."
+  },
   "new_list_candidates": [
     {
-      "handle": "Protocoolc",
-      "followers": 994,
-      "reason": "Data-driven Solada post (half of Cardano volume, 60k ADA to holders) in Charles's replies. Borderline: small account with an empty bio."
+      "handle": "WylanCoffman",
+      "followers": 3781,
+      "reason": "Non-team voice commenting on Solada's Solana side (8:04 PM). Borderline: one reply, bio is just a link."
     }
   ],
-  "new_list_candidates_note": "Rejected: @poolflowapp (templated app promo), @RnGcrYptO (3.4k, 'spotlighting Web3 teams', CLOVE bag in bio), @spidermtz08nfl (540), @diogocastro1993 (377), @LootNscootin (717), @coinmun (listing site). @Yabba900 from 3:30 PM is still pending.",
-  "helius_credits_est": "~7",
-  "discord_summary": "Discord pass 7:18 PM ET (hosking_, Holder role OK, read-only, no servers joined). #new-launches: 24 cards 1:24-7:19 PM, 22 Cardano + 2 Pump.fun-marked (RAIN 2:05, BALINA 4:09); latest CRAWJI 7:18, BATMAN/PAUL 7:19. #soladafun-buys: ~719 buys / ~155.4k ADA since 1:20 PM (25 dev buys ~13.0k). Top: BOLT 105/~38.3k (addr1qx7z..alk5ds 9 buys 4.6k), CLOVE 43/~16.6k, BTC 71/~15.1k, TOM 56/~8.0k, IAGONAUT 47/~7.6k, MISS 23/~7.2k, FEED 24/~6.2k, CORE 14/~5.0k, CRAWJI 26/~3.7k in first 7 min. Repeat: addr1q9ac..u9wwut 4x1,000 ADA CLOVE+BOLT 1:21-1:46 PM; addr1q867..f6cx3l and addr1q9fd..myanlj also rotating CLOVE/BOLT; multi-ticker launch buyers addr1qyng..ur35h7, addr1qxnx..st75y6, addr1qxef..rwuh57, addr1qy85..6cgdr5. #capital-shill: nothing new (last post 10:26 AM). #soladafun: nothing new since 4:06 AM.",
+  "new_list_candidates_note": "Rejected: @PepeanoCardano (ANOlaunch team), @SnekSignal (60, bot-like feed), @saltapp_xyz / @DylanCrypto77 / @1YA50 (reply spam), @LootNscootin (cheerleader). @Protocoolc and @Yabba900 are already on the list.",
+  "helius_credits_est": "~6",
+  "discord_summary": "Discord pass ~9:25 PM ET (hosking_, Holder role OK, read-only, no servers joined). #new-launches: 12 cards 7:19-9:06 PM, 11 Cardano + 1 Pump.fun (MBOT 8:44 PM); others BATMAN, PAUL, RBULL, RED, DINO, HUMAN, WHAT, PAT, PPC, WHITE, COCKY. #soladafun-buys: only the latest 12 bot posts loaded (9:07-9:21 PM, ~3.15k ADA): FEED 3 buys ~689 ADA at 65-67k mcap, CORE 500 at 79% curve, BOLT 500 at 353.6k, MISS 400 at 81% curve, ROBIN 420, MBOT 300, COCKY 210, TOM 133; earlier 7:18-9:07 PM buys weren't reached, so no repeat-wallet read this pass. #capital-shill: one new post, 9:03 PM $bluerbot/$zant reposting the Zanteus.World MBOT launch promo. #soladafun: nothing new since 4:06 AM (verify-bot removal; unanswered question on claiming rewards while tokens are locked).",
   "sources": [
-    "solada.fun /api/launches, /api/market (19:19 ET)",
-    "Blockfrost: wallet assets, Minswap V2 pool UTxOs, SOLADA pool UTxO + 271 pool txs (6h), early-buyer outputs for 15 new launches",
+    "solada.fun /api/launches, /api/market (21:19 ET)",
+    "Blockfrost: wallet assets + last 4 wallet txs, Minswap V2 pool UTxOs, SOLADA pool UTxO + 191 pool txs (6h), JUSTQ Cardano-leg pool, early-buyer outputs for 9 new launches",
     "Koios asset_addresses (holders, top-10, insider keys)",
-    "GeckoTerminal cardano pools/multi, CLOVE ohlcv/trades; solana JUSTQ pool/ohlcv/trades, trending_pools, pumpswap pools, CATE ohlcv, token info",
+    "GeckoTerminal cardano pools/multi, solana JUSTQ pool, trending_pools, pumpswap pools, MINTER ohlcv, token info",
     "DexScreener tokens/v1/solana",
-    "pump.fun frontend-api-v3 coins (complete=true), coins/currently-live, coins/top-holders",
-    "Helius getTokenSupply/getTokenLargestAccounts/getMultipleAccounts/getAccountInfo (7 req)",
-    "X public search (6 queries, 1 user lookup)",
+    "pump.fun frontend-api-v3 coins (complete=true), currently-live, top-holders",
+    "Helius getTokenSupply/getTokenLargestAccounts/getMultipleAccounts (6 req)",
+    "X public search (3 queries, 1 user lookup)",
     "CoinGecko simple/price"
   ],
   "history": [
+    {
+      "asof": "2026-10-17T19:18:00-04:00",
+      "source": "Snek Sentinel desk run (Sat evening), data half; Discord pass merged separately",
+      "rate": {
+        "ADA_USD": 0.219483,
+        "ADA_CAD": 0.310734,
+        "SOL_USD": 103.24
+      },
+      "headline": "CLOVE paper ticket closed at -12.7% (274.9k pool mcap) under new rule o after a 5 PM pop to ~397k faded and holders fell 128 -> 126 -> 123. BTC kill hit: flip-pair wallet u8a2m6 fully exited and pool mcap sits at 25.8k on the 25k line, so it's now L1. SOLADA ran +35% since 3:30 PM to ~2.23M ADA (~CA$692k), pool ADA side 106.7k. 45 identical 68.3-ADA buys look like a programmatic buyer; without them, swaps are 59 buys to 56 sells. Closest Solana-side name: JUSTQ, with 251 Solana-native holders (+21) and +52% h6 on a team post plus a synchronized 19-wallet burst at 6:16 PM. Its ~$5.0k USDC pool side (~22.9k ADA) is under rule k's 25k floor, so no ticket. The insider swarm was early in 12 of 13 new Cardano launches; a repeat launcher (ux739ulujk: FUCK, WHALE, BOLTY) plus cluster keys meets the 'loop forming' trigger. Pump arm: FTR closed at its kill (-34.5%), swordcat -12.3% open, CATE opened as strongest L2.",
+      "wallet_snapshot": {
+        "stake": "stake1u8srdh...dwm7rg",
+        "ADA": 96.07,
+        "values_ada": {
+          "SOLADA": 136.2,
+          "BEAST": 102.23,
+          "BOLT": 89.19,
+          "CLOVE": 32.68,
+          "FEED": 30.91,
+          "HIVE": 24.33,
+          "GOLFY": 10.68,
+          "JUICE": 8.94,
+          "HERO": 8.12
+        },
+        "SOLADA_raw_units": 61183,
+        "MISS": "dust 0.25",
+        "total_ada_incl_tokens": 539.3,
+        "total_cad": 167.6,
+        "note": "Balances unchanged since Oct 16 (Blockfrost, 228 assets). Values use on-chain Minswap V2 pool prices (SOLADA from its addr1x89ksjnf pool UTxO), or the Solada curve mcap for HIVE and GOLFY. Spot, no slippage. Not advice."
+      },
+      "levels": {
+        "JUSTQ": "L2 (Solana, bridge risk; closest to high-conviction on the Solana side; fails rule k pool depth)",
+        "SOLADA": "L2 hold (+35% since 3:30 PM)",
+        "BOLT": "L2 (meets rule k counts, fails rule o: h6 price -14.5%)",
+        "CLOVE": "L2 (paper closed -12.7%, rule o)",
+        "CORE": "L2 (Solana, bridge risk; KOTH 79.7%, recovering off its kill edge)",
+        "MISS": "L2 (Solana, bridge risk; team staking promo, rule l)",
+        "IAGONAUT": "L2 (+86% h6 bounce on flat holders 59 -> 60; fails rule k)",
+        "BTC": "L1 (kill hit: u8a2m6 fully exited; mcap 25.8k on the 25k line)",
+        "FEED": "L1 (holders 57/53 < 60)",
+        "PAWS": "L1 (bounced to 39.2k, holders flat 70 -> 72, 9.2k ADA side)",
+        "TOM": "L1 watch (top holder u9534d4g is a repeat early buyer)",
+        "HIVE": "L1",
+        "GOLFY": "L1",
+        "BEAST": "L1",
+        "JUICE": "L1",
+        "HERO": "L1",
+        "ROBIN": "L1",
+        "STARS": "L1 (insider loop)",
+        "DUX": "L1 (Solana)",
+        "DAVE": "L1 (Solana; curve 19% -> 15%)",
+        "new_tiny": "CRAWJI, SHRIMP, POKY, BOLTI, BOLTY, WHALE, FUCK, GRAVE, STARE, GATTO, CHADDY (all swarm-sniped, most back to 0-6 holders), MODR, VIBE (one wallet holds ~37%), PAUL, BATMAN (Cardano), BALINA (Solana, 4 native holders): L1"
+      },
+      "kill_lines": {
+        "JUSTQ": "Solana-native holders < 230 or mcap < $16.0k (~73k ADA). Entry trigger: USDC pool side >= ~$5.5k (25k ADA) with holders >= 251 and a full hourly close above ~2.11e-5 (the 6 PM spike midpoint)",
+        "SOLADA": "pool ADA side < 80k or mcap < 1.5M",
+        "BOLT": "holders < 250 or ADA side < 28k",
+        "CORE": "curve < 75% or Solada holders < 110",
+        "MISS": "curve < 60% or Solada holders < 80",
+        "IAGONAUT": "mcap < 30k or holders < 55",
+        "TOM": "curve < 15% or holders < 15"
+      },
+      "kill_hits": {
+        "BTC": "u8a2m6 (0.5% at 3:30 PM) is no longer a holder (Koios). Pool mcap 25.8k is on the 25k line, h6 -31%. On-chain holders 63, Solada 70.",
+        "CLOVE_ticket": "closed early under rule o (holders 128 -> 126 -> 123, price below entry); the 250k/110 kill line itself wasn't hit"
+      },
+      "onchain": {
+        "CLOVE": {
+          "pool_ada": 24326,
+          "pool_mcap_ada": 274894,
+          "holders_ex_pool": 114,
+          "top10_ex_pool": 42.64,
+          "top1": 6.16,
+          "gt_h6": "42/32, +3.3%",
+          "gt_h1": "2/9, -28.3%",
+          "hourly_high": "~397k at 5 PM ET"
+        },
+        "BOLT": {
+          "pool_ada": 31210,
+          "pool_mcap_ada": 383389,
+          "holders_ex_pool": 264,
+          "top10_ex_pool": 28.44,
+          "top1": 4.25,
+          "gt_h6": "104/49, -14.5%",
+          "gt_h1": "2/2, -5.0%"
+        },
+        "BTC": {
+          "pool_ada": 7500,
+          "pool_mcap_ada": 25832,
+          "holders_ex_pool": 63,
+          "top10_ex_pool": 45.57,
+          "top1": "5.47 (launcher u8px0zdx)",
+          "gt_h6": "70/46, -31.0%",
+          "note": "u8a2m6 fully exited"
+        },
+        "FEED": {
+          "pool_ada": 10446,
+          "pool_mcap_ada": 50763,
+          "holders_ex_pool": 53,
+          "top10_ex_pool": 63.15,
+          "gt_h6": "23/23, -8.9%"
+        },
+        "IAGONAUT": {
+          "pool_ada": 8780,
+          "pool_mcap_ada": 35789,
+          "holders_ex_pool": 60,
+          "top10_ex_pool": 41.06,
+          "gt_h6": "47/19, +85.7%"
+        },
+        "PAWS": {
+          "pool_ada": 9188,
+          "pool_mcap_ada": 39165,
+          "holders_ex_pool": 72,
+          "top10_ex_pool": 44.15,
+          "gt_h6": "23/18, +1.1%"
+        },
+        "BEAST": {
+          "pool_ada": 6726,
+          "pool_mcap_ada": 21115,
+          "gt_h6": "4/4, -7.0%"
+        },
+        "ROBIN": {
+          "pool_ada": 6377,
+          "pool_mcap_ada": 18940
+        },
+        "JUICE": {
+          "pool_ada": 5163,
+          "pool_mcap_ada": 12161,
+          "gt_h6": "5/13, +27.5%"
+        },
+        "HERO": {
+          "pool_ada": 3242,
+          "pool_mcap_ada": 4763,
+          "gt_h6": "1/7, -19.0%"
+        },
+        "SOLADA": {
+          "pool_ada": 106684,
+          "mcap_ada": 2225392,
+          "pool_txs_6h": 271,
+          "swaps_6h": "105 buys/56 sells, net +11.3k ADA into pool; 45 identical 68.3-ADA buys (programmatic, likely fee buybacks) -> 59/56 without them; >=1k ADA swaps 15 buys/24 sells",
+          "note": "single pool UTxO at addr1x89ksjnf...; flow decoded from pool UTxO deltas via Blockfrost"
+        },
+        "HIVE": {
+          "curve_pct": 57.4,
+          "holders_ex_curve": 69,
+          "top10_ex_curve": 46.61
+        },
+        "GOLFY": {
+          "curve_pct": 40.9,
+          "holders_ex_curve": 45,
+          "top10_ex_curve": 52.54
+        },
+        "TOM": {
+          "curve_pct": 30.6,
+          "holders_ex_curve": 26,
+          "top10_ex_curve": 64.06,
+          "top1": "5.65 (u9534d4g, repeat early buyer)"
+        }
+      },
+      "insider_loop": {
+        "swarm": "Early-buyer swarm in 12 of 13 new Cardano launches since 3:30 PM (first 10 buyer outputs via Blockfrost): flip pair u8a2m6+u978t4 in BOLTI, BOLTY, SHRIMP, CRAWJI, GRAVE, WHALE, FUCK, STARE, GATTO; sniper uytg09zr in SHRIMP, POKY, CRAWJI; sniper u9w6dd in CHADDY, POKY, CRAWJI, WHALE; u8x8h2hc in 10 of them.",
+        "same_block": "CRAWJI: 9 of its first 10 buyers in one block (u9kp4sxa, u8a2m6, u978t4, u9w6dd, uytg09zr, u8x8h2hc, uyt8xs9q, u944xqrv, uyhcfzlz). SHRIMP: 9 in one block incl. u8a2m6, u978t4, uytg09zr.",
+        "exits": "Most swarm-sniped launches are back to 0-6 holders and ~3.4k ADA curve mcap, so the snipers fully exited (rule j kill) within minutes.",
+        "loop_forming": "Repeat launcher stake1ux739ulujk launched FUCK (3:20 PM), WHALE (3:30) and BOLTY (3:39), and cluster keys u8a2m6/u978t4/u8x8h2hc were in all three early blocks. That meets the Oct 16 'loop forming' upgrade trigger. Funding links between the launcher and cluster keys weren't checked.",
+        "new_tracked": "stake1u9kp4sxa (early in 9: BOLTI, BOLTY, SHRIMP, CRAWJI, GRAVE, WHALE, FUCK, STARE, GATTO); stake1uxz6fvju (6); stake1uxfernv7 (4); stake1u944xqrv (4); stake1uyhcfzlz, uyvns79x, uyt8xs9q (3 each); stake1u9534d4g (BOLTY, MODR, VIBE, GRAVE, FUCK; also TOM top-1 at 5.65%)",
+        "BTC": "u8a2m6 fully exited (kill)",
+        "BOLT": "uytg09zr 0; repeat buyer addr1q9ac…u9wwut still 1.34%",
+        "CLOVE": "no tracked snipers; repeat buyer addr1q9ac…u9wwut still 1.25%",
+        "copycats": "BOLTI and BOLTY are BOLT copycats (rule: copycats mark peak attention)",
+        "solana": "DFZYHaTZ... (a plain system wallet holding ~0.52 SOL) is top-1 ex-pool in JUSTQ (4.18%, unchanged since 3:30 PM), blocus (3.8%) and was CyberAxe's top-1 (3.82%). It's a cross-token holder; watch for an exit, not a kill line."
+      },
+      "solana_side_snapshot": {
+        "at": "2026-10-17T19:18:00-04:00",
+        "note": "Solana-native = pump.fun totalHolders minus escrow HCYvN1 and deployer A1qaJW (rule n). prev = 15:30 run. JUSTQ escrow balance unchanged (~98.6M, 10.34%), so there was no bridge flow; the gain is Solana-side buying.",
+        "names": {
+          "JUSTQ": {
+            "solada_holders": 276,
+            "prev": 253,
+            "pumpfun_native": 251,
+            "prev_pumpfun": 230,
+            "curve_bps": 10000,
+            "mcap_usd": 20172,
+            "mcap_ada": 91880,
+            "trades24h": 164,
+            "pool_usdc_side": 5027,
+            "ds_h6": "66/41, +52.5%",
+            "ds_h1": "17/16, -10.4%",
+            "gt_h6_unique": "54 buyers/36 sellers",
+            "top10_ex_pool_escrow_deployer_pct_supply": 22.1,
+            "note": "Synchronized burst at 6:16-6:18 PM ET: ~19 wallets bought within 2 minutes, at least 9 sold within 30 min. Team account @QuantumSnek posted the mint at 4:51 PM."
+          },
+          "CORE": {
+            "solada_holders": 124,
+            "prev": 117,
+            "pumpfun_native": 35,
+            "prev_pumpfun": 32,
+            "curve_bps": 7973,
+            "prev_curve_bps": 7624,
+            "mcap_usd": 23721,
+            "ds_h6": "21/11, +2.6%",
+            "koth": true
+          },
+          "MISS": {
+            "solada_holders": 90,
+            "prev": 90,
+            "pumpfun_native": 8,
+            "prev_pumpfun": 10,
+            "curve_bps": 6881,
+            "prev_curve_bps": 6682,
+            "mcap_usd": 16568,
+            "ds_h6": "35/12, +42.1%",
+            "note": "WojakBlueADA 'pumpers ready' posts at 6:17-6:19 PM tagging @Pumpfun"
+          },
+          "DUX": {
+            "solada_holders": 28,
+            "prev": 31,
+            "pumpfun_native": 8,
+            "prev_pumpfun": 9,
+            "curve_bps": 3063,
+            "prev_curve_bps": 3292
+          },
+          "DAVE": {
+            "solada_holders": 19,
+            "prev": 21,
+            "pumpfun_native": 6,
+            "prev_pumpfun": 7,
+            "curve_bps": 1516,
+            "prev_curve_bps": 1897
+          },
+          "FUSH": {
+            "solada_holders": 12,
+            "pumpfun_native": 2,
+            "curve_bps": 1004
+          },
+          "SPERPS": {
+            "solada_holders": 12,
+            "pumpfun_native": 3,
+            "curve_bps": 248
+          },
+          "LOCK": {
+            "solada_holders": 8,
+            "prev": 8,
+            "pumpfun_native": 1,
+            "prev_pumpfun": 1,
+            "curve_bps": 327
+          },
+          "BALINA": {
+            "solada_holders": 8,
+            "pumpfun_native": 4,
+            "curve_bps": 127,
+            "live": "2026-10-17T16:08-04:00"
+          },
+          "STARS": {
+            "solada_holders": 7,
+            "prev": 8,
+            "pumpfun_native": 1,
+            "prev_pumpfun": 1,
+            "curve_bps": 123
+          },
+          "MONEY": {
+            "solada_holders": 6,
+            "prev": 6,
+            "curve_bps": 187
+          },
+          "RAIN": {
+            "solada_holders": 6,
+            "prev": 8,
+            "curve_bps": 20,
+            "prev_curve_bps": 51
+          },
+          "KILLUA": {
+            "solada_holders": 5,
+            "prev": 5,
+            "curve_bps": 55
+          },
+          "BATMAN": {
+            "solada_holders": 3,
+            "prev": 3,
+            "curve_bps": 1
+          }
+        }
+      },
+      "snipe_candidate": null,
+      "closest": "JUSTQ: 251 Solana-native holders (230 at 3:30 PM, +9%), GeckoTerminal h6 54 unique buyers vs 36 sellers, +52% h6, ~$20.2k mcap (~91.9k ADA, ~CA$28.5k). It's missing pool depth: the USDC side is ~$5.0k (~22.9k ADA), under rule k's 25k floor. The push came from the team account's mint post (@QuantumSnek, 4:51 PM) plus a synchronized 19-wallet burst at 6:16 PM that half-flipped within 30 min. Entry trigger: USDC side >= ~$5.5k with holders >= 251 and a full hourly close above ~2.11e-5.",
+      "x": {
+        "real_voices": [
+          "@cryptodramz (26.2k, on list): 'Have you @soladafun yet today?' (4:14 PM, 20 likes); replies at 6:56 PM say '@soladafun taking off'",
+          "@Protocoolc (994): Solada 'generating half of Cardano's total trading volume', 60k ADA rewarded to holders (4:52 PM reply to IOHK_Charles, 10 likes)",
+          "@fblthp_cryp (1.1k, on list): '250k seems like a safe estimate', cheering FEED",
+          "@diogocastro1993 (377): '24h 50% volume came from @soladafun'"
+        ],
+        "team_promo": [
+          "@QuantumSnek (JUSTQ team, on list): 'Are we back?' with the JUSTQ Solana mint (4:51 PM, 16 likes)",
+          "@CloveOnAscend: 'Should we do some $SOLADA airdrops to $CLOVE holders?' (5:59 PM, 19 likes); 'The pumps chase $CLOVE'",
+          "@WojakBlueADA: MISS 50% APY staking (4:48 PM) and 'pumpers ready to pump this Misses' tagging @Pumpfun (6:17-6:19 PM)",
+          "@FEEdBabySNEK: bought ~1M SOLADA and 50k COCK, floor/burn posts",
+          "@ModularGridADA: MODR launch post"
+        ],
+        "spam": [
+          "@poolflowapp: 6+ templated '$SOLADA ... track with PoolFlow' replies",
+          "@BigTitCoinada, @9ayL0rd, @Bonzai_Bruce one-liners"
+        ],
+        "temperature": "Warmer than 3:30 PM. About 50 Solada posts from 1:20 to 7:25 PM ET. The '@soladafun = half of Cardano volume' narrative is spreading in Charles's replies (Charles himself didn't mention Solada), and that lines up with SOLADA's +35%. Still mostly the Cardano crowd plus team accounts."
+      },
+      "cross_chain_signals": "Weak. No Solana-native KOL or known trader mentioned Solada or a ticker. The Solana pushes are team-side: @QuantumSnek (Cardano JUSTQ team) posted the JUSTQ Solana mint, and @WojakBlueADA tagged @Pumpfun for MISS. JUSTQ's Solana buying was real (+21 native holders, escrow unchanged, so no bridge flow), but it came in a synchronized burst, not from a caller. @SpiritSigma (5.2k) posted Solana memes ($Jotchua) but nothing on Solada. @coinmun's earlier 'Top 10 Today' JUSTQ listing is vote/listing promo.",
+      "paper_actions": [
+        "close CLOVE @274.9k ADA -12.7% (rule o: holders leaving)",
+        "no new Solada tickets (JUSTQ fails rule k pool depth; BOLT fails rule o flow)",
+        "pump: close FTR (DFMt) @$2.14M -34.5% (kill)",
+        "pump: mark swordcat @$2.09M -12.3% (open)",
+        "pump: open CATE (Ai66) L2 @ $67.8M"
+      ],
+      "rules_added": [
+        "o",
+        "pf-m"
+      ],
+      "new_list_candidates": [
+        {
+          "handle": "Protocoolc",
+          "followers": 994,
+          "reason": "Data-driven Solada post (half of Cardano volume, 60k ADA to holders) in Charles's replies. Borderline: small account with an empty bio."
+        }
+      ],
+      "new_list_candidates_note": "Rejected: @poolflowapp (templated app promo), @RnGcrYptO (3.4k, 'spotlighting Web3 teams', CLOVE bag in bio), @spidermtz08nfl (540), @diogocastro1993 (377), @LootNscootin (717), @coinmun (listing site). @Yabba900 from 3:30 PM is still pending.",
+      "helius_credits_est": "~7",
+      "discord_summary": "Discord pass 7:18 PM ET (hosking_, Holder role OK, read-only, no servers joined). #new-launches: 24 cards 1:24-7:19 PM, 22 Cardano + 2 Pump.fun-marked (RAIN 2:05, BALINA 4:09); latest CRAWJI 7:18, BATMAN/PAUL 7:19. #soladafun-buys: ~719 buys / ~155.4k ADA since 1:20 PM (25 dev buys ~13.0k). Top: BOLT 105/~38.3k (addr1qx7z..alk5ds 9 buys 4.6k), CLOVE 43/~16.6k, BTC 71/~15.1k, TOM 56/~8.0k, IAGONAUT 47/~7.6k, MISS 23/~7.2k, FEED 24/~6.2k, CORE 14/~5.0k, CRAWJI 26/~3.7k in first 7 min. Repeat: addr1q9ac..u9wwut 4x1,000 ADA CLOVE+BOLT 1:21-1:46 PM; addr1q867..f6cx3l and addr1q9fd..myanlj also rotating CLOVE/BOLT; multi-ticker launch buyers addr1qyng..ur35h7, addr1qxnx..st75y6, addr1qxef..rwuh57, addr1qy85..6cgdr5. #capital-shill: nothing new (last post 10:26 AM). #soladafun: nothing new since 4:06 AM.",
+      "sources": [
+        "solada.fun /api/launches, /api/market (19:19 ET)",
+        "Blockfrost: wallet assets, Minswap V2 pool UTxOs, SOLADA pool UTxO + 271 pool txs (6h), early-buyer outputs for 15 new launches",
+        "Koios asset_addresses (holders, top-10, insider keys)",
+        "GeckoTerminal cardano pools/multi, CLOVE ohlcv/trades; solana JUSTQ pool/ohlcv/trades, trending_pools, pumpswap pools, CATE ohlcv, token info",
+        "DexScreener tokens/v1/solana",
+        "pump.fun frontend-api-v3 coins (complete=true), coins/currently-live, coins/top-holders",
+        "Helius getTokenSupply/getTokenLargestAccounts/getMultipleAccounts/getAccountInfo (7 req)",
+        "X public search (6 queries, 1 user lookup)",
+        "CoinGecko simple/price"
+      ]
+    },
     {
       "asof": "2026-10-17T15:30:00-04:00",
       "source": "Snek Sentinel ad-hoc run ('run the tape now', requested 15:17 ET)",

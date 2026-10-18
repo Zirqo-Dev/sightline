@@ -247,6 +247,30 @@
    "id": "o",
    "rule": "Count-based flow and holder leaks: 'buys > sells' counts only if h6 price change is also >= -10% (FTR showed 2,665 buys/1,584 sells over h6 while price fell 34%; BOLT 104/49 at -14.5%). Close an open ticket early when holders fall at two marks in a row and price is below entry, instead of waiting for the kill line: FTR bled 18,434 -> 18,111 -> 17,599 holders into its -34.5% kill, and CLOVE 128 -> 126 -> 123 (closed -12.7%).",
    "source": "FTR-DFMt-20261017-1340 close (pump arm) + CLOVE-20261017-1125 close"
+  },
+  {
+   "added_at": "2026-10-17T21:18:00-04:00",
+   "id": "p",
+   "rule": "Swarm launchers: early-swarm keys now launch coins themselves. uyt8xs9q (early in CRAWJI) launched PPC at 8:37 PM with u9w6dd/uxfernv7/uxz6fvju in its first blocks; u9rwdkfjtr launched HUMAN and DINO 8 min apart and uxz5cts5ww launched RED and RBULL 6 min apart, with flip pair u8a2m6+u978t4 early in all four. A launch whose launcher is a swarm key, or with 2+ swarm keys in its first 10 buyers, is L1 until it shows 60+ holders outside the swarm list.",
+   "source": "run 2026-10-17 21:18 (9 of 9 new Cardano launches swarm-sniped, all back to 0-1 holders)"
+  },
+  {
+   "added_at": "2026-10-17T21:18:00-04:00",
+   "id": "q",
+   "rule": "Solana-side snipe hunt: team-driven King/Queen-of-the-hill pushes move the curve and Solada's mixed holder count, not Solana-native holders. MISS went 68.8% -> 83.7% curve and 90 -> 106 Solada holders on its own team's 'Queen of the hill' posts, but only 8 -> 17 Solana-native holders. An early-snipe ticket needs 50+ Solana-native holders (rule n) and 20%+ native growth between two runs, not curve % alone.",
+   "source": "MISS 2026-10-17 19:18 -> 21:18"
+  },
+  {
+   "added_at": "2026-10-17T21:18:00-04:00",
+   "id": "r",
+   "rule": "Wallet tracking: Solada holder-reward claims add tokens (8:05-8:06 PM claim tx paid ~0.2 ADA net and returned SOLADA +11,928 plus ASCEND, STRIKE, BabySNEK, NIGHT and others). Read balance increases against the claim address addr1vyrgesr... before calling them buys.",
+   "source": "Bousky wallet 2026-10-17 20:06"
+  },
+  {
+   "added_at": "2026-10-17T21:18:00-04:00",
+   "id": "daily-2026-10-17",
+   "rule": "Day review: 2 Solada paper closes (BOLT -20.6%, CLOVE -12.7%), both opened at L3 after a 6h pop and both lost to holders that didn't grow. Every ticket today was entered after a run-up; the next ticket should come after a pullback that holders survive (rule l), and rule o's two-mark holder exit cut CLOVE's loss. Graduates keep fading to 20-35k ADA unless holders keep climbing.",
+   "source": "daily rule update, last run of 2026-10-17"
   }
  ],
  "summaries": [
@@ -339,6 +363,11 @@
    "at": "2026-10-17T19:18:00-04:00",
    "type": "run",
    "note": "Closed CLOVE at 274.9k pool mcap (-12.7%) under the new rule o: holders fell 128 -> 126 -> 123 with price below entry after the 5 PM pop (~397k) faded. No new Solada tickets. BOLT meets rule k on counts (264 holders, 31.2k ADA side, h6 104/49), but price is -14.5% h6, so it fails rule o's flow test. JUSTQ is the closest Solana-side name (251 Solana-native holders, +21 since 3:30 PM) but its USDC pool side is ~$5.0k (~22.9k ADA), under rule k's 25k floor. BTC kill hit: flip-pair wallet u8a2m6 fully exited and pool mcap is 25.8k. The insider swarm (u8a2m6/u978t4 + u9kp4sxa/u8x8h2hc, snipers uytg09zr/u9w6dd) was early in 12 of 13 new Cardano launches since 3:30 PM. Rule o added."
+  },
+  {
+   "at": "2026-10-17T21:18:00-04:00",
+   "type": "run",
+   "note": "No open Solada tickets and none opened. JUSTQ's USDC pool side is now ~$5.8k (~26.4k ADA), so it passes rule k depth, but Solana-native holders fell 251 -> 244 and the price is under the 2.11e-5 entry trigger (h1 -9%). CLOVE rebounded to 302k (+10% vs its close) with 117 on-chain / 127 Solada holders, but h6 unique buyers 18 vs sellers 19 and airdrop-inflated holders (rule m) keep it at L2. BOLT 339k, ADA side 29.5k (1.5k above its 28k kill), fails rule o (h6 -12.5%). MISS ran to 83.7% curve on team promo with 17 Solana-native holders (rule q). Rules p, q, r and the daily review added."
   }
  ]
 }

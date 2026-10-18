@@ -6,13 +6,13 @@
  "launchpad": "pump.fun",
  "disclaimer": "Paper trades only: research/lottery/NFA. No real execution, no wallet keys, no real sizing. Nothing here is a profit claim.",
  "paper_ticket_ada_equivalent": 100,
- "paper_ticket_sol": 0.21259,
+ "paper_ticket_sol": 0.21268,
  "paper_ticket_conversion": {
-  "at": "2026-10-17T19:18:00-04:00",
-  "ada_usd": 0.219483,
-  "sol_usd": 103.24,
-  "ticket_usd": 21.9483,
+  "at": "2026-10-17T21:18:00-04:00",
+  "ada_usd": 0.22051,
+  "sol_usd": 103.68,
   "source": "api.coingecko.com simple/price",
+  "ticket_usd": 22.051,
   "note": "Re-convert at each new ticket; existing tickets keep their entry conversion."
  },
  "default_window_hours": 48,
@@ -49,68 +49,6 @@
   "selection": "5-10 names per run (recent graduates/near-graduates + GeckoTerminal/pump.fun trending); paper-trade L3+ plus the run's strongest L2; max 2 new tickets per run; no duplicates (one open ticket per mint)."
  },
  "open": [
-  {
-   "id": "swordcat-5tCj-20261017-1530",
-   "ticker": "swordcat",
-   "name": "swordcat",
-   "side": "solana",
-   "launchpad": "pump.fun",
-   "mint": "5tCju6YNxHq5zrA6tGndr6F7TK42mpUFmeE31cSFpump",
-   "pool": "8ewuF2o8ACro7fqWepZ3tKhkbBjndZU4Ldk9scRPw83d",
-   "pool_dex": "pumpswap",
-   "opened_at": "2026-10-17T15:30:00-04:00",
-   "window_ends_at": "2026-10-19T15:30:00-04:00",
-   "ticket_ada_equivalent": 100,
-   "ticket_sol": 0.21366,
-   "ticket_conversion": {
-    "at": "2026-10-17T15:30:00-04:00",
-    "ada_usd": 0.22197,
-    "sol_usd": 103.89,
-    "source": "api.coingecko.com simple/price"
-   },
-   "level": 2,
-   "entry": {
-    "mcap_usd": 2399084,
-    "price_usd": 0.002499,
-    "price_sol": 2.405e-05,
-    "holders": 9939,
-    "pool_quote_sol": 1005.4,
-    "paper_qty_tokens": 8882
-   },
-   "thesis_signals": [
-    "Strongest L2 of the run: 9,939 pump.fun holders, pool ~1,005 SOL, liq ~8.8% of mcap, coin is 19 days old",
-    "Steady grind with no spike: hourly closes ~$1.80-2.60e-3 over 48h, h6 +19%, h24 +28% (pf-l doesn't apply)",
-    "Top-10 ex-pool 21.7%, top-1 ex-pool 3.67% on pump.fun (Helius largest accounts: ~20.6% / 2.86% by token account); 0 sniper/bundler/dev flags in top-50, no identical-balance cluster",
-    "Flow: DexScreener h6 933/909, GeckoTerminal h6 2,811/1,782"
-   ],
-   "not_l3_because": "No prior holder snapshot to show holders aren't bleeding; the first-fade test can't be checked inside the 48h of OHLCV pulled; DexScreener h1 376/403 has sells > buys (L3 needs h1 buys >= sells); first-block check unresolved",
-   "stop": {
-    "text": "mcap < $1.68M or holders < 8,945 or pool quote < 704 SOL (default -30%/-10%/-30%)",
-    "mcap_usd_below": 1679000,
-    "holders_below": 8945,
-    "pool_quote_sol_below": 704
-   },
-   "first_block_check": "unresolved (19-day-old coin, not worth the archival credits); pump.fun flags clean; Helius 2 requests",
-   "custody": "SPL token, non-custodial (own Solana wallet); no Solada bridge involved",
-   "status": "open",
-   "marks": [
-    {
-     "at": "2026-10-17T19:18:00-04:00",
-     "mcap_usd": 2089315,
-     "price_usd": 0.002176,
-     "price_sol": 2.108e-05,
-     "holders": 9932,
-     "pool_quote_sol": 933.1,
-     "pct_vs_entry_mcap": -12.9,
-     "pct_vs_entry_price_sol": -12.3,
-     "top10_ex_pool": 22.6,
-     "top1_ex_pool": 4.51,
-     "flags_top50": 0,
-     "flow": "DexScreener h1 74/76, h6 893/862; price h1 +2.5%, h6 -1.5%, h24 +11.3%",
-     "note": "Above every kill line: mcap $2.09M vs $1.68M, holders 9,932 vs 8,945, pool 933 vs 704 SOL. Holders -0.07% vs entry, so rule pf-m's early exit (two falling marks) isn't triggered; this is mark 1. Top-1 ex-pool rose to 4.51% (2YaGc2...)."
-    }
-   ]
-  },
   {
    "id": "CATE-Ai66-20261017-1918",
    "ticker": "CATE",
@@ -154,7 +92,24 @@
    },
    "first_block_check": "not run (83-day-old coin); pump.fun flags clean; Helius 3 requests (supply, largest accounts, owners)",
    "custody": "SPL token, non-custodial (own Solana wallet); no Solada bridge involved",
-   "status": "open"
+   "status": "open",
+   "marks": [
+    {
+     "at": "2026-10-17T21:18:00-04:00",
+     "mcap_usd": 72072839,
+     "price_usd": 0.07475,
+     "price_sol": 0.0007214,
+     "holders": 108078,
+     "pool_quote_sol": 14918,
+     "pct_vs_entry_mcap": 6.2,
+     "pct_vs_entry_price_sol": 5.8,
+     "top10_ex_pool": 15.23,
+     "top1_ex_pool": 2.86,
+     "flags_top50": 0,
+     "flow": "DexScreener h1 533/492, h6 3,010/2,338; price h1 +3.2%, h6 -0.0%, h24 +18.0%",
+     "note": "Above every kill line ($72.1M vs $47.5M, 108,078 vs 97,082 holders, 14,918 vs 10,149 SOL). Holders +209 vs entry. Helius top-10 ex-pool 15.2%, top-1 2.86% (2 requests)."
+    }
+   ]
   }
  ],
  "closed": [
@@ -325,6 +280,108 @@
    "rules_applied": [
     "pf-m"
    ]
+  },
+  {
+   "id": "swordcat-5tCj-20261017-1530",
+   "ticker": "swordcat",
+   "name": "swordcat",
+   "side": "solana",
+   "launchpad": "pump.fun",
+   "mint": "5tCju6YNxHq5zrA6tGndr6F7TK42mpUFmeE31cSFpump",
+   "pool": "8ewuF2o8ACro7fqWepZ3tKhkbBjndZU4Ldk9scRPw83d",
+   "pool_dex": "pumpswap",
+   "opened_at": "2026-10-17T15:30:00-04:00",
+   "window_ends_at": "2026-10-19T15:30:00-04:00",
+   "ticket_ada_equivalent": 100,
+   "ticket_sol": 0.21366,
+   "ticket_conversion": {
+    "at": "2026-10-17T15:30:00-04:00",
+    "ada_usd": 0.22197,
+    "sol_usd": 103.89,
+    "source": "api.coingecko.com simple/price"
+   },
+   "level": 2,
+   "entry": {
+    "mcap_usd": 2399084,
+    "price_usd": 0.002499,
+    "price_sol": 2.405e-05,
+    "holders": 9939,
+    "pool_quote_sol": 1005.4,
+    "paper_qty_tokens": 8882
+   },
+   "thesis_signals": [
+    "Strongest L2 of the run: 9,939 pump.fun holders, pool ~1,005 SOL, liq ~8.8% of mcap, coin is 19 days old",
+    "Steady grind with no spike: hourly closes ~$1.80-2.60e-3 over 48h, h6 +19%, h24 +28% (pf-l doesn't apply)",
+    "Top-10 ex-pool 21.7%, top-1 ex-pool 3.67% on pump.fun (Helius largest accounts: ~20.6% / 2.86% by token account); 0 sniper/bundler/dev flags in top-50, no identical-balance cluster",
+    "Flow: DexScreener h6 933/909, GeckoTerminal h6 2,811/1,782"
+   ],
+   "not_l3_because": "No prior holder snapshot to show holders aren't bleeding; the first-fade test can't be checked inside the 48h of OHLCV pulled; DexScreener h1 376/403 has sells > buys (L3 needs h1 buys >= sells); first-block check unresolved",
+   "stop": {
+    "text": "mcap < $1.68M or holders < 8,945 or pool quote < 704 SOL (default -30%/-10%/-30%)",
+    "mcap_usd_below": 1679000,
+    "holders_below": 8945,
+    "pool_quote_sol_below": 704
+   },
+   "first_block_check": "unresolved (19-day-old coin, not worth the archival credits); pump.fun flags clean; Helius 2 requests",
+   "custody": "SPL token, non-custodial (own Solana wallet); no Solada bridge involved",
+   "status": "closed",
+   "marks": [
+    {
+     "at": "2026-10-17T19:18:00-04:00",
+     "mcap_usd": 2089315,
+     "price_usd": 0.002176,
+     "price_sol": 2.108e-05,
+     "holders": 9932,
+     "pool_quote_sol": 933.1,
+     "pct_vs_entry_mcap": -12.9,
+     "pct_vs_entry_price_sol": -12.3,
+     "top10_ex_pool": 22.6,
+     "top1_ex_pool": 4.51,
+     "flags_top50": 0,
+     "flow": "DexScreener h1 74/76, h6 893/862; price h1 +2.5%, h6 -1.5%, h24 +11.3%",
+     "note": "Above every kill line: mcap $2.09M vs $1.68M, holders 9,932 vs 8,945, pool 933 vs 704 SOL. Holders -0.07% vs entry, so rule pf-m's early exit (two falling marks) isn't triggered; this is mark 1. Top-1 ex-pool rose to 4.51% (2YaGc2...)."
+    },
+    {
+     "at": "2026-10-17T21:18:00-04:00",
+     "mcap_usd": 2115233,
+     "price_usd": 0.002203,
+     "price_sol": 2.126e-05,
+     "holders": 9930,
+     "pool_quote_sol": 943.7,
+     "pct_vs_entry_mcap": -11.8,
+     "pct_vs_entry_price_sol": -11.6,
+     "top10_ex_pool": 22.5,
+     "top1_ex_pool": 4.41,
+     "flags_top50": 0,
+     "flow": "DexScreener h1 51/53, h6 580/543; price h1 -1.6%, h6 -11.5%, h24 +16.8%",
+     "note": "Holders fell at a second mark in a row (9,939 -> 9,932 -> 9,930) with price below entry, so rule pf-m's early exit fires."
+    }
+   ],
+   "closed_at": "2026-10-17T21:18:00-04:00",
+   "exit": {
+    "mcap_usd": 2115233,
+    "price_usd": 0.002203,
+    "price_sol": 2.126e-05,
+    "holders": 9930,
+    "pool_quote_sol": 943.7,
+    "source": "DexScreener pumpswap pair; pump.fun top-holders; GeckoTerminal token info (10,435 holders)"
+   },
+   "exit_reason": "Rule pf-m early exit: holders fell at two marks in a row (9,939 -> 9,932 -> 9,930) with price below entry. No kill line was hit (mcap $2.12M vs $1.68M, holders 9,930 vs 8,945, pool 944 vs 704 SOL).",
+   "pct_change": -11.6,
+   "paper_pnl_ada_equiv": -11.6,
+   "signal_review": {
+    "worked": [
+     "Clean concentration and no sniper/bundler flags kept it from a fast collapse",
+     "pf-m early exit closed it at -11.6% instead of riding to the -30% line"
+    ],
+    "failed": [
+     "A 19-day-old coin with flat holders had no new buyers to carry it: holders never grew after entry",
+     "'Steady grind' price shape gave no edge; h1 and h6 counts were roughly even all the way"
+    ]
+   },
+   "rules_applied": [
+    "pf-m"
+   ]
   }
  ],
  "rules": [
@@ -387,6 +444,18 @@
    "added_at": "2026-10-17T19:18:00-04:00",
    "rule": "Counts aren't flow: 'h6 buys > sells' only counts if h6 price change is >= -10%. FTR kept a buy-count majority (4,645/3,353, then 2,665/1,584) while falling 34% h6 into its kill. Close a ticket early when holders fall at two marks in a row and price is below entry (FTR 18,434 -> 18,111 -> 17,599) instead of waiting for the -30% line.",
    "source": "FTR-DFMt-20261017-1340 close"
+  },
+  {
+   "added_at": "2026-10-17T21:18:00-04:00",
+   "id": "pf-n",
+   "rule": "Sybil holder band: on a coin under 24h old, 10+ of the top-12 non-pool holders sitting within about +/-10% of each other is a sybil/bundled distribution even when balances aren't exactly identical. MINTER (4h old, 7,512 holders, $3.8M) had all top-12 at 0.24-0.27% (Helius). Treat it as L1, whatever the holder count.",
+   "source": "run 2026-10-17 21:18"
+  },
+  {
+   "added_at": "2026-10-17T21:18:00-04:00",
+   "id": "pf-o",
+   "rule": "Old coins need fresh holders: on coins older than 7 days, the strongest-L2 ticket also needs holder growth of 2%+ between two snapshots. swordcat (19 days old) went 9,939 -> 9,932 -> 9,930 holders and closed -11.6% under pf-m.",
+   "source": "swordcat-5tCj-20261017-1530 close"
   }
  ],
  "summaries": [
@@ -521,6 +590,15 @@
    "helius_usage": {
     "requests": 7,
     "credits_estimate": "~7 (getTokenSupply x2, getTokenLargestAccounts x2, getMultipleAccounts x2, getAccountInfo x1)"
+   }
+  },
+  {
+   "at": "2026-10-17T21:18:00-04:00",
+   "type": "run",
+   "note": "Closed swordcat at -11.6% under pf-m (holders 9,939 -> 9,932 -> 9,930, price below entry). CATE marked +5.8% ($72.1M, 108,078 holders), open. No new ticket. MINTER (4h, $3.8M, 7,512 holders, 848 SOL) is L1 under new rule pf-n: its top-12 holders all sit at 0.24-0.27%, and no hourly candle has held above the 18:00 spike midpoint (~4.2e-3). Chaton L1 (h1 2,952/427 buys on ~$38 fills, farm filter). YILONGMA L1 (flat top-10 1.5% band, h1 -24%). MeiMei L2 no ticket (June coin, +98% h6 reactivation, pf-l). simulator L1 (h1 -34%). Rules pf-n and pf-o added.",
+   "helius_usage": {
+    "requests": 6,
+    "credits_estimate": "~6"
    }
   }
  ]
