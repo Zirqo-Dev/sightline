@@ -243,6 +243,12 @@ iframe{width:100%;border:1px solid var(--line);border-radius:4px;background:#060
   .pagehead{flex-wrap:wrap;gap:4px 8px;align-items:flex-start}.pagehead .sub{flex-basis:auto}.pagehead .run-wrap{flex-basis:100%;margin-left:0}.pagehead .run-now{width:100%;justify-content:center}
   .radar-row{grid-template-columns:1.4em minmax(0,1fr) auto}
   .radar-row .spark,.radar-row svg.spark{display:none}
+  .radar-row .rk{grid-column:1;grid-row:1}
+  .radar-row .who{grid-column:2;grid-row:1}
+  .radar-row .score{grid-column:3;grid-row:1}
+  .radar-row .seen{grid-column:2 / -1;grid-row:2;width:auto}
+  .radar-row .chips{grid-column:1 / -1;grid-row:3}
+  .radar-row .note{grid-column:1 / -1;grid-row:4}
   h1{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:calc(100% - 40px)}
   .grid{gap:6px}
   .panel{padding:7px 8px}
