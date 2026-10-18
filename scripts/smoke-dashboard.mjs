@@ -1,50 +1,77 @@
 /**
- * Dependency-free checks for P&L-by-unit and distance-to-kill.
- * Run from the repo root: node scripts/smoke-dashboard.mjs
+ * Dashboard smoke checks. Dependency-free. Run from the repo root:
+ *   node scripts/smoke-dashboard.mjs
+ *
+ * Exact P&L, win rate, and distance-to-kill numbers are checked against
+ * scripts/fixtures/dashboard-smoke.json only. Live desk files change several
+ * times a day; those get shape checks, so opening or closing a ticket cannot
+ * fail a deploy. A broken script, a book that is not JSON, or a score that
+ * no longer matches its own tickets still fails.
  */
 import fs from "fs";
 import vm from "vm";
 import path from "path";
+import { spawnSync } from "child_process";
 import { fileURLToPath } from "url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sandbox = { console };
 sandbox.window = sandbox;
-vm.runInNewContext(fs.readFileSync(path.join(root, "dashboard/core.js"), "utf8"), sandbox);
-vm.runInNewContext(fs.readFileSync(path.join(root, "dashboard/panels/tickets.js"), "utf8"), sandbox);
-const S = sandbox.S;
 
-function load(p) { return JSON.parse(fs.readFileSync(path.join(root, p), "utf8")); }
+function load(rel) {
+  return JSON.parse(fs.readFileSync(path.join(root, rel), "utf8"));
+}
 function closeTo(actual, expected, label) {
-  if (Math.abs(actual - expected) > 0.02) {
-    throw new Error(`${label}: expected ${expected}, got ${actual}`);
-  }
+  if (Math.abs(actual - expected) > 0.02) throw new Error(`${label}: expected ${expected}, got ${actual}`);
 }
 function assert(cond, msg) { if (!cond) throw new Error(msg); }
 
-const solada = load("solada/paper.json");
-const pump = load("solada/pumpfun/paper.json");
-const nft = load("nft/paper.json");
-const sc = S.score([solada, pump, nft]);
+function jsFiles() {
+  const panels = fs.readdirSync(path.join(root, "dashboard/panels")).filter(n => n.endsWith(".js")).sort();
+  return ["dashboard/core.js", "dashboard/pages.js", ...panels.map(n => "dashboard/panels/" + n)];
+}
+for (const rel of jsFiles()) {
+  const r = spawnSync(process.execPath, ["--check", path.join(root, rel)], { encoding: "utf8" });
+  if (r.status !== 0) throw new Error(rel + " failed to parse\n" + (r.stderr || r.stdout));
+}
 
+vm.runInNewContext(fs.readFileSync(path.join(root, "dashboard/core.js"), "utf8"), sandbox);
+for (const rel of jsFiles()) {
+  if (rel === "dashboard/pages.js" || rel === "dashboard/core.js") continue;
+  vm.runInNewContext(fs.readFileSync(path.join(root, rel), "utf8"), sandbox);
+}
+const S = sandbox.S;
+assert(S && typeof S.score === "function" && typeof S.killDistance === "function", "dashboard core did not load");
+
+function ticket(books, ticker) {
+  for (const b of books) {
+    const hit = (b.open || []).find(t => t.ticker === ticker);
+    if (hit) return hit;
+  }
+  throw new Error("fixture is missing " + ticker);
+}
+
+const fx = load("scripts/fixtures/dashboard-smoke.json");
+const sc = S.score(fx.books);
 assert(!("pnl" in sc), "score() must not expose a cross-unit pnl total");
-closeTo(sc.byUnit.ADA.pnl, -33.3, "ADA pnl");
-closeTo(sc.byUnit["ADA-equivalent"].pnl, -77.8, "ADA-equivalent pnl");
-closeTo(sc.byUnit.USD.pnl, 0, "USD pnl");
-assert(sc.open === 2, "open count");
-assert(sc.closed === 5, "closed count");
-assert(sc.winRate === 0, "win rate");
+closeTo(sc.byUnit.ADA.pnl, -33.3, "fixture ADA pnl");
+closeTo(sc.byUnit["ADA-equivalent"].pnl, -77.8, "fixture ADA-equivalent pnl");
+closeTo(sc.byUnit.USD.pnl, 0, "fixture USD pnl");
+assert(sc.open === 2, "fixture open count");
+assert(sc.closed === 5, "fixture closed count");
+assert(sc.winRate === 0, "fixture win rate");
 const summed = sc.byUnit.ADA.pnl + sc.byUnit["ADA-equivalent"].pnl;
-assert(Math.abs(summed - (-111.1)) < 0.02, "fixture still sums to -111.1 if someone adds the units");
-assert(!S.metricCards(sc).includes("-111") && !S.metricCards(sc).includes("111.1"), "cards must not show a mixed total");
-assert(S.metricCards(sc).includes("ADA-equivalent"), "cards label each unit");
+assert(Math.abs(summed - (-111.1)) < 0.02, "fixture units still sum to -111.1 if someone adds them");
+const cards = S.metricCards(sc);
+assert(!cards.includes("-111") && !cards.includes("111.1"), "cards must not show a mixed total");
+assert(cards.includes("ADA-equivalent") && cards.includes("USD"), "cards label each unit");
 assert(S.unitNote(sc).includes("not added together"), "mixed units get an explanation");
 
-const cate = pump.open.find(t => t.ticker === "CATE");
+const cate = ticket(fx.books, "CATE");
 const kd = S.killDistance(cate);
-assert(kd && /holder/.test(kd.what), "CATE closest kill is holders, got " + JSON.stringify(kd));
-closeTo(kd.pct, (108078 - 97082) / 108078 * 100, "CATE holders distance");
-assert(kd.cur === 108078 && kd.lim === 97082, "CATE uses the latest mark and the numeric limit");
+assert(kd && /holder/.test(kd.what), "fixture CATE closest kill is holders, got " + JSON.stringify(kd));
+closeTo(kd.pct, (108078 - 97082) / 108078 * 100, "fixture CATE holders distance");
+assert(kd.cur === 108078 && kd.lim === 97082, "fixture CATE uses the latest mark and the numeric limit");
 
 const stripped = JSON.parse(JSON.stringify(cate));
 stripped.kill_line = { text: stripped.kill_line.text };
@@ -52,11 +79,11 @@ const kdText = S.killDistance(stripped);
 assert(kdText && /holder/.test(kdText.what), "text fallback still picks holders, got " + JSON.stringify(kdText));
 closeTo(kdText.pct, kd.pct, "text fallback matches numeric distance");
 
-const argo = nft.open.find(t => t.ticker === "argonauts");
+const argo = ticket(fx.books, "argonauts");
 const kdA = S.killDistance(argo);
-assert(kdA && kdA.what === "floor", "argonauts text parse uses floor, got " + JSON.stringify(kdA));
-closeTo(kdA.pct, (0.793 - 0.70) / 0.793 * 100, "argonauts floor distance");
-closeTo(kdA.lim, 0.70, "argonauts floor limit");
+assert(kdA && kdA.what === "floor", "fixture argonauts text parse uses floor, got " + JSON.stringify(kdA));
+closeTo(kdA.pct, (0.793 - 0.70) / 0.793 * 100, "fixture argonauts floor distance");
+closeTo(kdA.lim, 0.70, "fixture argonauts floor limit");
 
 const synthetic = {
   entry: { mcap_ada: 500000, holders: 260, ada_side: 30000, floor_eth: 0.9 },
@@ -82,6 +109,73 @@ assert(!card.includes("stake1") && !card.includes("addr1"), "ticket card does no
 assert(S.when("2026-10-18") === "Oct 18", "date-only stays on that calendar day, got " + S.when("2026-10-18"));
 assert(S.when("2026-10-18T09:50:08-04:00") === "Oct 18, 9:50 AM ET", "timestamp keeps ET, got " + S.when("2026-10-18T09:50:08-04:00"));
 
+function liveBooks() {
+  const idx = load("desks.json");
+  if (!idx || !Array.isArray(idx.desks)) throw new Error("desks.json has no desks array");
+  const books = [];
+  for (const d of idx.desks) {
+    for (const b of d.books || []) {
+      let j;
+      try { j = load(b.paper); }
+      catch (e) { throw new Error("cannot read " + b.paper + ": " + e.message); }
+      if (!j || typeof j !== "object" || !Array.isArray(j.open) || !Array.isArray(j.closed)) {
+        throw new Error(b.paper + " is not a paper book");
+      }
+      books.push({ json: j, path: b.paper });
+    }
+  }
+  if (!books.length) throw new Error("desks.json lists no paper books");
+  return books;
+}
+
+function assertLiveShape(books, label) {
+  let scLive;
+  try { scLive = S.score(books); }
+  catch (e) { throw new Error(label + ": score() threw: " + e.message); }
+  const open = books.reduce((n, b) => n + (b.json.open || []).length, 0);
+  const closed = books.reduce((n, b) => n + (b.json.closed || []).length, 0);
+  assert(scLive.open === open, label + ": open count does not match the tickets");
+  assert(scLive.closed === closed, label + ": closed count does not match the tickets");
+  assert(Number.isInteger(scLive.wins) && scLive.wins >= 0 && scLive.wins <= closed, label + ": wins out of range");
+  assert(scLive.losses === closed - scLive.wins, label + ": losses do not match");
+  if (closed === 0) assert(scLive.winRate == null, label + ": win rate should be empty with no closes");
+  else assert(typeof scLive.winRate === "number" && scLive.winRate >= 0 && scLive.winRate <= 100, label + ": win rate out of range");
+  assert(!("pnl" in scLive), label + ": score() exposed a cross-unit pnl total");
+  const units = Object.keys(scLive.byUnit);
+  for (const unit of units) {
+    const row = scLive.byUnit[unit];
+    assert(row && typeof row.pnl === "number" && Number.isFinite(row.pnl), label + ": bad pnl for " + unit);
+  }
+  let rendered = "";
+  try { rendered = S.metricCards(scLive) + S.unitNote(scLive); }
+  catch (e) { throw new Error(label + ": scoreboard render threw: " + e.message); }
+  for (const unit of units) assert(rendered.includes(unit), label + ": scoreboard omitted " + unit);
+  if (units.length >= 2) assert(rendered.includes("not added together"), label + ": mixed units were not labeled");
+  for (const b of books) {
+    for (const t of b.json.open) {
+      let kdLive;
+      try { kdLive = S.killDistance(t); }
+      catch (e) { throw new Error(label + ": killDistance threw on " + (t.ticker || t.id || b.path) + ": " + e.message); }
+      if (kdLive == null) continue;
+      assert(typeof kdLive.what === "string" && kdLive.what.length > 0, label + ": kill distance missing a label");
+      assert(typeof kdLive.pct === "number" && Number.isFinite(kdLive.pct), label + ": kill distance pct is not a number");
+      assert(typeof kdLive.cur === "number" && typeof kdLive.lim === "number", label + ": kill distance readings are not numbers");
+    }
+  }
+}
+
+const live = liveBooks();
+assertLiveShape(live, "live");
+
+const changed = JSON.parse(JSON.stringify(live));
+for (const b of changed) {
+  b.json.open.push({ ticker: "NEW", entry: { holders: 10 }, kill_line: { text: "holders < 4" } });
+  b.json.open = b.json.open.filter(t => t.ticker !== "CATE" && t.ticker !== "argonauts");
+  b.json.closed.push({ ticker: "GONE", result: { pnl: 1.5, pct: 1.5, unit: b.json.unit || "ADA" } });
+}
+assertLiveShape(changed, "after tickets open and close");
+assert(!changed.some(b => (b.json.open || []).some(t => t.ticker === "CATE" || t.ticker === "argonauts")), "mutation did not drop named tickets");
+
 console.log("smoke-dashboard: OK");
-console.log("  ADA", sc.byUnit.ADA.pnl, "ADA-equivalent", sc.byUnit["ADA-equivalent"].pnl, "USD", sc.byUnit.USD.pnl);
-console.log("  CATE", kd.what, S.fmt(kd.pct) + "%", "argonauts", kdA.what, S.fmt(kdA.pct) + "%");
+console.log("  fixture ADA", sc.byUnit.ADA.pnl, "ADA-equivalent", sc.byUnit["ADA-equivalent"].pnl, "USD", sc.byUnit.USD.pnl);
+console.log("  live books", live.length, "open", live.reduce((n, b) => n + b.json.open.length, 0), "closed", live.reduce((n, b) => n + b.json.closed.length, 0));

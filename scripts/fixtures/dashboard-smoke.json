@@ -1,0 +1,52 @@
+{
+  "note": "Frozen sample for dashboard logic checks. Desk bots never update this file. Numbers are a snapshot of the books as of 2026-10-18 morning, kept so deploys do not depend on live tickets.",
+  "books": [
+    {
+      "book": "solada",
+      "chain": "cardano",
+      "unit": "ADA",
+      "open": [],
+      "closed": [
+        {"ticker": "BOLT", "result": {"unit": "ADA", "pct": -20.6, "pnl": -20.6}},
+        {"ticker": "CLOVE", "result": {"unit": "ADA", "pct": -12.7, "pnl": -12.7}}
+      ]
+    },
+    {
+      "book": "pumpfun",
+      "chain": "solana",
+      "unit": "ADA-equivalent",
+      "open": [
+        {
+          "ticker": "CATE",
+          "entry": {"mcap_usd": 67846121, "holders": 107869, "pool_quote_sol": 14499},
+          "marks": [{"mcap_usd": 72072839, "holders": 108078, "pool_quote_sol": 14918}],
+          "kill_line": {
+            "text": "mcap < $47.49M or holders < 97,082 or pool quote < 10,149 SOL (default -30%/-10%/-30%); early exit per pf-m if holders fall at two marks in a row with price below entry",
+            "mcap_usd_below": 47492000,
+            "holders_below": 97082,
+            "pool_quote_sol_below": 10149
+          }
+        }
+      ],
+      "closed": [
+        {"ticker": "CyberAxe", "result": {"unit": "ADA-equivalent", "pct": -31.7, "pnl": -31.7}},
+        {"ticker": "FTR", "result": {"unit": "ADA-equivalent", "pct": -34.5, "pnl": -34.5}},
+        {"ticker": "swordcat", "result": {"unit": "ADA-equivalent", "pct": -11.6, "pnl": -11.6}}
+      ]
+    },
+    {
+      "book": "nft",
+      "chain": "multi",
+      "unit": "USD",
+      "open": [
+        {
+          "ticker": "argonauts",
+          "entry": {"floor_eth": 0.793, "top_offer_eth": 0.743},
+          "marks": [{"floor": 0.793, "holders": null}],
+          "kill_line": {"text": "OS floor < 0.70 ETH, or OS top collection offer < 0.55"}
+        }
+      ],
+      "closed": []
+    }
+  ]
+}

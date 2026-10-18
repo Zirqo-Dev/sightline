@@ -17,7 +17,7 @@ python3 -m http.server -d dist
 
 The build uses the Python standard library only. It writes `dist/`, generates each desk's `briefs/index.json` from `briefs/YYYY-MM-DD.json`, and includes every file in `dashboard/panels/`. Adding a panel does not require an `index.html` edit.
 
-`node scripts/smoke-dashboard.mjs` checks that P&L stays per unit and that distance-to-kill is computed from the current desk files.
+`node scripts/smoke-dashboard.mjs` checks that the dashboard scripts parse, that P&L stays per unit, and that distance-to-kill is computed correctly. Those number checks use `scripts/fixtures/dashboard-smoke.json`. Live desk files only get a shape check, so a bot opening or closing a ticket does not fail the deploy.
 
 ## Publish
 
