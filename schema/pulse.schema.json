@@ -36,12 +36,85 @@
           "asset_id": {"type": "string"},
           "first_seen": {"type": "string"},
           "score": {"type": "number"},
+          "score_raw": {"type": ["number", "null"]},
+          "score_max": {"type": ["number", "null"]},
           "signals": {"type": "array", "items": {"type": "string"}},
-          "note": {"type": "string"}
+          "note": {"type": "string"},
+          "flags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {"type": "string"},
+                "tone": {"type": "string"}
+              },
+              "additionalProperties": true
+            }
+          },
+          "factors": {"$ref": "#/$defs/factors"}
         },
         "additionalProperties": true
       }
     }
   },
-  "additionalProperties": true
+  "additionalProperties": true,
+  "$defs": {
+    "factors": {
+      "type": "object",
+      "properties": {
+        "holders": {"type": ["number", "null"]},
+        "holders_prev": {"type": ["number", "null"]},
+        "holders_basis": {"type": ["string", "null"]},
+        "holders_per_h": {"type": ["number", "null"]},
+        "accel_per_h": {"type": ["number", "null"]},
+        "curve_pct": {"type": ["number", "null"]},
+        "curve_pts_per_h": {"type": ["number", "null"]},
+        "graduated": {"type": ["string", "null"]},
+        "vol_h1": {"type": ["number", "null"]},
+        "vol_x": {"type": ["number", "null"]},
+        "vol_unit": {"type": ["string", "null"]},
+        "buys_h1": {"type": ["number", "null"]},
+        "sells_h1": {"type": ["number", "null"]},
+        "price_h1_pct": {"type": ["number", "null"]},
+        "price_h6_pct": {"type": ["number", "null"]},
+        "ada_side": {"type": ["number", "null"]},
+        "ada_side_pct": {"type": ["number", "null"]},
+        "swarm": {"type": ["number", "null"]},
+        "swarm_keys": {"type": ["array", "null"], "items": {"type": "string"}},
+        "repeat_first_buyers": {"type": ["array", "null"], "items": {"type": "number"}},
+        "snipers": {"type": ["number", "null"]},
+        "one_sided": {"type": ["boolean", "null"]},
+        "airdrop": {"type": ["boolean", "null"]},
+        "native_share_pct": {"type": ["number", "null"]},
+        "top10_pct": {"type": ["number", "null"]},
+        "top1_pct": {"type": ["number", "null"]},
+        "floor": {"type": ["number", "null"]},
+        "floor_unit": {"type": ["string", "null"]},
+        "floor_pct_h": {"type": ["number", "null"]},
+        "floor_pct_h_prev": {"type": ["number", "null"]},
+        "floor_pct_h_basis": {"type": ["string", "null"]},
+        "sales_h": {"type": ["number", "null"]},
+        "sales_base_h": {"type": ["number", "null"]},
+        "sales_base_basis": {"type": ["string", "null"]},
+        "sales_x": {"type": ["number", "null"]},
+        "buyers_h": {"type": ["number", "null"]},
+        "buyers_base_h": {"type": ["number", "null"]},
+        "buyers_x": {"type": ["number", "null"]},
+        "listings_near_floor": {"type": ["number", "null"]},
+        "listings_basis": {"type": ["string", "null"]},
+        "listings_chg_pct": {"type": ["number", "null"]},
+        "listings_window_h": {"type": ["number", "null"]},
+        "sell_through_pct_h": {"type": ["number", "null"]},
+        "sell_through_basis": {"type": ["string", "null"]},
+        "top_offer": {"type": ["number", "null"]},
+        "bid_units_10pct": {"type": ["number", "null"]},
+        "bidders_10pct": {"type": ["number", "null"]},
+        "repeat_wallets_24h": {"type": ["number", "null"]},
+        "concentrated": {"type": ["object", "null"], "additionalProperties": true},
+        "broad": {"type": ["object", "null"], "additionalProperties": true},
+        "fresh": {"type": ["boolean", "null"]}
+      },
+      "additionalProperties": true
+    }
+  }
 }

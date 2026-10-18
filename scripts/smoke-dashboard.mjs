@@ -165,15 +165,80 @@ const radarHtml = await S.registry.radar.render({
   opt: { now },
   spec: {}
 });
+function cardOf(html, ticker) {
+  const parts = String(html).split('<article class="rc"').slice(1);
+  const hit = parts.find(p => p.includes(`title="${ticker}"`));
+  assert(hit, "radar card for " + ticker);
+  return '<article class="rc"' + hit.split("</article>")[0] + "</article>";
+}
+function tilesOf(card) {
+  const m = card.match(/<div class="tiles">([\s\S]*?)<\/div>/);
+  return m ? m[1] : "";
+}
+function hasTile(tiles, label) {
+  return tiles.includes(">" + label + "<") || tiles.includes(">" + label + "<span");
+}
 assert(radarHtml.indexOf(">NEW<") !== -1 && radarHtml.indexOf(">NEW<") < radarHtml.indexOf(">OLD<"), "radar ranks the higher score first");
-assert(radarHtml.includes("burst") && radarHtml.includes("new pool"), "radar shows signal chips");
-assert(radarHtml.includes("sbar") && radarHtml.includes("81"), "radar draws a score bar");
-assert(radarHtml.includes("seen 4h ago"), "radar shows first-seen age, got snippet missing");
+assert(radarHtml.includes("burst") && radarHtml.includes("new pool"), "factors-absent radar still shows the prose");
+assert(radarHtml.includes("rawsig"), "factors-absent radar keeps a raw-text face");
+assert(!radarHtml.includes("sbar"), "radar no longer draws the old score bar");
+assert(radarHtml.includes(">100<") && radarHtml.includes("raw 81"), "top score fills the ring, raw score stays under it");
+assert(radarHtml.includes(">49<") && radarHtml.includes("raw 40"), "lower score is normalized to the desk top");
+assert(radarHtml.includes("4h old"), "radar shows first-seen age");
+assert(!radarHtml.includes("seen 4h ago"), "age chip replaced the old seen line");
 assert(radarHtml.includes(">example<"), "example pulse is labelled");
 assert(radarHtml.includes("spark"), "radar sparkline uses pulse points");
+assert(radarHtml.includes("Momentum map"), "radar draws the momentum map");
+assert(!hasTile(tilesOf(cardOf(radarHtml, "NEW")), "holders/h"), "factors-absent card hides metric tiles");
 const quiet = await S.registry.radar.render({ desk: { id: "solada", dir: "solada/" }, data: null, opt: {}, spec: {} });
 assert(quiet.includes("No early runners yet"), "missing pulse degrades quietly");
 assert(!quiet.includes("example"), "missing pulse is not labelled example");
+
+const factPulse = load("scripts/fixtures/pulse-factors.json");
+const factHtml = await S.registry.radar.render({
+  desk: { id: "example", dir: "example/" },
+  data: factPulse,
+  opt: { now },
+  spec: {}
+});
+const fact = cardOf(factHtml, "FACT");
+const factTiles = tilesOf(fact);
+assert(fact.includes(">50<") && fact.includes("raw 20"), "score_max scales the ring, got " + (fact.match(/<b>\d+<\/b><i>[^<]+/) || [])[0]);
+assert(hasTile(factTiles, "holders/h") && factTiles.includes("+1.5"), "structured holders/h wins over the signal prose");
+assert(!factTiles.includes("21.3"), "regex holder rate does not override a measured factor");
+assert(!hasTile(factTiles, "accel"), "null accel is hidden");
+assert(hasTile(factTiles, "curve · done") && factTiles.includes("minswap-v2") && factTiles.includes("100%"), "graduated minswap-v2 draws a finished curve");
+assert(factTiles.includes(">0<") && factTiles.includes("buys / sells"), "a real zero buy count stays on the card");
+assert(!hasTile(factTiles, "price h6"), "omitted price_h6_pct is not a tile");
+assert(fact.includes("SWARM") && fact.includes('class="bdg warn"'), "known flag uses its short label and tone");
+assert(fact.includes("mystery_flag") && fact.includes('class="bdg bad"'), "unknown flag code is shown as its own text");
+const youngTiles = tilesOf(cardOf(factHtml, "YOUNG"));
+assert(!hasTile(youngTiles, "holders/h") && !hasTile(youngTiles, "native/h") && !hasTile(youngTiles, "accel"), "names under 1h hide missing velocity tiles");
+assert(!youngTiles.includes("price h6") && hasTile(youngTiles, "price h1"), "SER-style omit of price_h6_pct leaves price h1");
+assert(!cardOf(factHtml, "YOUNG").includes('class="bdg'), "an empty flags list does not invent badges");
+const flatTiles = tilesOf(cardOf(factHtml, "FLAT"));
+assert(hasTile(flatTiles, "holders/h") && flatTiles.includes("flat"), "holders_per_h 0 is a flat reading, not a hidden tile");
+
+const rulesHtml = S.registry.rules.render({
+  data: [
+    { json: { book: "solada", rules: [
+      { id: "j", rule: "body that is not the title", added_at: "2026-10-17T12:00:00Z" },
+      { id: "z", rule: "buy the dip now", title: "Structured title wins", category: "kill", evidence: ["BOLT"], added_at: "2026-10-18T12:00:00Z" }
+    ] } },
+    { json: { book: "pumpfun", rules: [
+      { id: "j", rule: "pump copy", title: "Pump copy of the sniper exit", category: "kill", mirrors: "solada:j", evidence: ["FTR"], added_at: "2026-10-18T11:00:00Z" },
+      { id: "x", rule: "no such twin", title: "Unresolved mirror stays text", category: "entry", mirrors: "solada:nope", added_at: "2026-10-16T12:00:00Z" }
+    ] } }
+  ],
+  opt: { limit: 2 }
+});
+assert(rulesHtml.includes("<b>Sniper exit = kill</b>"), "id without a title still uses the book table");
+assert(rulesHtml.includes("<b>Structured title wins</b>"), "structured title wins over the rule body");
+assert(!rulesHtml.includes("<b>buy the dip"), "titles do not keep a leading buy");
+assert(rulesHtml.includes("solada:j · Sniper exit = kill"), "a mirror resolves to the other book's title");
+assert(rulesHtml.includes("solada:nope") && !rulesHtml.includes("solada:nope ·"), "an unresolved mirror is plain text");
+assert(rulesHtml.includes("Show all 4 rules"), "limit hides the rest behind Show all");
+assert(rulesHtml.includes('class="rchip'), "rules draw filter chips");
 
 const wired = S.runButton({ id: "solada", run: { url: "https://github.com/Zirqo-Dev/sightline/actions/workflows/run-solada.yml", label: "RUN NOW" } });
 assert(wired.includes('target="_blank"') && wired.includes("run-solada.yml"), "run button opens the workflow");
@@ -198,7 +263,36 @@ const solPulse = load("solada/pulse.json");
 const solRadar = await S.registry.radar.render({ desk: { id: "solada", dir: "solada/", pulse: byId.solada.pulse }, data: solPulse, opt: {}, spec: {} });
 assert(!/>example</.test(solRadar), "real solada pulse is not labelled example");
 assert(Array.isArray(solPulse.radar) && solPulse.radar.length > 0 && solRadar.includes(solPulse.radar[0].ticker), "solada radar renders a real name");
+assert(solRadar.includes("Momentum map") && !solRadar.includes("sbar"), "live solada radar uses the card view");
+for (const row of solPulse.radar) {
+  const card = cardOf(solRadar, row.ticker);
+  const tiles = tilesOf(card);
+  const f = row.factors || {};
+  const holderLabel = String(f.holders_basis || "").toLowerCase() === "native" ? "native/h" : "holders/h";
+  if (f.holders_per_h == null) assert(!hasTile(tiles, "holders/h") && !hasTile(tiles, "native/h"), row.ticker + " hides a missing holders rate");
+  else assert(hasTile(tiles, holderLabel), row.ticker + " shows its holders rate");
+  if (f.accel_per_h == null) assert(!hasTile(tiles, "accel"), row.ticker + " hides a missing accel");
+  if (f.vol_x == null) assert(!hasTile(tiles, "vol ×h-avg"), row.ticker + " hides a missing volume multiple");
+  if (f.price_h6_pct == null) assert(!hasTile(tiles, "price h6"), row.ticker + " does not invent a price h6 tile");
+  if (f.graduated && f.curve_pct == null) assert(tiles.includes("curve · done") && tiles.includes(String(f.graduated)), row.ticker + " shows graduated " + f.graduated);
+  if (Array.isArray(row.flags)) {
+    for (const fl of row.flags) assert(card.includes(String(fl.code)) || card.includes("bdg"), row.ticker + " renders its flags");
+  }
+}
 const nftPulse = load("nft/pulse.json");
+const nftRadar = await S.registry.radar.render({ desk: { id: "nft", dir: "nft/", pulse: byId.nft.pulse }, data: nftPulse, opt: {}, spec: {} });
+assert(nftPulse.radar && nftPulse.radar[0] && nftRadar.includes(nftPulse.radar[0].ticker), "nft radar renders a real name");
+assert(nftRadar.includes("Momentum map") && (nftRadar.includes("BROAD") || nftRadar.includes("FRESH") || nftRadar.includes("FIRST")), "nft flags use short labels");
+assert(S.panelAsRadar({ id: "nft", dir: "nft/" }, { type: "table", data: "pulse.json", path: "radar" }) === true, "nft table path radar maps to the radar view");
+assert(S.panelAsRadar({ id: "nft", dir: "nft/", pulse: "nft/pulse.json" }, { type: "table", data: ["nft/pulse.json"], path: "radar" }) === true, "listed pulse path still maps");
+assert(S.panelAsRadar({ id: "nft", dir: "nft/" }, { type: "table", data: "pulse.json", path: "latest" }) === false, "tracked-names table stays a table");
+const liveRules = S.registry.rules.render({
+  data: [{ json: load("solada/paper.json") }, { json: load("solada/pumpfun/paper.json") }],
+  opt: { limit: 8 }
+});
+const solJ = (load("solada/paper.json").rules || []).find(x => x.id === "j");
+assert(solJ && solJ.title && liveRules.includes("solada:j · " + solJ.title), "pump.fun mirror solada:j resolves");
+assert(!liveRules.includes("mirror not in this list</span>solada:nope") && liveRules.includes("Show all"), "live rules render with Show all");
 const nftRadarTable = S.registry.table.render({
   data: nftPulse.radar,
   opt: { columns: ["ticker", "chain", "score", "first_seen", "note"], labels: { ticker: "Collection", first_seen: "First seen" }, limit: 10 }
