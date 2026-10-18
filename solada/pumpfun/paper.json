@@ -8,13 +8,13 @@
  "launchpad": "pump.fun",
  "disclaimer": "Paper trades only: research/lottery/NFA. No real execution, no wallet keys, no real sizing. Nothing here is a profit claim.",
  "ticket_size": 100,
- "paper_ticket_sol": 0.21268,
+ "paper_ticket_sol": 0.21104,
  "paper_ticket_conversion": {
-  "at": "2026-10-17T21:18:00-04:00",
-  "ada_usd": 0.22051,
-  "sol_usd": 103.68,
+  "at": "2026-10-18T19:15:00-04:00",
+  "ada_usd": 0.218951,
+  "sol_usd": 103.75,
   "source": "api.coingecko.com simple/price",
-  "ticket_usd": 22.051,
+  "ticket_usd": 21.895,
   "note": "Re-convert at each new ticket; existing tickets keep their entry conversion."
  },
  "default_window_hours": 48,
@@ -252,8 +252,80 @@
      "flags_top50": 0,
      "flow": "DexScreener h1 161/126 buys/sells; price h1 0.98%, h6 0.46%, h24 2.45%",
      "note": "Hourly pulse mark. Above every kill line ($69.1M vs $47.5M, 108,930 vs 97,082 holders, 14,646 vs 10,149 SOL). Holders slipped again (108,960 -> 108,930), but price is above entry in SOL (+1.2%) and USD mcap is +1.8%, so pf-m's early exit (holders falling with price below entry) is not triggered. pump.fun top-holders/coins-v2 + DexScreener; no Helius used."
+    },
+    {
+     "at": "2026-10-18T19:20:00-04:00",
+     "mcap_usd": 68662987,
+     "price_usd": 0.07121,
+     "price_sol": 0.0006887,
+     "holders": 108924,
+     "pool_quote_sol": 14631,
+     "pct_vs_entry_mcap": 1.2,
+     "pct_vs_entry_price_sol": 1.0,
+     "top10_ex_pool": 14.7,
+     "flags_top50": 0,
+     "flow": "DexScreener h1 148/126, h6 2,843/2,218, h24 12,042/9,629 buys/sells; price h1 +2.71%, h6 +0.36%, h24 +2.05%",
+     "note": "Pump arm 7:15 PM run mark. Above every kill line ($68.7M vs $47.5M, 108,924 vs 97,082 holders, 14,631 vs 10,149 SOL). Holders slipped again (108,930 -> 108,924), the sixth falling mark in a row since the 15:15 peak (109,133, -0.19% total), but price is above entry in SOL (+1.0%) and in ADA terms (about +1.5%), so pf-m's early exit (holders falling with price below entry) is not triggered. Window ends Oct 19 7:18 PM. pump.fun top-holders/coins-v2 + DexScreener; GeckoTerminal holders 144,682 (stale, 7:30 AM). No Helius used on CATE."
     }
    ]
+  },
+  {
+   "id": "Macca-AKot-20261018-1925",
+   "ticker": "Macca",
+   "name": "Macca The Gator",
+   "side": "solana",
+   "launchpad": "pump.fun",
+   "mint": "AKotzk1dhcNangAJBtvNKtT9bhbSVZc2mMhRFgkFpump",
+   "pool": "4FoNNNMMKMa66ppCiA9557cg63s2BNN9UoFcaKxXbmvg",
+   "pool_dex": "pumpswap",
+   "pool_quote_token": "TTWO (TTWofwAge91oFhZs7kpQdyrVRkmevgM88xijGvQFbKo, tokenized Take-Two stock), not SOL",
+   "opened_at": "2026-10-18T19:25:00-04:00",
+   "window_ends_at": "2026-10-20T19:25:00-04:00",
+   "size": 100,
+   "ticket_sol": 0.21104,
+   "ticket_conversion": {
+    "at": "2026-10-18T19:15:00-04:00",
+    "ada_usd": 0.218951,
+    "sol_usd": 103.75,
+    "source": "api.coingecko.com simple/price"
+   },
+   "level": 2,
+   "entry": {
+    "mcap_usd": 269450,
+    "price_usd": 0.0002826,
+    "price_sol": 2.724e-06,
+    "price_quote_ttwo": 1.308e-06,
+    "ttwo_usd_implied": 216.06,
+    "holders": 1053,
+    "pool_quote_sol": 244,
+    "pool_quote_native": {
+     "amount": 117.27,
+     "token": "TTWO"
+    },
+    "liq_usd": 52613,
+    "paper_qty_tokens": 77477
+   },
+   "thesis": [
+    "Strongest ticket-eligible L2 of the run: 1,053 pump.fun holders (GeckoTerminal 1,035, no mismatch), pool quote side ~117 TTWO (~$25.3k, ~244 SOL-equivalent), liq ~19.5% of mcap, coin is 3.4 days old (pf-o n/a)",
+    "Concentration inside L2 caps: Helius top-10 ex-pool 24.7%, top-1 3.67%; pump.fun 0 sniper/bundler/dev flags in top-50, no identical balances",
+    "Flow passes rule k and pf-m: DexScreener h6 419/278 with price h6 +35.7%, h1 81/35 (+17.8%); average h6 fill ~$72 (no tiny-fill farm)",
+    "pf-l passes: grind from 0.000150 (10 AM) to 0.000286; the 6 PM and 7 PM hourly candles held above the ~0.00022 midpoint (lows 0.000228 / 0.000270); price is ~92% of the 72h high 0.000312 (Oct 15)"
+   ],
+   "not_l3_because": "Holders 1,053 are under the 1,500 L3 floor and flat across three pump.fun snapshots in 8 min (1,054 -> 1,053 -> 1,053), so rule h caps it at L2; no >=30% first fade since this leg started; first-block check not run (82h-old coin). Quote asset is TTWO, so ADA-equivalent P&L also moves with the TTWO token.",
+   "kill_line": {
+    "text": "mcap < $188.6k or holders < 948 or pool quote < 82.1 TTWO (~171 SOL-equivalent) (default -30%/-10%/-30%); early exit per pf-m if holders fall at two marks in a row with price below entry",
+    "mcap_usd_below": 188615,
+    "holders_below": 948,
+    "pool_quote_sol_below": 171,
+    "pool_quote_native_below": {
+     "amount": 82.1,
+     "token": "TTWO"
+    }
+   },
+   "first_block_check": "not run (82h-old coin); pump.fun flags clean; Helius 3 requests (supply, largest accounts, owners)",
+   "custody": "SPL token, non-custodial (paper only); no Solada bridge involved",
+   "status": "open",
+   "marks": []
   }
  ],
  "closed": [
@@ -694,6 +766,40 @@
     "swordcat",
     "CATE"
    ]
+  },
+  {
+   "added_at": "2026-10-18T19:25:00-04:00",
+   "id": "pf-p",
+   "rule": "Non-SOL quote pools: some pump.fun coins (Macca, Dacity) are paired with TTWO, a tokenized Take-Two stock worth ~$216, not SOL. DexScreener's liquidity.quote and priceNative are then in TTWO, and pump.fun's usd_market_cap prices the quote as if it were SOL, so it is off. Convert the quote side to SOL-equivalent at USD rates before applying the pool floors, take mcap from DexScreener/GeckoTerminal, and mark these tickets by USD price.",
+   "source": "run 2026-10-18 19:15",
+   "title": "Convert non-SOL pool quotes to SOL-equivalent",
+   "category": "liq",
+   "evidence": [
+    "Macca",
+    "Dacity"
+   ]
+  },
+  {
+   "added_at": "2026-10-18T19:30:00-04:00",
+   "id": "pf-daily-2026-10-18",
+   "rule": "Day review: no Pump.fun closes today (book still 0-3). CATE, the deep ~109k-holder name, stayed between -1.1% and +6.8% in SOL all day. Its holders slipped at six marks in a row after the 3:15 PM peak (109,133 -> 108,924, -0.2%), and only pf-m's price-below-entry condition kept it open. MISTAKE grew holders 17,897 -> 18,807 (+5.1%) through a 40% fade (0.0061 -> 0.00365), but sells beat buys on h1 and h6, so rule k blocked a ticket: holder growth and flow can disagree. Fresh launches were mostly sybil bands (EZECK, startupSI, CATONICE, pf-n), holder-count mismatches (PIERRE 3,528 vs GeckoTerminal 165, LUKE 1,614 vs 55) or farms with cloned ~$26 average fills (UER nNE5, NODF, IQD, WOSE). The best shape, Dacity (+228% h24, 5.2k holders), failed pf-o because 2% holder growth takes more than a 10-minute gap, so take pf-o snapshots an hour or more apart. One open L2 (Macca) added. No threshold change.",
+   "source": "daily learning brief 2026-10-18",
+   "title": "Oct 18 review: holder growth and flow can disagree",
+   "category": "review",
+   "evidence": [
+    "CATE",
+    "MISTAKE",
+    "Dacity",
+    "EZECK",
+    "startupSI",
+    "CATONICE",
+    "PIERRE",
+    "LUKE",
+    "UER",
+    "NODF",
+    "IQD",
+    "WOSE"
+   ]
   }
  ],
  "summaries": [
@@ -870,6 +976,197 @@
    "at": "2026-10-18T13:20:00-04:00",
    "type": "run",
    "note": "Marked CATE at $68.4M (+0.8% vs entry mcap, +3.9% vs entry price in SOL). No new pump tickets (max 2 slot unused). Comparison: CATE remains the only open name; live livestream coins are sub-$70k with thin books; completed recent trades are either mega-caps already owned-class or sub-threshold farms."
+  },
+  {
+   "at": "2026-10-18T19:15:00-04:00",
+   "type": "run",
+   "note": "CATE marked +1.0% in SOL / +1.2% mcap ($68.7M, 108,924 holders, 14,631 SOL), open. Holders have fallen at six marks in a row, but price is above entry, so pf-m doesn't fire. MISTAKE re-check: holders 18,807 (+5.1% vs 10:31 AM, +4.2% vs 10:51 AM) pass pf-o and it survived a 40% fade, but sells beat buys (h6 522/625), so no ticket under rule k. Dacity (best shape, +228% h24, 5,162 holders) fails pf-o (+0.4% over 8 min); re-check next run. Opened Macca (AKot...pump, TTWO-quoted pool) as the strongest ticket-eligible L2 at $269k. VEIL L2, no ticket (pf-l fails, holders bleeding). L1: fone, DOPE; PIERRE and LUKE (pump.fun vs GeckoTerminal holder mismatch); EZECK, startupSI, CATONICE (pf-n bands); farms with liq/mcap <=2% or 10-36:1 buys: UER x2, WOSE, GDF, MUCRON, NODF; IQD (liq 3.8%, the same ~$26 average fill as NODF/UER/WOSE); ALLOX, FABLES, SO (cloned ~17.9k/16.4k h6 counts); FOMO, TikTok US, Nike, KFC (<1h old, $1-15 fills); CAPE ($4.6 fills), SI276 ($12 fills); Vader (h1 -87%); MINTER, SUPERCORE, mucron, TSI, blocus (h6 -45% to -65%). Added rules pf-p (non-SOL quote pools) and pf-daily-2026-10-18. Research/lottery/NFA.",
+   "data_sources": [
+    "frontend-api-v3.pump.fun/coins (complete=true), /coins/currently-live, /coins-v2/<mint>, /coins/top-holders/<mint>",
+    "api.dexscreener.com/tokens/v1/solana/<mints>",
+    "api.geckoterminal.com trending_pools, dexes/pumpswap/pools, tokens/<mint>/info, pools/<pool>/ohlcv/hour",
+    "Helius RPC: getTokenSupply, getTokenLargestAccounts, getMultipleAccounts",
+    "api.coingecko.com simple/price (ADA $0.218951, SOL $103.75)"
+   ],
+   "helius_usage": {
+    "requests": 15,
+    "credits_estimate": "~15 (getTokenSupply x4, getTokenLargestAccounts x5 incl. 1 retry, getMultipleAccounts x4, plus 2 calls that failed on a transient error)"
+   },
+   "candidates": [
+    {
+     "ticker": "Dacity",
+     "mint": "nxPqZ4F7ux8Vph5NFu25rEP6Kx9Gr1U6Fmj36Rjpump",
+     "pool": "G2UuRbmVDzDFP4qyoBJrSKBXSi7d6V4bPP9tHPs36y4b",
+     "mcap_usd": 4963203,
+     "holders": 5162,
+     "pool_quote_sol": 1306,
+     "pool_quote_native": "627 TTWO",
+     "top10_ex_pool_pct": 17.18,
+     "top1_ex_pool_pct": 2.63,
+     "level": 2,
+     "reason": "Best shape, no ticket. 7.5 days old, +228% h24 reactivation to an ATH at 7:03 PM; DexScreener h1 1,092/741, h6 6,475/4,608, liq 5.5%, 0 flags, Helius top-10 ex-pool 17.2%. pf-l passes (6 PM candle low 0.00393 above the ~0.0039 midpoint), but it fails pf-o: holders 5,143 -> 5,146 -> 5,162 (+0.4% in 8 min, under 2%), and there's no first fade since the new high. GeckoTerminal showed 3,605 holders at 12:04 AM. Would-be kill: mcap < $3.47M or holders < 4,646 or pool quote < 439 TTWO."
+    },
+    {
+     "ticker": "MISTAKE",
+     "mint": "HKZDfZnkHZxd9agRDNPyDv4iT6LmAurJnpRtj9wpump",
+     "pool": "867dKvaCcyRrUDP66bqNXbujXfjaxsNB9wTpc4CmBdAD",
+     "mcap_usd": 3895992,
+     "holders": 18807,
+     "pool_quote_sol": 1095,
+     "top10_ex_pool_pct": 5.32,
+     "top1_ex_pool_pct": 0.74,
+     "level": 2,
+     "reason": "pf-o now passes: holders 18,807 vs 17,897 (10:31 AM, +5.1%) and 18,043 (10:51 AM, +4.2%). The first fade passes too: 0.0061 high at 11 AM, 0.00365 low (-40%), now 0.00405 (66% of high), with holders growing. Flow fails rule k (h6 522/625, h1 97/126 sells > buys; price h6 +2.2%, h1 -2.5%), so no ticket. Would-be kill if entered now: mcap < $2.73M or holders < 16,926 or pool quote < 767 SOL."
+    },
+    {
+     "ticker": "Macca",
+     "mint": "AKotzk1dhcNangAJBtvNKtT9bhbSVZc2mMhRFgkFpump",
+     "mcap_usd": 269450,
+     "holders": 1053,
+     "pool_quote_sol": 244,
+     "pool_quote_native": "117 TTWO",
+     "top10_ex_pool_pct": 24.69,
+     "top1_ex_pool_pct": 3.67,
+     "level": 2,
+     "reason": "Strongest ticket-eligible L2: passes k, pf-l and pf-m, and pf-o doesn't apply (3.4 days old). Holders are flat, so rule h keeps it at L2. TICKET OPENED (Macca-AKot-20261018-1925)."
+    },
+    {
+     "ticker": "VEIL",
+     "mint": "HgTGdc29D5bDMrDvsCLnorxz899VyDj7ZN7FPa6vpump",
+     "mcap_usd": 3132875,
+     "holders": 13587,
+     "pool_quote_sol": 841,
+     "top10_ex_pool_pct": 9.55,
+     "top1_ex_pool_pct": 2.31,
+     "level": 2,
+     "reason": "No ticket. A 3 PM spike to 0.00429, then no hourly candle held above the ~0.0035 midpoint (pf-l fails). Price is 34% of its 72h high (under the 40% floor). Holders are bleeding (13,601 -> 13,590 -> 13,587; GeckoTerminal 13,917 last night). h6 2,002/1,514 (+22.9%), h1 234/229."
+    },
+    {
+     "ticker": "fone",
+     "mint": "CTPoyCwkjMvoJwU4xvZZqoD8tiYk6yDchySiN5gGpump",
+     "mcap_usd": 3555056,
+     "holders": 22614,
+     "pool_quote_sol": 2160,
+     "top10_ex_pool_pct": 20.9,
+     "level": 1,
+     "reason": "53 days old with holders bleeding (22,617 -> 22,615 -> 22,614), so pf-o fails; price h6 -4.5%, h24 -14.8%; 9% of ATH."
+    },
+    {
+     "ticker": "DOPE",
+     "mint": "33jENUQnjoitkMFpvNJcSHyLAHFWJuHwT6E3E8CNpump",
+     "mcap_usd": 4188882,
+     "holders": 9957,
+     "level": 1,
+     "reason": "Sells > buys on h1 (210/247) and h6 (1,060/1,178)."
+    },
+    {
+     "ticker": "PIERRE",
+     "mint": "D3S6J9s1byrNBt3ZKwEDiPsNRqHtoEP8zQKdhyBdpump",
+     "mcap_usd": 690626,
+     "holders": "3,528 pump.fun vs 165 GeckoTerminal",
+     "level": 1,
+     "reason": "Holder-count mismatch (farm filter); +3,660% h6 spike on a 7h coin; 1 flagged wallet at 3.15%."
+    },
+    {
+     "ticker": "LUKE",
+     "mint": "Ez7eEs53hQiXgCGmcbhdX5i1jgg2gC3F6MoeosuVpump",
+     "mcap_usd": 537433,
+     "holders": "1,614 pump.fun vs 55 GeckoTerminal",
+     "level": 1,
+     "reason": "Holder-count mismatch (farm filter); +190% h6 spike; 1 flagged wallet at 3.08%."
+    },
+    {
+     "ticker": "EZECK / startupSI / CATONICE",
+     "level": 1,
+     "reason": "pf-n sybil bands on <8h coins: top pump.fun holders all at 0.41% / 0.11% / 0.12%."
+    }
+   ],
+   "watch_next": {
+    "Dacity": {
+     "mint": "nxPqZ4F7ux8Vph5NFu25rEP6Kx9Gr1U6Fmj36Rjpump",
+     "pool": "G2UuRbmVDzDFP4qyoBJrSKBXSi7d6V4bPP9tHPs36y4b",
+     "quote": "TTWO",
+     "holders_snapshots": [
+      {
+       "at": "2026-10-18T19:16:45-04:00",
+       "holders": 5143
+      },
+      {
+       "at": "2026-10-18T19:19:36-04:00",
+       "holders": 5146
+      },
+      {
+       "at": "2026-10-18T19:24:22-04:00",
+       "holders": 5162
+      }
+     ],
+     "needs": "pf-o: >=5,265 holders (+2% vs 5,162) plus a first fade since the 7:03 PM high",
+     "would_be_kill_line": "mcap < $3.47M or holders < 4,646 or pool quote < 439 TTWO"
+    },
+    "MISTAKE": {
+     "mint": "HKZDfZnkHZxd9agRDNPyDv4iT6LmAurJnpRtj9wpump",
+     "pool": "867dKvaCcyRrUDP66bqNXbujXfjaxsNB9wTpc4CmBdAD",
+     "holders_snapshots": [
+      {
+       "at": "2026-10-18T10:31:00-04:00",
+       "holders": 17897
+      },
+      {
+       "at": "2026-10-18T10:51:00-04:00",
+       "holders": 18043
+      },
+      {
+       "at": "2026-10-18T19:16:45-04:00",
+       "holders": 18802
+      },
+      {
+       "at": "2026-10-18T19:24:22-04:00",
+       "holders": 18807
+      }
+     ],
+     "needs": "h6 and h1 buys > sells (rule k); everything else passes",
+     "would_be_kill_line": "mcap < $2.73M or holders < 16,926 or pool quote < 767 SOL"
+    }
+   },
+   "book_stats": {
+    "scope": "all tickets since the book started (2026-10-17 11:41 ET)",
+    "opened": 5,
+    "closed": 3,
+    "open": 2,
+    "wins": 0,
+    "losses": 3,
+    "avg_closed_pct": -25.9,
+    "best_closed": {
+     "id": "swordcat-5tCj-20261017-1530",
+     "pct": -11.6
+    },
+    "worst_closed": {
+     "id": "FTR-DFMt-20261017-1340",
+     "pct": -34.5
+    },
+    "open_marks": [
+     {
+      "id": "CATE-Ai66-20261017-1918",
+      "pct_vs_entry_price_sol": 1.0,
+      "pct_vs_entry_mcap": 1.2
+     },
+     {
+      "id": "Macca-AKot-20261018-1925",
+      "pct": 0.0
+     }
+    ],
+    "signals_worked": [
+     "A deep, widely held holder base with a big pool (CATE: ~109k holders, ~14.6k SOL) is the only ticket in the green",
+     "Clean concentration (0 flags, top-10 ex-pool <25%) kept every loser from a fast rug-style collapse",
+     "pf-m early exit closed swordcat at -11.6% instead of -30%"
+    ],
+    "signals_failed": [
+     "Spike entries (CyberAxe -31.7%, pf-l)",
+     "Buy-count majority while price fell (FTR -34.5%, pf-m)",
+     "Flat holders on an old coin (swordcat -11.6%, pf-o)"
+    ]
+   },
+   "vs_solada": "Solada side: BOLT L2 open paper ticket (entry 406k ADA pool mcap); see solada log. Pump.fun: CATE open (+1.0% in SOL), Macca opened at L2."
   }
  ]
 }
