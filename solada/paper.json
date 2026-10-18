@@ -93,7 +93,19 @@
      "top1_ex_pool_pct": 5.49,
      "flow": "GeckoTerminal h1 4/2 (+/-1%), h6 34/14 (-9.4%), h24 191/98 (-18.9%); vol_h6 ~$3.7k",
      "source": "desk afternoon: GeckoTerminal BOLT/ADA; Blockfrost asset addresses ex Minswap V2/curve/order (270); Solada /api/market 370,453; ADA side = pool token reserve * spot (~30.6k)",
-     "note": "Desk mark 5 min after 13:15 pulse. Above every kill line (364.7k vs 340k, 270 vs 250 holders, 30.6k vs 28k ADA). Holders flat vs pulse (278/270), so still only one down-mark since entry \u2014 rule o needs two in a row. Pool-implied mcap 364.7k is a touch under the pulse's on-chain 370.5k; both clear 340k. h6 -9.4% fails rule o flow by a hair."
+     "note": "Desk mark 5 min after 13:15 pulse. Above every kill line (364.7k vs 340k, 270 vs 250 holders, 30.6k vs 28k ADA). Holders flat vs pulse (278/270), so still only one down-mark since entry — rule o needs two in a row. Pool-implied mcap 364.7k is a touch under the pulse's on-chain 370.5k; both clear 340k. h6 -9.4% fails rule o flow by a hair."
+    },
+    {
+     "at": "2026-10-18T14:15:00-04:00",
+     "mcap_ada": 382925,
+     "price_ada": 0.000382925,
+     "holders": 278,
+     "onchain_holders_ex_pool": 270,
+     "ada_side": 31173,
+     "pct_vs_entry_mcap": -5.7,
+     "flow": "GeckoTerminal h1 3/1 buys/sells (+1.9%), h6 27/14 (-20.1%), h24 -6.8%; last full hour (1 PM) 212 ADA vs 2,760 avg prior 5h",
+     "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 377,996",
+     "note": "Above every kill line (382.9k vs 340k mcap, 270 vs 250 on-chain holders, 31,173 vs 28,000 ADA side). Price -5.7% vs entry. Holders flat vs the 13:15 and 13:20 marks (278/270), so rule o still has only one down-mark and no early exit."
     }
    ]
   }
@@ -209,7 +221,7 @@
      "top1": 6.14,
      "gt_h6": "85 buys/37 sells, price +9.7%",
      "gt_h1": "5 buys/3 sells, price -9.7%",
-     "note": "Still above the 250k/110-holder stop, about 4.7% over the mcap line. ADA side 24.1k is now under rule k's 25k entry floor. The team's wallet-drop thread is still collecting addresses on X, so holder counts stay airdrop-inflated (rule m). 116 stake keys on-chain ex-pool, still above 110. Repeat buyer addr1q9ac\u2026u9wwut still holds 1.25%. Level cut from L3 to L2; ticket stays open because no kill line has been hit."
+     "note": "Still above the 250k/110-holder stop, about 4.7% over the mcap line. ADA side 24.1k is now under rule k's 25k entry floor. The team's wallet-drop thread is still collecting addresses on X, so holder counts stay airdrop-inflated (rule m). 116 stake keys on-chain ex-pool, still above 110. Repeat buyer addr1q9ac…u9wwut still holds 1.25%. Level cut from L3 to L2; ticket stays open because no kill line has been hit."
     },
     {
      "at": "2026-10-17T19:18:00-04:00",
@@ -249,7 +261,7 @@
     ],
     "failed": [
      "Airdrop-inflated holders (rule m) leaked once the airdrop window passed: 128 -> 123",
-     "ADA side drifted 26.5k -> 24.3k, under rule k's floor, while mcap chopped \u00b130% on a few hundred ADA a swap",
+     "ADA side drifted 26.5k -> 24.3k, under rule k's floor, while mcap chopped ±30% on a few hundred ADA a swap",
      "Each pop (1 PM airdrop, 5 PM SOLADA-airdrop tease) came from team promo and faded inside two hours"
     ]
    },
@@ -308,13 +320,13 @@
   {
    "added_at": "2026-10-17T11:25:00-04:00",
    "id": "j",
-   "rule": "First-block sniper full exit = kill trigger; IAGONAUT faded 47.8k\u219232.2k within ~45 min after top sniper uytg09zr sold out (Oct 17).",
+   "rule": "First-block sniper full exit = kill trigger; IAGONAUT faded 47.8k→32.2k within ~45 min after top sniper uytg09zr sold out (Oct 17).",
    "source": "IAGONAUT Oct 17"
   },
   {
    "added_at": "2026-10-17T11:25:00-04:00",
    "id": "k",
-   "rule": "Holding-tier shape: only names with 120+ holders, ADA-side \u226525k and 6h buys > sells qualify for paper tickets; post-graduation names under ~11k ADA side with 6h price down >40% (HERO -76%, JUICE -41%, ROBIN -55%) are Pass regardless of 24h headline gains.",
+   "rule": "Holding-tier shape: only names with 120+ holders, ADA-side ≥25k and 6h buys > sells qualify for paper tickets; post-graduation names under ~11k ADA side with 6h price down >40% (HERO -76%, JUICE -41%, ROBIN -55%) are Pass regardless of 24h headline gains.",
    "source": "run 2026-10-17 11:10"
   },
   {
