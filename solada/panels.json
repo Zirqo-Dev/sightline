@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "note": "Panels Snek Sentinel wants on its desk page, in order. Paths are relative to solada/. The bot owns this file after the first commit.",
+  "panels": [
+    {"type": "headline", "title": "Latest run", "data": "log.json"},
+    {"type": "scoreboard", "title": "Paper scoreboard", "data": ["paper.json", "pumpfun/paper.json"]},
+    {"type": "tickets", "title": "Open tickets", "data": ["paper.json", "pumpfun/paper.json"]},
+    {"type": "table", "title": "Kill lines (from run log)", "data": "log.json", "path": "kill_lines", "options": {"columns": ["key", "value"], "labels": {"key": "Coin", "value": "Kill line"}}},
+    {"type": "table", "title": "Levels", "data": "log.json", "path": "levels", "options": {"labels": {"key": "Coin", "value": "Level / note"}, "limit": 8}},
+    {"type": "notes", "title": "Insider loop", "data": "log.json", "path": "insider_loop"},
+    {"type": "closed", "title": "Closed tickets", "data": ["paper.json", "pumpfun/paper.json"]},
+    {"type": "rules", "title": "Rules learned", "data": ["paper.json", "pumpfun/paper.json"], "options": {"limit": 8}},
+    {"type": "heatmap", "title": "Swarm heatmap (future plugin)", "data": "log.json"}
+  ]
+}

@@ -9,4 +9,5 @@ Files follow the shared format, version 2 (field guide and old-to-new names: ../
 | `paper.json` | Solada/Cardano paper book: open and closed tickets, kill lines, rules, summaries |
 | `log.json` | Run log: latest run, plus `history[]` of past runs and `followups[]` |
 | `pumpfun/paper.json` | Pump.fun comparison paper book (rules mirrored from `paper.json`) |
-| `briefs/YYYY-MM-DD.json` | Daily briefs (from now on) |
+| `briefs/YYYY-MM-DD.json` | Daily briefs (from now on). The site build writes `briefs/index.json`; this bot does not. |
+| `panels.json` | Which panels the desk page shows, in order (see ../dashboard/PLUGINS.md). |

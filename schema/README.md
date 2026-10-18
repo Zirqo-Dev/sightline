@@ -11,6 +11,10 @@ Each desk has a folder (e.g. `solada/`, `nft/`), listed in `/desks.json`:
 - `<desk>/briefs/YYYY-MM-DD.json`: one daily brief per day (`schema/brief.schema.json`)
 A new file or desk must be added to `desks.json`; CI validates every file listed there.
 
+Each desk may also have `<desk>/panels.json`, which chooses the panels on that desk's page. The panel format, built-in types, and how to add a component are in [dashboard/PLUGINS.md](../dashboard/PLUGINS.md).
+
+Bots write daily briefs as `<desk>/briefs/YYYY-MM-DD.json` only. They do not maintain a brief index. The site build writes `<desk>/briefs/index.json` from those files when it publishes.
+
 ## Paper book
 - **required:** `schema_version` (= 2), `desk`, `book` (book id, e.g. "solada", "pumpfun"), `open[]`, `closed[]`, `rules[]`
 - optional: `chain`, `unit` (what `size`/`pnl` are in, e.g. "ADA" or "ADA-equivalent"), `ticket_size`, `disclaimer`, `default_window_hours`, `levels{}`, `summaries[]` (each `at`, `type`, `note`, plus anything else)
@@ -41,4 +45,4 @@ A new file or desk must be added to `desks.json`; CI validates every file listed
 All other fields (e.g. `asset_id`, `custody`, `mint`, `pool`, `ticket_sol`, `entry`, `exit`, `marks`, `rules_applied`) are unchanged.
 
 ## Before committing
-Run `bash scripts/privacy-guard.sh` and `python3 scripts/validate-desks.py` (needs `pip install jsonschema`). CI runs both on every push and PR to `main`.
+Run `bash scripts/privacy-guard.sh` and `python3 scripts/validate-desks.py` (needs `pip install jsonschema`). CI runs both on every push and PR to `main`. The Pages workflow runs them again and publishes only if both pass.

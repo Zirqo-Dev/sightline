@@ -70,7 +70,7 @@ function paintIntel(data){
 }
 async function loadIntel(){
   try{
-    const res = await fetch("intel.json?ts=" + Date.now());
+    const res = await fetch((window.sightlineAsset ? window.sightlineAsset("intel.json") : "intel.json") + "?ts=" + Date.now());
     if(!res.ok) return;
     paintIntel(await res.json());
     if(typeof renderTable === "function") renderTable();
