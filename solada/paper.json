@@ -13,7 +13,51 @@
   "3": "Watch: lots of holders early that stick through first dip",
   "4": "High-conviction lottery: L3 + cross-chain/bigger accounts, improving ADA-side pool, holder growth through first dip, prior similar shapes worked in paper book"
  },
- "open": [],
+ "open": [
+  {
+   "id": "BOLT-20261018-1020",
+   "ticker": "BOLT",
+   "side": "cardano",
+   "asset_id": "14628c260a749e78e69e58acca32d0baa09808d50388c84fa7e1ae470014df10424f4c54",
+   "opened_at": "2026-10-18T10:20:00-04:00",
+   "window_ends_at": "2026-10-20T10:20:00-04:00",
+   "size": 100,
+   "level": 2,
+   "status": "open",
+   "entry_type": "strongest-L2 re-hold",
+   "entry": {
+    "mcap_ada": 406244,
+    "price_ada": 0.000406244,
+    "holders": 274,
+    "onchain_holders_ex_pool": 263,
+    "ada_side": 32170,
+    "source": "on-chain Minswap V2 pool UTxO via Blockfrost (~10:25 AM ET); Solada /api/market 406,086"
+   },
+   "thesis": [
+    "Pullback that holders survived (daily-2026-10-17 / rule l): 530k (Oct 17 11 AM) -> ~305k (10 PM) with holders 277 -> 263, then a re-hold: hourly closes 380-461k since midnight with higher lows",
+    "Rule k passes: 263 on-chain holders (274 Solada), ADA side 32.2k (up from 29.5k at 9:18 PM), 6h on-chain 33 buys / 13 sells, and price +0.9% over 6h so rule o's flow test passes (GeckoTerminal h6 35/14, +3.5%)",
+    "No promo pop in the last 6h (rule l); no airdrop window (rule m); top-10 ex-pool 26.4%, top-1 4.99%",
+    "Repeat buyers addr1q9ac..u9wwut (1.34%) and addr1q9yt..ct2n4q (0.50%) still hold"
+   ],
+   "not_l3_because": "Holders are flat on the bounce (263 at 9:18 PM and now), so price is rising with flat holders (rule h): L2 at best",
+   "kill_line": {
+    "text": "pool mcap < 340k ADA or on-chain holders < 250 or ADA side < 28k; early exit under rule o (holders down at two marks in a row with price below entry)",
+    "mcap_ada_below": 340000,
+    "holders_below": 250,
+    "ada_side_below": 28000
+   },
+   "custody": "Cardano native token, non-custodial; Minswap V2 pool, ADA side ~8% of mcap",
+   "rules_applied": [
+    "h",
+    "k",
+    "l",
+    "m",
+    "o",
+    "daily-2026-10-17"
+   ],
+   "marks": []
+  }
+ ],
  "closed": [
   {
    "id": "BOLT-20261017-1125",
@@ -377,6 +421,11 @@
    "at": "2026-10-17T21:18:00-04:00",
    "type": "run",
    "note": "No open Solada tickets and none opened. JUSTQ's USDC pool side is now ~$5.8k (~26.4k ADA), so it passes rule k depth, but Solana-native holders fell 251 -> 244 and the price is under the 2.11e-5 entry trigger (h1 -9%). CLOVE rebounded to 302k (+10% vs its close) with 117 on-chain / 127 Solada holders, but h6 unique buyers 18 vs sellers 19 and airdrop-inflated holders (rule m) keep it at L2. BOLT 339k, ADA side 29.5k (1.5k above its 28k kill), fails rule o (h6 -12.5%). MISS ran to 83.7% curve on team promo with 17 Solana-native holders (rule q). Rules p, q, r and the daily review added."
+  },
+  {
+   "at": "2026-10-18T10:20:00-04:00",
+   "type": "run",
+   "note": "Opened BOLT-20261018-1020 (L2, 100 ADA) at 406.2k pool mcap as the strongest L2 and the only name passing rule k: a re-hold of 380-461k since midnight after the ~305k low, 263 on-chain holders, ADA side 32.2k, 6h on-chain 33 buys / 13 sells at +0.9%. Kill hits, no tickets: CLOVE (240.9k < 250k at 10:25; 283k by 10:55) and JUSTQ (mcap $15.3k < $16.0k). SURFY (91% curve, King of the Hill, 48 holders) is L1 under rule p. PAWS (87 holders, ADA side ~12k) fails rule k. CORE fails rule q. No trade closed, no rule changes."
   }
  ]
 }

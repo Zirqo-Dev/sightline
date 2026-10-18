@@ -110,6 +110,30 @@
      "flags_top50": 0,
      "flow": "DexScreener h1 533/492, h6 3,010/2,338; price h1 +3.2%, h6 -0.0%, h24 +18.0%",
      "note": "Above every kill line ($72.1M vs $47.5M, 108,078 vs 97,082 holders, 14,918 vs 10,149 SOL). Holders +209 vs entry. Helius top-10 ex-pool 15.2%, top-1 2.86% (2 requests)."
+    },
+    {
+     "at": "2026-10-18T10:31:00-04:00",
+     "mcap_usd": 70626041,
+     "price_usd": 0.07325,
+     "price_sol": 0.0007134,
+     "holders": 108964,
+     "pool_quote_sol": 14842,
+     "pct_vs_entry_mcap": 4.1,
+     "pct_vs_entry_price_sol": 4.6,
+     "top10_ex_pool": 14.69,
+     "top1_ex_pool": 2.75,
+     "flags_top50": 0,
+     "flow": "DexScreener h1 628/325, h6 2,734/1,932; price h1 -2.8%, h6 -3.0%, h24 +5.0%",
+     "recheck": {
+      "at": "2026-10-18T10:51:00-04:00",
+      "mcap_usd": 68969972,
+      "price_sol": 0.0007012,
+      "pct_vs_entry_price_sol": 2.8,
+      "holders": 108940,
+      "pool_quote_sol": 14721,
+      "flow": "h1 695/356, h6 2,801/1,987; price h1 -4.7%, h6 -5.3%"
+     },
+     "note": "Above every kill line ($70.6M vs $47.5M, 108,964 vs 97,082 holders, 14,842 vs 10,149 SOL). Holders +886 since the 9:18 PM mark, so pf-m's early exit isn't triggered. GeckoTerminal 144,682 holders (no mismatch). pump.fun top-holders, no Helius used."
     }
    ]
   }
@@ -617,6 +641,33 @@
     "requests": 6,
     "credits_estimate": "~6"
    }
+  },
+  {
+   "at": "2026-10-18T10:20:00-04:00",
+   "type": "run",
+   "note": "CATE marked +4.6% in SOL ($70.6M, 108,964 holders, 14,842 SOL), open. No new ticket. Strongest L2: MISTAKE (HKZDfZ...pump, 37 days old, $4.9-5.1M, 17,897 -> 18,043 pump.fun holders (GeckoTerminal 17,117), pool 1,222-1,252 SOL, liq 5.2%, Helius top-10 ex-pool 5.3%, top-1 0.74%, 0 flags; breakout from ~0.0035 to a 0.0056 high at 9-11 PM Oct 17, then 13 hourly closes at 0.0046-0.0053, above the ~0.0045 spike midpoint, so pf-l passes). It fails pf-o: holders grew 0.8% between two snapshots 20 min apart, under the 2% needed for a coin older than 7 days. Its pullback (-20%) is also short of L3's 30% first-fade test. Re-check holders next run. L2, no ticket: neet ($31.4M, 19,635 holders, h6 104/190 sells > buys), CLAUDIA ($7.9M, h6 1,844/1,972, -4.8%), hi (h1 104/149, +142% h24 reactivation, pf-l). L1: CATSZN (12h, top-12 all at 0.11%, pf-n), HOLDOWEEN (pump.fun 3,017 vs GeckoTerminal 15 holders, 49 identical top-50 balances), MHDG (top-1 30%), NTRNDM (h6 701/904); farms by liq/mcap <= 3.5% or cloned ~1,000/670 h6 txn counts: UDR, USDF, UDTF x2, USDR x2, FTR-fire 72xN, XRC, USWR, XTO, MINTER, TSI, ADTF, WOTF, LOAD; tiny-fill wash ($2.6-4.5 average fills): Awkward Dog, SI276, BARRON, MrBeast; h6 price < -15% or <6h spikes: DOPE, NIHILISM, SUPERCORE, YILONGMA, blocus, mucron, MEGA. After their closes, swordcat fell to $1.89M (exit $2.12M) and FTR DFMt to $1.83M (exit $2.14M). Research/lottery/NFA.",
+   "helius_usage": {
+    "requests": 3,
+    "credits_estimate": "~3"
+   },
+   "watch_next": {
+    "MISTAKE": {
+     "mint": "HKZDfZnkHZxd9agRDNPyDv4iT6LmAurJnpRtj9wpump",
+     "pool": "867dKvaCcyRrUDP66bqNXbujXfjaxsNB9wTpc4CmBdAD",
+     "holders_snapshots": [
+      {
+       "at": "2026-10-18T10:31:00-04:00",
+       "holders": 17897
+      },
+      {
+       "at": "2026-10-18T10:51:00-04:00",
+       "holders": 18043
+      }
+     ],
+     "would_be_kill_line": "mcap < $3.4M or holders < 16,200 or pool quote < 860 SOL"
+    }
+   },
+   "vs_solada": "Solada: 1 open (BOLT L2, 406k ADA mcap, 263 holders, 32.2k ADA side, ~8% of mcap). Pump.fun: 1 open (CATE +4.6%, ~$70.6M, ~109k holders, 14.8k SOL side, ~4.3% of mcap). Pump.fun's only green ticket is its deepest, most widely held name; on Solada only BOLT passes rule k. Junk rates are similar: 28 of 30 new Cardano launches were swarm-touched, and about 20 of the ~40 pump.fun names checked were farms."
   }
  ]
 }
