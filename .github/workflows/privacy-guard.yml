@@ -1,0 +1,16 @@
+name: privacy-guard
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan tracked files for owner wallet data
+        env:
+          # Optional repo secret; empty when unset, which the script ignores.
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+        run: bash scripts/privacy-guard.sh
