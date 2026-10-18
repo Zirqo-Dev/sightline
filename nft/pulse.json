@@ -1,7 +1,7 @@
 {
  "schema_version": 2,
  "desk": "nft",
- "updated_at": "2026-10-18T16:35:41-04:00",
+ "updated_at": "2026-10-18T17:42:31-04:00",
  "window_days": 7,
  "note": "KING hourly NFT pulse. Public market data only (OpenSea, Magic Eden, Wayup). Paper and research only, not financial advice. Missing readings are null.",
  "sources": {
@@ -12,8 +12,7 @@
    "opensea listings": "ok"
   },
   "polygon": {
-   "opensea stats": "ok",
-   "opensea sales": "ok"
+   "opensea stats": "ok"
   },
   "multi": {
    "opensea trending 1h": "ok"
@@ -23,16 +22,16 @@
    "opensea sales": "ok",
    "opensea offers": "ok",
    "magiceden stats 1h": "ok",
-   "magiceden stats 1d": "ok"
+   "magiceden v2 stats": "ok"
+  },
+  "ronin": {
+   "opensea stats": "ok",
+   "opensea sales": "ok"
   },
   "robinhood": {
    "opensea stats": "ok",
    "opensea sales": "ok",
    "opensea offers": "ok"
-  },
-  "abstract": {
-   "opensea stats": "ok",
-   "opensea sales": "ok"
   },
   "cardano": {
    "wayup top 1h": "ok",
@@ -45,11 +44,11 @@
    "ticker": "argonauts",
    "chain": "ethereum",
    "role": "ticket",
-   "floor": 0.73,
+   "floor": 0.729999,
    "unit": "ETH",
    "top_offer": 0.69,
    "sales_1h": 5,
-   "buyers_1h": 5,
+   "buyers_1h": 4,
    "listings": 13,
    "listings_basis": "within 10% of floor",
    "ticket": "P001",
@@ -59,7 +58,7 @@
    "ticker": "birds-marfa",
    "chain": "ethereum",
    "role": "pass",
-   "floor": 0.099,
+   "floor": 0.09499,
    "unit": "ETH",
    "top_offer": null,
    "sales_1h": null,
@@ -95,7 +94,7 @@
    "ticker": "credits",
    "chain": "ethereum",
    "role": "pass",
-   "floor": 0.016551,
+   "floor": 0.016242,
    "unit": "ETH",
    "top_offer": null,
    "sales_1h": null,
@@ -107,7 +106,7 @@
    "ticker": "milady",
    "chain": "ethereum",
    "role": "pass",
-   "floor": 0.729,
+   "floor": 0.729799,
    "unit": "ETH",
    "top_offer": null,
    "sales_1h": null,
@@ -119,7 +118,7 @@
    "ticker": "pudgypenguins",
    "chain": "ethereum",
    "role": "pass",
-   "floor": 2.27,
+   "floor": 2.35,
    "unit": "ETH",
    "top_offer": null,
    "sales_1h": null,
@@ -133,8 +132,8 @@
    "role": "pass",
    "floor": 0.549,
    "unit": "SOL",
-   "top_offer": 0.46981,
-   "sales_1h": 1,
+   "top_offer": null,
+   "sales_1h": null,
    "buyers_1h": null,
    "listings": 409,
    "listings_basis": "total"
@@ -142,91 +141,128 @@
  ],
  "radar": [
   {
+   "ticker": "traceart",
+   "chain": "ethereum",
+   "first_seen": "2026-10-18T13:01:10-04:00",
+   "score": 5.5,
+   "signals": [
+    "sales spike 36/h vs 5.6/h base",
+    "buyers 21/h vs 10.0/h",
+    "fresh: >=80% of lifetime sales in last 30d",
+    "5 repeat buyer wallets 24h"
+   ],
+   "note": "floor 0.008726 ETH, top offer n/a, 36 sales/21 buyers 1h, listings n/a; opensea; signals: sales spike 36/h vs 5.6/h base; buyers 21/h vs 10.0/h; fresh: >=80% of lifetime sales in last 30d; 5 repeat buyer wallets 24h. Research only, not a call.",
+   "venue": "opensea"
+  },
+  {
    "ticker": "argonauts",
    "chain": "ethereum",
    "first_seen": "2026-10-18T14:41:07-04:00",
-   "score": 5.5,
+   "score": 4.5,
    "signals": [
-    "broad buying 5 wallets/5 sales",
-    "near-floor listings -61% in 4h",
-    "bid depth 8->11 units within 10% of top",
+    "broad buying 4 wallets/5 sales",
+    "near-floor listings -61% in 5h",
     "near-floor sell-through 28%/h",
-    "3 repeat buyer wallets 24h"
+    "4 repeat buyer wallets 24h"
    ],
-   "note": "floor 0.73 ETH, top offer 0.69, 5 sales/5 buyers 1h, listings 13 near floor; opensea; signals: broad buying 5 wallets/5 sales; near-floor listings -61% in 4h; bid depth 8->11 units within 10% of top; near-floor sell-through 28%/h; 3 repeat buyer wallets 24h. Research only, not a call.",
+   "note": "floor 0.73 ETH, top offer 0.69, 5 sales/4 buyers 1h, listings 13 near floor; opensea; signals: broad buying 4 wallets/5 sales; near-floor listings -61% in 5h; near-floor sell-through 28%/h; 4 repeat buyer wallets 24h. Research only, not a call.",
+   "venue": "opensea"
+  },
+  {
+   "ticker": "mudwater-cards",
+   "chain": "solana",
+   "first_seen": "2026-10-18T13:35:20-04:00",
+   "score": 4.5,
+   "signals": [
+    "floor +64.1%/h",
+    "floor accelerating (-23.8 -> +64.1%/h)",
+    "concentrated: 19 wallet(s) took 150 sales (against)",
+    "fresh: >=80% of lifetime sales in last 30d",
+    "28 repeat buyer wallets 24h"
+   ],
+   "note": "floor 0.024 SOL, top offer n/a, 150 sales/19 buyers 1h, listings n/a; opensea; signals: floor +64.1%/h; floor accelerating (-23.8 -> +64.1%/h); concentrated: 19 wallet(s) took 150 sales (against); fresh: >=80% of lifetime sales in last 30d; 28 repeat buyer wallets 24h. Research only, not a call.",
+   "venue": "opensea"
+  },
+  {
+   "ticker": "rhmachines",
+   "chain": "robinhood",
+   "first_seen": "2026-10-18T15:40:52-04:00",
+   "score": 4.0,
+   "signals": [
+    "sales spike 3/h vs 0.8/h base",
+    "buyers 3/h vs 1.0/h",
+    "broad buying 3 wallets/3 sales"
+   ],
+   "note": "floor 0.01667 ETH, top offer n/a, 3 sales/3 buyers 1h, listings n/a; opensea; signals: sales spike 3/h vs 0.8/h base; buyers 3/h vs 1.0/h; broad buying 3 wallets/3 sales. Research only, not a call.",
+   "venue": "opensea"
+  },
+  {
+   "ticker": "veefriends-series-2",
+   "chain": "ethereum",
+   "first_seen": "2026-10-18T17:42:31-04:00",
+   "score": 2.5,
+   "signals": [
+    "sales spike 3/h vs 0.2/h base",
+    "broad buying 3 wallets/3 sales"
+   ],
+   "note": "floor 0.072 ETH, top offer n/a, 3 sales/3 buyers 1h, listings n/a; opensea; signals: sales spike 3/h vs 0.2/h base; broad buying 3 wallets/3 sales. Research only, not a call.",
+   "venue": "opensea"
+  },
+  {
+   "ticker": "enchanted_miner",
+   "chain": "solana",
+   "first_seen": "2026-10-18T17:42:31-04:00",
+   "score": 2.0,
+   "signals": [
+    "sell-through 7%/h of supply on offer"
+   ],
+   "note": "floor 0.05216 SOL, top offer 0.04429, 10 sales/n/a buyers 1h, listings 136; magiceden; signals: sell-through 7%/h of supply on offer. Research only, not a call.",
+   "venue": "magiceden"
+  },
+  {
+   "ticker": "mindsdotgames",
+   "chain": "robinhood",
+   "first_seen": "2026-10-18T13:01:10-04:00",
+   "score": 2.0,
+   "signals": [
+    "fresh: >=80% of lifetime sales in last 30d",
+    "2 repeat buyer wallets 24h"
+   ],
+   "note": "floor 0.0157 ETH, top offer n/a, 3 sales/2 buyers 1h, listings n/a; opensea; signals: fresh: >=80% of lifetime sales in last 30d; 2 repeat buyer wallets 24h. Research only, not a call.",
    "venue": "opensea"
   },
   {
    "ticker": "mudwater-packs",
    "chain": "solana",
    "first_seen": "2026-10-18T14:41:07-04:00",
-   "score": 5.0,
+   "score": 2.0,
    "signals": [
-    "floor +8.3%/h",
-    "floor accelerating (-5.2 -> +8.3%/h)",
     "fresh: >=80% of lifetime sales in last 30d",
-    "8 repeat buyer wallets 24h"
+    "14 repeat buyer wallets 24h"
    ],
-   "note": "floor 0.3765 SOL, top offer n/a, 44 sales/15 buyers 1h, listings n/a; opensea; signals: floor +8.3%/h; floor accelerating (-5.2 -> +8.3%/h); fresh: >=80% of lifetime sales in last 30d; 8 repeat buyer wallets 24h. Research only, not a call.",
+   "note": "floor 0.35 SOL, top offer n/a, 22 sales/15 buyers 1h, listings n/a; opensea; signals: fresh: >=80% of lifetime sales in last 30d; 14 repeat buyer wallets 24h. Research only, not a call.",
    "venue": "opensea"
   },
   {
-   "ticker": "crawlmd",
+   "ticker": "ncro",
    "chain": "solana",
-   "first_seen": "2026-10-18T16:35:41-04:00",
-   "score": 3.0,
+   "first_seen": "2026-10-18T17:42:31-04:00",
+   "score": 2.0,
    "signals": [
-    "ME floor change -44% (1h window, against)",
-    "sales spike 5/h vs 0.2/h base",
-    "sell-through 5%/h of supply on offer"
+    "sell-through 6%/h of supply on offer"
    ],
-   "note": "floor 0.3696 SOL, top offer 0.25, 5 sales/n/a buyers 1h, listings 94; magiceden; signals: ME floor change -44% (1h window, against); sales spike 5/h vs 0.2/h base; sell-through 5%/h of supply on offer. Research only, not a call.",
+   "note": "floor 0.3439 SOL, top offer 0.13, 3 sales/n/a buyers 1h, listings 45; magiceden; signals: sell-through 6%/h of supply on offer. Research only, not a call.",
    "venue": "magiceden"
   },
   {
-   "ticker": "hash-cats",
-   "chain": "robinhood",
-   "first_seen": "2026-10-18T16:35:41-04:00",
-   "score": 2.5,
-   "signals": [
-    "sales spike 8/h vs 1.6/h base",
-    "broad buying 8 wallets/8 sales"
-   ],
-   "note": "floor 0.01487 ETH, top offer n/a, 8 sales/8 buyers 1h, listings n/a; opensea; signals: sales spike 8/h vs 1.6/h base; broad buying 8 wallets/8 sales. Research only, not a call.",
-   "venue": "opensea"
-  },
-  {
-   "ticker": "mutant-ape-yacht-club",
-   "chain": "ethereum",
-   "first_seen": "2026-10-18T16:35:41-04:00",
-   "score": 2.5,
-   "signals": [
-    "sales spike 4/h vs 1.2/h base",
-    "broad buying 4 wallets/4 sales"
-   ],
-   "note": "floor 0.765 ETH, top offer n/a, 4 sales/4 buyers 1h, listings n/a; opensea; signals: sales spike 4/h vs 1.2/h base; broad buying 4 wallets/4 sales. Research only, not a call.",
-   "venue": "opensea"
-  },
-  {
-   "ticker": "crypto_coral_tribe",
+   "ticker": "otc_desks",
    "chain": "solana",
-   "first_seen": "2026-10-18T16:35:41-04:00",
+   "first_seen": "2026-10-18T14:41:07-04:00",
    "score": 2.0,
    "signals": [
-    "sales spike 5/h vs 0.4/h base"
+    "sell-through 10%/h of supply on offer"
    ],
-   "note": "floor 0.499 SOL, top offer 0.3701, 5 sales/n/a buyers 1h, listings 314; magiceden; signals: sales spike 5/h vs 0.4/h base. Research only, not a call.",
-   "venue": "magiceden"
-  },
-  {
-   "ticker": "xelementia",
-   "chain": "solana",
-   "first_seen": "2026-10-18T16:35:41-04:00",
-   "score": 2.0,
-   "signals": [
-    "sales spike 4/h vs 0.5/h base"
-   ],
-   "note": "floor 0.09673 SOL, top offer 0.08543, 4 sales/n/a buyers 1h, listings 258; magiceden; signals: sales spike 4/h vs 0.5/h base. Research only, not a call.",
+   "note": "floor 5.147 SOL, top offer 4.779, 3 sales/n/a buyers 1h, listings 27; magiceden; signals: sell-through 10%/h of supply on offer. Research only, not a call.",
    "venue": "magiceden"
   }
  ],
@@ -307,6 +343,23 @@
   {"t":"2026-10-18T16:35:41-04:00","ticker":"crypto_coral_tribe","chain":"solana","role":"radar","src":"magiceden","metrics":{"floor":0.499,"floor_symbol":"SOL","top_offer":0.370093,"sales_1h":5,"buyers_1h":null,"listings":314,"owners":3220,"sales_24h":9,"volume_1h":1.98875,"me_fp_pct_chg":-4.520726248496465}},
   {"t":"2026-10-18T16:35:41-04:00","ticker":"mudwater-packs","chain":"solana","role":"radar","src":"opensea","metrics":{"floor":0.3765,"floor_symbol":"SOL","top_offer":null,"sales_1h":44,"buyers_1h":15,"listings":null,"owners":1010,"sales_24h":2017,"volume_24h":32.967513}},
   {"t":"2026-10-18T16:35:41-04:00","ticker":"retardio_cousins","chain":"solana","role":"pass","src":"magiceden","metrics":{"floor":0.549,"floor_symbol":"SOL","top_offer":0.46981,"sales_1h":1,"buyers_1h":null,"listings":409,"owners":2426,"sales_24h":8,"volume_1h":0.5165,"me_fp_pct_chg":-6.822809799922003}},
-  {"t":"2026-10-18T16:35:41-04:00","ticker":"xelementia","chain":"solana","role":"radar","src":"magiceden","metrics":{"floor":0.09673,"floor_symbol":"SOL","top_offer":0.085435,"sales_1h":4,"buyers_1h":null,"listings":258,"owners":709,"sales_24h":11,"volume_1h":0.906015,"me_fp_pct_chg":-3.866030610216664}}
+  {"t":"2026-10-18T16:35:41-04:00","ticker":"xelementia","chain":"solana","role":"radar","src":"magiceden","metrics":{"floor":0.09673,"floor_symbol":"SOL","top_offer":0.085435,"sales_1h":4,"buyers_1h":null,"listings":258,"owners":709,"sales_24h":11,"volume_1h":0.906015,"me_fp_pct_chg":-3.866030610216664}},
+  {"t":"2026-10-18T17:42:31-04:00","ticker":"argonauts","chain":"ethereum","role":"ticket","src":"opensea","metrics":{"floor":0.729999,"floor_symbol":"ETH","top_offer":0.69,"sales_1h":5,"buyers_1h":4,"listings":null,"owners":2363,"sales_24h":54,"volume_24h":60.280296,"bid_units_10pct":12,"bidders_10pct":7,"offer_symbol":"WETH","volume_1h":3.918,"listings_10pct":13}},
+  {"t":"2026-10-18T17:42:31-04:00","ticker":"birds-marfa","chain":"ethereum","role":"pass","src":"opensea","metrics":{"floor":0.09499,"floor_symbol":"ETH","top_offer":null,"sales_1h":null,"buyers_1h":null,"listings":null,"owners":73,"sales_24h":1,"volume_24h":0.075087}},
+  {"t":"2026-10-18T17:42:31-04:00","ticker":"cambria-charters","chain":"ethereum","role":"pass","src":"opensea","metrics":{"floor":0.058,"floor_symbol":"ETH","top_offer":null,"sales_1h":null,"buyers_1h":null,"listings":null,"owners":1116,"sales_24h":63,"volume_24h":4.870688}},
+  {"t":"2026-10-18T17:42:31-04:00","ticker":"credits","chain":"ethereum","role":"pass","src":"opensea","metrics":{"floor":0.016242,"floor_symbol":"ETH","top_offer":null,"sales_1h":null,"buyers_1h":null,"listings":null,"owners":11941,"sales_24h":656,"volume_24h":14.266798}},
+  {"t":"2026-10-18T17:42:31-04:00","ticker":"milady","chain":"ethereum","role":"pass","src":"opensea","metrics":{"floor":0.729799,"floor_symbol":"ETH","top_offer":null,"sales_1h":null,"buyers_1h":null,"listings":null,"owners":5149,"sales_24h":21,"volume_24h":18.396}},
+  {"t":"2026-10-18T17:42:31-04:00","ticker":"pudgypenguins","chain":"ethereum","role":"pass","src":"opensea","metrics":{"floor":2.35,"floor_symbol":"ETH","top_offer":null,"sales_1h":null,"buyers_1h":null,"listings":null,"owners":5007,"sales_24h":24,"volume_24h":58.697955}},
+  {"t":"2026-10-18T17:42:31-04:00","ticker":"traceart","chain":"ethereum","role":"radar","src":"opensea","metrics":{"floor":0.008726,"floor_symbol":"ETH","top_offer":null,"sales_1h":36,"buyers_1h":21,"listings":null,"owners":1605,"sales_24h":134,"volume_24h":1.424607,"volume_1h":0.3072}},
+  {"t":"2026-10-18T17:42:31-04:00","ticker":"veefriends-series-2","chain":"ethereum","role":"radar","src":"opensea","metrics":{"floor":0.072,"floor_symbol":"ETH","top_offer":null,"sales_1h":3,"buyers_1h":3,"listings":null,"owners":19907,"sales_24h":6,"volume_24h":0.5102,"volume_1h":0.274}},
+  {"t":"2026-10-18T17:42:31-04:00","ticker":"courtyard-nft","chain":"polygon","role":"pass","src":"opensea","metrics":{"floor":5.75,"floor_symbol":"USDC","top_offer":null,"sales_1h":null,"buyers_1h":null,"listings":null,"owners":131987,"sales_24h":11004,"volume_24h":195.684171}},
+  {"t":"2026-10-18T17:42:31-04:00","ticker":"mindsdotgames","chain":"robinhood","role":"radar","src":"opensea","metrics":{"floor":0.0157,"floor_symbol":"ETH","top_offer":null,"sales_1h":3,"buyers_1h":2,"listings":null,"owners":1076,"sales_24h":85,"volume_24h":1.765398,"volume_1h":0.0994}},
+  {"t":"2026-10-18T17:42:31-04:00","ticker":"rhmachines","chain":"robinhood","role":"radar","src":"opensea","metrics":{"floor":0.016671,"floor_symbol":"ETH","top_offer":null,"sales_1h":3,"buyers_1h":3,"listings":null,"owners":1334,"sales_24h":19,"volume_24h":1.714826,"volume_1h":0.251}},
+  {"t":"2026-10-18T17:42:31-04:00","ticker":"enchanted_miner","chain":"solana","role":"radar","src":"magiceden","metrics":{"floor":0.05216,"floor_symbol":"SOL","top_offer":0.044288,"sales_1h":10,"buyers_1h":null,"listings":136,"owners":620,"volume_1h":0.55223,"me_fp_pct_chg":-11.788268222560461}},
+  {"t":"2026-10-18T17:42:31-04:00","ticker":"mudwater-cards","chain":"solana","role":"radar","src":"opensea","metrics":{"floor":0.024,"floor_symbol":"SOL","top_offer":null,"sales_1h":150,"buyers_1h":19,"listings":null,"owners":393,"sales_24h":1070,"volume_24h":6.44503,"sales_1h_capped":true}},
+  {"t":"2026-10-18T17:42:31-04:00","ticker":"mudwater-packs","chain":"solana","role":"radar","src":"opensea","metrics":{"floor":0.35,"floor_symbol":"SOL","top_offer":null,"sales_1h":22,"buyers_1h":15,"listings":null,"owners":1027,"sales_24h":2039,"volume_24h":33.317536}},
+  {"t":"2026-10-18T17:42:31-04:00","ticker":"ncro","chain":"solana","role":"radar","src":"magiceden","metrics":{"floor":0.3439,"floor_symbol":"SOL","top_offer":0.13,"sales_1h":3,"buyers_1h":null,"listings":45,"owners":182,"volume_1h":0.55125,"me_fp_pct_chg":-1.064441887226708}},
+  {"t":"2026-10-18T17:42:31-04:00","ticker":"otc_desks","chain":"solana","role":"radar","src":"magiceden","metrics":{"floor":5.1472,"floor_symbol":"SOL","top_offer":4.7785,"sales_1h":3,"buyers_1h":null,"listings":27,"owners":457,"sales_24h":11,"volume_1h":14.938,"me_fp_pct_chg":31.979487179487176}},
+  {"t":"2026-10-18T17:42:31-04:00","ticker":"retardio_cousins","chain":"solana","role":"pass","src":"magiceden","metrics":{"floor":0.549,"floor_symbol":"SOL","top_offer":null,"sales_1h":null,"buyers_1h":null,"listings":409}}
  ]
 }
