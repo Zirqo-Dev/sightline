@@ -45,7 +45,7 @@ function honestZeros(){
 }
 async function bootIntel(){
   try{
-    const res = await fetch("intel.json?ts=" + Date.now());
+    const res = await fetch((window.sightlineAsset ? window.sightlineAsset("intel.json") : "intel.json") + "?ts=" + Date.now());
     if(!res.ok) throw new Error("intel HTTP " + res.status);
     applyIntel(await res.json());
   }catch(e){

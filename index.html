@@ -1,66 +1,35 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sightline — NFT Finder Desk</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="app.css?v=sat4" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sightline · Research Desks</title>
+<link rel="stylesheet" href="dashboard/app.css">
 </head>
 <body>
-  <header>
-    <div class="logo">Sight<span>line</span></div>
-    <span class="tag">NFT FINDER DESK</span>
-    <span id="intelStamp" class="slug" style="max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-    <div class="grow"></div>
-    <span id="modeLabel"><span class="status-dot demo"></span>DEMO TAPE</span>
-    <input id="apiKey" type="password" placeholder="OpenSea API key (optional)" autocomplete="off" />
-    <button class="ghost" id="btnDemo">Demo</button>
-    <button id="btnLive">Connect live</button>
-  </header>
-  <main>
-    <aside class="rail"><h2>Scout bots</h2><div id="bots"></div></aside>
-    <section class="desk">
-      <div class="tabs">
-        <button class="on" id="tabRadar">Radar</button>
-        <button id="tabBlotter">Paper blotter</button>
-      </div>
-      <div id="radarWrap">
-        <h2>Watchlist</h2>
-        <div class="filters" id="filters"></div>
-        <table>
-          <thead><tr><th>Collection</th><th>Floor</th><th>24h</th><th>Vol 24h</th><th>Sales</th><th>Holders</th><th>Listed</th><th>X human</th><th>X farm</th><th>Score</th><th>Flags</th></tr></thead>
-          <tbody id="rows"></tbody>
-        </table>
-      </div>
-      <div id="blotterWrap">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-          <h2 style="margin:0">Paper blotter</h2>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button type="button" id="btnRefreshMarks" class="ghost" style="background:transparent;color:var(--text);border:1px solid var(--line);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:12px">Refresh marks</button>
-            <button type="button" id="btnClearBlotter" class="clear-btn">Clear blotter</button>
-          </div>
-        </div>
-        <div id="blotterSummary" class="blotter-summary"></div>
-        <p class="empty" id="blotterEmpty">No paper trades yet. Exit vs bid. Fees 2.5% each way.</p>
-        <table class="blotter" id="blotterTable" style="display:none">
-          <thead><tr><th>When</th><th>Name</th><th>Side</th><th>Qty</th><th>Entry</th><th>Mark</th><th>Gross</th><th>Net</th><th></th></tr></thead>
-          <tbody id="blotterRows"></tbody>
-        </table>
-      </div>
-    </section>
-    <aside class="intel"><h2>CIO tape</h2><div id="tape"></div><div id="detail"></div></aside>
-  </main>
-  <footer>Research desk only — no auto-buy. Last live tape is kept in this browser for 36h. Void ≠ fill.</footer>
-  <script src="extra.js?v=sat4"></script>
-  <script src="app.js?v=sat4"></script>
-  <script src="blotter-pnl.js?v=sat4"></script>
-  <script src="scouts-live.js?v=sat4"></script>
-  <script src="watchlist-boot.js?v=sat4"></script>
-  <script src="intel-boot.js?v=sat4"></script>
-  <script src="desk-guards.js?v=sat4"></script>
-  <script src="desk-ops.js?v=sat4"></script>
+<div class="banner">PAPER TRADING / RESEARCH ONLY · no real positions · not financial advice</div>
+<header class="top">
+  <a class="logo" href="#/">Sight<span>line</span></a>
+  <nav id="nav"></nav>
+  <span id="stamp" class="muted small"></span>
+</header>
+<main id="view"><div class="loading">Loading desks…</div></main>
+<footer class="foot">Built from <code>desks.json</code> and each desk's <code>panels.json</code>. Paper books, run logs and briefs, read from this site.</footer>
+<script src="dashboard/core.js"></script>
+<!-- panels:begin -->
+<script src="dashboard/panels/briefs.js"></script>
+<script src="dashboard/panels/chart.js"></script>
+<script src="dashboard/panels/closed.js"></script>
+<script src="dashboard/panels/coming-soon.js"></script>
+<script src="dashboard/panels/embed.js"></script>
+<script src="dashboard/panels/headline.js"></script>
+<script src="dashboard/panels/notes.js"></script>
+<script src="dashboard/panels/rules.js"></script>
+<script src="dashboard/panels/scoreboard.js"></script>
+<script src="dashboard/panels/stat-cards.js"></script>
+<script src="dashboard/panels/table.js"></script>
+<script src="dashboard/panels/tickets.js"></script>
+<!-- panels:end -->
+<script src="dashboard/pages.js"></script>
 </body>
 </html>

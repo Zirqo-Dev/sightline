@@ -29,7 +29,7 @@ async function applyWatchlist(data){
 }
 async function bootWatchlist(){
   try{
-    const res = await fetch("watchlist.json?ts=" + Date.now());
+    const res = await fetch((window.sightlineAsset ? window.sightlineAsset("watchlist.json") : "watchlist.json") + "?ts=" + Date.now());
     if(!res.ok) throw new Error("watchlist HTTP " + res.status);
     await applyWatchlist(await res.json());
   }catch(e){
