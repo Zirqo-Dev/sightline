@@ -65,7 +65,7 @@
     let best = null;
     for (const d of desks) {
       const log = d.log ? await S.get(d.log) : null;
-      const pulse = await S.get(d.dir + "pulse.json");
+      const pulse = await S.get(S.pulsePath(d));
       const at = S.freshestAt(log, pulse);
       const ms = at ? new Date(at).getTime() : NaN;
       if (isFinite(ms) && (best == null || ms > new Date(best).getTime())) best = at;
@@ -98,7 +98,7 @@
       const books = await S.bookFiles(d);
       allBooks = allBooks.concat(books);
       const log = d.log ? await S.get(d.log) : null;
-      const pulse = await S.get(d.dir + "pulse.json");
+      const pulse = await S.get(S.pulsePath(d));
       const b = (await S.briefsOf(d))[0];
       if (b) briefs.push({ b, d });
       books.forEach(bk => (bk.json.rules || []).forEach(r => rules.push({ ...r, desk: d.id, book: bk.json.book })));
@@ -142,7 +142,7 @@
     if (!d) { document.title = "Sightline"; view.innerHTML = `<p class="muted">Unknown desk.</p>`; return; }
     document.title = "Sightline · " + d.name;
     const log = d.log ? await S.get(d.log) : null;
-    const pulse = await S.get(d.dir + "pulse.json");
+    const pulse = await S.get(S.pulsePath(d));
     const got = await S.panelsFor(d);
     const { out: panels, dropped } = dedupe(got.panels);
     const html = await Promise.all(panels.map(p => S.renderPanel(d, p)));

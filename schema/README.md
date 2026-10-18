@@ -9,7 +9,7 @@ Each desk has a folder (e.g. `solada/`, `nft/`), listed in `/desks.json`:
 - `<desk>/paper.json`: paper book (`schema/paper-book.schema.json`). Sub-books live in a subfolder, e.g. `solada/pumpfun/paper.json`.
 - `<desk>/log.json`: run log (`schema/run-log.schema.json`)
 - `<desk>/briefs/YYYY-MM-DD.json`: one daily brief per day (`schema/brief.schema.json`)
-- `<desk>/pulse.json`: optional hourly pulse (`schema/pulse.schema.json`). Older points may be filed as `<desk>/archive/pulse-YYYY-MM.json` in the same shape. A missing pulse is normal.
+- `<desk>/pulse.json` (optional): hourly pulse, listed as `pulse` on the desk in `desks.json` when set (otherwise the dashboard reads `<desk>/pulse.json`). `schema_version` (= 2), `desk`, `updated_at`, `window_days`, `points[]` (`t`, `ticker`, `asset_id`, `metrics{}`), `radar[]` (`ticker`, `chain`, `asset_id`, `first_seen`, `score`, `signals[]`, `note`). Points older than `window_days` move to `<desk>/archive/pulse-YYYY-MM.json`. Schema: `schema/pulse.schema.json`. CI validates the file when it is present. A missing pulse is normal.
 A new file or desk must be added to `desks.json`; CI validates every file listed there, plus a pulse file when one is present.
 
 Each desk may also have `<desk>/panels.json`, which chooses the panels on that desk's page. The panel format, built-in types, and how to add a component are in [dashboard/PLUGINS.md](../dashboard/PLUGINS.md).

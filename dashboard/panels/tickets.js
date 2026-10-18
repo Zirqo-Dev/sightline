@@ -15,7 +15,7 @@ S.ticketCard = function (t, kd, extra = "", pulse) {
 };
 S.register("tickets", { async render({ desk, data }) {
   const books = (Array.isArray(data) ? data : [{ json: data }]).filter(b => b && b.json);
-  const pulse = desk ? await S.get((desk.dir || (desk.id ? desk.id + "/" : "")) + "pulse.json") : null;
+  const pulse = desk ? await S.get(S.pulsePath(desk)) : null;
   const all = [];
   books.forEach(b => (b.json.open || []).forEach(t => all.push({ t, b, kd: S.killDistance(t, pulse) })));
   if (!all.length) return `<p class="muted">No open paper tickets.</p>`;

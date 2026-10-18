@@ -36,7 +36,7 @@ One file each in `dashboard/panels/`. Each calls `S.register`.
 | Type | What it draws |
 |---|---|
 | `headline` | Latest run headline and time. |
-| `radar` | Early runners from `<desk>/pulse.json`, ranked by score. Quiet line when the file is missing. |
+| `radar` | Early runners from the desk pulse file, ranked by score. Quiet line when the file is missing. |
 | `scoreboard` | Open, closed, win rate, and realized P&L **per unit**, plus one row per book. |
 | `tickets` | Open tickets, closest to the kill line first. |
 | `closed` | Closed tickets with percent and P&L in that ticket's unit. |
@@ -53,11 +53,11 @@ One file each in `dashboard/panels/`. Each calls `S.register`.
 
 Realized P&L is summed **inside one unit only**. ADA, ADA-equivalent and USD each get their own total. The dashboard never adds those together.
 
-Distance to kill uses numeric fields on `kill_line` when they match a current reading. A field named `holders_below` (also `_under`, `_lt`, and `_above` / `_over` / `_gt`) is compared with the same name on the latest mark, falling back to entry. When `<desk>/pulse.json` has points for that ticker, the latest pulse metrics override those readings, and the open-ticket sparkline uses the pulse series. The closest line is the one with the least room left. If no numeric field matches, the text is parsed for comparisons such as `floor < 0.70`, `holders < 97,082` or `mcap < 450k`.
+Distance to kill uses numeric fields on `kill_line` when they match a current reading. A field named `holders_below` (also `_under`, `_lt`, and `_above` / `_over` / `_gt`) is compared with the same name on the latest mark, falling back to entry. When the desk pulse file has points for that ticker, the latest pulse metrics override those readings, and the open-ticket sparkline uses the pulse series. The closest line is the one with the least room left. If no numeric field matches, the text is parsed for comparisons such as `floor < 0.70`, `holders < 97,082` or `mcap < 450k`.
 
 ## Pulse, data age, and Run now
 
-Bots may write `<desk>/pulse.json` (schema `schema/pulse.schema.json`): an hourly window of `{t, ticker, metrics}` points plus a `radar` list. Older months can sit in `<desk>/archive/pulse-YYYY-MM.json` with the same shape. Both are optional. A missing file does not fail the build or the page.
+Bots may write the pulse file named by `pulse` in `desks.json`, or `<desk>/pulse.json` when that field is absent (schema `schema/pulse.schema.json`): an hourly window of `{t, ticker, metrics}` points plus a `radar` list. A desk page can also show that file with the `table` panel (`path` `latest` or `radar`). Older months can sit in `<desk>/archive/pulse-YYYY-MM.json` with the same shape. Both are optional. A missing file does not fail the build or the page.
 
 The header and each desk show `updated 12m ago` from the newer of `log.asof` and `pulse.updated_at`. It turns amber after 90 minutes and red after 6 hours, and the browser updates the wording on its own.
 

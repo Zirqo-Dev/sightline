@@ -96,6 +96,19 @@ window.S = (function () {
     if (String(p).startsWith("/")) return String(p).slice(1);
     return (dir || "") + p;
   }
+  /* desks.json `pulse` wins. Otherwise the file is <desk>/pulse.json. */
+  function pulsePath(desk) {
+    if (!desk) return "pulse.json";
+    const listed = desk.pulse != null ? String(desk.pulse).trim() : "";
+    if (listed) return listed.replace(/^\//, "");
+    return (desk.dir || (desk.id ? desk.id + "/" : "")) + "pulse.json";
+  }
+  function isPulseRef(desk, p) {
+    const s = String(p == null ? "" : p).replace(/^\//, "");
+    if (s === "pulse.json") return true;
+    const listed = pulsePath(desk);
+    return s === listed || s === listed.split("/").slice(1).join("/");
+  }
 
   const registry = {};
   function register(type, def) { registry[type] = def; }
@@ -106,7 +119,7 @@ window.S = (function () {
     const out = [];
     for (const p of list) {
       if (String(p).endsWith("/")) { out.push({ path: p, json: null, dir: true }); continue; }
-      const j = await get(join(desk.dir, p));
+      const j = await get(isPulseRef(desk, p) ? pulsePath(desk) : join(desk.dir, p));
       out.push({ path: p, json: pick(j, spec.path) });
     }
     return Array.isArray(spec.data) ? out : out[0].json;
@@ -359,7 +372,7 @@ window.S = (function () {
   async function allOpen(dlist) {
     const out = [];
     for (const d of dlist) {
-      const pulse = await get(d.dir + "pulse.json");
+      const pulse = await get(pulsePath(d));
       for (const b of await bookFiles(d)) {
         for (const t of b.json.open || []) out.push({ desk: d, book: b, t, pulse, kd: killDistance(t, pulse) });
       }
@@ -505,7 +518,7 @@ window.S = (function () {
   return {
     get, pick, esc, rich, walletTag, walletLabel, walletHue, fmt, pct, pnlNum, pnlClass, when, join, register, registry,
     renderPanel, desks, panelsFor, bookFiles, briefsOf, score, avgRet, pnlCards,
-    metricCards, unitNote, killDistance, allOpen, pointsFor,
+    metricCards, unitNote, killDistance, allOpen, pointsFor, pulsePath,
     ageInfo, freshestAt, ageTag, ago, runButton,
     loadIcons, coinIcon, nftIcon, chainIcon, assetIcon, mono, unitTag, spark, seriesOf, pnlBar, scoreBar, killMeter, pill
   };

@@ -189,6 +189,27 @@ const desksIdx = load("desks.json");
 const byId = Object.fromEntries(desksIdx.desks.map(d => [d.id, d]));
 assert(byId.solada.run.url.endsWith("/run-solada.yml"), "solada run url");
 assert(byId.nft.run.url.endsWith("/run-nft.yml"), "nft run url");
+assert(S.pulsePath({ id: "solada", dir: "solada/", pulse: "solada/pulse.json" }) === "solada/pulse.json", "pulse path comes from desks.json");
+assert(S.pulsePath({ id: "nft", dir: "nft/" }) === "nft/pulse.json", "missing pulse field falls back to <desk>/pulse.json");
+assert(byId.solada.pulse === "solada/pulse.json", "solada lists its pulse file");
+assert(byId.nft.pulse === "nft/pulse.json", "nft lists its pulse file");
+assert(S.pulsePath({ id: "nft", dir: "nft/", pulse: byId.nft.pulse }) === "nft/pulse.json", "nft pulse path is kept");
+const solPulse = load("solada/pulse.json");
+const solRadar = await S.registry.radar.render({ desk: { id: "solada", dir: "solada/", pulse: byId.solada.pulse }, data: solPulse, opt: {}, spec: {} });
+assert(!/>example</.test(solRadar), "real solada pulse is not labelled example");
+assert(Array.isArray(solPulse.radar) && solPulse.radar.length > 0 && solRadar.includes(solPulse.radar[0].ticker), "solada radar renders a real name");
+const nftPulse = load("nft/pulse.json");
+const nftRadarTable = S.registry.table.render({
+  data: nftPulse.radar,
+  opt: { columns: ["ticker", "chain", "score", "first_seen", "note"], labels: { ticker: "Collection", first_seen: "First seen" }, limit: 10 }
+});
+assert(nftRadarTable.includes("tbl"), "nft radar table renders");
+if (nftPulse.radar && nftPulse.radar[0]) assert(nftRadarTable.includes(nftPulse.radar[0].ticker), "nft radar table shows a real name");
+const nftLatest = S.registry.table.render({
+  data: nftPulse.latest,
+  opt: { columns: ["ticker", "chain", "role", "floor", "unit"], badge: "role" }
+});
+assert(nftLatest.includes("tbl") && nftPulse.latest && nftLatest.includes(nftPulse.latest[0].ticker), "nft tracked-names table renders");
 for (const name of ["run-solada.yml", "run-nft.yml"]) {
   const yml = fs.readFileSync(path.join(root, ".github/workflows", name), "utf8");
   assert(yml.includes("workflow_dispatch"), name + " is manual");

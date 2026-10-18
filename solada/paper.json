@@ -55,7 +55,20 @@
     "o",
     "daily-2026-10-17"
    ],
-   "marks": []
+   "marks": [
+    {
+     "at": "2026-10-18T12:51:00-04:00",
+     "mcap_ada": 373864,
+     "price_ada": 0.000373864,
+     "holders": 279,
+     "onchain_holders_ex_pool": 271,
+     "ada_side": 30795,
+     "pct_vs_entry_mcap": -8.0,
+     "flow": "GeckoTerminal h1 6/1 buys/sells (+6.8%), h6 37/14 (-10.2%), h24 194/103 (-19.5%); last full hour (11 AM) 5,879 ADA vs 3,100 avg prior 6h",
+     "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 372,139",
+     "note": "Above every kill line (373.9k vs 340k mcap, 271 vs 250 on-chain holders, 30,795 vs 28,000 ADA side). Price -8.0% vs entry, but holders are up (Solada 274 -> 279), so rule o's early exit isn't triggered. On-chain count is now stake-grouped (271); the entry's 263 used a different grouping. h6 -10.2% fails rule o's flow test by a hair, so buys > sells doesn't count this hour."
+    }
+   ]
   }
  ],
  "closed": [
