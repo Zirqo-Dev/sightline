@@ -121,6 +121,23 @@
           "kill_line_hit": false,
           "note": "Post-graduation lines clear: pool ADA side ~12.3k vs 8k (11:30 pulse read; GeckoTerminal shows ~$5.6k reserve on the Minswap pool), holders 72 on-chain vs 55, mcap 70.9k vs 31.4k. No swarm key holding. Keep; graduation LP stays unburned in Solada's wallet.",
           "source": "Solada /api/market quote, Blockfrost asset holders, pulse 11:30"
+        },
+        {
+          "at": "2026-10-19T12:40:00-04:00",
+          "mcap_ada": 38873,
+          "graduated": "minswap-v2",
+          "pool_ada": 9164,
+          "holders_onchain": 68,
+          "holders_solada": 68,
+          "pct_vs_entry_mcap": -13.4,
+          "result": {
+            "pnl": -13.4,
+            "pct": -13.4,
+            "unit": "ADA"
+          },
+          "kill_line_hit": false,
+          "note": "Post-graduation dump: pool mcap 70.7k -> 38.9k ADA in about an hour (GT h1 -36.6%, m30 -46%), pool ADA side 12,322 -> 9,164. Kill lines still clear (pool 9,164 vs 8,000, holders 68 vs 55, mcap 38,873 vs 31,400). On-chain holders 72 -> 68 is the first drop with price below entry; rule o closes it if the next mark drops again.",
+          "source": "hourly pulse: Blockfrost Minswap pool UTxO reserves, Koios asset_addresses (stake-grouped, ex pool), GeckoTerminal pool"
         }
       ],
       "last_mark": {
