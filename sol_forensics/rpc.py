@@ -128,7 +128,8 @@ class RpcClient:
             except urllib.error.HTTPError as e:
                 last = f"HTTP {e.code}"
                 if e.code == 429 or e.code >= 500:
-                    self._backoff(attempt)
+                    self._backoff(attempt, _retry_after(e))
+                    _drain(e)
                     continue
                 raise RpcMethodError(e.code, last) from None
             except (urllib.error.URLError, TimeoutError, OSError) as e:
@@ -171,12 +172,40 @@ class RpcClient:
             self._sleep(wait)
         self._next = self._now() + self.min_interval
 
-    def _backoff(self, attempt):
-        self._sleep(min(2**attempt, 20))
+    def _backoff(self, attempt, retry_after=None):
+        delay = min(2**attempt, 20)
+        if retry_after:
+            # Honor Retry-After, but don't let a hostile value stall the run.
+            delay = max(delay, min(float(retry_after), 30))
+        self._sleep(delay)
         # Stay slower after a 429 or 5xx. Public mainnet keeps rejecting a
         # client that returns to 8 requests/second. Cap at one request per 5s.
         # The configured max_rps is still a ceiling, never a floor.
         self.min_interval = min(max(self.min_interval * 2, 1.0), 5.0)
+
+
+def _retry_after(exc):
+    headers = getattr(exc, "headers", None)
+    if not headers:
+        return None
+    raw = None
+    try:
+        raw = headers.get("Retry-After")
+    except Exception:
+        return None
+    if not raw:
+        return None
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _drain(exc):
+    try:
+        exc.read(256)
+    except Exception:
+        return
 
 
 def _redact_query(text, mark):

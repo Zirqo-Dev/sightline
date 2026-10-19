@@ -67,6 +67,25 @@ class RpcTests(unittest.TestCase):
         self.assertEqual(rpc.calls["getTokenSupply"], 3)
         self.assertGreaterEqual(rpc.min_interval, 1.0)
 
+    def test_retry_after_header_sets_the_wait(self):
+        calls = {"n": 0}
+
+        def transport(_body):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise urllib.error.HTTPError(
+                    PUBLIC_RPC_URL,
+                    429,
+                    "rate",
+                    {"Retry-After": "12"},
+                    io.BytesIO(b'{"error":"slow"}'),
+                )
+            return json.dumps({"jsonrpc": "2.0", "id": 1, "result": {"ok": True}}).encode()
+
+        rpc = client(transport)
+        self.assertEqual(rpc.call("getTokenLargestAccounts", ["mint"]), {"ok": True})
+        self.assertEqual(rpc.clock.slept, [12])
+
     def test_version_error_is_not_retried(self):
         calls = {"n": 0}
 
