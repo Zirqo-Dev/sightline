@@ -3,13 +3,14 @@
 import io
 import json
 import unittest
+import urllib.error
 from contextlib import redirect_stderr, redirect_stdout
 
 from sol_forensics.rpc import RpcClient
-from sol_forensics.smoke_rpc import QBITS_MINT, redact, smoke
+from sol_forensics.smoke_rpc import QBITS_MINT, endpoint_shape, redact, smoke
 
 
-SECRET = "https://rpc.example/helius?api-key=supersecret"
+SECRET = "https://mainnet.helius-rpc.com/?api-key=supersecret"
 
 
 def scripted(payloads):
@@ -56,6 +57,8 @@ class SmokeTests(unittest.TestCase):
         self.assertEqual(code, 0)
         text = out.getvalue() + err.getvalue()
         self.assertIn("smoke: pass", text)
+        self.assertIn("host=mainnet.helius-rpc.com", text)
+        self.assertIn("api_key_param=yes api_key_len=11", text)
         self.assertIn("slot: 458581711", text)
         self.assertIn("qbits_supply_amount: 1000000000000000", text)
         self.assertIn("qbits_supply_ui: 1000000000", text)
@@ -64,6 +67,32 @@ class SmokeTests(unittest.TestCase):
         self.assertEqual(transport.calls[0]["method"], "getSlot")
         self.assertEqual(transport.calls[1]["method"], "getTokenSupply")
         self.assertEqual(transport.calls[1]["params"][0], QBITS_MINT)
+
+    def test_http_401_includes_the_body_and_hides_the_url(self):
+        def transport(_body):
+            raise urllib.error.HTTPError(
+                SECRET,
+                401,
+                "Unauthorized",
+                hdrs=None,
+                fp=io.BytesIO(b'{"error":"invalid api key","url":"' + SECRET.encode() + b'"}'),
+            )
+
+        err = io.StringIO()
+        out = io.StringIO()
+        with redirect_stderr(err), redirect_stdout(out):
+            code = smoke({"SOLANA_RPC_URL": '"' + SECRET + '"'}, transport)
+        self.assertEqual(code, 1)
+        text = out.getvalue() + err.getvalue()
+        self.assertIn("HTTP 401", text)
+        self.assertIn("invalid api key", text)
+        self.assertNotIn("supersecret", text)
+        self.assertIn("api_key_len=11", text)
+
+    def test_secure_host_is_not_printed(self):
+        shape = endpoint_shape("https://abc-456-fast-mainnet.helius-rpc.com/path")
+        self.assertIn("host=*.helius-rpc.com", shape)
+        self.assertNotIn("abc-456", shape)
 
     def test_rpc_error_is_redacted(self):
         def transport(_body):

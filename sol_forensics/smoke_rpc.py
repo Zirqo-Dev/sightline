@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 import os
 import sys
+import urllib.error
+import urllib.parse
 import urllib.request
 
 QBITS_MINT = "Ceuu7uQHwhtHuMhPWrWL9dgri3FaGJZFkTy6FoDow7NA"
@@ -43,6 +45,34 @@ def _redact_query(text, mark):
     return "".join(out)
 
 
+def endpoint_shape(url):
+    """Facts about the endpoint that do not include the key or the raw URL."""
+    try:
+        parts = urllib.parse.urlsplit(url)
+    except ValueError:
+        return "scheme=no host=unparsed api_key_param=no"
+    host = (parts.hostname or "").lower()
+    known = host in {"mainnet.helius-rpc.com", "beta.helius-rpc.com", "devnet.helius-rpc.com"}
+    if known:
+        host_label = host
+    elif host.endswith(".helius-rpc.com"):
+        host_label = "*.helius-rpc.com"
+    elif host:
+        host_label = "other"
+    else:
+        host_label = "missing"
+    query = urllib.parse.parse_qs(parts.query)
+    key = (query.get("api-key") or query.get("apikey") or [""])[0]
+    return (
+        f"scheme={parts.scheme or 'missing'} host={host_label} "
+        f"api_key_param={'yes' if key else 'no'} api_key_len={len(key)}"
+    )
+
+
+def normalize_url(url):
+    return str(url or "").strip().strip('"').strip("'")
+
+
 def rpc_call(url, method, params, transport=None):
     body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
     try:
@@ -55,6 +85,13 @@ def rpc_call(url, method, params, transport=None):
             with urllib.request.urlopen(req, timeout=60) as resp:
                 raw = resp.read()
         data = json.loads(raw.decode() if isinstance(raw, (bytes, bytearray)) else raw)
+    except urllib.error.HTTPError as exc:
+        detail = ""
+        try:
+            detail = exc.read(300).decode("utf-8", "replace")
+        except Exception:
+            detail = ""
+        raise RuntimeError(redact(f"HTTP {exc.code} {detail}".strip(), url)) from None
     except Exception as exc:
         raise RuntimeError(redact(exc, url)) from None
     if not isinstance(data, dict):
@@ -70,10 +107,11 @@ def rpc_call(url, method, params, transport=None):
 def smoke(env=None, transport=None):
     """Return 0 after printing the slot and the QBITS supply. Never print the URL."""
     env = os.environ if env is None else env
-    url = str(env.get("SOLANA_RPC_URL") or "").strip()
+    url = normalize_url(env.get("SOLANA_RPC_URL") or "")
     if not url:
         print("SOLANA_RPC_URL secret is empty", file=sys.stderr)
         return 1
+    print("smoke: " + endpoint_shape(url))
     try:
         slot = rpc_call(url, "getSlot", [{"commitment": "confirmed"}], transport)
         supply = rpc_call(
