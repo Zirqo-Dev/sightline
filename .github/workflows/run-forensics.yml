@@ -67,7 +67,9 @@ jobs:
         env:
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
         run: |
-          bash scripts/privacy-guard.sh
+          # Pass the forensics tree so a brand-new report is scanned before git add.
+          # With no arguments the guard only sees tracked files.
+          bash scripts/privacy-guard.sh $(find solada/forensics -type f | sort)
           python3 scripts/validate-desks.py
 
       - name: Commit reports

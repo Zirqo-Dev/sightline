@@ -1,0 +1,1726 @@
+{
+  "tool": {
+    "name": "sol_forensics",
+    "version": "0.1"
+  },
+  "experimental": true,
+  "disclaimer": "Experimental research. Flags are uncalibrated hypotheses, not trading signals. No trading, no signing, no keys.",
+  "mint": "9mBi6hL2omjfeQ5JiNdLDf7zEAmXVuSBsSU3kNm9pump",
+  "symbol": "Echo",
+  "symbol_source": "dexscreener",
+  "run_at": "2026-10-19T03:47:45Z",
+  "run_at_unix": 1792381665,
+  "creation_slot": 458670095,
+  "creation_time": 1792377565,
+  "creation_time_iso": "2026-10-19T02:39:25Z",
+  "dev_wallet": "5Z3ctYozREg7vWvoR6NLCkkoxe7NUz96thonupPv9BNm",
+  "dev_pct_supply": 0.181,
+  "window": {
+    "buys": 30,
+    "seconds": 30,
+    "hops": 3,
+    "sig_pages": 50,
+    "wallet_pages": 5,
+    "top_buyers": 100,
+    "txs_scanned": 233,
+    "buy_txs": 30,
+    "skipped_owners": [
+      "74smYsHGfSp4wQRLj1UEWdEEZwhqVehKk77Y5XisW71x",
+      "9mBi6hL2omjfeQ5JiNdLDf7zEAmXVuSBsSU3kNm9pump",
+      "A8V628KQs1tXWfg81U7b8HoVYXxUcJFFnbYVqDXv5Rh1",
+      "FGKFXizYUsptHSozKx7v6ntRmpeZqziXnqV2V2qpAXef"
+    ]
+  },
+  "buyers": [
+    {
+      "wallet": "CgkeAmWEunFmhZyGXRii5fAikyWcnxvcw7jKVKTAYpZZ",
+      "slot": 458670095,
+      "slot_offset": 0,
+      "block_time": 1792377565,
+      "amount_raw": "266352240248852",
+      "amount_slot0_raw": "266352240248852",
+      "signature": "4FM8noW4NwtCSDZmfZ2SRgno6vQWMHsAkcmSd1a9bzx3zM23sgbS54ZcjLpJj88umz1vdKRATHwn7LkxUvS4CYBa",
+      "fee_payer": "CgkeAmWEunFmhZyGXRii5fAikyWcnxvcw7jKVKTAYpZZ",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 27.7317,
+      "pct_supply_slot0": 27.7317,
+      "analysed": true,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
+      "funding": {
+        "status": "traced",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": 136757,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "CgkeAmWEunFmhZyGXRii5fAikyWcnxvcw7jKVKTAYpZZ",
+            "funder": "ASTyfSima4LLAdDgoFGkgqoKowG1LZFDr9fAQrg7iaJZ",
+            "asset": "SOL",
+            "amount_raw": "39999963000",
+            "kind": "system.transfer",
+            "funded_at": 1792240808,
+            "signature": "2x8erLMWer47g6TkSzQUmXvTVvrUPExQGuRqsSosPoG5B7VV5nKSksTmVpV3hcXQnqtKaTXWRz1KWQuKNnVej4RK",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "ASTyfSima4LLAdDgoFGkgqoKowG1LZFDr9fAQrg7iaJZ",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "4yFAz7dp5WwuZs3vbWKedbRiUmSFxTVGCdsLAxfEQrG3",
+      "slot": 458670095,
+      "slot_offset": 0,
+      "block_time": 1792377565,
+      "amount_raw": "41293971422107",
+      "amount_slot0_raw": "41293971422107",
+      "signature": "5T88Xbeq147teUvjaH4qugUEc4shPHRUaeRsCuf9SH6EroMFoTonhk5HYhFjMyfAct3WT5Cj5DVAJvH8sXcH3HvM",
+      "fee_payer": "4yFAz7dp5WwuZs3vbWKedbRiUmSFxTVGCdsLAxfEQrG3",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 4.2994,
+      "pct_supply_slot0": 4.2994,
+      "analysed": true,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
+      "funding": {
+        "status": "unresolved_busy",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": null,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "4yFAz7dp5WwuZs3vbWKedbRiUmSFxTVGCdsLAxfEQrG3",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "jerkk3aAxLF2B6KGZFyksSywZ2DZ5k8nKpR6Hsk8Q4U",
+      "slot": 458670095,
+      "slot_offset": 0,
+      "block_time": 1792377565,
+      "amount_raw": "10599389699602",
+      "amount_slot0_raw": "10599389699602",
+      "signature": "5BdHZHqqMwqXuRNMCAki1KTMXXsmRtHsoD6YhTVa12RF6PjwqV4tPFYhxBxX7EBTkWfC9QPJfp84kHhjp1W8y2cn",
+      "fee_payer": "jerkk3aAxLF2B6KGZFyksSywZ2DZ5k8nKpR6Hsk8Q4U",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 1.1036,
+      "pct_supply_slot0": 1.1036,
+      "analysed": true,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
+      "funding": {
+        "status": "traced",
+        "fresh": true,
+        "wallet_age_at_buy_seconds": 18778,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "jerkk3aAxLF2B6KGZFyksSywZ2DZ5k8nKpR6Hsk8Q4U",
+            "funder": "8UqCWe6yQtew1RaZEtVn2vWhfCdvSDR7g8AQLBuBEGtb",
+            "asset": "SOL",
+            "amount_raw": "3000000000",
+            "kind": "system.transfer",
+            "funded_at": 1792358787,
+            "signature": "3xkm16PcyJsjhQ2Qagigh1u5TaK4k1Gs73H9DSvLisNU4wrTmuRUVr9CRkrF8MS4c9m6KaJd2aNEaixyXRo595FD",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "8UqCWe6yQtew1RaZEtVn2vWhfCdvSDR7g8AQLBuBEGtb",
+            "funder": "GNpPkZVr9MRXCdsrMh1ci2v5fMMu3AQA2Yy7WHMeMsjn",
+            "asset": "SOL",
+            "amount_raw": "211609910075",
+            "kind": "system.transfer",
+            "funded_at": 1791930892,
+            "signature": "5N6EFmqwX7LsDJMbUGbC6LAJ7FHEKvUXYGvBiFJaTaUXeMDAeZbXG62hbMWFbfnmvE11rMj25cZCPwA7j2XW3TFR",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 3,
+            "wallet": "GNpPkZVr9MRXCdsrMh1ci2v5fMMu3AQA2Yy7WHMeMsjn",
+            "funder": "2ST51jaJzxMBtpi2VkJ9WQhBWo91PwW1D1kWiWekf6fG",
+            "asset": "SOL",
+            "amount_raw": "240916971421",
+            "kind": "system.transfer",
+            "funded_at": 1791921987,
+            "signature": "5tSrEytZd9a5fjq9hJorWzvx44nnHNTqyA2h4sfLZFNupPM9aLtYfw4feryKVhXSKeJTdcQNMbL2Sv2beYs3cvxA",
+            "label": null,
+            "status": "traced"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "5Z3ctYozREg7vWvoR6NLCkkoxe7NUz96thonupPv9BNm",
+      "slot": 458670095,
+      "slot_offset": 0,
+      "block_time": 1792377565,
+      "amount_raw": "1738041714368",
+      "amount_slot0_raw": "1738041714368",
+      "signature": "2EyezkjnGT7iMufYECUAVpHecZePz5j5G8Cg7x5B7T3EGe9tR1iWuqoMLbXt8HpNyYMLEZWF1bEMJhEoxBcCEU3n",
+      "fee_payer": "5Z3ctYozREg7vWvoR6NLCkkoxe7NUz96thonupPv9BNm",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 0.181,
+      "pct_supply_slot0": 0.181,
+      "analysed": true,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
+      "funding": {
+        "status": "traced",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": 2081900,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "5Z3ctYozREg7vWvoR6NLCkkoxe7NUz96thonupPv9BNm",
+            "funder": "J8Z5G6XvxGNns7BugPGMVw36fUA7vSGLg9Qz5ma7mPoh",
+            "asset": "SOL",
+            "amount_raw": "50000000",
+            "kind": "system.transfer",
+            "funded_at": 1790295665,
+            "signature": "5EWpv6kXeExyMb1qpwjiRduvCsKcS2szc6y1SaFkPqNLF3wzGxdYCMr45BGjzTNeH8Z4gMbcjvpgd5C3jin6D7tM",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "J8Z5G6XvxGNns7BugPGMVw36fUA7vSGLg9Qz5ma7mPoh",
+            "funder": "Gn8dGJNxEQwU9GSGYH1PpHtarFfJDx5nTF7M5CdcHU9y",
+            "asset": "SOL",
+            "amount_raw": "750000000",
+            "kind": "system.transfer",
+            "funded_at": 1661844523,
+            "signature": "X6wHgRkhQe8Xg9f5ApZiAk6AEdVztCJaw8gkvP45WMmFLTTgxL1B9fyjGHU24Na7ttnAkEeEFvkr2iDgLVi5BMZ",
+            "label": null,
+            "status": "old_wallet"
+          },
+          {
+            "hop": 3,
+            "wallet": "Gn8dGJNxEQwU9GSGYH1PpHtarFfJDx5nTF7M5CdcHU9y",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "BVsFtQYSgTu9ZibF9Mrdt9F7TRooLt4aiT15rN8c6a79",
+      "slot": 458670095,
+      "slot_offset": 0,
+      "block_time": 1792377565,
+      "amount_raw": "1243470569145",
+      "amount_slot0_raw": "1243470569145",
+      "signature": "53mgodKiASLg3BB43hNCdNo7V5cYjQZtGrarHaYA845jG8pWn3iHAABLDRvLoaZfjJpD3BSXfs8P8su6YfSkb49e",
+      "fee_payer": "BVsFtQYSgTu9ZibF9Mrdt9F7TRooLt4aiT15rN8c6a79",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 0.1295,
+      "pct_supply_slot0": 0.1295,
+      "analysed": true,
+      "still_holding_raw": "310867642287",
+      "still_holding_pct": 0.0324,
+      "funding": {
+        "status": "traced",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": 450832,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "BVsFtQYSgTu9ZibF9Mrdt9F7TRooLt4aiT15rN8c6a79",
+            "funder": "5m8TYQjpkqAoN7UgefXT4Hmie3bZejQSwWUzurVGtfLX",
+            "asset": "SOL",
+            "amount_raw": "906769090",
+            "kind": "system.transfer",
+            "funded_at": 1791926733,
+            "signature": "3eF496zAjFB4EdozqLDVcmnRmUwsBGDFng3u63dozJ2NHPi2Ke2EEA2Esx7XFDZAoo2w2PZcpVL3NmACZHatogp",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "5m8TYQjpkqAoN7UgefXT4Hmie3bZejQSwWUzurVGtfLX",
+            "funder": "BMu3QHUd68km4c6rMESChZTLwBBT7DGbG3qDE5ZDDS4p",
+            "asset": "SOL",
+            "amount_raw": "380000000",
+            "kind": "system.transfer",
+            "funded_at": 1790940039,
+            "signature": "3wPy31S3Mpe9BKXjkPEg6z6NQHwoonEcmfpwfQ6C7N2VovnA6tuAUuiwoxYReRhhA9T8EAMXannPvFFGbyus2G5y",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 3,
+            "wallet": "BMu3QHUd68km4c6rMESChZTLwBBT7DGbG3qDE5ZDDS4p",
+            "funder": "Ayc5Vt4wozLJayYNrbiR653PZP67pqHhVNY1pdLG3uD5",
+            "asset": "SOL",
+            "amount_raw": "1374747966",
+            "kind": "system.transfer",
+            "funded_at": 1790938411,
+            "signature": "Q9kyF6qWiRPrVT1nR9Cpok2dzMNiP8JZ499vvaXzkRftVieRjuuMxBfBtFBUR5UkZuHJV6rUszorreDEtQPMc9g",
+            "label": null,
+            "status": "traced"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "HRy2iccTNUuZrFYW8uabc5C7wfKhoPh8AGPbABcXJ4ve",
+      "slot": 458670096,
+      "slot_offset": 1,
+      "block_time": 1792377565,
+      "amount_raw": "2280653612335",
+      "amount_slot0_raw": "0",
+      "signature": "29n14knEgdE2xpRj6v4obqThMDTWoXfsFrwyhfiD6NYnqciZnRLpW3w8yC9ybQ6e7zhbDoDrAimYgjYhD9hkFi2d",
+      "fee_payer": "HRy2iccTNUuZrFYW8uabc5C7wfKhoPh8AGPbABcXJ4ve",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 0.2375,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "788332357339",
+      "still_holding_pct": 0.0821,
+      "funding": {
+        "status": "traced",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": 1092495,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "HRy2iccTNUuZrFYW8uabc5C7wfKhoPh8AGPbABcXJ4ve",
+            "funder": "HPfdvzbBUy2SrvLGi6kovLcnXC5Fm2t7459ifbVFB7wQ",
+            "asset": "SOL",
+            "amount_raw": "7265035384",
+            "kind": "system.transfer",
+            "funded_at": 1791285070,
+            "signature": "5xFMgPrYf8Hc3j8BMuQaSpcANFeBfN8X9HhNQJ3N4jNLLEU1LKfFF6FMivcFMYH67LrT69kyKTes576sXLUo9jBS",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "HPfdvzbBUy2SrvLGi6kovLcnXC5Fm2t7459ifbVFB7wQ",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "DipFroJxwyZnWq76sSByksUfsX8GvjMz446jSAPGHaRR",
+      "slot": 458670096,
+      "slot_offset": 1,
+      "block_time": 1792377565,
+      "amount_raw": "1723985619891",
+      "amount_slot0_raw": "0",
+      "signature": "3oqsFLfg5dxVbtH4JpQb6FogPfL8sgkPG9QiCNkn34vthy9XcK3fg3CPviSuwRc9RKm8nGxaB9qTa4WN75H5i3AL",
+      "fee_payer": "DipFroJxwyZnWq76sSByksUfsX8GvjMz446jSAPGHaRR",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 0.1795,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "646564754355",
+      "still_holding_pct": 0.0673,
+      "funding": {
+        "status": "traced",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": 171621,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "DipFroJxwyZnWq76sSByksUfsX8GvjMz446jSAPGHaRR",
+            "funder": "is6MTRHEgyFLNTfYcuV4QBWLjrZBfmhVNYR6ccgr8KV",
+            "asset": "SOL",
+            "amount_raw": "5115222230",
+            "kind": "system.transfer",
+            "funded_at": 1792205944,
+            "signature": "og68HN99CWMADvjs8czHghXJZs2Jpqu6eNgHcHbbfEZhX4Lv9RECQaC8Q1xfzPDFrBJ13y5o8KXjTNMFCLsbR3d",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "is6MTRHEgyFLNTfYcuV4QBWLjrZBfmhVNYR6ccgr8KV",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "rrPAoqc3KFw7gvMDBESzVF1WwCtwHRYqdaY39fNNDgP",
+      "slot": 458670096,
+      "slot_offset": 1,
+      "block_time": 1792377565,
+      "amount_raw": "1318599332091",
+      "amount_slot0_raw": "0",
+      "signature": "3qx2Qkrw98arn7G9e1amXYebv5FxnEvgStjBhZZoP8Gjgnim5f4PRghaGPptvwNjiAk9Rzq3GvcC5kCvaG9rbHYi",
+      "fee_payer": "rrPAoqc3KFw7gvMDBESzVF1WwCtwHRYqdaY39fNNDgP",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 0.1373,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "300393410344",
+      "still_holding_pct": 0.0313,
+      "funding": {
+        "status": "traced",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": 1131331,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "rrPAoqc3KFw7gvMDBESzVF1WwCtwHRYqdaY39fNNDgP",
+            "funder": "EhK6mhRAapKSxtFiFqea1euKSEU2EfdpXMgt2saCHPRv",
+            "asset": "SOL",
+            "amount_raw": "2134229000",
+            "kind": "system.transfer",
+            "funded_at": 1791246234,
+            "signature": "4252rx2vqHj6H3h9R7TAzx84ZrXU2quieeSVGJ7oZWCN7SKLCmqZ5WxDAouBv9ukGacDyBU4G6o8bx93aLG5skKy",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "EhK6mhRAapKSxtFiFqea1euKSEU2EfdpXMgt2saCHPRv",
+            "funder": "AhhiHYFYcUq4iidVr7F7ARHQpb9C4TPS5dsqFCLsnEMG",
+            "asset": "SOL",
+            "amount_raw": "2403466000",
+            "kind": "system.transfer",
+            "funded_at": 1790996471,
+            "signature": "2yH4AcKTNN3m6ALz1xaZgBsC1cfMmFiGMj9ZHZqwpN16yQAXFT5kh9x29E5sUm4Jv3QcopjZwurMibUWFjHpFL4M",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 3,
+            "wallet": "AhhiHYFYcUq4iidVr7F7ARHQpb9C4TPS5dsqFCLsnEMG",
+            "funder": "H9zD9YBu6NhsA85dpE9mqUfUKVaNUKcKjoZDzwBDEYLa",
+            "asset": "SOL",
+            "amount_raw": "1672454000",
+            "kind": "system.transfer",
+            "funded_at": 1788528146,
+            "signature": "2pGtGzuQt6JUaoYnFaJGhk21RTdS4UUHAUmzTKFFiABSgfHpad785sHsJytLwbukt4XkMCXetbQmRfeiRdQS24CC",
+            "label": null,
+            "status": "old_wallet"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "EdaNUQesXTEFLWSBU9szszGuF8AMteYtjYBJoijkSCdM",
+      "slot": 458670096,
+      "slot_offset": 1,
+      "block_time": 1792377565,
+      "amount_raw": "349747851583",
+      "amount_slot0_raw": "0",
+      "signature": "5PpMHKZnMMrFniPFMdC7M5YZCUR8mCXTuG8Xt3SskBS9ohEtbS9EmBXfDKRk78emLg3Q7yf3q3KKRGTiDXu5ZN4k",
+      "fee_payer": "EdaNUQesXTEFLWSBU9szszGuF8AMteYtjYBJoijkSCdM",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 0.0364,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "349747851583",
+      "still_holding_pct": 0.0364,
+      "funding": {
+        "status": "traced",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": 689798,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "EdaNUQesXTEFLWSBU9szszGuF8AMteYtjYBJoijkSCdM",
+            "funder": "DBWq9b1Xve4n5pd2VihZNWbbaUkfyJ69KFrgHcMfuyfW",
+            "asset": "SOL",
+            "amount_raw": "600000000",
+            "kind": "system.transfer",
+            "funded_at": 1791687767,
+            "signature": "3A4dDAYpJWWa69T57fqPNpS2giaMwSRYAJXnY7dE7TCjY77Vk2EUSK9NShGVm8ebSdtUWNZTCe4ki4Trv9ZdFyKa",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "DBWq9b1Xve4n5pd2VihZNWbbaUkfyJ69KFrgHcMfuyfW",
+            "funder": "iGdFcQoyR2MwbXMHQskhmNsqddZ6rinsipHc4TNSdwu",
+            "asset": "SOL",
+            "amount_raw": "2095220000",
+            "kind": "system.transfer",
+            "funded_at": 1776424240,
+            "signature": "5PLCfGxMiWecw3yX8qNv6HrGjceWRHfZAMe8tdRLqnpCjtirvKutJYY5SdgW57iwZvu9hfEDD9bJ5iaUcG7cECrb",
+            "label": null,
+            "status": "old_wallet"
+          },
+          {
+            "hop": 3,
+            "wallet": "iGdFcQoyR2MwbXMHQskhmNsqddZ6rinsipHc4TNSdwu",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "3m6Gjt6QWwQNZjtgXA2F6fuWACJePBSWyGRrUSiF54ZL",
+      "slot": 458670127,
+      "slot_offset": 32,
+      "block_time": 1792377572,
+      "amount_raw": "35559039096946",
+      "amount_slot0_raw": "0",
+      "signature": "2nj4QLpxagVicJ453LWvA59p375FFAwQspRmoUG635hvGWyE4tf6sD4TfV1KaoRBtj6rKfFbbZbKkAPA59jRzJm7",
+      "fee_payer": "3m6Gjt6QWwQNZjtgXA2F6fuWACJePBSWyGRrUSiF54ZL",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 3.7023,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
+      "funding": {
+        "status": "unresolved_busy",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": null,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "3m6Gjt6QWwQNZjtgXA2F6fuWACJePBSWyGRrUSiF54ZL",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "Fpspg48Zd7hPXqqvy1HzEkXtqigRMsWkdiutqKQHDChS",
+      "slot": 458670170,
+      "slot_offset": 75,
+      "block_time": 1792377582,
+      "amount_raw": "871420082851",
+      "amount_slot0_raw": "0",
+      "signature": "5SJimNhCRUP74qhQ7UdfhuJfh8EcRqx9nAVu6wvdRkbGrqAGQw1w1gakzLdk3MLVTGsNCPwVage1C5zpf8yMdLb2",
+      "fee_payer": "Fpspg48Zd7hPXqqvy1HzEkXtqigRMsWkdiutqKQHDChS",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 0.0907,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
+      "funding": {
+        "status": "traced",
+        "fresh": true,
+        "wallet_age_at_buy_seconds": 69674,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "Fpspg48Zd7hPXqqvy1HzEkXtqigRMsWkdiutqKQHDChS",
+            "funder": "5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9",
+            "asset": "SOL",
+            "amount_raw": "3887888880",
+            "kind": "system.transfer",
+            "funded_at": 1792307908,
+            "signature": "KamTA3AdTBiNRLEGfxpeS6Gt9izv2KeEAGAQBE7aqqhumQY1BqwaYTPqju7gVWbLgRuksmLQD6UoUaoEeW93wyF",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "6vR8b54MDixQ1N4Bq2mRwXkvuqWfRgpkgzQ8JgXqujuf",
+      "slot": 458670190,
+      "slot_offset": 95,
+      "block_time": 1792377586,
+      "amount_raw": "47850593011235",
+      "amount_slot0_raw": "0",
+      "signature": "3qc4PbCnKj6PueatnFErELiHf2RyeG4vSYYtKgckDyCBPiJHBKBZsbijUQ77onF254fyfYf82tRAjJLgY6KXmzQ9",
+      "fee_payer": "6vR8b54MDixQ1N4Bq2mRwXkvuqWfRgpkgzQ8JgXqujuf",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 4.982,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "3363486074424",
+      "still_holding_pct": 0.3502,
+      "funding": {
+        "status": "traced",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": 137216,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "6vR8b54MDixQ1N4Bq2mRwXkvuqWfRgpkgzQ8JgXqujuf",
+            "funder": "EHyAQV1K3nBBcQEBa5X8UFPngZtfjJNPSVJcep1JV7qB",
+            "asset": "SOL",
+            "amount_raw": "53522644853",
+            "kind": "balance-diff",
+            "funded_at": 1792240370,
+            "signature": "ckMKbbWjtn8VAgUAZVmDFHh3XskJfKJuBUeQ5KF5dQg91ccZ6nkUif9m2CwdhGpPZTLkuoM6KbLFotZ4SHMmYbJ",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "EHyAQV1K3nBBcQEBa5X8UFPngZtfjJNPSVJcep1JV7qB",
+            "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+            "asset": "SOL",
+            "amount_raw": "53522644852",
+            "kind": "system.createAccount",
+            "funded_at": 1792240364,
+            "signature": "8FgL3QjZkgBYBHb4raUNXiGh5CSnmwpV1xFAuEzp8Hhx7jp5T7uwwg4EyfotRgPGR2n8TCDTqF36JuHVDBx5k8W",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 3,
+            "wallet": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "E2x1ewwXUwxABtFcssgxQLY6PrcRQuhLJRWPCR3WyeJb",
+      "slot": 458670191,
+      "slot_offset": 96,
+      "block_time": 1792377586,
+      "amount_raw": "3040192156003",
+      "amount_slot0_raw": "0",
+      "signature": "CfDpcFYympgiS1SqysXXbBy8wHCot1sFGbURwhvweZsvTm7WCSYPMEeurTsHJtFRC7daHTwuhH2Lty57Uhza2iY",
+      "fee_payer": "E2x1ewwXUwxABtFcssgxQLY6PrcRQuhLJRWPCR3WyeJb",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 0.3165,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
+      "funding": {
+        "status": "traced",
+        "fresh": true,
+        "wallet_age_at_buy_seconds": 26625,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "E2x1ewwXUwxABtFcssgxQLY6PrcRQuhLJRWPCR3WyeJb",
+            "funder": "Grozoe2Lk9yu7kWPcCMuWEbrnuBYseBExkYAuHPRJUdJ",
+            "asset": "SOL",
+            "amount_raw": "5000000000",
+            "kind": "system.transfer",
+            "funded_at": 1792350961,
+            "signature": "3rw9heNPFBZdPv6EmD3vrhawaefbmvzeJJzAjKwCFWCk4ySFRBR8T18bVPkVNPcShNK9mTxokMT79nhiGtCaJMZS",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "Grozoe2Lk9yu7kWPcCMuWEbrnuBYseBExkYAuHPRJUdJ",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "64BKS2Wqe4WWd7xa52FBXnDqf82mXxNm96WWbvFjsQnW",
+      "slot": 458670227,
+      "slot_offset": 132,
+      "block_time": 1792377593,
+      "amount_raw": "139479413729",
+      "amount_slot0_raw": "0",
+      "signature": "5gZuEgx4jLSbNK5pCmh3n7qH8w8DcRvChEbTJECfjZ89UW7KKb1CiXPhjL4HGYUAaJ2HEnwgnAzfQUX6hiHv1dwi",
+      "fee_payer": "64BKS2Wqe4WWd7xa52FBXnDqf82mXxNm96WWbvFjsQnW",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 0.0145,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
+      "funding": {
+        "status": "unresolved_busy",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": null,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "64BKS2Wqe4WWd7xa52FBXnDqf82mXxNm96WWbvFjsQnW",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "5itDRfTiWYK5ms32uXkYbJ7WAPCb3iomfLNq64uvyR4c",
+      "slot": 458670326,
+      "slot_offset": 231,
+      "block_time": 1792377614,
+      "amount_raw": "10876780874782",
+      "amount_slot0_raw": "0",
+      "signature": "4a7MVHCrmsE2oMiDuXTdpVTXTywuL8gRMs82WBXebaahk1iW5CwfeAY7oCCuhey3W8DcmXdC7L59iHzEFisbomzd",
+      "fee_payer": "5itDRfTiWYK5ms32uXkYbJ7WAPCb3iomfLNq64uvyR4c",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 1.1325,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
+      "funding": {
+        "status": "traced",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": 137236,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "5itDRfTiWYK5ms32uXkYbJ7WAPCb3iomfLNq64uvyR4c",
+            "funder": "8gYzEX7dB6iXuLPyy7NP3YdYG85dZUusdhey9Zhc3CKD",
+            "asset": "SOL",
+            "amount_raw": "52114492276",
+            "kind": "balance-diff",
+            "funded_at": 1792240378,
+            "signature": "4umW3oHPoQ5VxCENFRMMxEaQHodvEBDid1wghv2Urgj9Zg5h3UFziEb8tqL9FiCofsM9R2yk776zBYEEw5hgS2xH",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "8gYzEX7dB6iXuLPyy7NP3YdYG85dZUusdhey9Zhc3CKD",
+            "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+            "asset": "SOL",
+            "amount_raw": "52114492276",
+            "kind": "system.createAccount",
+            "funded_at": 1792240373,
+            "signature": "5DkikDKw4A3p9TLJQsLYJMmmxtmdPpZV9aNFVSNE2LGqUJAiZTgYikQ6io65e4xPAj6sFnj7uS678pz6sNFekrPY",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 3,
+            "wallet": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "2uaRGYEKeKcdWr4KzHCbzZAhfbCijndgFEVy27WHZXBV",
+      "slot": 458670348,
+      "slot_offset": 253,
+      "block_time": 1792377619,
+      "amount_raw": "30731767000509",
+      "amount_slot0_raw": "0",
+      "signature": "3opwVvYgCr78F3iUMJCF3uo9pm4kBKAHHiQ6SrKqh8MJ7hwDZus7F3ML79YHvkfxPJ3VBaaso3EaimigESzuxDco",
+      "fee_payer": "2uaRGYEKeKcdWr4KzHCbzZAhfbCijndgFEVy27WHZXBV",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 3.1997,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "4424889041979",
+      "still_holding_pct": 0.4607,
+      "funding": {
+        "status": "traced",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": 137248,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "2uaRGYEKeKcdWr4KzHCbzZAhfbCijndgFEVy27WHZXBV",
+            "funder": "HazT1AMXoYdcdcvHEKfBfuevvYyUgp11pxz1LTuBrzX4",
+            "asset": "SOL",
+            "amount_raw": "50289297865",
+            "kind": "balance-diff",
+            "funded_at": 1792240371,
+            "signature": "QKryfnaMgmPX9XeQa5YDnVzfaxcdZzVXb5RBN1kFh9Je462qkRBRFU88VFBQs2BbaHKcgC5mGCYUynqw5wgU6qF",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "HazT1AMXoYdcdcvHEKfBfuevvYyUgp11pxz1LTuBrzX4",
+            "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+            "asset": "SOL",
+            "amount_raw": "50289297865",
+            "kind": "system.createAccount",
+            "funded_at": 1792240365,
+            "signature": "3ixcUcWtCZpbZYzq4LiP1D7AFnJ6C8ZMt9fiLFWhDZTpHaLG4UcsuMxKmygRMM6X68LBb3LY8d2cUHn4Z2UyZxMV",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 3,
+            "wallet": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "6DskyYLmmA9j1Ht5gAKFBtf2dn8uPZgbVJ2zcmyTZfgp",
+      "slot": 458670349,
+      "slot_offset": 254,
+      "block_time": 1792377619,
+      "amount_raw": "10763800",
+      "amount_slot0_raw": "0",
+      "signature": "4bLbrFNbGdtjagSNvq44DMvFmWDtLoWyv8LoXqVcfeTia3W64rNVuR2FTpup97v8ksSmLm6aAm7kMqFxcTKKZXR6",
+      "fee_payer": "6DskyYLmmA9j1Ht5gAKFBtf2dn8uPZgbVJ2zcmyTZfgp",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 0.0,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
+      "funding": {
+        "status": "unresolved_busy",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": null,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "6DskyYLmmA9j1Ht5gAKFBtf2dn8uPZgbVJ2zcmyTZfgp",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "45TbtFrzUaH54P7FDfsNd5cDvm7iT1GZ7Ru7ETHC9f8X",
+      "slot": 458670350,
+      "slot_offset": 255,
+      "block_time": 1792377620,
+      "amount_raw": "1332227241605",
+      "amount_slot0_raw": "0",
+      "signature": "3yqXQZfLkt5cKGj6gDhUMtXucyFyZrvmt43C9FpqXvVzgU2yU8x7Z66ZjxdpLnAHSha7ns7UUfNNKKpjb3RfqaEG",
+      "fee_payer": "45TbtFrzUaH54P7FDfsNd5cDvm7iT1GZ7Ru7ETHC9f8X",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 0.1387,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
+      "funding": {
+        "status": "old_wallet",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": 25485812,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "45TbtFrzUaH54P7FDfsNd5cDvm7iT1GZ7Ru7ETHC9f8X",
+            "funder": "JAq1uEj4vbohD63dHEKQWFHGvqiSiKbH77W81yqProhC",
+            "asset": "SOL",
+            "amount_raw": "161335861",
+            "kind": "system.transfer",
+            "funded_at": 1766891808,
+            "signature": "3SkroYXqDgZ3XiqYsH761i3wZn8pKVf8yH5gzXbr2pATGXBsE8GnL38yX1y3g6qLvJb2MtwEeU9MUL22EqxPmAWH",
+            "label": null,
+            "status": "old_wallet"
+          },
+          {
+            "hop": 2,
+            "wallet": "JAq1uEj4vbohD63dHEKQWFHGvqiSiKbH77W81yqProhC",
+            "funder": "GJRs4FwHtemZ5ZE9x3FNvJ8TMwitKTh21yxdRPqn7npE",
+            "asset": "SOL",
+            "amount_raw": "388853571",
+            "kind": "system.transfer",
+            "funded_at": 1725642978,
+            "signature": "5SpmMA7bq36KTkSkpvFwwsVRFsubbxU79LNR1F7tzwGXE3fAsaLcdARHH6Vdt6hipKkpPj1j3YfUzmrEzwxv6g5r",
+            "label": null,
+            "status": "old_wallet"
+          },
+          {
+            "hop": 3,
+            "wallet": "GJRs4FwHtemZ5ZE9x3FNvJ8TMwitKTh21yxdRPqn7npE",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "62S1ajqycKdmAQbezcvLhqk8GH45meuoS7WMyk3Sg2F5",
+      "slot": 458670374,
+      "slot_offset": 279,
+      "block_time": 1792377625,
+      "amount_raw": "10748787743784",
+      "amount_slot0_raw": "0",
+      "signature": "j36WkgFju44Xtdzqs3dLv6sTsDwMGCDtE6adiZCgSA7fTFaiMsMfPY44FXPwTBuVjTtFxiUYZAgqHMub7Qnf7xV",
+      "fee_payer": "62S1ajqycKdmAQbezcvLhqk8GH45meuoS7WMyk3Sg2F5",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 1.1191,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "4076148153682",
+      "still_holding_pct": 0.4244,
+      "funding": {
+        "status": "traced",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": 137206,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "62S1ajqycKdmAQbezcvLhqk8GH45meuoS7WMyk3Sg2F5",
+            "funder": "5MxDpCiygWxcAjQm2UU4k5yZ835AoSnVfjMUxqrPRjNF",
+            "asset": "SOL",
+            "amount_raw": "16944269930",
+            "kind": "balance-diff",
+            "funded_at": 1792240419,
+            "signature": "unSucpbFXG6FWtfn7ifLWSdMp2qV7t45uqXFanpjxPxLyGQqvHFcp44Q3ua4RUiFSnMSz5pEtn5BoSxGe2hJES8",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "5MxDpCiygWxcAjQm2UU4k5yZ835AoSnVfjMUxqrPRjNF",
+            "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+            "asset": "SOL",
+            "amount_raw": "16944269930",
+            "kind": "system.createAccount",
+            "funded_at": 1792240414,
+            "signature": "5NPyFzXHGpFDa3XEt52sWbNDEGhBYLKhDS4ZF6JAHfs5jgV3bVQk16qQPkvNd8eEtXpUbzFS4aE3grvYAaFTT5Kz",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 3,
+            "wallet": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "8MkMkG9uZUPSxwsnqbMPdy5zy7FFsiDhtuvSNAj1BFR9",
+      "slot": 458670430,
+      "slot_offset": 335,
+      "block_time": 1792377637,
+      "amount_raw": "15620552681775",
+      "amount_slot0_raw": "0",
+      "signature": "3vGB7X2A17F661qp1vf19V5enUDPukJDY4HTx69mQmFAZS3QN2X865HT4WL7x9cBmKySJemhhznwjza6rmge1m3q",
+      "fee_payer": "8MkMkG9uZUPSxwsnqbMPdy5zy7FFsiDhtuvSNAj1BFR9",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 1.6264,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
+      "funding": {
+        "status": "traced",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": 137238,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "8MkMkG9uZUPSxwsnqbMPdy5zy7FFsiDhtuvSNAj1BFR9",
+            "funder": "3ZEa8APDdVL6Awkar1obgaU6YYxDp3YxUJ7gWyS9N5Xn",
+            "asset": "SOL",
+            "amount_raw": "16851181115",
+            "kind": "balance-diff",
+            "funded_at": 1792240399,
+            "signature": "4XfFjsrcZ2ex64WyjJ4Pg94MkUjehbChgHaBgBuAzueUP742hZMYL4BczHZ4mTuJviXhrfqM6WYqQ5mWE4j7sR5P",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "3ZEa8APDdVL6Awkar1obgaU6YYxDp3YxUJ7gWyS9N5Xn",
+            "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+            "asset": "SOL",
+            "amount_raw": "16851181115",
+            "kind": "system.createAccount",
+            "funded_at": 1792240394,
+            "signature": "2w41T4nQzCizqu6WYFAzayYyguirKNNdciWUhYR2J9GZxU3tEdzWi2oaSwSjySVtKvgBD7Z7ByLiXu9Yq9GMwCVN",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 3,
+            "wallet": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "J3pyP1fcP4vcfwy19QAnvzPnd4LHzL73of5BtRbP9HQ1",
+      "slot": 458670451,
+      "slot_offset": 356,
+      "block_time": 1792377641,
+      "amount_raw": "1927234088008",
+      "amount_slot0_raw": "0",
+      "signature": "kYtjf256gh2nugn1dWzmkDz4mbNQpvwhGXsFJphtpKwBw6U9vyHJHxCrGoB8P6xCvWyjLWTRstH3Yh16s7Kbv7C",
+      "fee_payer": "J3pyP1fcP4vcfwy19QAnvzPnd4LHzL73of5BtRbP9HQ1",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 0.2007,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
+      "funding": {
+        "status": "traced",
+        "fresh": true,
+        "wallet_age_at_buy_seconds": 76800,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "J3pyP1fcP4vcfwy19QAnvzPnd4LHzL73of5BtRbP9HQ1",
+            "funder": "5RbF3mm1xRj1xrisT2YDdDWCchA2xJAXVqeC5a5uZfDQ",
+            "asset": "SOL",
+            "amount_raw": "3197540000",
+            "kind": "system.transfer",
+            "funded_at": 1792300841,
+            "signature": "2cYLVLikEfaKrw2NW97o1N5Vxb278SBLeRSh3y1o92hawbpKQCCmMa7EneHc4joJFYFW7GkW32NPDuDqqFzFaN4x",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "5RbF3mm1xRj1xrisT2YDdDWCchA2xJAXVqeC5a5uZfDQ",
+            "funder": "iGdFcQoyR2MwbXMHQskhmNsqddZ6rinsipHc4TNSdwu",
+            "asset": "SOL",
+            "amount_raw": "4341069470",
+            "kind": "system.transfer",
+            "funded_at": 1782381770,
+            "signature": "335uTKPDU1XdnR8tnT4kqi5FWbFTT72dS7qBtcLoq4QPzAqtyxKn79iVwMeE2A3yrERr2MFc7MiFycE2eN8z588h",
+            "label": null,
+            "status": "old_wallet"
+          },
+          {
+            "hop": 3,
+            "wallet": "iGdFcQoyR2MwbXMHQskhmNsqddZ6rinsipHc4TNSdwu",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "4THgteoKKUXC162SJYiQu42KWV7UW513itTebbiZvuFC",
+      "slot": 458670451,
+      "slot_offset": 356,
+      "block_time": 1792377641,
+      "amount_raw": "1897975800870",
+      "amount_slot0_raw": "0",
+      "signature": "5gF6QeLTbqwbTFs4aqdxcE6pbDjRQLSaGtH1vSDZziFbtqgB4QwwuQqMKPZy5f65npPGaiauP87Wm2RJnd8VZ3U3",
+      "fee_payer": "4THgteoKKUXC162SJYiQu42KWV7UW513itTebbiZvuFC",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 0.1976,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
+      "funding": {
+        "status": "traced",
+        "fresh": true,
+        "wallet_age_at_buy_seconds": 76887,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "4THgteoKKUXC162SJYiQu42KWV7UW513itTebbiZvuFC",
+            "funder": "5RbF3mm1xRj1xrisT2YDdDWCchA2xJAXVqeC5a5uZfDQ",
+            "asset": "SOL",
+            "amount_raw": "3040013000",
+            "kind": "system.transfer",
+            "funded_at": 1792300754,
+            "signature": "2dQ5JjxrLr93mqPae6uQkcGT1WAfqmCLUq7Raz5VacUtpFUAhi9tEcFGGh63VVwd7TBN9B9QGWZ6SQzYFY3QddXP",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "5RbF3mm1xRj1xrisT2YDdDWCchA2xJAXVqeC5a5uZfDQ",
+            "funder": "iGdFcQoyR2MwbXMHQskhmNsqddZ6rinsipHc4TNSdwu",
+            "asset": "SOL",
+            "amount_raw": "4341069470",
+            "kind": "system.transfer",
+            "funded_at": 1782381770,
+            "signature": "335uTKPDU1XdnR8tnT4kqi5FWbFTT72dS7qBtcLoq4QPzAqtyxKn79iVwMeE2A3yrERr2MFc7MiFycE2eN8z588h",
+            "label": null,
+            "status": "old_wallet"
+          },
+          {
+            "hop": 3,
+            "wallet": "iGdFcQoyR2MwbXMHQskhmNsqddZ6rinsipHc4TNSdwu",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "7331dEJm4DqaC4emnVewc2NqeX48PkjVn18txnM4Wase",
+      "slot": 458670453,
+      "slot_offset": 358,
+      "block_time": 1792377642,
+      "amount_raw": "25150209911294",
+      "amount_slot0_raw": "0",
+      "signature": "YX8rUxxL7LjNCpWZJ8bN8NKrg3dYepwvhTkTRRbNAopDBG1FNp7dhg8u6zHjuHSeNxr1CewCJhinSctEPpEosRq",
+      "fee_payer": "7331dEJm4DqaC4emnVewc2NqeX48PkjVn18txnM4Wase",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 2.6186,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
+      "funding": {
+        "status": "traced",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": 137186,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "7331dEJm4DqaC4emnVewc2NqeX48PkjVn18txnM4Wase",
+            "funder": "8f1KtgD7td9ABorDRodz3Zzjd7fuMF5UXz5jquNeq9eC",
+            "asset": "SOL",
+            "amount_raw": "16846193051",
+            "kind": "balance-diff",
+            "funded_at": 1792240456,
+            "signature": "dhaoGp85FV1DRkdYhXQbwSdX56XSAidY8S9djHjVod4APi5KYPA5Bysk29kBxkBDm1wWAjH3ZC2qwaiCE6TNv4P",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "8f1KtgD7td9ABorDRodz3Zzjd7fuMF5UXz5jquNeq9eC",
+            "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+            "asset": "SOL",
+            "amount_raw": "16846193051",
+            "kind": "system.createAccount",
+            "funded_at": 1792240451,
+            "signature": "4RS5vXmcDQMAMSLxtsG994PdgUw6NYhYipdKTWFoY2Qge2TZrkRqEpJH31rd9Q3jqjn2fEBwCSWEBNiHMxpwsquj",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 3,
+            "wallet": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "7j3jnoXrV5ma7L6qZPMkoAQVCB2kh9KRyBdUeoGBW7QZ",
+      "slot": 458670485,
+      "slot_offset": 390,
+      "block_time": 1792377649,
+      "amount_raw": "594697790129",
+      "amount_slot0_raw": "0",
+      "signature": "4VfrzmjKfB6t6hppG77KnXGAsAgMhpK5VsPXeTyuDEVToreCtahEzSiMjqAHR8he4yQhVefMcK7ZYdAaYSaGWajB",
+      "fee_payer": "7j3jnoXrV5ma7L6qZPMkoAQVCB2kh9KRyBdUeoGBW7QZ",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 0.0619,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
+      "funding": {
+        "status": "traced",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": 327237,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "7j3jnoXrV5ma7L6qZPMkoAQVCB2kh9KRyBdUeoGBW7QZ",
+            "funder": "5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9",
+            "asset": "SOL",
+            "amount_raw": "499037200",
+            "kind": "system.transfer",
+            "funded_at": 1792050412,
+            "signature": "gY5Thnq8evaMQymF52FZQ6veQCS3fgzRdi3CfgrmvxgR9x2TWdSL2UdpN8iMiVErKpXzq3eHmAsuZ1jAExQiw7S",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    },
+    {
+      "wallet": "54RHywMHCsbWRgDuZdcfZAREXPLFg9JE8k51gL5zzfa7",
+      "slot": 458670493,
+      "slot_offset": 398,
+      "block_time": 1792377651,
+      "amount_raw": "62368167391",
+      "amount_slot0_raw": "0",
+      "signature": "4tUj8SrMv3Ezhz8VhJAkTzVjWX8uGTk6LA2tVk8SF7khNKJuSpR6zxjC3GZ2pt4EqAgJSF9pwSQiBf5CkXhgJo34",
+      "fee_payer": "54RHywMHCsbWRgDuZdcfZAREXPLFg9JE8k51gL5zzfa7",
+      "fee_payer_signature": null,
+      "fee_payer_is_buyer": true,
+      "dev_paid_signature": null,
+      "label": null,
+      "pct_supply": 0.0065,
+      "pct_supply_slot0": 0.0,
+      "analysed": true,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
+      "funding": {
+        "status": "traced",
+        "fresh": false,
+        "wallet_age_at_buy_seconds": 178269,
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "54RHywMHCsbWRgDuZdcfZAREXPLFg9JE8k51gL5zzfa7",
+            "funder": "5g7yNHyGLJ7fiQ9SN9mf47opDnMjc585kqXWt6d7aBWs",
+            "asset": "SOL",
+            "amount_raw": "47975437",
+            "kind": "system.transfer",
+            "funded_at": 1792199382,
+            "signature": "51EJPJCZP4AeDdqQxPQ5pUSj3QCVd1gH92c2eTMLsxXLLTqyhCLPn8Scq4ymSQqYPeZFda37p3EvUh5TyXaTz9Ks",
+            "label": null,
+            "status": "traced"
+          },
+          {
+            "hop": 2,
+            "wallet": "5g7yNHyGLJ7fiQ9SN9mf47opDnMjc585kqXWt6d7aBWs",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "status": "unresolved_busy"
+          }
+        ]
+      }
+    }
+  ],
+  "holders": [],
+  "clusters": [
+    {
+      "wallets": [
+        "6vR8b54MDixQ1N4Bq2mRwXkvuqWfRgpkgzQ8JgXqujuf",
+        "2uaRGYEKeKcdWr4KzHCbzZAhfbCijndgFEVy27WHZXBV",
+        "7331dEJm4DqaC4emnVewc2NqeX48PkjVn18txnM4Wase",
+        "8MkMkG9uZUPSxwsnqbMPdy5zy7FFsiDhtuvSNAj1BFR9",
+        "5itDRfTiWYK5ms32uXkYbJ7WAPCb3iomfLNq64uvyR4c",
+        "62S1ajqycKdmAQbezcvLhqk8GH45meuoS7WMyk3Sg2F5"
+      ],
+      "pct_supply_bought": 14.6782,
+      "pct_supply_still_held": 1.2353,
+      "edges": [
+        {
+          "wallets": [
+            "2uaRGYEKeKcdWr4KzHCbzZAhfbCijndgFEVy27WHZXBV",
+            "5itDRfTiWYK5ms32uXkYbJ7WAPCb3iomfLNq64uvyR4c"
+          ],
+          "type": "shared_funder",
+          "weight": 1.0,
+          "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+          "proximity": true,
+          "signatures": [
+            "3ixcUcWtCZpbZYzq4LiP1D7AFnJ6C8ZMt9fiLFWhDZTpHaLG4UcsuMxKmygRMM6X68LBb3LY8d2cUHn4Z2UyZxMV",
+            "5DkikDKw4A3p9TLJQsLYJMmmxtmdPpZV9aNFVSNE2LGqUJAiZTgYikQ6io65e4xPAj6sFnj7uS678pz6sNFekrPY"
+          ]
+        },
+        {
+          "wallets": [
+            "2uaRGYEKeKcdWr4KzHCbzZAhfbCijndgFEVy27WHZXBV",
+            "62S1ajqycKdmAQbezcvLhqk8GH45meuoS7WMyk3Sg2F5"
+          ],
+          "type": "shared_funder",
+          "weight": 1.0,
+          "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+          "proximity": true,
+          "signatures": [
+            "3ixcUcWtCZpbZYzq4LiP1D7AFnJ6C8ZMt9fiLFWhDZTpHaLG4UcsuMxKmygRMM6X68LBb3LY8d2cUHn4Z2UyZxMV",
+            "5NPyFzXHGpFDa3XEt52sWbNDEGhBYLKhDS4ZF6JAHfs5jgV3bVQk16qQPkvNd8eEtXpUbzFS4aE3grvYAaFTT5Kz"
+          ]
+        },
+        {
+          "wallets": [
+            "2uaRGYEKeKcdWr4KzHCbzZAhfbCijndgFEVy27WHZXBV",
+            "6vR8b54MDixQ1N4Bq2mRwXkvuqWfRgpkgzQ8JgXqujuf"
+          ],
+          "type": "shared_funder",
+          "weight": 1.0,
+          "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+          "proximity": true,
+          "signatures": [
+            "3ixcUcWtCZpbZYzq4LiP1D7AFnJ6C8ZMt9fiLFWhDZTpHaLG4UcsuMxKmygRMM6X68LBb3LY8d2cUHn4Z2UyZxMV",
+            "8FgL3QjZkgBYBHb4raUNXiGh5CSnmwpV1xFAuEzp8Hhx7jp5T7uwwg4EyfotRgPGR2n8TCDTqF36JuHVDBx5k8W"
+          ]
+        },
+        {
+          "wallets": [
+            "2uaRGYEKeKcdWr4KzHCbzZAhfbCijndgFEVy27WHZXBV",
+            "7331dEJm4DqaC4emnVewc2NqeX48PkjVn18txnM4Wase"
+          ],
+          "type": "shared_funder",
+          "weight": 1.0,
+          "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+          "proximity": true,
+          "signatures": [
+            "3ixcUcWtCZpbZYzq4LiP1D7AFnJ6C8ZMt9fiLFWhDZTpHaLG4UcsuMxKmygRMM6X68LBb3LY8d2cUHn4Z2UyZxMV",
+            "4RS5vXmcDQMAMSLxtsG994PdgUw6NYhYipdKTWFoY2Qge2TZrkRqEpJH31rd9Q3jqjn2fEBwCSWEBNiHMxpwsquj"
+          ]
+        },
+        {
+          "wallets": [
+            "2uaRGYEKeKcdWr4KzHCbzZAhfbCijndgFEVy27WHZXBV",
+            "8MkMkG9uZUPSxwsnqbMPdy5zy7FFsiDhtuvSNAj1BFR9"
+          ],
+          "type": "shared_funder",
+          "weight": 1.0,
+          "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+          "proximity": true,
+          "signatures": [
+            "3ixcUcWtCZpbZYzq4LiP1D7AFnJ6C8ZMt9fiLFWhDZTpHaLG4UcsuMxKmygRMM6X68LBb3LY8d2cUHn4Z2UyZxMV",
+            "2w41T4nQzCizqu6WYFAzayYyguirKNNdciWUhYR2J9GZxU3tEdzWi2oaSwSjySVtKvgBD7Z7ByLiXu9Yq9GMwCVN"
+          ]
+        },
+        {
+          "wallets": [
+            "5itDRfTiWYK5ms32uXkYbJ7WAPCb3iomfLNq64uvyR4c",
+            "62S1ajqycKdmAQbezcvLhqk8GH45meuoS7WMyk3Sg2F5"
+          ],
+          "type": "shared_funder",
+          "weight": 1.0,
+          "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+          "proximity": true,
+          "signatures": [
+            "5DkikDKw4A3p9TLJQsLYJMmmxtmdPpZV9aNFVSNE2LGqUJAiZTgYikQ6io65e4xPAj6sFnj7uS678pz6sNFekrPY",
+            "5NPyFzXHGpFDa3XEt52sWbNDEGhBYLKhDS4ZF6JAHfs5jgV3bVQk16qQPkvNd8eEtXpUbzFS4aE3grvYAaFTT5Kz"
+          ]
+        },
+        {
+          "wallets": [
+            "5itDRfTiWYK5ms32uXkYbJ7WAPCb3iomfLNq64uvyR4c",
+            "6vR8b54MDixQ1N4Bq2mRwXkvuqWfRgpkgzQ8JgXqujuf"
+          ],
+          "type": "shared_funder",
+          "weight": 1.0,
+          "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+          "proximity": true,
+          "signatures": [
+            "5DkikDKw4A3p9TLJQsLYJMmmxtmdPpZV9aNFVSNE2LGqUJAiZTgYikQ6io65e4xPAj6sFnj7uS678pz6sNFekrPY",
+            "8FgL3QjZkgBYBHb4raUNXiGh5CSnmwpV1xFAuEzp8Hhx7jp5T7uwwg4EyfotRgPGR2n8TCDTqF36JuHVDBx5k8W"
+          ]
+        },
+        {
+          "wallets": [
+            "5itDRfTiWYK5ms32uXkYbJ7WAPCb3iomfLNq64uvyR4c",
+            "7331dEJm4DqaC4emnVewc2NqeX48PkjVn18txnM4Wase"
+          ],
+          "type": "shared_funder",
+          "weight": 1.0,
+          "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+          "proximity": true,
+          "signatures": [
+            "5DkikDKw4A3p9TLJQsLYJMmmxtmdPpZV9aNFVSNE2LGqUJAiZTgYikQ6io65e4xPAj6sFnj7uS678pz6sNFekrPY",
+            "4RS5vXmcDQMAMSLxtsG994PdgUw6NYhYipdKTWFoY2Qge2TZrkRqEpJH31rd9Q3jqjn2fEBwCSWEBNiHMxpwsquj"
+          ]
+        },
+        {
+          "wallets": [
+            "5itDRfTiWYK5ms32uXkYbJ7WAPCb3iomfLNq64uvyR4c",
+            "8MkMkG9uZUPSxwsnqbMPdy5zy7FFsiDhtuvSNAj1BFR9"
+          ],
+          "type": "shared_funder",
+          "weight": 1.0,
+          "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+          "proximity": true,
+          "signatures": [
+            "5DkikDKw4A3p9TLJQsLYJMmmxtmdPpZV9aNFVSNE2LGqUJAiZTgYikQ6io65e4xPAj6sFnj7uS678pz6sNFekrPY",
+            "2w41T4nQzCizqu6WYFAzayYyguirKNNdciWUhYR2J9GZxU3tEdzWi2oaSwSjySVtKvgBD7Z7ByLiXu9Yq9GMwCVN"
+          ]
+        },
+        {
+          "wallets": [
+            "62S1ajqycKdmAQbezcvLhqk8GH45meuoS7WMyk3Sg2F5",
+            "6vR8b54MDixQ1N4Bq2mRwXkvuqWfRgpkgzQ8JgXqujuf"
+          ],
+          "type": "shared_funder",
+          "weight": 1.0,
+          "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+          "proximity": true,
+          "signatures": [
+            "5NPyFzXHGpFDa3XEt52sWbNDEGhBYLKhDS4ZF6JAHfs5jgV3bVQk16qQPkvNd8eEtXpUbzFS4aE3grvYAaFTT5Kz",
+            "8FgL3QjZkgBYBHb4raUNXiGh5CSnmwpV1xFAuEzp8Hhx7jp5T7uwwg4EyfotRgPGR2n8TCDTqF36JuHVDBx5k8W"
+          ]
+        },
+        {
+          "wallets": [
+            "62S1ajqycKdmAQbezcvLhqk8GH45meuoS7WMyk3Sg2F5",
+            "7331dEJm4DqaC4emnVewc2NqeX48PkjVn18txnM4Wase"
+          ],
+          "type": "shared_funder",
+          "weight": 1.0,
+          "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+          "proximity": true,
+          "signatures": [
+            "5NPyFzXHGpFDa3XEt52sWbNDEGhBYLKhDS4ZF6JAHfs5jgV3bVQk16qQPkvNd8eEtXpUbzFS4aE3grvYAaFTT5Kz",
+            "4RS5vXmcDQMAMSLxtsG994PdgUw6NYhYipdKTWFoY2Qge2TZrkRqEpJH31rd9Q3jqjn2fEBwCSWEBNiHMxpwsquj"
+          ]
+        },
+        {
+          "wallets": [
+            "62S1ajqycKdmAQbezcvLhqk8GH45meuoS7WMyk3Sg2F5",
+            "8MkMkG9uZUPSxwsnqbMPdy5zy7FFsiDhtuvSNAj1BFR9"
+          ],
+          "type": "shared_funder",
+          "weight": 1.0,
+          "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+          "proximity": true,
+          "signatures": [
+            "5NPyFzXHGpFDa3XEt52sWbNDEGhBYLKhDS4ZF6JAHfs5jgV3bVQk16qQPkvNd8eEtXpUbzFS4aE3grvYAaFTT5Kz",
+            "2w41T4nQzCizqu6WYFAzayYyguirKNNdciWUhYR2J9GZxU3tEdzWi2oaSwSjySVtKvgBD7Z7ByLiXu9Yq9GMwCVN"
+          ]
+        },
+        {
+          "wallets": [
+            "6vR8b54MDixQ1N4Bq2mRwXkvuqWfRgpkgzQ8JgXqujuf",
+            "7331dEJm4DqaC4emnVewc2NqeX48PkjVn18txnM4Wase"
+          ],
+          "type": "shared_funder",
+          "weight": 1.0,
+          "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+          "proximity": true,
+          "signatures": [
+            "8FgL3QjZkgBYBHb4raUNXiGh5CSnmwpV1xFAuEzp8Hhx7jp5T7uwwg4EyfotRgPGR2n8TCDTqF36JuHVDBx5k8W",
+            "4RS5vXmcDQMAMSLxtsG994PdgUw6NYhYipdKTWFoY2Qge2TZrkRqEpJH31rd9Q3jqjn2fEBwCSWEBNiHMxpwsquj"
+          ]
+        },
+        {
+          "wallets": [
+            "6vR8b54MDixQ1N4Bq2mRwXkvuqWfRgpkgzQ8JgXqujuf",
+            "8MkMkG9uZUPSxwsnqbMPdy5zy7FFsiDhtuvSNAj1BFR9"
+          ],
+          "type": "shared_funder",
+          "weight": 1.0,
+          "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+          "proximity": true,
+          "signatures": [
+            "8FgL3QjZkgBYBHb4raUNXiGh5CSnmwpV1xFAuEzp8Hhx7jp5T7uwwg4EyfotRgPGR2n8TCDTqF36JuHVDBx5k8W",
+            "2w41T4nQzCizqu6WYFAzayYyguirKNNdciWUhYR2J9GZxU3tEdzWi2oaSwSjySVtKvgBD7Z7ByLiXu9Yq9GMwCVN"
+          ]
+        },
+        {
+          "wallets": [
+            "7331dEJm4DqaC4emnVewc2NqeX48PkjVn18txnM4Wase",
+            "8MkMkG9uZUPSxwsnqbMPdy5zy7FFsiDhtuvSNAj1BFR9"
+          ],
+          "type": "shared_funder",
+          "weight": 1.0,
+          "funder": "DKbxpLL5sjD1ztnhx8XkzdcRrHt5yrfa94YJRncSyUd4",
+          "proximity": true,
+          "signatures": [
+            "4RS5vXmcDQMAMSLxtsG994PdgUw6NYhYipdKTWFoY2Qge2TZrkRqEpJH31rd9Q3jqjn2fEBwCSWEBNiHMxpwsquj",
+            "2w41T4nQzCizqu6WYFAzayYyguirKNNdciWUhYR2J9GZxU3tEdzWi2oaSwSjySVtKvgBD7Z7ByLiXu9Yq9GMwCVN"
+          ]
+        }
+      ],
+      "cluster_id": "c1"
+    },
+    {
+      "wallets": [
+        "J3pyP1fcP4vcfwy19QAnvzPnd4LHzL73of5BtRbP9HQ1",
+        "4THgteoKKUXC162SJYiQu42KWV7UW513itTebbiZvuFC"
+      ],
+      "pct_supply_bought": 0.3983,
+      "pct_supply_still_held": 0.0,
+      "edges": [
+        {
+          "wallets": [
+            "4THgteoKKUXC162SJYiQu42KWV7UW513itTebbiZvuFC",
+            "J3pyP1fcP4vcfwy19QAnvzPnd4LHzL73of5BtRbP9HQ1"
+          ],
+          "type": "shared_funder",
+          "weight": 1.0,
+          "funder": "iGdFcQoyR2MwbXMHQskhmNsqddZ6rinsipHc4TNSdwu",
+          "proximity": true,
+          "signatures": [
+            "335uTKPDU1XdnR8tnT4kqi5FWbFTT72dS7qBtcLoq4QPzAqtyxKn79iVwMeE2A3yrERr2MFc7MiFycE2eN8z588h",
+            "335uTKPDU1XdnR8tnT4kqi5FWbFTT72dS7qBtcLoq4QPzAqtyxKn79iVwMeE2A3yrERr2MFc7MiFycE2eN8z588h"
+          ]
+        },
+        {
+          "wallets": [
+            "4THgteoKKUXC162SJYiQu42KWV7UW513itTebbiZvuFC",
+            "J3pyP1fcP4vcfwy19QAnvzPnd4LHzL73of5BtRbP9HQ1"
+          ],
+          "type": "shared_funder",
+          "weight": 1.0,
+          "funder": "5RbF3mm1xRj1xrisT2YDdDWCchA2xJAXVqeC5a5uZfDQ",
+          "proximity": true,
+          "signatures": [
+            "2dQ5JjxrLr93mqPae6uQkcGT1WAfqmCLUq7Raz5VacUtpFUAhi9tEcFGGh63VVwd7TBN9B9QGWZ6SQzYFY3QddXP",
+            "2cYLVLikEfaKrw2NW97o1N5Vxb278SBLeRSh3y1o92hawbpKQCCmMa7EneHc4joJFYFW7GkW32NPDuDqqFzFaN4x"
+          ]
+        }
+      ],
+      "cluster_id": "c2"
+    }
+  ],
+  "summary": {
+    "pct_supply_slot0": 33.4451,
+    "pct_supply_window": 53.4435,
+    "n_buyers_slot0": 5,
+    "fresh_wallet_ratio": 0.2,
+    "largest_cluster_pct": 14.6782,
+    "largest_cluster_still_held_pct": 1.2353,
+    "flags": [
+      "HIGH_SNIPE",
+      "CLUSTERED"
+    ]
+  },
+  "data_quality": {
+    "partial": false,
+    "partial_reason": null,
+    "history_too_deep": false,
+    "calls_used": {
+      "getTokenSupply": 1,
+      "getSignaturesForAddress": 129,
+      "getTransaction": 272,
+      "getTokenAccountsByOwner": 25
+    },
+    "calls_total": 427,
+    "budget": 5000,
+    "wallets_skipped_old": 1,
+    "wallets_unresolved_busy": 4,
+    "cache_hits": 1,
+    "version_unsupported": 0,
+    "probable_infra_hubs": [],
+    "labels_dropped": [],
+    "creation_source": "bonding_curve",
+    "creation_pages": 2,
+    "mint_pages": 10,
+    "mint_history_capped": false,
+    "pump_time_matches": true,
+    "pump_created_time": 1792377565
+  },
+  "pump": {
+    "bonding_curve": "A8V628KQs1tXWfg81U7b8HoVYXxUcJFFnbYVqDXv5Rh1",
+    "associated_bonding_curve": "FGKFXizYUsptHSozKx7v6ntRmpeZqziXnqV2V2qpAXef",
+    "creator": "CgkeAmWEunFmhZyGXRii5fAikyWcnxvcw7jKVKTAYpZZ",
+    "created_timestamp": 1792377565000,
+    "symbol": "Echo",
+    "complete": true,
+    "token_program": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+    "quote_mint": "11111111111111111111111111111111"
+  },
+  "supply": {
+    "amount": "960460098936909",
+    "decimals": 6,
+    "uiAmountString": "960460098.936909"
+  },
+  "creation_signature": "2EyezkjnGT7iMufYECUAVpHecZePz5j5G8Cg7x5B7T3EGe9tR1iWuqoMLbXt8HpNyYMLEZWF1bEMJhEoxBcCEU3n"
+}
