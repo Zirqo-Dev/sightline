@@ -113,6 +113,89 @@
     "pf-n",
     "pf-o",
     "pf-q"
+   ],
+   "last_mark": {
+    "at": "2026-10-19T10:00:00-04:00",
+    "mcap_usd": 1687341,
+    "price_usd": 0.001777,
+    "price_sol": 1.705e-05,
+    "holders": 4506,
+    "pool_quote_sol": 620.62,
+    "liq_usd": 131733,
+    "pnl_pct_usd": 28.6,
+    "pnl_pct_sol": 29.0,
+    "result": {
+     "pnl": 29.0,
+     "pct": 29.0,
+     "unit": "ADA-equivalent"
+    },
+    "kill_line_hit": false,
+    "note": "h1 +31.8% (382 buys / 469 sells), h6 +1.1%; holders 4,525 (8:12) -> 4,506, still above entry 4,478; pf-m not triggered (price above entry)",
+    "source": "DexScreener pair HRMcDD..., pump.fun /coins/top-holders (~9:57 AM ET)"
+   }
+  },
+  {
+   "id": "UHI-FGkC-20261019-1000",
+   "ticker": "UHI",
+   "name": "UHI",
+   "side": "solana",
+   "launchpad": "pump.fun",
+   "mint": "FGkCj28xhabWTYg9QyzACvs4NsN6LUyesP6EwiHepump",
+   "pool": "3ENsvQnHuHtQzMBxpDG4pkxwbBnzJvFcz2yyCfxC9QNH",
+   "pool_dex": "pumpswap",
+   "pool_quote_token": "SOL",
+   "opened_at": "2026-10-19T10:00:00-04:00",
+   "window_ends_at": "2026-10-21T10:00:00-04:00",
+   "size": 100,
+   "ticket_sol": 0.20837,
+   "ticket_conversion": {
+    "at": "2026-10-19T10:00:00-04:00",
+    "ada_usd": 0.217565,
+    "sol_usd": 104.41,
+    "source": "api.coingecko.com simple/price"
+   },
+   "level": 2,
+   "entry_type": "strongest-L2 (first-block check unresolved)",
+   "status": "open",
+   "entry": {
+    "mcap_usd": 911692,
+    "price_usd": 0.0009491,
+    "price_sol": 9.107e-06,
+    "holders": 3369,
+    "gt_holders_stale": 660,
+    "pool_quote_sol": 459.86,
+    "liq_usd": 98099,
+    "liq_to_mcap_pct": 10.8,
+    "top10_ex_pool_pct": 17.71,
+    "top1_ex_pool_pct": 2.54,
+    "paper_qty_tokens": 22880,
+    "source": "DexScreener pair 3ENsvQ..., pump.fun /coins/top-holders (~9:57 AM ET)"
+   },
+   "thesis": [
+    "Holder growth through the first fade: pump.fun holders 2,835 at 7:50 AM (when price was -21% h1 after a +222% h6 spike) -> 3,369 (+18.8%) by 9:57 AM",
+    "Re-held and extended: h6 +99%, h1 -2.5%; about 13h old",
+    "Flow not dust: h6 13,535 buys / 11,421 sells on ~$2.46M volume (~$99 average fill, pf-q); liq 10.8% of mcap",
+    "Concentration clean: top-10 ex-pool 17.7%, top-1 2.5%; 0 snipers, 0 bundlers, no identical-balance band (pf1, pf-n)",
+    "The GeckoTerminal holder mismatch that kept it L1 at 7:50 comes from a stale GT snapshot (last updated 9:43 PM ET Oct 18, about an hour after launch), see rule pf-s"
+   ],
+   "not_l3_because": "First-block / create-slot bundle check not run this run (rule i unresolved), and GeckoTerminal holders are stale so there is no second source for the holder count",
+   "kill_line": {
+    "text": "mcap < $638k (-30%) or holders < 3,032 (-10%) or pool quote < 322 SOL (-30%); pf-m early exit (holders down at two marks in a row with price below entry)",
+    "mcap_usd_below": 638000,
+    "holders_below": 3032,
+    "pool_quote_sol_below": 322
+   },
+   "custody": "Solana SPL token on PumpSwap; non-custodial, no bridge (pump.fun arm)",
+   "rules_applied": [
+    "i",
+    "k",
+    "pf1",
+    "pf-l",
+    "pf-m",
+    "pf-n",
+    "pf-o",
+    "pf-q",
+    "pf-s"
    ]
   }
  ],
@@ -1354,6 +1437,18 @@
    ],
    "rule": "pf-m early exits so far: CATE closed at -0.3% (11:12 PM Oct 18) and kept sliding (~$69.0M -> $66.95M by 7:50 AM), so that exit was right. Dacity closed at -16.8% (5:15 AM, $3.95M, holders 5,650 -> 5,640 -> 5,617) and by 7:50 AM was back to $4.43M (-6.7% vs entry) with holders 5,656, above the pre-drop count. A two-mark dip of under ~1% of holders on a 5k+ holder coin can be noise. Keep pf-m, but log every pf-m exit's price and holders at the next run; if two more exits recover like Dacity, raise pf-m's trigger to a 1% cumulative holder drop on coins with 5,000+ holders.",
    "source": "desk run 2026-10-19 07:50 (review of overnight pf-m closes)"
+  },
+  {
+   "id": "pf-s",
+   "added_at": "2026-10-19T10:00:00-04:00",
+   "title": "Only count a holder mismatch when both counts are fresh",
+   "category": "sybil",
+   "evidence": [
+    "UHI",
+    "saluteface"
+   ],
+   "rule": "The farm filter's holder-count mismatch (pump.fun vs GeckoTerminal) only counts when GeckoTerminal's holder snapshot is under ~6h old. UHI showed 2,835 pump.fun vs 660 GT holders at 7:50 AM Oct 19 and was scored L1, but GT's count was last updated at 9:43 PM ET Oct 18, about an hour after launch; by 9:57 AM pump.fun showed 3,369 holders with a clean top-10 (17.7%) and no sniper or bundler flags. Check GT's last_updated before using the mismatch, and when it is stale use pump.fun holder growth between two runs (pf-o) instead.",
+   "source": "desk run 2026-10-19 10:00"
   }
  ],
  "summaries": [
@@ -1886,6 +1981,62 @@
     }
    },
    "vs_solada": "Solada: no ticket open; strongest L2 BOLT ~446k ADA pool mcap, 271 holders, 31k ADA side. Pump.fun: PIERRE opened with ~4.5k holders and a 545 SOL side. Pump.fun still produces names with real holder growth through fades; Solada's overnight board was 20 copycat launches from one swarm launcher."
+  },
+  {
+   "at": "2026-10-19T10:00:00-04:00",
+   "type": "run",
+   "note": "Marked PIERRE at $1.69M, +28.6% USD / about +29 ADA-equivalent, kill lines clear (holders 4,506 vs 4,030 line, pool 620.6 SOL vs 382). Opened UHI-FGkC-20261019-1000 (strongest L2, first-block unresolved) at $912k. L2 no ticket: SI276 (308h, $706k, 2,260 holders, h6 6,837/2,891 at +27%; holder snapshot for pf-o), godspeed (17h, $126k, 2,561 holders, +46% h6; snapshot for pf-o), SAPLING ($2.35M, 3,531 holders vs 3,534 at 7:50: no pf-o growth), Groklet ($243k, 1,380 holders vs 1,394: no growth). L1: saluteface (+245% h1 spike, pf-l fails), startupSI (13.2k holders but a 12-wallet identical band and liq 3%), FOMO / GTA VI / COMPUTE / MrBeast (<2h, dust fills), Moonoween (666/55 buys), USOE/USDR/USDP/MUCRON/EVERNORTHX farms (liq <2% of mcap). Added rule pf-s. Research/lottery/NFA.",
+   "helius_usage": {
+    "requests": 0,
+    "credits_estimate": "0 (first-block checks skipped; pump.fun and DexScreener only)"
+   },
+   "watch_next": {
+    "SI276": {
+     "mint": "HMYd9tosnUXuNHmq7pXmoePRVBLBBjA3JBfydq6upump",
+     "holders_snapshots": [
+      {
+       "at": "2026-10-19T10:00:00-04:00",
+       "holders": 2260
+      }
+     ]
+    },
+    "godspeed": {
+     "mint": "ArpPsesHXKbGeJsHdquM6acT3uNs7BChyetJjiNYpump",
+     "holders_snapshots": [
+      {
+       "at": "2026-10-19T10:00:00-04:00",
+       "holders": 2561
+      }
+     ]
+    },
+    "SAPLING": {
+     "mint": "BZFYNPeQAEW3HWQ4DNsTVahC1n4ZjTgn6jB2nnBbB96W",
+     "holders_snapshots": [
+      {
+       "at": "2026-10-19T07:50:00-04:00",
+       "holders": 3534
+      },
+      {
+       "at": "2026-10-19T10:00:00-04:00",
+       "holders": 3531
+      }
+     ]
+    },
+    "Groklet": {
+     "mint": "4qH8A5GxvRMZgpRFjXASc6U9HAoEzKeUqxY2dPB7pump",
+     "holders_snapshots": [
+      {
+       "at": "2026-10-19T07:50:00-04:00",
+       "holders": 1394
+      },
+      {
+       "at": "2026-10-19T10:00:00-04:00",
+       "holders": 1380
+      }
+     ]
+    }
+   },
+   "vs_solada": "Solada: its one breakout, RAIN (5 to 67 holders overnight), faded on 9 AM sells and re-held at 92.9%, so it got an L3 paper ticket; BOLT holds ~456k on flat holders. Pump.fun: PIERRE +28.6% and UHI added holders 19% through its first fade. Both arms now have a holders-survived-the-fade ticket to compare."
   }
  ]
 }

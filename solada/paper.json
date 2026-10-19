@@ -13,7 +13,64 @@
   "3": "Watch: lots of holders early that stick through first dip",
   "4": "High-conviction lottery: L3 + cross-chain/bigger accounts, improving ADA-side pool, holder growth through first dip, prior similar shapes worked in paper book"
  },
- "open": [],
+ "open": [
+  {
+   "id": "RAIN-7cc1-20261019-1000",
+   "ticker": "RAIN",
+   "name": "RAIN (RAIN-3)",
+   "side": "cardano",
+   "launchpad": "solada.fun",
+   "chain": "cardano",
+   "asset_id": "7cc11ddeba48ac007c6af09715aebbc188fe0032563ba99207f0fc840014df105241494e",
+   "solada_id": "draft-rain-3",
+   "opened_at": "2026-10-19T10:00:00-04:00",
+   "window_ends_at": "2026-10-21T10:00:00-04:00",
+   "size": 100,
+   "level": 3,
+   "entry_type": "pullback re-hold (pre-graduation curve)",
+   "status": "open",
+   "entry": {
+    "mcap_ada": 44893,
+    "curve_pct": 92.9,
+    "curve_ada": 9610,
+    "holders_onchain": 67,
+    "holders_solada": 65,
+    "top10_pct": 28.23,
+    "top1_pct": 3.99,
+    "price_basis": "Solada curve marketCapLovelace",
+    "source": "Solada /api/launches + Koios asset_addresses (~10:09 AM ET)"
+   },
+   "thesis": [
+    "Holder density from nothing: 5 holders at 3 AM to 63 on-chain by 9:52 AM, crowned King of the Hill at 92.7% (8:57 AM)",
+    "Survived its first fade: curve 92.7% -> 83.9% on 9 AM selling (~3.75k ADA out vs ~2.1k in), then back to 92.9% by 10:09 with holders 63 -> 67 (rule a, daily-2026-10-18 pullback lesson)",
+    "No sniper overhang: first-block keys uytg09zr, u8a2m6, uyt8xs9q, u97c3csuc5 and the launcher already sold out; top-10 28.2%, top-1 4.0%",
+    "Busiest name on #soladafun-buys 7:58-10:02 AM (50 buys, ~9.5k ADA) with a 1,000 ADA buy at 8:48"
+   ],
+   "risks": [
+    "Discord chat called it a 'scam token' / 'farmed' (unverified)",
+    "Graduation at 100% moves it to a Minswap pool whose LP tokens sit unburned in Solada's wallet, so liquidity depends on trusting Solada",
+    "Graduation alone is not a signal (rule f): many graduates faded to 19-30k ADA"
+   ],
+   "kill_line": {
+    "text": "Before graduation: curve under 80% or on-chain holders under 55. After graduation: pool ADA side under 8k or on-chain holders under 55, or pool mcap under 31k ADA (-30%).",
+    "curve_below": 80,
+    "holders_below": 55,
+    "post_grad_ada_side_below": 8000,
+    "mcap_ada_below": 31400
+   },
+   "custody": "Cardano native token in the holder wallet (non-custodial); post-graduation LP held unburned by Solada",
+   "rules_applied": [
+    "a",
+    "f",
+    "h",
+    "i",
+    "j",
+    "l",
+    "p",
+    "daily-2026-10-18"
+   ]
+  }
+ ],
  "closed": [
   {
    "id": "BOLT-20261017-1125",
@@ -835,6 +892,26 @@
     "o",
     "p",
     "q",
+    "s",
+    "t",
+    "u"
+   ]
+  },
+  {
+   "at": "2026-10-19T10:00:00-04:00",
+   "type": "run",
+   "note": "Opened RAIN-7cc1-20261019-1000 (L3, 100 ADA) at 44.9k ADA mcap / 92.9% curve. RAIN (RAIN-3) went from 5 holders at 3 AM to 63 on-chain, was crowned King at 92.7% (8:57 AM), faded to 83.9% on 9 AM selling, then re-held at 92.9% with 67 on-chain holders by 10:09, and all first-block keys and the launcher had already sold out (no overhang). BOLT holds ~456-473k with flow passing rule k but holders flat (271 to 274 on-chain), so rules h and l keep it L2. No Solana-side snipe (MISS 26 natives). Research/lottery/NFA.",
+   "rules_applied": [
+    "a",
+    "b",
+    "h",
+    "j",
+    "k",
+    "l",
+    "n",
+    "p",
+    "q",
+    "r",
     "s",
     "t",
     "u"
