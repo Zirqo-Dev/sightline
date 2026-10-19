@@ -1,0 +1,100 @@
+name: Solana forensics
+
+# Research scan. Reads the SOLANA_RPC_URL secret and never prints it.
+# Commits reports only from main, with pull --rebase and no force-push.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mint:
+        description: "Token mint to scan. Leave empty to scan the watchlist."
+        required: false
+        type: string
+        default: ""
+  schedule:
+    - cron: "30 8 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sol-forensics
+  cancel-in-progress: false
+
+jobs:
+  forensics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Existing checks
+        env:
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+        run: |
+          bash scripts/privacy-guard.sh
+          pip install --quiet "jsonschema>=4.18"
+          python3 scripts/validate-desks.py
+
+      - name: Unit tests
+        run: python3 -m unittest discover -s sol_forensics/tests -v
+
+      - name: Scan
+        env:
+          SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}
+          MINT: ${{ github.event.inputs.mint }}
+        run: |
+          set -euo pipefail
+          if [ -n "${MINT}" ]; then
+            case "${MINT}" in
+              *[!1-9A-HJ-NP-Za-km-z]*|"" ) echo "mint is not a base58 address"; exit 1 ;;
+            esac
+            if [ "${#MINT}" -lt 32 ] || [ "${#MINT}" -gt 44 ]; then
+              echo "mint is not a Solana address"
+              exit 1
+            fi
+            python3 -m sol_forensics --mint "${MINT}" --holders
+          else
+            python3 -m sol_forensics --watchlist --holders
+          fi
+
+      - name: Checks before commit
+        env:
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+        run: |
+          bash scripts/privacy-guard.sh
+          python3 scripts/validate-desks.py
+
+      - name: Commit reports
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "Refusing to push reports from ${GITHUB_REF}. Run this workflow on main."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add solada/forensics
+          if git diff --cached --quiet; then
+            echo "No report changes."
+            exit 0
+          fi
+          git commit -m "Update sol_forensics reports"
+          ok=0
+          for i in 1 2 3; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              ok=1
+              break
+            fi
+            echo "Rebase or push failed (attempt ${i}). Not force-pushing."
+            sleep $((i * 5))
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo "Push failed after rebase retries. No force-push was used."
+            exit 1
+          fi

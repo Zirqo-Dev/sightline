@@ -16,6 +16,8 @@ Each desk may also have `<desk>/panels.json`, which chooses the panels on that d
 
 Bots write daily briefs as `<desk>/briefs/YYYY-MM-DD.json` only. They do not maintain a brief index. The site build writes `<desk>/briefs/index.json` from those files when it publishes.
 
+`solada/forensics/` is experimental Solana research (`sol_forensics`), not a paper book, run log, brief, or pulse. It is not listed in `desks.json` and this check does not validate it. The privacy guard still scans it. Flag codes in those reports are hypotheses, not pulse signals.
+
 ## Paper book
 - **required:** `schema_version` (= 2), `desk`, `book` (book id, e.g. "solada", "pumpfun"), `open[]`, `closed[]`, `rules[]`
 - optional: `chain`, `unit` (what `size`/`pnl` are in, e.g. "ADA" or "ADA-equivalent"), `ticket_size`, `disclaimer`, `default_window_hours`, `levels{}`, `summaries[]` (each `at`, `type`, `note`, plus anything else)

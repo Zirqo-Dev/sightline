@@ -12,3 +12,4 @@ Files follow the shared format, version 2 (field guide and old-to-new names: ../
 | `briefs/YYYY-MM-DD.json` | Daily briefs (from now on). The site build writes `briefs/index.json`; this bot does not. |
 | `pulse.json` | Hourly pulse: per-name metric points (last 7 days; older points move to `archive/pulse-YYYY-MM.json`) plus the early-runner `radar[]`. Numbers only, no tickets. |
 | `panels.json` | Which panels the desk page shows, in order (see ../dashboard/PLUGINS.md). |
+| `forensics/` | Experimental Solana early-buyer reports (`sol_forensics`). Not paper trades. Flag codes stay in the report JSON; the panel does not show them as signals. |
