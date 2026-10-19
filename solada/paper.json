@@ -866,6 +866,16 @@
       ],
       "rule": "Liquidity pulls are not selling. BOLT's paper ticket closed at 362k (-10.8%) at 11:12 PM Oct 18 when the pool ADA side fell 33.4k -> 27.9k, under its 28k line, because LP was withdrawn (both pool sides fell, invariant down ~16%) while on-chain holders held at 266 and mcap stayed above 340k. By 7:50 AM Oct 19 BOLT was back to ~446k pool mcap with the ADA side at ~31.0k and 271 holders (+23% vs the exit, +9.7% vs entry). When the ADA-side line breaks because both pool sides shrank and holders are flat or rising, confirm it on the next pulse before closing; an ADA-side drop driven by net selling (token side up, ADA side down) still closes at once.",
       "source": "desk run 2026-10-19 07:50 (review of BOLT-20261018-1020 close)"
+    },
+    {
+      "id": "v",
+      "title": "Fresh graduates open on a thin pool",
+      "category": "kill",
+      "evidence": [
+        "RAIN"
+      ],
+      "rule": "Solada curves graduate with about 10.3k ADA, so every fresh graduate opens under rule g's ~11k ADA side, and curve buyers sell into the new pool. RAIN was ticketed at L3 on a 92.9% curve re-hold, graduated at 10:36 AM Oct 19, peaked near 70.9k ADA, then fell to 12.2k by 1:08 PM (-72.9% close) and 5.5k by 1:54 PM with holders 72 -> 44. Pre-graduation curve tickets now close on the first post-graduation holder drop below entry (no second mark), and coins under about 3 hours past graduation stay L2 at most until the pool ADA side is 15k+ and holders survive a first post-graduation fade.",
+      "added_at": "2026-10-19T14:00:00-04:00"
     }
   ],
   "summaries": [
@@ -1051,6 +1061,25 @@
       "at": "2026-10-19T13:08:00-04:00",
       "type": "pulse-close",
       "note": "Closed RAIN-7cc1-20261019-1000 at -72.9% (12,168 ADA pool mcap vs 44,893 entry). Kill line hit: pool mcap under 31,400 and pool ADA side 5,158 under 8,000 after a post-graduation dump driven by net selling; rule o also fired (holders 72 -> 68 -> 59). Research/lottery/NFA."
+    },
+    {
+      "at": "2026-10-19T14:00:00-04:00",
+      "type": "run",
+      "note": "Monday 2 PM run. No Solada ticket open or opened. DEXY graduated in under 2 hours (112.3k ADA pool mcap, 16.0k ADA side, 71 holders, 1 PM hour ~55k ADA) but fails rule k (holders, depth), carries seven swarm keys (rule p) and is a fresh graduate under new rule v, so L2. BOLT 459.5k with flat holders (rules h, l). SER holders 83 -> 78 (rule k). No Solana-side snipe (MISS 18 natives). Added rule v from RAIN's -72.9% close. Research/lottery/NFA.",
+      "rules_applied": [
+        "a",
+        "f",
+        "g",
+        "h",
+        "k",
+        "l",
+        "n",
+        "p",
+        "q",
+        "s",
+        "t",
+        "v"
+      ]
     }
   ]
 }
