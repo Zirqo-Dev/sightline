@@ -1,23 +1,8 @@
 {
  "schema_version": 2,
  "desk": "solada",
- "updated_at": "2026-10-19T04:12:00-04:00",
+ "updated_at": "2026-10-19T05:15:00-04:00",
  "window_days": 7,
- "note": "Hourly pulse: numbers only, paper/research. Point metrics: holders = Solada count; holders_onchain = Koios stake-grouped holders ex pool/curve (Cardano) or pump.fun totalHolders (Solana; GeckoTerminal for CATE); holders_native = Solana-native (pump.fun total minus escrow/deployer/pool, rule n); mcap_ada = on-chain pool/curve mcap; ada_side = pool or curve ADA, or the quote side in ADA-equivalent for Solana names; volume = 24h volume in ADA(-equivalent). No owner wallet data.",
- "rates": {
-  "ADA_USD": 0.220132,
-  "SOL_USD": 105.48,
-  "source": "solada.fun /api/market adaUsdMicro; CoinGecko simple/price"
- },
- "sources": [
-  "solada.fun /api/launches, /api/market (www.solada.fun)",
-  "Koios asset_addresses (holders, swarm keys holding)",
-  "Blockfrost: Minswap V2 pool UTxOs, first ~13 asset txs per curve launch (early buyers, buy sizes)",
-  "GeckoTerminal cardano token pools + hourly OHLCV (BOLT, PAWS, CLOVE, SER)",
-  "DexScreener tokens/v1/solana",
-  "pump.fun frontend-api-v3 coins-v2 and coins/top-holders",
-  "Helius: not used (0 credits)"
- ],
  "points": [
   {
    "t": "2026-10-18T12:51:00-04:00",
@@ -10889,6 +10874,161 @@
     "price_sol": 3.999810390595373e-05,
     "holders_source": "pump.fun totalHolders"
    }
+  },
+  {
+   "t": "2026-10-19T05:15:00-04:00",
+   "ticker": "SER",
+   "chain": "cardano",
+   "asset_id": "971236b54a245b8850cd8a7ff01a4fa1ac017ab8e53096531b37c1980014df10534552",
+   "metrics": {
+    "holders": 80,
+    "holders_onchain": 79,
+    "mcap_ada": 88054,
+    "ada_side": 13753,
+    "volume": 1715
+   }
+  },
+  {
+   "t": "2026-10-19T05:15:00-04:00",
+   "ticker": "BOLT",
+   "chain": "cardano",
+   "asset_id": "14628c260a749e78e69e58acca32d0baa09808d50388c84fa7e1ae470014df10424f4c54",
+   "metrics": {
+    "holders": 277,
+    "holders_onchain": 270,
+    "mcap_ada": 397718,
+    "ada_side": 29217,
+    "volume": 650
+   }
+  },
+  {
+   "t": "2026-10-19T05:15:00-04:00",
+   "ticker": "CLOVE",
+   "chain": "cardano",
+   "asset_id": "c1b89ed48dfc2b82167c1548b88942d367af1e517947c3dd8bdead0b0014df10434c4f56452d33",
+   "metrics": {
+    "holders": 144,
+    "holders_onchain": 133,
+    "mcap_ada": 190673,
+    "ada_side": 20253,
+    "volume": 3606
+   }
+  },
+  {
+   "t": "2026-10-19T05:15:00-04:00",
+   "ticker": "BRO",
+   "chain": "cardano",
+   "asset_id": "f1b4cd6f6390ed1f94cb1577c9c3e9617f459614013b24e254cec4650014df1042524f",
+   "metrics": {
+    "holders": 30,
+    "holders_onchain": 29,
+    "mcap_ada": 12188,
+    "ada_side": 3259,
+    "curve_pct": 31.5,
+    "volume": 0
+   }
+  },
+  {
+   "t": "2026-10-19T05:15:00-04:00",
+   "ticker": "SNIPE",
+   "chain": "cardano",
+   "asset_id": "b6e70af9f41afffb8a98b3e06c9d6665c234b9cd8fc723f9b9a79ba50014df10534e495045",
+   "metrics": {
+    "holders": 32,
+    "holders_onchain": 32,
+    "mcap_ada": 7680,
+    "ada_side": 1834,
+    "curve_pct": 17.73,
+    "volume": 0
+   }
+  },
+  {
+   "t": "2026-10-19T05:15:00-04:00",
+   "ticker": "MISS",
+   "chain": "solana",
+   "asset_id": "HspCMGCBSMFChFaGieU8kRs1UR3YXffYej7x2KHSz1Mv",
+   "metrics": {
+    "holders": 24,
+    "holders_onchain": 24,
+    "holders_native": 24,
+    "mcap_ada": 171346,
+    "ada_side": 20500,
+    "curve_pct": 91.25,
+    "volume": 1473
+   }
+  },
+  {
+   "t": "2026-10-19T05:15:00-04:00",
+   "ticker": "CORE",
+   "chain": "solana",
+   "asset_id": "Ba54R6DJMYJ47kYbirUqfMXfHyy9toF35wjxnBYTeUy7",
+   "metrics": {
+    "holders": 34,
+    "holders_onchain": 34,
+    "holders_native": 34,
+    "mcap_ada": 111156,
+    "ada_side": 14800,
+    "curve_pct": 80.61,
+    "volume": 1138
+   }
+  },
+  {
+   "t": "2026-10-19T05:15:00-04:00",
+   "ticker": "JUSTQ",
+   "chain": "solana",
+   "asset_id": "HFTxNjdyESnGNscsgeW2NyosSBScpfaMwDiaH5ttcvGo",
+   "metrics": {
+    "holders": 230,
+    "holders_onchain": 230,
+    "holders_native": 230,
+    "mcap_ada": 64171,
+    "ada_side": 22843,
+    "volume": 0
+   }
+  },
+  {
+   "t": "2026-10-19T05:15:00-04:00",
+   "ticker": "CUBEC",
+   "chain": "solana",
+   "asset_id": "JBzevP79tjZ65uuZjNhcUzkeCtubvKsSyK74Et5g11kC",
+   "metrics": {
+    "holders": 4,
+    "holders_onchain": 4,
+    "holders_native": 4,
+    "mcap_ada": 18232,
+    "ada_side": 20,
+    "curve_pct": 0.28,
+    "volume": 0
+   }
+  },
+  {
+   "t": "2026-10-19T05:15:00-04:00",
+   "ticker": "QBITS",
+   "chain": "solana",
+   "asset_id": "Ceuu7uQHwhtHuMhPWrWL9dgri3FaGJZFkTy6FoDow7NA",
+   "metrics": {
+    "holders": 9,
+    "holders_onchain": 9,
+    "holders_native": 9,
+    "mcap_ada": 28451,
+    "ada_side": 2500,
+    "curve_pct": 27.21,
+    "volume": 0
+   }
+  },
+  {
+   "t": "2026-10-19T05:15:00-04:00",
+   "ticker": "Dacity",
+   "chain": "solana",
+   "asset_id": "nxPqZ4F7ux8Vph5NFu25rEP6Kx9Gr1U6Fmj36Rjpump",
+   "metrics": {
+    "holders": 5617,
+    "holders_onchain": 5617,
+    "holders_native": 5617,
+    "mcap_ada": 17929316,
+    "ada_side": 537435,
+    "volume": 93893
+   }
   }
  ],
  "radar": [
@@ -10897,44 +11037,35 @@
    "chain": "cardano",
    "asset_id": "971236b54a245b8850cd8a7ff01a4fa1ac017ab8e53096531b37c1980014df10534552",
    "first_seen": "2026-10-18T14:56:03-04:00",
-   "score": 5,
+   "score": 6,
+   "score_max": 40,
    "signals": [
-    "on-chain holders 72->76 since 3:07 (+3.7/h); Solada 74->76",
-    "acceleration +1.5/h vs prior pulse (+2.2/h)",
-    "pool mcap 92.0k->89.2k ADA (-3.1%); GT h1 7/6 buys/sells from 6 buyers / 6 sellers, price h1 -3.8%",
-    "3 AM hour 1,666 ADA vs 1,423 in the 2 AM hour",
-    "pool ADA side 14,052->13,836 (-1.5%)",
+    "on-chain holders 76->79 since 4:12 (+2.9/h); Solada 80",
+    "acceleration -0.8/h vs prior pulse (+3.7/h)",
+    "pool mcap ~88.1k ADA; GT h1 8/3 buys/sells from 7 buyers / 3 sellers, price h1 -4.9%, h6 -17.1%",
+    "pool ADA side 13836->13753 (-0.6%)",
     "swarm key u9q3xusf still holds"
    ],
-   "note": "Two-way trade this hour: seven buys to six sells, price eased 3.8% and the pool slipped 1.5%, but on-chain holders rose again from 72 to 76 and the 3 AM hour was busier than 2 AM. One swarm key still holds. GeckoTerminal 6h/24h changes come from the pre-seeded pool and are ignored. Swarm launcher uyetfdape9 put out another copycat SER at 3:50 AM (2 holders, swarm first buyers); it is not on the radar.",
-   "velocity_h": 3.7,
-   "score_max": 40,
+   "note": "Buyers led again (8/3) but price still slipped 4.9% and the pool edged down to 13.8k ADA; holders rose 76->79.",
    "factors": {
-    "holders": 76,
+    "holders": 79,
+    "holders_prev": 76,
     "holders_basis": "onchain",
-    "holders_prev": 72,
-    "holders_per_h": 3.7,
-    "accel_per_h": 1.5,
+    "holders_per_h": 2.9,
+    "accel_per_h": -0.8,
+    "ada_side": 13753,
+    "ada_side_pct": -0.6,
     "graduated": "minswap-v2",
-    "vol_h1": 2298,
-    "vol_x": 0.88,
+    "vol_h1": 1715,
     "vol_unit": "ADA",
-    "buys_h1": 7,
-    "sells_h1": 6,
-    "price_h1_pct": -3.8,
-    "ada_side": 13836,
-    "ada_side_pct": -1.5,
+    "buys_h1": 8,
+    "sells_h1": 3,
+    "price_h1_pct": -4.85,
+    "price_h6_pct": -17.12,
     "swarm": 1,
     "swarm_keys": [
      "u9q3xusf"
-    ],
-    "repeat_first_buyers": [
-     5,
-     11
-    ],
-    "one_sided": false,
-    "top10_pct": 43.0,
-    "top1_pct": 6.22
+    ]
    },
    "flags": [
     {
@@ -10942,8 +11073,8 @@
      "tone": "good"
     },
     {
-     "code": "two-way-flow",
-     "tone": "warn"
+     "code": "buyers-lead-h1",
+     "tone": "good"
     },
     {
      "code": "swarm-holding",
@@ -10956,180 +11087,54 @@
    ]
   },
   {
-   "ticker": "MISS",
-   "chain": "solana",
-   "asset_id": "HspCMGCBSMFChFaGieU8kRs1UR3YXffYej7x2KHSz1Mv",
-   "first_seen": "2026-10-15T16:58:16-04:00",
-   "score": 4,
-   "signals": [
-    "native holders 22->22 since 3:07 (+0.0/h); Solada 133->132",
-    "acceleration +0.0/h vs prior pulse (+0.0/h)",
-    "curve 92.40%->92.25% (slipping)",
-    "vol h1 ~296 ADA-eq, DexScreener h1 1 buy / 2 sells, price h1 -0.7%; h24 +66.7%",
-    "pump.fun flagged wallets in top holders 4",
-    "native 22 of 132 Solada-count holders (17%), rule n"
-   ],
-   "note": "Still stalled: one buy to two sells, the curve edged down to 92.25% and Solana-native holders flat at 22. Rule q's lowest-of-three stays 22, far under 50, with four flagged wallets in the top holders. Still the Solada King.",
-   "velocity_h": 0.0,
-   "score_max": 40,
-   "factors": {
-    "holders": 22,
-    "holders_basis": "native",
-    "holders_prev": 22,
-    "holders_per_h": 0.0,
-    "accel_per_h": 0.0,
-    "curve_pct": 92.25,
-    "curve_pts_per_h": -0.1,
-    "graduated": null,
-    "vol_h1": 296,
-    "vol_x": 0.36,
-    "vol_unit": "ADA-eq",
-    "buys_h1": 1,
-    "sells_h1": 2,
-    "price_h1_pct": -0.7,
-    "price_h6_pct": 2.1,
-    "ada_side": 20901,
-    "ada_side_pct": -0.2,
-    "snipers": 4,
-    "native_share_pct": 16.7,
-    "one_sided": false,
-    "top10_pct": 4.61
-   },
-   "flags": [
-    {
-     "code": "sellers-lead-h1",
-     "tone": "warn"
-    },
-    {
-     "code": "holders-flat",
-     "tone": "warn"
-    },
-    {
-     "code": "sniper-flags",
-     "tone": "warn"
-    },
-    {
-     "code": "low-native-share",
-     "tone": "bad"
-    }
-   ]
-  },
-  {
-   "ticker": "SNIPE",
+   "ticker": "BOLT",
    "chain": "cardano",
-   "asset_id": "b6e70af9f41afffb8a98b3e06c9d6665c234b9cd8fc723f9b9a79ba50014df10534e495045",
-   "first_seen": "2026-10-19T01:15:00-04:00",
+   "asset_id": "14628c260a749e78e69e58acca32d0baa09808d50388c84fa7e1ae470014df10424f4c54",
+   "first_seen": "2026-10-14T13:26:46-04:00",
    "score": 3,
-   "signals": [
-    "on-chain holders 12->31 since 3:07 (+17.5/h); Solada 12->31",
-    "acceleration +17.5/h vs prior pulse (+0.0/h)",
-    "curve 13.94%->16.43% with 1,700 ADA on curve, 47 trades, 5,819 ADA volume since launch",
-    "9 trades and ~1,100 ADA of volume this hour but 19 new holders, so some of the jump looks like token transfers rather than buys",
-    "launcher key uxq32zraa5: not a known swarm key",
-    "swarm key uytg09zr still holds (u8a2m6 has exited); early buyers also include uyt8xs9q, ux9da0mc and u97c3csuc5"
-   ],
-   "note": "Woke up: on-chain holders jumped from 12 to 31 and the curve gained 2.5 points, but only nine trades came in, so more holders appeared than trades. That points to some token transfers or distribution. One swarm key still holds and the pool is thin. Watch only.",
-   "velocity_h": 17.5,
    "score_max": 40,
+   "signals": [
+    "on-chain holders 266->270 since 4:12 (+3.8/h); Solada 277",
+    "acceleration +3.8/h vs prior pulse (+0.0/h)",
+    "pool mcap ~398k ADA; GT h1 3/0 buys/sells, price h1 +3.1%, h6 +6.9%",
+    "pool ADA side 28017->29217 (+4.3%)",
+    "swarm keys holding now: uytg09zr, u9q3xusf, plus launcher keys u9rwdkfjtr, uyetfdape9"
+   ],
+   "note": "Quiet bid: three buys and no sells lifted holders 266->270 and the ADA side back to 29.2k; still swarm-held.",
    "factors": {
-    "holders": 31,
+    "holders": 270,
+    "holders_prev": 266,
     "holders_basis": "onchain",
-    "holders_prev": 12,
-    "holders_per_h": 17.5,
-    "accel_per_h": 17.5,
-    "curve_pct": 16.43,
-    "curve_pts_per_h": 2.3,
-    "graduated": null,
-    "ada_side": 1700,
-    "ada_side_pct": 17.9,
-    "swarm": 1,
+    "holders_per_h": 3.8,
+    "accel_per_h": 3.8,
+    "ada_side": 29217,
+    "ada_side_pct": 4.3,
+    "graduated": "minswap-v2",
+    "vol_h1": 650,
+    "vol_unit": "ADA",
+    "buys_h1": 3,
+    "sells_h1": 0,
+    "price_h1_pct": 3.06,
+    "price_h6_pct": 6.93,
+    "swarm": 4,
     "swarm_keys": [
-     "uytg09zr"
-    ],
-    "repeat_first_buyers": [
-     4,
-     9
-    ],
-    "top10_pct": 32.52,
-    "top1_pct": 10.17
+     "uytg09zr",
+     "u9q3xusf",
+     "u9rwdkfjtr",
+     "uyetfdape9"
+    ]
    },
    "flags": [
     {
-     "code": "holders-jump",
+     "code": "buyers-lead-h1",
      "tone": "good"
     },
     {
-     "code": "holders-outpace-trades",
-     "tone": "warn"
+     "code": "holders-rising",
+     "tone": "good"
     },
     {
      "code": "swarm-holding",
-     "tone": "bad"
-    },
-    {
-     "code": "thin-pool",
-     "tone": "bad"
-    }
-   ]
-  },
-  {
-   "ticker": "BRO",
-   "chain": "cardano",
-   "asset_id": "f1b4cd6f6390ed1f94cb1577c9c3e9617f459614013b24e254cec4650014df1042524f",
-   "first_seen": "2026-10-19T01:15:00-04:00",
-   "score": 3,
-   "signals": [
-    "on-chain holders 30->28 since 3:07 (-1.8/h); Solada 31->29",
-    "acceleration +1.5/h vs prior pulse (-3.3/h)",
-    "curve 36.84%->34.26% with 3,545 ADA on curve, 109 trades, 13,360 ADA volume since launch",
-    "launcher key u87ps7jasv: not a known swarm key",
-    "swarm key uytg09zr still holds (u8a2m6 has exited); early buyers include uyt8xs9q and sweep wallet addr1qyng…ur35h7",
-    "three identical 100 ADA buys (u8pthrth0m twice)"
-   ],
-   "note": "Fading for a second hour: 16 trades and about 2,500 ADA of volume, but net selling pulled the curve to 34.3% and on-chain holders fell from 30 to 28. One swarm key still holds, so it stays penalized (rule p).",
-   "velocity_h": -1.8,
-   "score_max": 40,
-   "factors": {
-    "holders": 28,
-    "holders_basis": "onchain",
-    "holders_prev": 30,
-    "holders_per_h": -1.8,
-    "accel_per_h": 1.5,
-    "curve_pct": 34.26,
-    "curve_pts_per_h": -2.4,
-    "graduated": null,
-    "ada_side": 3545,
-    "ada_side_pct": -7.0,
-    "swarm": 1,
-    "swarm_keys": [
-     "uytg09zr"
-    ],
-    "repeat_first_buyers": [
-     3,
-     6
-    ],
-    "top10_pct": 32.64,
-    "top1_pct": 4.91
-   },
-   "flags": [
-    {
-     "code": "holders-falling",
-     "tone": "warn"
-    },
-    {
-     "code": "curve-falling",
-     "tone": "warn"
-    },
-    {
-     "code": "swarm-holding",
-     "tone": "bad"
-    },
-    {
-     "code": "identical-buys",
-     "tone": "warn"
-    },
-    {
-     "code": "thin-pool",
      "tone": "warn"
     }
    ]
@@ -11140,35 +11145,30 @@
    "asset_id": "HFTxNjdyESnGNscsgeW2NyosSBScpfaMwDiaH5ttcvGo",
    "first_seen": "2026-10-09T19:30:18-04:00",
    "score": 3,
-   "signals": [
-    "native holders 227->227 since 3:07 (+0.0/h); Solada 254->254",
-    "acceleration -2.2/h vs prior pulse (+2.2/h)",
-    "no trades this hour; h6 9 buys / 3 sells, price h6 +25.3%",
-    "native 227 of 254 Solada-count holders (89%)",
-    "pool side ~17.1k ADA-eq (+0.3%)"
-   ],
-   "note": "Quiet hour with no trades; natives flat at 227 and the pool steady. Mcap is still only about $14.1k, under the desk kill lines.",
-   "velocity_h": 0.0,
    "score_max": 40,
+   "signals": [
+    "native holders 227->230 since 4:12 (+2.9/h); Solada 254",
+    "acceleration +2.9/h vs prior pulse (+0.0/h)",
+    "no trades this hour; h6 price +25.6% on DexScreener",
+    "native 230 of 254 Solada-count holders (91%)",
+    "pool side ~22.8k ADA-eq"
+   ],
+   "note": "Natives ticked up to 230 on a quiet hour with no trades; pool steady, still below old kill lines.",
    "factors": {
-    "holders": 227,
-    "holders_basis": "native",
+    "holders": 230,
     "holders_prev": 227,
-    "holders_per_h": 0.0,
-    "accel_per_h": -2.2,
-    "graduated": "pumpswap",
+    "holders_basis": "native",
+    "holders_per_h": 2.9,
+    "accel_per_h": 2.9,
+    "native_share_pct": 91,
+    "ada_side": 22843,
     "vol_h1": 0,
-    "vol_x": 0.0,
-    "vol_unit": "ADA-eq",
+    "vol_unit": "ADA",
     "buys_h1": 0,
     "sells_h1": 0,
-    "price_h6_pct": 25.3,
-    "ada_side": 17105,
-    "ada_side_pct": 0.3,
-    "snipers": 0,
-    "native_share_pct": 89.4,
-    "one_sided": false,
-    "top10_pct": 18.58
+    "price_h1_pct": 0,
+    "price_h6_pct": 25.59,
+    "graduated": "pumpswap"
    },
    "flags": [
     {
@@ -11186,37 +11186,128 @@
    ]
   },
   {
+   "ticker": "MISS",
+   "chain": "solana",
+   "asset_id": "HspCMGCBSMFChFaGieU8kRs1UR3YXffYej7x2KHSz1Mv",
+   "first_seen": "2026-10-15T16:58:16-04:00",
+   "score": 3,
+   "score_max": 40,
+   "signals": [
+    "native holders 22->24 since 4:12 (+1.9/h); Solada 132",
+    "acceleration +1.9/h vs prior pulse (+0.0/h)",
+    "curve 92.25%->91.25% (slipping)",
+    "vol h1 ~1473 ADA-eq, DexScreener h1 1 buy / 2 sells, price h1 -4.5%; h6 -8.7%",
+    "pump.fun flagged wallets in top holders 4",
+    "native 24 of 132 Solada-count holders (18%), rule n"
+   ],
+   "note": "Natives edged 22->24 but sellers still lead and the curve slipped to 91.25%; still fails rule q.",
+   "factors": {
+    "holders": 24,
+    "holders_prev": 22,
+    "holders_basis": "native",
+    "holders_per_h": 1.9,
+    "accel_per_h": 1.9,
+    "native_share_pct": 18,
+    "curve_pct": 91.25,
+    "ada_side": 20500,
+    "vol_h1": 1473,
+    "vol_unit": "ADA",
+    "buys_h1": 1,
+    "sells_h1": 2,
+    "price_h1_pct": -4.52,
+    "price_h6_pct": -8.7,
+    "snipers": 4
+   },
+   "flags": [
+    {
+     "code": "sellers-lead-h1",
+     "tone": "warn"
+    },
+    {
+     "code": "sniper-flags",
+     "tone": "warn"
+    },
+    {
+     "code": "low-native-share",
+     "tone": "bad"
+    }
+   ]
+  },
+  {
+   "ticker": "BRO",
+   "chain": "cardano",
+   "asset_id": "f1b4cd6f6390ed1f94cb1577c9c3e9617f459614013b24e254cec4650014df1042524f",
+   "first_seen": "2026-10-19T01:15:00-04:00",
+   "score": 2,
+   "score_max": 40,
+   "signals": [
+    "on-chain holders 28->29 since 4:12 (+1.0/h); Solada 30",
+    "acceleration +2.8/h vs prior pulse (-1.8/h)",
+    "curve 34.26%->31.5% with 3259 ADA on curve, 115 trades, 14121 ADA volume since launch",
+    "swarm key uytg09zr still holds; early buyers include uyt8xs9q and sweep wallet addr1qyng\u2026ur35h7"
+   ],
+   "note": "Curve kept sliding (34.3%->31.5%) even as holders ticked 28->29; swarm key still on the book and pool stays thin.",
+   "factors": {
+    "holders": 29,
+    "holders_prev": 28,
+    "holders_basis": "onchain",
+    "holders_per_h": 1.0,
+    "accel_per_h": 2.8,
+    "ada_side": 3259,
+    "ada_side_pct": -8.1,
+    "curve_pct": 31.5,
+    "curve_pts_per_h": -2.63,
+    "graduated": null,
+    "swarm": 1,
+    "swarm_keys": [
+     "uytg09zr"
+    ]
+   },
+   "flags": [
+    {
+     "code": "curve-falling",
+     "tone": "warn"
+    },
+    {
+     "code": "swarm-holding",
+     "tone": "bad"
+    },
+    {
+     "code": "thin-pool",
+     "tone": "warn"
+    }
+   ]
+  },
+  {
    "ticker": "CLOVE",
    "chain": "cardano",
    "asset_id": "c1b89ed48dfc2b82167c1548b88942d367af1e517947c3dd8bdead0b0014df10434c4f56452d33",
    "first_seen": "2026-10-15T06:23:07-04:00",
    "score": 2,
+   "score_max": 40,
    "signals": [
-    "on-chain holders 132->132 since 3:07 (+0.0/h); Solada 146->145",
-    "acceleration +0.0/h vs prior pulse (+0.0/h)",
-    "pool mcap 212.1k->213.5k ADA (+0.6%); GT h1 one small buy",
-    "pool ADA side 21,320->21,389 (+0.3%)",
+    "on-chain holders 132->133 since 4:12 (+1.0/h); Solada 144",
+    "acceleration +1.0/h vs prior pulse (+0.0/h)",
+    "pool mcap ~191k ADA; GT h1 2/2 buys/sells, price h1 -11.7%",
+    "pool ADA side 21389->20253 (-5.3%)",
     "swarm keys holding now: u9q3xusf, u9rwdkfjtr, uyetfdape9, uytg09zr, uyyyjqps; team airdrop inflates holder base"
    ],
-   "note": "One small buy this hour; holders flat at 132 and the pool barely moved. Airdrop base (rule m), five swarm keys and a sub-rule-k side keep it watch only.",
-   "velocity_h": 0.0,
-   "score_max": 40,
+   "note": "Choppy hour (2/2) cut the on-chain pool mcap to ~191k; holders barely up, airdrop base and swarm still overhang.",
    "factors": {
-    "holders": 132,
-    "holders_basis": "onchain",
+    "holders": 133,
     "holders_prev": 132,
-    "holders_per_h": 0.0,
-    "accel_per_h": 0.0,
+    "holders_basis": "onchain",
+    "holders_per_h": 1.0,
+    "accel_per_h": 1.0,
+    "ada_side": 20253,
+    "ada_side_pct": -5.3,
     "graduated": "minswap-v2",
-    "vol_h1": 69,
-    "vol_x": 0.07,
+    "vol_h1": 3606,
     "vol_unit": "ADA",
-    "buys_h1": 1,
-    "sells_h1": 0,
-    "price_h1_pct": 0.0,
-    "price_h6_pct": 8.5,
-    "ada_side": 21389,
-    "ada_side_pct": 0.3,
+    "buys_h1": 2,
+    "sells_h1": 2,
+    "price_h1_pct": -11.7,
+    "price_h6_pct": -9.12,
     "swarm": 5,
     "swarm_keys": [
      "u9q3xusf",
@@ -11225,16 +11316,9 @@
      "uytg09zr",
      "uyyyjqps"
     ],
-    "one_sided": false,
-    "airdrop": true,
-    "top10_pct": 39.6,
-    "top1_pct": 6.62
+    "airdrop": true
    },
    "flags": [
-    {
-     "code": "no-volume",
-     "tone": "warn"
-    },
     {
      "code": "team-airdrop",
      "tone": "warn"
@@ -11246,63 +11330,9 @@
     {
      "code": "below-rule-k-depth",
      "tone": "warn"
-    }
-   ]
-  },
-  {
-   "ticker": "BOLT",
-   "chain": "cardano",
-   "asset_id": "14628c260a749e78e69e58acca32d0baa09808d50388c84fa7e1ae470014df10424f4c54",
-   "first_seen": "2026-10-14T13:26:46-04:00",
-   "score": 2,
-   "signals": [
-    "on-chain holders 266->266 since 3:07 (+0.0/h); Solada 275->274",
-    "acceleration +0.0/h vs prior pulse (+0.0/h)",
-    "one sell (~357 ADA) after three quiet hours",
-    "pool ADA side 28,372->28,017 (-1.3%); mcap 366.0k",
-    "swarm keys holding now: uytg09zr, u9q3xusf, plus launcher keys u9rwdkfjtr, uyetfdape9"
-   ],
-   "note": "One sell broke three quiet hours and trimmed the pool 1.3% to about 28.0k ADA; holders flat at 266.",
-   "velocity_h": 0.0,
-   "score_max": 40,
-   "factors": {
-    "holders": 266,
-    "holders_basis": "onchain",
-    "holders_prev": 266,
-    "holders_per_h": 0.0,
-    "accel_per_h": 0.0,
-    "graduated": "minswap-v2",
-    "vol_h1": 357,
-    "vol_x": 0.91,
-    "vol_unit": "ADA",
-    "buys_h1": 0,
-    "sells_h1": 1,
-    "price_h1_pct": 0.0,
-    "price_h6_pct": -3.9,
-    "ada_side": 28017,
-    "ada_side_pct": -1.3,
-    "swarm": 4,
-    "swarm_keys": [
-     "u9q3xusf",
-     "u9rwdkfjtr",
-     "uyetfdape9",
-     "uytg09zr"
-    ],
-    "one_sided": false,
-    "top10_pct": 26.74,
-    "top1_pct": 5.25
-   },
-   "flags": [
+    },
     {
      "code": "sellers-lead-h1",
-     "tone": "warn"
-    },
-    {
-     "code": "holders-flat",
-     "tone": "warn"
-    },
-    {
-     "code": "swarm-holding",
      "tone": "warn"
     }
    ]
@@ -11313,45 +11343,83 @@
    "asset_id": "Ba54R6DJMYJ47kYbirUqfMXfHyy9toF35wjxnBYTeUy7",
    "first_seen": "2026-10-09T18:39:40-04:00",
    "score": 2,
-   "signals": [
-    "native holders 32->32 since 3:07 (+0.0/h); Solada 133->133",
-    "acceleration +0.0/h vs prior pulse (+0.0/h)",
-    "curve 81.87% (flat)",
-    "no trades for four hours, price h6 -5.0%",
-    "native 32 of 133 Solada-count holders (24%)"
-   ],
-   "note": "No trades again; 32 natives and a flat 81.9% curve. Fails rule q.",
-   "velocity_h": 0.0,
    "score_max": 40,
+   "signals": [
+    "native holders 32->34 since 4:12 (+1.9/h); Solada 132",
+    "acceleration +1.9/h vs prior pulse (+0.0/h)",
+    "curve 80.61%",
+    "DexScreener h1 0 buys / 1 sell, price h1 -4.6%",
+    "native 34 of 132 Solada-count holders (26%)"
+   ],
+   "note": "One sell hour; natives 32->34 and curve ~80.6%. Still fails rule q.",
    "factors": {
-    "holders": 32,
-    "holders_basis": "native",
+    "holders": 34,
     "holders_prev": 32,
-    "holders_per_h": 0.0,
-    "accel_per_h": 0.0,
-    "curve_pct": 81.87,
-    "curve_pts_per_h": 0.0,
-    "graduated": null,
-    "vol_h1": 0,
-    "vol_x": 0.0,
-    "vol_unit": "ADA-eq",
+    "holders_basis": "native",
+    "holders_per_h": 1.9,
+    "accel_per_h": 1.9,
+    "native_share_pct": 26,
+    "curve_pct": 80.61,
+    "ada_side": 14800,
+    "vol_h1": 1138,
+    "vol_unit": "ADA",
     "buys_h1": 0,
-    "sells_h1": 0,
-    "price_h6_pct": -5.0,
-    "ada_side": 14942,
-    "ada_side_pct": 0.3,
-    "snipers": 0,
-    "native_share_pct": 24.1,
-    "one_sided": false,
-    "top10_pct": 15.04
+    "sells_h1": 1,
+    "price_h1_pct": -4.56,
+    "price_h6_pct": -4.56
    },
    "flags": [
     {
-     "code": "no-volume",
+     "code": "sellers-lead-h1",
      "tone": "warn"
     },
     {
      "code": "low-native-share",
+     "tone": "bad"
+    }
+   ]
+  },
+  {
+   "ticker": "SNIPE",
+   "chain": "cardano",
+   "asset_id": "b6e70af9f41afffb8a98b3e06c9d6665c234b9cd8fc723f9b9a79ba50014df10534e495045",
+   "first_seen": "2026-10-19T01:15:00-04:00",
+   "score": 2,
+   "score_max": 40,
+   "signals": [
+    "on-chain holders 31->32 since 4:12 (+1.0/h); Solada 32",
+    "acceleration -16.5/h vs prior pulse (+17.5/h)",
+    "curve 16.43%->17.73% with 1834 ADA on curve, 51 trades, 6338 ADA volume since launch",
+    "swarm key uytg09zr still holds; early buyers also include uyt8xs9q, ux9da0mc and u97c3csuc5"
+   ],
+   "note": "Held the transfer-inflated base (31->32) with the curve up to 17.7%; still thin and swarm-touched.",
+   "factors": {
+    "holders": 32,
+    "holders_prev": 31,
+    "holders_basis": "onchain",
+    "holders_per_h": 1.0,
+    "accel_per_h": -16.5,
+    "ada_side": 1834,
+    "ada_side_pct": 7.9,
+    "curve_pct": 17.73,
+    "curve_pts_per_h": 1.24,
+    "graduated": null,
+    "swarm": 1,
+    "swarm_keys": [
+     "uytg09zr"
+    ]
+   },
+   "flags": [
+    {
+     "code": "holders-flat",
+     "tone": "warn"
+    },
+    {
+     "code": "swarm-holding",
+     "tone": "bad"
+    },
+    {
+     "code": "thin-pool",
      "tone": "bad"
     }
    ]
@@ -11362,33 +11430,29 @@
    "asset_id": "JBzevP79tjZ65uuZjNhcUzkeCtubvKsSyK74Et5g11kC",
    "first_seen": "2026-10-19T04:12:00-04:00",
    "score": 1,
-   "signals": [
-    "native holders 2 (first pulse); Solada 6",
-    "new Solana-side launch (CosmicCube) at 3:39 AM, curve 0.28%",
-    "launcher key u9fzx7xp0n: not a known swarm key",
-    "10 buys / 9 sells in its first hour (~$870), price flat",
-    "native 2 of 6 Solada-count holders"
-   ],
-   "note": "Brand-new Solana-side launch from a clean launcher, but it churned 19 trades in its first hour without building holders or curve. Only two Solana-native holders.",
-   "velocity_h": null,
    "score_max": 40,
+   "signals": [
+    "native holders 2->4 since 4:12 (+1.9/h); Solada 6",
+    "native holders 4; Solada 6",
+    "curve 0.28%, no trades this hour",
+    "launcher key u9fzx7xp0n: not a known swarm key"
+   ],
+   "note": "Natives 2->4 after a dead hour with no trades; still a brand-new thin curve name.",
    "factors": {
-    "holders": 2,
+    "holders": 4,
+    "holders_prev": 2,
     "holders_basis": "native",
+    "holders_per_h": 1.9,
+    "accel_per_h": 0.0,
+    "native_share_pct": 67,
     "curve_pct": 0.28,
-    "graduated": null,
-    "vol_h1": 3939,
-    "vol_x": 6.0,
-    "vol_unit": "ADA-eq",
-    "buys_h1": 10,
-    "sells_h1": 9,
-    "price_h1_pct": -0.5,
-    "price_h6_pct": -0.5,
     "ada_side": 20,
-    "snipers": 0,
-    "native_share_pct": 33.3,
-    "one_sided": false,
-    "top10_pct": 0.07
+    "vol_h1": 0,
+    "vol_unit": "ADA",
+    "buys_h1": 0,
+    "sells_h1": 0,
+    "price_h1_pct": 0,
+    "price_h6_pct": -0.52
    },
    "flags": [
     {
@@ -11402,6 +11466,10 @@
     {
      "code": "thin-pool",
      "tone": "bad"
+    },
+    {
+     "code": "no-volume",
+     "tone": "warn"
     }
    ]
   },
@@ -11411,42 +11479,35 @@
    "asset_id": "Ceuu7uQHwhtHuMhPWrWL9dgri3FaGJZFkTy6FoDow7NA",
    "first_seen": "2026-10-18T18:07:00-04:00",
    "score": 1,
-   "signals": [
-    "native holders 7->6 since 3:07 (-0.9/h); Solada 30->30",
-    "acceleration +0.2/h vs prior pulse (-1.1/h)",
-    "curve 27.21% (flat)",
-    "no trades this hour; price h6 -6.4%",
-    "native 6 of 30 Solada-count holders (20%)"
-   ],
-   "note": "Still going backwards: no trades, and natives slipped from seven to six.",
-   "velocity_h": -0.9,
    "score_max": 40,
+   "signals": [
+    "native holders 6->9 since 4:12 (+2.9/h); Solada 30",
+    "acceleration +3.8/h vs prior pulse (-0.9/h)",
+    "curve 27.21% (flat)",
+    "no trades this hour; price h6 -6.2%",
+    "native 9 of 30 Solada-count holders (30%)"
+   ],
+   "note": "Natives recovered 6->9 but still no trades and a low native share.",
    "factors": {
-    "holders": 6,
+    "holders": 9,
+    "holders_prev": 6,
     "holders_basis": "native",
-    "holders_prev": 7,
-    "holders_per_h": -0.9,
-    "accel_per_h": 0.2,
+    "holders_per_h": 2.9,
+    "accel_per_h": 3.8,
+    "native_share_pct": 30,
     "curve_pct": 27.21,
-    "curve_pts_per_h": 0.0,
-    "graduated": null,
+    "ada_side": 2500,
     "vol_h1": 0,
-    "vol_x": 0.0,
-    "vol_unit": "ADA-eq",
+    "vol_unit": "ADA",
     "buys_h1": 0,
     "sells_h1": 0,
-    "price_h6_pct": -6.4,
-    "ada_side": 2455,
-    "ada_side_pct": 0.3,
-    "snipers": 0,
-    "native_share_pct": 20.0,
-    "one_sided": false,
-    "top10_pct": 6.44
+    "price_h1_pct": 0,
+    "price_h6_pct": -6.19
    },
    "flags": [
     {
-     "code": "holders-falling",
-     "tone": "warn"
+     "code": "holders-rising",
+     "tone": "good"
     },
     {
      "code": "no-volume",
@@ -11458,5 +11519,14 @@
     }
    ]
   }
- ]
+ ],
+ "notes": {
+  "closed": [
+   "Dacity-nxPq-20261018-2125 closed under pf-m at -16.8% USD (holders 5650->5640->5617)"
+  ],
+  "new_launches": [
+   "Copycat BRO (draft-bro-3, draft-bro-4) and SER (draft-ser-4) from launcher addr1q9l9u74zglcgujz since 4:12 AM; thin (1-2 holders), not added to radar"
+  ],
+  "swarm": "u97c3csuc5 still noted on SNIPE early buyers; uytg09zr still on BRO/SNIPE; no new swarm prefix confirmed this hour"
+ }
 }
