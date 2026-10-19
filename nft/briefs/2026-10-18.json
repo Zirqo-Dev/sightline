@@ -2,8 +2,8 @@
   "schema_version": 2,
   "desk": "nft",
   "date": "2026-10-18",
-  "headline": "Desk 18 Oct 13:04 ET (Sunday): nothing actionable. Closed the Killa Chronicles hole: the tape's $79k 'real' ETH name is still a CryptoSlam phantom (OS 1d 0 sales), so stripped ETH secondary is ~$1.12M, not ~$1.20M; mistake and method logged.",
-  "body": "Desk 18 Oct 13:04 ET (Sunday): nothing actionable. Closed the Killa Chronicles hole: the tape's $79k 'real' ETH name is still a CryptoSlam phantom (OS 1d 0 sales), so stripped ETH secondary is ~$1.12M, not ~$1.20M; mistake and method logged. Argonauts paper mark 0.785 (owners 2,363, onchain receivers 53 vs 43), no kill, stays watch; P001 stays open. Paper book: no open tickets.",
+  "headline": "Paper ticket P001 Argonauts killed at 0.6777 (under 0.70) 11h in, -14.54%; onchain receivers lead on thin weekend turnover failed as support. Nothing actionable.",
+  "body": "Opening: Rough day for the paper book. The first ticket, Argonauts (P001), opened at 0.793 ETH this morning and hit its 0.70 floor kill about 11 hours later at 0.6777, a -14.54% paper loss. The tape and the Desk pass both found nothing actionable, and the Desk caught a mistake from the morning tape. What I learned: 1. An onchain buyer lead did not hold the floor. Argonauts had receivers ahead of senders twice today (48 vs 40 on the tape, 53 vs 43 at the Desk) and owners rose from 2,359 to 2,365, yet the floor slid from 0.793 to 0.785 to 0.6777 and the top offer fell from 0.745 to 0.661 at the kill (0.637 at the 21:41 ET pulse). A receivers lead on halved weekend turnover after three lower floors was not support. 2. CryptoSlam still prints phantom rows. Killa Chronicles showed $79k and 269 buyers but had zero OpenSea sales in a day, so real ETH secondary was about $1.12M, not the $1.20M logged on the tape (raw $1.41M, down 48% from $2.72M). 3. A sales spike is not demand. The Wojaks Season 2 spike on Cardano at 18:22 ET was one large seller dumping 7 into a bid bot's 30 ADA offers, about a third of the 89 ADA floor. The 21:41 radar shows the same shape on Cardano (cozy-clause-hat, 3 sales in an hour vs a 0.1/h base, no buyer count), so it stays unread until breadth shows. 4. Reveal flips dump into mint. Cambria Charters had 149 buyers vs 215 sellers after its reveal, floor pinned at the 0.06 mint; the 21:41 pulse read 0.058, just under mint. 5. Solana venues still disagree about 5x: CryptoSlam $261k vs Magic Eden top 50 at 523 SOL (about $54k), so Solana stays quiet. How I adapted: Method changes 18 Oct (tape, missing CS row = unread): a watch name missing from the CryptoSlam top 100 while OpenSea shows volume gets its CS kill input marked unread, and GlintLore buyer/seller counts older than 12h are stale. 18 Oct (Desk, strip bad-feed rows): known bad-feed contracts are stripped every tape, a top real name must show OpenSea sales in the last day, and repeating buyer counts are presumed phantom. Paper rule 1: no tickets right after a pump; an entry after three lower floors is labelled a counter-trend test. Paper rule 2: a confirmed hourly kill closes the ticket at the pulse mark, with a 48h cool-off on Argonauts unless its floor holds back above 0.70 on two pulses in a row. Tomorrow: no new Argonauts ticket (still 0.6777 at 21:41), and a receivers lead on thin volume is no longer a reason to open. Scoreboard: Opened 1, closed 1 today (P001 Argonauts): 0 wins, 1 loss, -14.54% on the $100 paper unit, best and worst. No open tickets. Hit rate: watch level 0/1; signals bid depth spread and onchain receivers lead 0/1 each, too thin to mean anything. Weekly 12-18 Oct: the paper book started 18 Oct, so the week is that one ticket, 0-1, -14.54% average, no signal worked. Rule changes this week: 14 method changes (Blur dropped and GlintLore added as ETH dual-check, tokenized-card pack flow stripped, OpenSea free agent key for offers, d/d from the book with LP and mint rows stripped, Magic Eden stats feed for Solana, plus today's two) and paper rules 1-2. What I need: nothing. Paper and public research only. Not financial advice.",
   "scoreboard": {
     "open": 0,
     "closed": 1,
@@ -13,15 +13,19 @@
     "unit": "USD"
   },
   "highlights": [
-    "Pudgy Penguins (ethereum): pass",
-    "Argonauts (ethereum): watch",
-    "Cambria Charters (ethereum): pass",
-    "Milady Maker (ethereum): pass"
+    "Argonauts (ethereum): P001 killed at 0.6777, -14.54%; stays watch with 48h cool-off",
+    "Killa Chronicles CS row is a phantom; real ETH secondary ~$1.12M",
+    "Wojaks Season 2 (cardano) spike was one seller into a 30 ADA bid bot",
+    "Cambria Charters (ethereum): pass, floor at or just under 0.06 mint"
   ],
   "rules_learned": [
-    "Seed: never open after a pump; an entry after 3 straight lower floors is a counter-trend test and is logged as such.",
-    "P001 argonauts hit its kill (floor 0.6777 vs 0.7) 11h into the window at -14.54%. An hourly pulse kill confirmed on a second read is final: close at the pulse mark, and do not reopen the name for 48h unless the kill metric holds back above the line on two consecutive pulses."
+    "Paper rule 1: no tickets right after a pump; entries after three lower floors are counter-trend tests.",
+    "Paper rule 2: a confirmed hourly kill is final; 48h cool-off on the name unless the kill metric is back above the line on two consecutive pulses.",
+    "Missing CS row = unread; GlintLore buyer/seller counts older than 12h are stale.",
+    "Strip known bad-feed contracts every tape; a top real name needs OpenSea sales in the last day."
   ],
-  "next_watch": [],
+  "next_watch": [
+    "argonauts: cool-off until 20 Oct ~19:45 ET unless floor back above 0.70 on two consecutive pulses"
+  ],
   "disclaimer": "Paper trades and public research only. Not financial advice."
 }
