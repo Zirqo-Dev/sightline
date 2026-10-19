@@ -75,8 +75,7 @@ jobs:
           fi
           python3 -m sol_forensics --mint Ceuu7uQHwhtHuMhPWrWL9dgri3FaGJZFkTy6FoDow7NA --holders
           python3 -m sol_forensics --mint DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263 --max-pages 50 --holders
-          python3 -m sol_forensics --mint 9mBi6hL2omjfeQ5JiNdLDf7zEAmXVuSBsSU3kNm9pump --holders
-          python3 -m sol_forensics --mint 6C7hgz2RhinRFMyv8717DCnBRncqqsrkHUmii8Xkpump --holders
+          python3 -m sol_forensics --mint 2m2m1dpqQPa97MU1voKG2p7G9ts4eR7GjmYNeXiTpump --holders
           python3 - << 'PY'
           import json
           import pathlib
@@ -88,7 +87,16 @@ jobs:
                   f"report {report.get('symbol') or report['mint']} "
                   f"partial={quality['partial']} history_too_deep={quality['history_too_deep']} "
                   f"buyers={len(report['buyers'])} holders={len(report.get('holders') or [])} "
-                  f"calls={quality['calls_total']} flags={flags}"
+                  f"calls={quality['calls_total']} calls_used={quality.get('calls_used')} flags={flags}"
+              )
+              summary = report.get("summary") or {}
+              print(
+                  f"summary slot0={summary.get('pct_supply_slot0')} "
+                  f"window={summary.get('pct_supply_window')} "
+                  f"n_slot0={summary.get('n_buyers_slot0')} "
+                  f"fresh={summary.get('fresh_wallet_ratio')} "
+                  f"cluster={summary.get('largest_cluster_pct')} "
+                  f"held={summary.get('largest_cluster_still_held_pct')}"
               )
           PY
 
