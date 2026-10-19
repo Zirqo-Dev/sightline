@@ -178,6 +178,18 @@
           "flow": "GeckoTerminal h1 1/5 buys/sells (price h1 -4.6%), h6 21/16 (-1.2%), h24 -0.9%; pool reserve ~$13.4k",
           "source": "desk run: Solada /api/market (pool-priced) 384,310 ADA at ~7:14 PM; on-chain holders from 7:08 PM pulse (Koios stake-grouped ex pool); ADA side from GeckoTerminal reserve / 2 at ADA $0.2188",
           "note": "Above every kill line (384.3k vs 340k mcap, 266 vs 250 holders, ~30.7k vs 28k ADA side). Holders flat at 266 for a third mark, so rule o's two-drop exit is not triggered. Thin evening selling; window runs to Oct 20 10:20 AM."
+        },
+        {
+          "at": "2026-10-18T20:13:00-04:00",
+          "mcap_ada": 414222,
+          "price_ada": 0.000414222,
+          "holders": 275,
+          "onchain_holders_ex_pool": 266,
+          "ada_side": 32445,
+          "pct_vs_entry_mcap": 2.0,
+          "flow": "GeckoTerminal h1 3/4 buys/sells (+15.0%), h6 21/18 (+10.1%), h24 +34.1%; last full hour (7 PM) 1,094 ADA vs 859 at 6 PM",
+          "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market",
+          "note": "Above every kill line (414,222 vs 340k mcap, 266 vs 250 on-chain holders, 32,445 vs 28,000 ADA side). Price is back above entry (+2.0%) on an 8 PM pop, while on-chain holders held at 266 for a fourth mark, so rule o is not in play."
         }
       ]
     }
