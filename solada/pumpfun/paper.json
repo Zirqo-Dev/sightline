@@ -2336,6 +2336,93 @@
           "needs": "pf-t: hold the post-pullback level for one pulse with holders rising; h6 price >= -10% for pf-m flow"
         }
       }
+    },
+    {
+      "at": "2026-10-19T19:00:00-04:00",
+      "type": "run",
+      "note": "No open Pump.fun tickets and none opened. Dacity ($6.02M, down from $6.47M) added 0.9% holders (7,184 -> 7,250) and is still under its ~0.0065 re-hold (pf-l, pf-o). UHI grew holders 7.5% to 3,506 but is -55% h6 / -31% h1 (pf-t, pf-m). SI276 is flat at 2,283 (pf-o). NTRNDM ($530k, 10 days old, h6 +46%) gets its first snapshot under pf-o. COLLECTOOOR (+1,192% h1, 4.95% sniper/bundler flags) waits under pf-t and pump rule i. MILO's top-12 balances all sit in one band (pf-n): Pass. Several $10M-$480M 'stock' tickers (XTO, USOE, EVERNORTHX, UDTF) carry liquidity under 2% of mcap: farm filter. Research/lottery/NFA.",
+      "helius_usage": {
+        "requests": 2,
+        "credits_estimate": "~20 (MISS and CORE Solana-side token accounts, shared budget)"
+      },
+      "watch_next": {
+        "Dacity": {
+          "mint": "nxPqZ4F7ux8Vph5NFu25rEP6Kx9Gr1U6Fmj36Rjpump",
+          "holders_snapshots": [
+            {
+              "at": "2026-10-19T13:58:00-04:00",
+              "holders": 6385
+            },
+            {
+              "at": "2026-10-19T15:58:00-04:00",
+              "holders": 7074
+            },
+            {
+              "at": "2026-10-19T16:54:00-04:00",
+              "holders": 7184
+            },
+            {
+              "at": "2026-10-19T19:03:00-04:00",
+              "holders": 7250
+            }
+          ],
+          "needs": "pf-l: a full hourly candle held above ~0.0065; pf-o: 2%+ holder step"
+        },
+        "SI276": {
+          "mint": "HMYd9tosnUXuNHmq7pXmoePRVBLBBjA3JBfydq6upump",
+          "holders_snapshots": [
+            {
+              "at": "2026-10-19T10:00:00-04:00",
+              "holders": 2260
+            },
+            {
+              "at": "2026-10-19T13:58:00-04:00",
+              "holders": 2280
+            },
+            {
+              "at": "2026-10-19T15:58:00-04:00",
+              "holders": 2284
+            },
+            {
+              "at": "2026-10-19T16:54:00-04:00",
+              "holders": 2287
+            },
+            {
+              "at": "2026-10-19T19:03:00-04:00",
+              "holders": 2283
+            }
+          ],
+          "needs": "pf-o: 2%+ holder growth between snapshots"
+        },
+        "UHI": {
+          "mint": "FGkCj28xhabWTYg9QyzACvs4NsN6LUyesP6EwiHepump",
+          "holders_snapshots": [
+            {
+              "at": "2026-10-19T07:50:00-04:00",
+              "holders": 2835
+            },
+            {
+              "at": "2026-10-19T16:54:00-04:00",
+              "holders": 3262
+            },
+            {
+              "at": "2026-10-19T19:03:00-04:00",
+              "holders": 3506
+            }
+          ],
+          "needs": "pf-t: hold the post-pullback level for one pulse with holders rising; h6 price >= -10% for pf-m flow"
+        },
+        "NTRNDM": {
+          "mint": "NTRNDMqQSiwEC2jJs3wJiZS6bpGYQJtMNQJgiX3WyV6",
+          "holders_snapshots": [
+            {
+              "at": "2026-10-19T19:03:00-04:00",
+              "holders": 2612
+            }
+          ],
+          "needs": "pf-o: 2%+ holder growth between snapshots on a 10-day-old coin"
+        }
+      }
     }
   ]
 }
