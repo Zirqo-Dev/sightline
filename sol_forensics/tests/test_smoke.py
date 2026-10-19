@@ -6,7 +6,7 @@ import unittest
 import urllib.error
 from contextlib import redirect_stderr, redirect_stdout
 
-from sol_forensics.rpc import RpcClient
+from sol_forensics.rpc import RpcClient, clean_rpc_url
 from sol_forensics.smoke_rpc import QBITS_MINT, endpoint_shape, redact, smoke
 
 
@@ -88,6 +88,15 @@ class SmokeTests(unittest.TestCase):
         self.assertIn("invalid api key", text)
         self.assertNotIn("supersecret", text)
         self.assertIn("api_key_len=11", text)
+
+    def test_quoted_api_key_is_trimmed_to_the_uuid(self):
+        raw = "https://mainnet.helius-rpc.com/?api-key=%22" + ("a" * 8) + "-bbbb-cccc-dddd-eeeeeeeeeeee%22"
+        cleaned = clean_rpc_url(raw)
+        self.assertNotIn("%22", cleaned)
+        self.assertNotIn('"', cleaned)
+        shape = endpoint_shape(cleaned)
+        self.assertIn("api_key_len=36", shape)
+        self.assertNotIn("a" * 8, shape)
 
     def test_secure_host_is_not_printed(self):
         shape = endpoint_shape("https://abc-456-fast-mainnet.helius-rpc.com/path")

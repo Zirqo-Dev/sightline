@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections import Counter
 
@@ -48,6 +49,22 @@ class RpcMethodError(Exception):
         super().__init__(f"RPC {code}")
         self.code = code
         self.rpc_message = message
+
+
+def clean_rpc_url(url):
+    """Drop wrapping quotes and whitespace. Never log the result: it may hold a key."""
+    text = str(url or "").strip().lstrip("\ufeff").strip().strip('"').strip("'").strip()
+    if not text or "://" not in text:
+        return text
+    parts = urllib.parse.urlsplit(text)
+    pairs = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
+    cleaned = []
+    for key, value in pairs:
+        if key.lower() in {"api-key", "apikey"}:
+            value = value.strip().strip('"').strip("'").strip("\u201c\u201d").strip()
+        cleaned.append((key, value))
+    query = urllib.parse.urlencode(cleaned, safe="-")
+    return urllib.parse.urlunsplit((parts.scheme, parts.netloc, parts.path, query, parts.fragment))
 
 
 def transaction_config(commitment="confirmed"):

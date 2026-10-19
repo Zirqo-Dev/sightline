@@ -8,10 +8,13 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+
+from sol_forensics.rpc import clean_rpc_url
 
 QBITS_MINT = "Ceuu7uQHwhtHuMhPWrWL9dgri3FaGJZFkTy6FoDow7NA"
 
@@ -63,14 +66,18 @@ def endpoint_shape(url):
         host_label = "missing"
     query = urllib.parse.parse_qs(parts.query)
     key = (query.get("api-key") or query.get("apikey") or [""])[0]
+    kind = "uuid" if re.fullmatch(
+        r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+        key,
+    ) else "other"
     return (
         f"scheme={parts.scheme or 'missing'} host={host_label} "
-        f"api_key_param={'yes' if key else 'no'} api_key_len={len(key)}"
+        f"api_key_param={'yes' if key else 'no'} api_key_len={len(key)} api_key_form={kind}"
     )
 
 
 def normalize_url(url):
-    return str(url or "").strip().strip('"').strip("'")
+    return clean_rpc_url(url)
 
 
 def rpc_call(url, method, params, transport=None):
@@ -111,7 +118,7 @@ def smoke(env=None, transport=None):
     if not url:
         print("SOLANA_RPC_URL secret is empty", file=sys.stderr)
         return 1
-    print("smoke: " + endpoint_shape(url))
+    print("smoke: " + endpoint_shape(url), flush=True)
     try:
         slot = rpc_call(url, "getSlot", [{"commitment": "confirmed"}], transport)
         supply = rpc_call(

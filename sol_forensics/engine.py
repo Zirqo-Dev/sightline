@@ -28,6 +28,7 @@ from sol_forensics.rpc import (
     RpcClient,
     RpcMethodError,
     RpcRetriesExhausted,
+    clean_rpc_url,
     transaction_config,
 )
 
@@ -44,7 +45,7 @@ def rpc_url_from_env(env=None):
     import os
 
     source = env if env is not None else os.environ
-    url = (source.get("SOLANA_RPC_URL") or "").strip()
+    url = clean_rpc_url(source.get("SOLANA_RPC_URL") or "")
     return url or PUBLIC_RPC_URL
 
 
