@@ -89,23 +89,13 @@ class SmokeTests(unittest.TestCase):
         self.assertNotIn("supersecret", text)
         self.assertIn("api_key_len=11", text)
 
-    def test_zero_width_characters_are_removed_from_the_key(self):
-        uuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
-        raw = "https://mainnet.helius-rpc.com/?api-key=" + "\u200b" + uuid + "\u200b"
+    def test_only_whitespace_and_wrapping_quotes_are_trimmed(self):
+        raw = "  'https://mainnet.helius-rpc.com/?api-key=<aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee>'  "
         cleaned = clean_rpc_url(raw)
-        shape = endpoint_shape(cleaned)
-        self.assertIn("api_key_len=36", shape)
-        self.assertIn("api_key_form=uuid", shape)
-        self.assertNotIn(uuid, shape)
-
-    def test_quoted_api_key_is_trimmed_to_the_uuid(self):
-        raw = "https://mainnet.helius-rpc.com/?api-key=%22" + ("a" * 8) + "-bbbb-cccc-dddd-eeeeeeeeeeee%22"
-        cleaned = clean_rpc_url(raw)
-        self.assertNotIn("%22", cleaned)
-        self.assertNotIn('"', cleaned)
-        shape = endpoint_shape(cleaned)
-        self.assertIn("api_key_len=36", shape)
-        self.assertNotIn("a" * 8, shape)
+        self.assertEqual(
+            cleaned,
+            "https://mainnet.helius-rpc.com/?api-key=<aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee>",
+        )
 
     def test_secure_host_is_not_printed(self):
         shape = endpoint_shape("https://abc-456-fast-mainnet.helius-rpc.com/path")

@@ -8,9 +8,7 @@ from __future__ import annotations
 
 import json
 import time
-import unicodedata
 import urllib.error
-import urllib.parse
 import urllib.request
 from collections import Counter
 
@@ -52,31 +50,9 @@ class RpcMethodError(Exception):
         self.rpc_message = message
 
 
-def _clean_key(value):
-    """Remove quotes, spaces, and invisible copy-paste characters from a key."""
-    text = str(value or "").strip().strip('"').strip("'").strip("\u201c\u201d")
-    kept = []
-    for ch in text:
-        if unicodedata.category(ch) in {"Cf", "Zs", "Cc"}:
-            continue
-        kept.append(ch)
-    return "".join(kept).strip()
-
-
 def clean_rpc_url(url):
-    """Drop wrapping quotes and whitespace. Never log the result: it may hold a key."""
-    text = str(url or "").strip().lstrip("\ufeff").strip().strip('"').strip("'").strip()
-    if not text or "://" not in text:
-        return text
-    parts = urllib.parse.urlsplit(text)
-    pairs = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
-    cleaned = []
-    for key, value in pairs:
-        if key.lower() in {"api-key", "apikey"}:
-            value = _clean_key(value)
-        cleaned.append((key, value))
-    query = urllib.parse.urlencode(cleaned, safe="-")
-    return urllib.parse.urlunsplit((parts.scheme, parts.netloc, parts.path, query, parts.fragment))
+    """Trim whitespace and wrapping quotes. The key itself is left as stored."""
+    return str(url or "").strip().strip('"').strip("'").strip()
 
 
 def transaction_config(commitment="confirmed"):
