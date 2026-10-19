@@ -45,4 +45,6 @@ Pump.fun mints are walked from the bonding curve first (shorter history, same cr
 
 ## Schedule
 
-`.github/workflows/run-forensics.yml` runs on a daily schedule and on `workflow_dispatch` (`mint` input). It reads the `SOLANA_RPC_URL` secret, runs the repo privacy and desk checks, then commits reports with `git pull --rebase` and a normal push. It does not force-push.
+`.github/workflows/run-forensics.yml` runs on a daily schedule and on `workflow_dispatch` (`mint` input). It reads the `SOLANA_RPC_URL` secret, runs the repo privacy and desk checks, then commits reports with `git pull --rebase` and a normal push. It does not force-push. The schedule does not run the secret smoke test.
+
+Pushes and pull requests for `cursor/sol-forensics-v01-6802` run `python3 -m sol_forensics.smoke_rpc`: one `getSlot` and one `getTokenSupply` for QBITS. That step fails if the secret is empty, and it does not print the URL. `getSlot` stays out of the analysis client. A push of that branch, after the smoke test passes, also reruns the acceptance mints with `--holders` and uploads the reports as artifacts. It does not commit those reports to main.

@@ -1,0 +1,106 @@
+"""Prove SOLANA_RPC_URL answers, without printing it.
+
+This is a one-shot Actions check. getSlot is used only here. The analysis
+client still rejects it. The daily schedule does not run this module.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import urllib.request
+
+QBITS_MINT = "Ceuu7uQHwhtHuMhPWrWL9dgri3FaGJZFkTy6FoDow7NA"
+
+
+def redact(text, url):
+    s = str(text)
+    if url:
+        s = s.replace(url, "<rpc>")
+    for mark in ("api-key=", "apikey="):
+        s = _redact_query(s, mark)
+    return s
+
+
+def _redact_query(text, mark):
+    out = []
+    i = 0
+    low = text.lower()
+    mlow = mark.lower()
+    while True:
+        j = low.find(mlow, i)
+        if j < 0:
+            out.append(text[i:])
+            break
+        out.append(text[i:j])
+        out.append(mark)
+        out.append("<redacted>")
+        k = j + len(mark)
+        while k < len(text) and text[k] not in "& \n\r\t":
+            k += 1
+        i = k
+    return "".join(out)
+
+
+def rpc_call(url, method, params, transport=None):
+    body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
+    try:
+        if transport is not None:
+            raw = transport(body)
+        else:
+            req = urllib.request.Request(
+                url, data=body, headers={"Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                raw = resp.read()
+        data = json.loads(raw.decode() if isinstance(raw, (bytes, bytearray)) else raw)
+    except Exception as exc:
+        raise RuntimeError(redact(exc, url)) from None
+    if not isinstance(data, dict):
+        raise RuntimeError("RPC response was not an object")
+    if data.get("error"):
+        err = data["error"] or {}
+        raise RuntimeError(redact(f"RPC {err.get('code')} {err.get('message')}", url))
+    if "result" not in data:
+        raise RuntimeError("RPC response had no result")
+    return data["result"]
+
+
+def smoke(env=None, transport=None):
+    """Return 0 after printing the slot and the QBITS supply. Never print the URL."""
+    env = os.environ if env is None else env
+    url = str(env.get("SOLANA_RPC_URL") or "").strip()
+    if not url:
+        print("SOLANA_RPC_URL secret is empty", file=sys.stderr)
+        return 1
+    try:
+        slot = rpc_call(url, "getSlot", [{"commitment": "confirmed"}], transport)
+        supply = rpc_call(
+            url,
+            "getTokenSupply",
+            [QBITS_MINT, {"commitment": "confirmed"}],
+            transport,
+        )
+    except Exception as exc:
+        print("smoke: fail " + redact(exc, url), file=sys.stderr)
+        return 1
+    value = supply.get("value") if isinstance(supply, dict) else None
+    amount = value.get("amount") if isinstance(value, dict) else None
+    if amount is None:
+        print("smoke: fail getTokenSupply returned no amount", file=sys.stderr)
+        return 1
+    print("smoke: pass")
+    print(f"slot: {slot}")
+    print(f"qbits_supply_amount: {amount}")
+    print(f"qbits_supply_decimals: {value.get('decimals')}")
+    print(f"qbits_supply_ui: {value.get('uiAmountString')}")
+    return 0
+
+
+def main():
+    return smoke()
+
+
+if __name__ == "__main__":
+    sys.exit(main())
