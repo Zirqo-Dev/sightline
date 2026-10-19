@@ -1,0 +1,129 @@
+{
+  "schema_version": 2,
+  "desk": "solada",
+  "date": "2026-10-18",
+  "headline": "Sunday: the pullback re-entry on BOLT is the desk's first green paper ticket (+4.6%), no Solada coin showed lasting Solana-side traction, and Pump.fun added two TTWO-paired tickets while still 0-3 on closes.",
+  "learned": [
+    "Entering after a pullback that holders survived worked better than yesterday's run-up entries. BOLT opened at 406.2k pool mcap at 10:20 AM, marked -10.2% at 1:20 PM, dipped to 345.7k at the 4:10 PM pulse (about 6k above the 340k kill line), then closed the day at 424.8k (+4.6%, 438.4k at the 9:13 PM pulse). On-chain holders stayed flat at 263-271, so it is still price without new holders and stays L2.",
+    "No Solada coin showed real Solana-side traction, so no Solana-side paper snipe opened and there is nothing to grade. MISS had the only native growth, but it was choppy: 11 -> 18 -> 24 -> 23 -> 19 -> 32 natives across today's pulses, with the last jump arriving alongside giveaway posts. CORE slid 36 -> 34, and JUSTQ stayed under both kill lines (223 natives, about $11.5k mcap).",
+    "SER showed how fast a swarm-launched graduation drains: it went from 38.2k to 96.0k mcap in the hour around its 4:27 PM graduation, then slid to 52.3k by 9:13 PM with the same swarm keys holding. A tracked large wallet bought it in five identical 71-ADA clips while the pool kept falling, which is one buyer and not flow.",
+    "On Pump.fun, holder growth and flow can disagree. MISTAKE grew holders 5.1% through a 40% fade but sells beat buys, and CATE's ~109k holders slipped at six marks in a row while price held near entry. Fresh launches were mostly farms: sybil balance bands, holder-count mismatches and dust fills under about $5."
+  ],
+  "pulse_caught_early": [
+    "MISS's curve push and native growth (11 -> 18 natives, curve 79% -> 85%) at the 5:12 PM pulse, two hours before the 7:15 PM desk run.",
+    "SER on its first sighting at 2:56 PM, already flagged as swarm-seeded, before its graduation pop and drain.",
+    "BOLT's 4:10 PM dip to within about 6k of its kill line, and the rebound to 438.4k by 9:13 PM."
+  ],
+  "adapted": [
+    "Solada rule s: repeated same-size buys from one tracked wallet count as one buyer, not flow (SER).",
+    "Solada rule t (new tonight): Solana-native holder growth only counts when it holds on two consecutive hourly pulses; rule q uses the lowest native count of the last three pulses (MISS).",
+    "Pump.fun rule pf-p: TTWO-quoted pools (Macca, Dacity) are converted to SOL-equivalent before pool floors apply, and those tickets are marked in USD.",
+    "Pump.fun rule pf-q: on coins under 2 hours old, an average fill under about $5 marks a wash or bot farm even when buy and sell counts look balanced.",
+    "Pump.fun pf-o snapshots now need to be an hour or more apart, because Dacity failed a 2% growth test on a 10-minute gap and then passed (+4.1% over about 2 hours).",
+    "No thresholds moved in either book. Tomorrow: MISS needs 50+ natives that hold across two pulses before any Solana-side snipe, and BOLT stays L2 until holders grow."
+  ],
+  "scoreboard": {
+    "open": 4,
+    "closed": 5,
+    "wins": 0,
+    "losses": 5,
+    "pnl": -111.1,
+    "unit": "ADA (Solada) + ADA-equivalent (Pump.fun), closed tickets only",
+    "closed_today": 0,
+    "solada": {
+      "open": [
+        {
+          "id": "BOLT-20261018-1020",
+          "ticker": "BOLT",
+          "level": 2,
+          "pct": 4.6
+        }
+      ],
+      "closed": [
+        {
+          "id": "BOLT-20261017-1125",
+          "ticker": "BOLT",
+          "pct": -20.6
+        },
+        {
+          "id": "CLOVE-20261017-1125",
+          "ticker": "CLOVE",
+          "pct": -12.7
+        }
+      ],
+      "record": "0-2",
+      "pnl": -33.3,
+      "unit": "ADA"
+    },
+    "pumpfun": {
+      "open": [
+        {
+          "id": "CATE-Ai66-20261017-1918",
+          "ticker": "CATE",
+          "level": 2,
+          "pct": 0.1,
+          "basis": "SOL price"
+        },
+        {
+          "id": "Macca-AKot-20261018-1925",
+          "ticker": "Macca",
+          "level": 2,
+          "pct": -17.4,
+          "basis": "USD price"
+        },
+        {
+          "id": "Dacity-nxPq-20261018-2125",
+          "ticker": "Dacity",
+          "level": 2,
+          "pct": null,
+          "basis": "opened 9:25 PM, not marked yet"
+        }
+      ],
+      "closed": [
+        {
+          "id": "CyberAxe-20261017-1141",
+          "ticker": "CyberAxe",
+          "pct": -31.7
+        },
+        {
+          "id": "FTR-DFMt-20261017-1340",
+          "ticker": "FTR",
+          "pct": -34.5
+        },
+        {
+          "id": "swordcat-5tCj-20261017-1530",
+          "ticker": "swordcat",
+          "pct": -11.6
+        }
+      ],
+      "record": "0-3",
+      "pnl": -77.8,
+      "unit": "ADA-equivalent"
+    },
+    "verdict": "Solada's signals held up better today: its one ticket turned green after surviving a pullback, while Pump.fun's newest ticket (Macca) fell 17.4% within two hours and CATE sat flat."
+  },
+  "asks": [
+    "A Birdeye or Solscan API key would let the desk check Solana holder funding and first-block bundles (JUSTQ's holder quality and PIERRE's first-block check are still unresolved without it). Otherwise nothing today."
+  ],
+  "highlights": [
+    "BOLT L2 paper +4.6% (first green Solada mark)",
+    "MISS natives 32, short of rule q's 50",
+    "SER swarm graduation drained 96.0k -> 52.3k",
+    "Pump.fun opened Macca and Dacity (TTWO pools)"
+  ],
+  "rules_learned": [
+    "solada:s",
+    "solada:t",
+    "pumpfun:pf-p",
+    "pumpfun:pf-q",
+    "solada:daily-2026-10-18",
+    "pumpfun:pf-daily-2026-10-18"
+  ],
+  "next_watch": [
+    "MISS: 50+ Solana-native holders holding across two pulses",
+    "BOLT: holder growth above 271, kills at 340k / 250 holders / 28k ADA side",
+    "Dacity first mark",
+    "PIERRE: hourly candle above spike midpoint and first-block check"
+  ],
+  "disclaimer": "Paper trades and public research only. Not financial advice."
+}
