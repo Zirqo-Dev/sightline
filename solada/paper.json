@@ -68,6 +68,25 @@
     "l",
     "p",
     "daily-2026-10-18"
+   ],
+   "marks": [
+    {
+     "at": "2026-10-19T10:15:00-04:00",
+     "mcap_ada": 50000,
+     "curve_pct": 100.0,
+     "curve_ada": 10344,
+     "holders_onchain": 68,
+     "holders_solada": 67,
+     "pct_vs_entry_mcap": 11.4,
+     "result": {
+      "pnl": 11.4,
+      "pct": 11.4,
+      "unit": "ADA"
+     },
+     "kill_line_hit": false,
+     "note": "Curve filled to 100% (graduation pending) with on-chain holders 67 -> 68; above every pre-graduation line (curve 100% vs 80%, holders 68 vs 55). No swarm key holds. After graduation the post-grad lines apply (ADA side 8k, mcap 31.4k).",
+     "source": "hourly pulse: Solada /api/launches curve, Koios asset_addresses (stake-grouped, ex curve)"
+    }
    ]
   }
  ],
