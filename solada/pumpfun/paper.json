@@ -50,7 +50,72 @@
   "kill_line_default": "mcap -30% from entry OR holders -10% from entry OR pool quote side -30% from entry OR full exit by any identified first-block sniper/bundler wallet",
   "selection": "5-10 names per run (recent graduates/near-graduates + GeckoTerminal/pump.fun trending); paper-trade L3+ plus the run's strongest L2; max 2 new tickets per run; no duplicates (one open ticket per mint)."
  },
- "open": [],
+ "open": [
+  {
+   "id": "PIERRE-D3S6-20261019-0750",
+   "ticker": "PIERRE",
+   "name": "PIERRE",
+   "side": "solana",
+   "launchpad": "pump.fun",
+   "mint": "D3S6J9s1byrNBt3ZKwEDiPsNRqHtoEP8zQKdhyBdpump",
+   "pool": "HRMcDD9XawGTXH6QkBZs1mtiwyjTfg4bDMrL5DcjwXnb",
+   "pool_dex": "pumpswap",
+   "pool_quote_token": "SOL",
+   "opened_at": "2026-10-19T07:50:00-04:00",
+   "window_ends_at": "2026-10-21T07:50:00-04:00",
+   "size": 100,
+   "ticket_sol": 0.20833,
+   "ticket_conversion": {
+    "at": "2026-10-19T07:50:00-04:00",
+    "ada_usd": 0.218159,
+    "sol_usd": 104.72,
+    "source": "api.coingecko.com simple/price"
+   },
+   "level": 2,
+   "entry_type": "strongest-L2 (L3 shape, first-block check unresolved)",
+   "status": "open",
+   "entry": {
+    "mcap_usd": 1312116,
+    "price_usd": 0.001382,
+    "price_sol": 1.322e-05,
+    "holders": 4478,
+    "gt_holders": 4019,
+    "pool_quote_sol": 545.38,
+    "liq_usd": 115868,
+    "liq_to_mcap_pct": 8.8,
+    "top10_ex_pool_pct": 20.32,
+    "top1_ex_pool_pct": 3.69,
+    "paper_qty_tokens": 15759,
+    "source": "DexScreener pair HRMcDD..., pump.fun /coins/top-holders and /coins-v2, Helius getTokenLargestAccounts (~7:55 AM ET)"
+   },
+   "thesis": [
+    "Holder growth through two fades: pump.fun holders 3,926 (9:25 PM Oct 18) -> 4,478 (+14%), GeckoTerminal 4,019 (stale since 9:52 PM)",
+    "pf-l passes now: every hourly candle since 9 PM held above the first spike's ~$0.0009 midpoint (lows $0.00100-0.00159)",
+    "First fade passes: a 3-4 AM run to $0.00252, then a 53% pullback to $0.00118 (6 AM) and a re-hold at $0.00138 (55% of high) with holders still rising",
+    "Rule k flow: h6 5,020 buys / 4,529 sells, h1 362/311; ~$50 h6 average fills (not dust, pf-q); pool 545 SOL, liq 8.8% of mcap",
+    "Concentration clean: Helius top-10 ex-pool 20.3%, top-1 3.7%; 0 snipers, 2 bundler flags among top holders, no identical-balance band (pf1, pf-n)"
+   ],
+   "not_l3_because": "First-block check unresolved: 8 pages (8,000 signatures) of bonding-curve history didn't reach the create slot, so rule i (create-slot bundle share) can't be cleared",
+   "kill_line": {
+    "text": "mcap < $918k (-30%) or holders < 4,030 (-10%) or pool quote < 382 SOL (-30%), or a full exit by the flagged bundler wallets; pf-m early exit (holders down at two marks in a row with price below entry)",
+    "mcap_usd_below": 918000,
+    "holders_below": 4030,
+    "pool_quote_sol_below": 382
+   },
+   "custody": "Solana SPL token on PumpSwap; non-custodial, no bridge (pump.fun arm)",
+   "rules_applied": [
+    "i",
+    "j",
+    "k",
+    "pf1",
+    "pf-l",
+    "pf-m",
+    "pf-n",
+    "pf-o",
+    "pf-q"
+   ]
+  }
+ ],
  "closed": [
   {
    "id": "CyberAxe-20261017-1141",
@@ -479,7 +544,7 @@
      "token": "TTWO"
     },
     "ttwo_usd_implied": 207.14,
-    "source": "DexScreener pumpswap pair 4FoN\u2026Xbmvg; pump.fun top-holders and coins-v2 (usd_market_cap $192.6k)"
+    "source": "DexScreener pumpswap pair 4FoN…Xbmvg; pump.fun top-holders and coins-v2 (usd_market_cap $192.6k)"
    },
    "exit_reason": "Kill line hit: mcap $183.2k on DexScreener is under the $188.6k line (pump.fun's own figure was $192.6k, just above). Rule pf-m early exit fired at the same mark: holders fell two marks in a row (1,060 -> 1,059 -> 1,047) with price below entry. Holders (1,047 vs 948) and pool quote (97.6 vs 82.1 TTWO) were still above their lines.",
    "result": {
@@ -792,7 +857,7 @@
     "price_sol": 0.0006798,
     "holders": 108858,
     "pool_quote_sol": 14538,
-    "source": "DexScreener pumpswap pair HMzv\u2026; pump.fun top-holders (totalHolders) and coins-v2"
+    "source": "DexScreener pumpswap pair HMzv…; pump.fun top-holders (totalHolders) and coins-v2"
    },
    "exit_reason": "Early exit under pf-m: holders fell at two (now four) marks in a row (108,931 -> 108,924 -> 108,880 -> 108,858) and price slipped below entry in SOL (-0.3%). No kill line was hit: mcap $69.0M vs $47.5M, holders 108,858 vs 97,082, pool 14,538 vs 10,149 SOL.",
    "result": {
@@ -1045,7 +1110,7 @@
      "token": "TTWO"
     },
     "ttwo_usd_implied": 206.1,
-    "source": "DexScreener pumpswap pair G2Uu\u2026; pump.fun top-holders (totalHolders) and coins-v2"
+    "source": "DexScreener pumpswap pair G2Uu…; pump.fun top-holders (totalHolders) and coins-v2"
    },
    "exit_reason": "Early exit under pf-m: holders fell at two marks in a row (5,650 -> 5,640 -> 5,617) with price below entry in USD (-16.8%). No kill line was hit: mcap $3.95M vs $3.32M, holders 5,617 vs 4,838, pool 574.5 vs 439.3 TTWO.",
    "result": {
@@ -1277,6 +1342,18 @@
    ],
    "rule": "Farm filter refinement: on coins under 2 hours old, an average fill under ~$5 is a wash/bot farm even when buy and sell counts are balanced (the >5:1 test misses these). Tonight Claude AI (22,994/17,095 txns on $58k = ~$1.4 fills), FOMO (~$1.3), Mr Beast (~$1.7, 45 identical top balances) and LEGO (~$3.9) all showed it. Coins whose h1/h6 counts match other tickers almost exactly (IOF / HOLDOWEEN / PURPS at ~170/110 and ~1,010/660, GeckoTerminal 14-15 holders vs ~3,000 on pump.fun) are one farm.",
    "source": "run 2026-10-18 21:15"
+  },
+  {
+   "id": "pf-r",
+   "added_at": "2026-10-19T07:50:00-04:00",
+   "title": "After a pf-m exit, re-check before calling it right",
+   "category": "review",
+   "evidence": [
+    "Dacity",
+    "CATE"
+   ],
+   "rule": "pf-m early exits so far: CATE closed at -0.3% (11:12 PM Oct 18) and kept sliding (~$69.0M -> $66.95M by 7:50 AM), so that exit was right. Dacity closed at -16.8% (5:15 AM, $3.95M, holders 5,650 -> 5,640 -> 5,617) and by 7:50 AM was back to $4.43M (-6.7% vs entry) with holders 5,656, above the pre-drop count. A two-mark dip of under ~1% of holders on a 5k+ holder coin can be noise. Keep pf-m, but log every pf-m exit's price and holders at the next run; if two more exits recover like Dacity, raise pf-m's trigger to a 1% cumulative holder drop on coins with 5,000+ holders.",
+   "source": "desk run 2026-10-19 07:50 (review of overnight pf-m closes)"
   }
  ],
  "summaries": [
@@ -1374,7 +1451,7 @@
      "reason": "Below L3 holder (1,500) and pool (200 SOL) floors; 1 flagged sniper at 1.56%."
     },
     {
-     "ticker": "\u7d22\u62c9\u7eb3",
+     "ticker": "索拉纳",
      "mint": "FeSqDFg1vMsB7dsWXE3UWURwUVksJArWWWynnhgiaaQ6",
      "mcap_usd": 256751,
      "holders": 3466,
@@ -1398,7 +1475,7 @@
   {
    "at": "2026-10-17T15:30:00-04:00",
    "type": "run",
-   "note": "Ad-hoc run. FTR marked -16.6% ($2.72M, 18,111 holders, 1,007 SOL), still open. Opened swordcat (5tCj...pump) as the strongest L2 at $2.40M. L2, no ticket: HeyGrok (graduated 1:13 PM, +502% h6, fails pf-l because the 2 PM candle low 171 sat under the ~285 spike midpoint; TG caller promo); hi (+294% h6 reactivation, h1 sells > buys, pf-l); JEANPHIL (19.4k holders, 1,946 SOL, but h1 65/81 and flat); VEIL (h6 -24.6%, h24 -55.6%). L1: SI276 (h6 6,349/2,365 buys with price -14% at ~$5 average fills, wash-like); MAKERS, Kavantissa, \u7d22\u62c9\u7eb3 (h6 -73% to -79%, rule k). CLAUDIA skipped: the DexScreener pump mint was a dead 46-holder clone. No trade closed, no rule changes. Research/lottery/NFA.",
+   "note": "Ad-hoc run. FTR marked -16.6% ($2.72M, 18,111 holders, 1,007 SOL), still open. Opened swordcat (5tCj...pump) as the strongest L2 at $2.40M. L2, no ticket: HeyGrok (graduated 1:13 PM, +502% h6, fails pf-l because the 2 PM candle low 171 sat under the ~285 spike midpoint; TG caller promo); hi (+294% h6 reactivation, h1 sells > buys, pf-l); JEANPHIL (19.4k holders, 1,946 SOL, but h1 65/81 and flat); VEIL (h6 -24.6%, h24 -55.6%). L1: SI276 (h6 6,349/2,365 buys with price -14% at ~$5 average fills, wash-like); MAKERS, Kavantissa, 索拉纳 (h6 -73% to -79%, rule k). CLAUDIA skipped: the DexScreener pump mint was a dead 46-holder clone. No trade closed, no rule changes. Research/lottery/NFA.",
    "helius_usage": {
     "requests": 2,
     "credits_estimate": "~2"
@@ -1777,6 +1854,38 @@
    ],
    "rule_changes": "Started with mirrored a/f/h/i/j/k plus pf1/pf2 on Oct 17; added pf-l, pf-m, pf-n, pf-o, pf-daily-2026-10-17 (Oct 17), pf-p, pf-daily-2026-10-18 (Oct 18) and pf-q tonight (16 rules).",
    "note": "Closed record 0-3 (-77.8 ADA-equivalent on 300). Open: CATE +0.1% (SOL), Macca -17.4% (USD), Dacity new. Solada's rules held up better this week: smaller average loss (-16.7% vs -25.9%) and fewer tickets; both arms' early holder-exit rules (o / pf-m) cut losses, and neither arm has a winning close yet."
+  },
+  {
+   "at": "2026-10-19T07:50:00-04:00",
+   "type": "run",
+   "note": "Opened PIERRE-D3S6-20261019-0750 (L2, strongest ticket-eligible; L3 shape but first-block check unresolved) at $1.31M. No open tickets before this run: CATE (-0.3%), Macca (-32.0%) and Dacity (-16.8%) closed overnight. L2 no ticket: SAPLING (23 days old, ZEC-quoted pool, holder snapshot 3,534 for pf-o), Groklet (504 days old, +20% h1, snapshot 1,394 for pf-o). L1: UHI (11h, +222% h6 spike then -21% h1, pump.fun 2,835 vs GeckoTerminal 660 holders), ZDOG (766 vs 63 holders), DOGESTER (1,620 vs 54), GTA and VEIL (sells > buys h1), farms with liq/mcap <2.1% (USOE, USDR, NODF, MUCRON, XTO, USWR, WSOS, USDP, USOS), fresh <1h dust-fill coins (Anthropic, Claude AI, KIM, Mimi, 김정은). Added rule pf-r. Research/lottery/NFA.",
+   "helius_usage": {
+    "requests": 27,
+    "credits_estimate": "~98 (getSignaturesForAddress x8 at ~10, getTransaction x15, supply/largest/multiple x3)"
+   },
+   "watch_next": {
+    "SAPLING": {
+     "mint": "BZFYNPeQAEW3HWQ4DNsTVahC1n4ZjTgn6jB2nnBbB96W",
+     "holders_snapshots": [
+      {
+       "at": "2026-10-19T07:50:00-04:00",
+       "holders": 3534
+      }
+     ],
+     "needs": "pf-o: +2% holders by next run; pf-p: convert the ZEC quote side"
+    },
+    "Groklet": {
+     "mint": "4qH8A5GxvRMZgpRFjXASc6U9HAoEzKeUqxY2dPB7pump",
+     "holders_snapshots": [
+      {
+       "at": "2026-10-19T07:50:00-04:00",
+       "holders": 1394
+      }
+     ],
+     "needs": "pf-o: +2% holders; held candle after the +20% h1 pop (pf-l); pool 259 SOL"
+    }
+   },
+   "vs_solada": "Solada: no ticket open; strongest L2 BOLT ~446k ADA pool mcap, 271 holders, 31k ADA side. Pump.fun: PIERRE opened with ~4.5k holders and a 545 SOL side. Pump.fun still produces names with real holder growth through fades; Solada's overnight board was 20 copycat launches from one swarm launcher."
   }
  ]
 }

@@ -668,6 +668,17 @@
     "MISS",
     "CORE"
    ]
+  },
+  {
+   "id": "u",
+   "added_at": "2026-10-19T07:50:00-04:00",
+   "title": "Confirm an ADA-side kill caused by an LP pull",
+   "category": "kill",
+   "evidence": [
+    "BOLT"
+   ],
+   "rule": "Liquidity pulls are not selling. BOLT's paper ticket closed at 362k (-10.8%) at 11:12 PM Oct 18 when the pool ADA side fell 33.4k -> 27.9k, under its 28k line, because LP was withdrawn (both pool sides fell, invariant down ~16%) while on-chain holders held at 266 and mcap stayed above 340k. By 7:50 AM Oct 19 BOLT was back to ~446k pool mcap with the ADA side at ~31.0k and 271 holders (+23% vs the exit, +9.7% vs entry). When the ADA-side line breaks because both pool sides shrank and holders are flat or rising, confirm it on the next pulse before closing; an ADA-side drop driven by net selling (token side up, ADA side down) still closes at once.",
+   "source": "desk run 2026-10-19 07:50 (review of BOLT-20261018-1020 close)"
   }
  ],
  "summaries": [
@@ -810,6 +821,24 @@
    ],
    "rule_changes": "Started with rules a-k on Oct 17; added l-r plus daily-2026-10-17 on Oct 17-18, then s and daily-2026-10-18 tonight (21 rules).",
    "note": "Closed record 0-2 (-33.3 ADA on 200 ADA of tickets). Open: BOLT +4.6%. Smaller average loss than the Pump.fun arm (-16.7% vs -25.9%)."
+  },
+  {
+   "at": "2026-10-19T07:50:00-04:00",
+   "type": "run",
+   "note": "Monday morning. No Solada ticket open or opened. BOLT popped back to ~446k pool mcap (+26% h1 on 3 buys, holders 270 -> 271), above the 362k ticket exit, but flat holders keep it L2 (rule h) and a 1-hour pop is not a re-hold (rule l). SER is the busiest name (80 on-chain holders, ADA side 13.1k) but fails rule k's 25k side. 27 overnight launches, 20 from copycat launcher uyetfdape9 (rule p). No Solana-side snipe (MISS 23 natives, CORE kill hit). Added rule u. Research/lottery/NFA.",
+   "rules_applied": [
+    "h",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "q",
+    "s",
+    "t",
+    "u"
+   ]
   }
  ]
 }
