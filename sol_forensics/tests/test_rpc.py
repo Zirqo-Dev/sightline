@@ -65,6 +65,7 @@ class RpcTests(unittest.TestCase):
         self.assertEqual(calls["n"], 3)
         self.assertEqual(rpc.clock.slept, [1, 2])
         self.assertEqual(rpc.calls["getTokenSupply"], 3)
+        self.assertGreaterEqual(rpc.min_interval, 1.0)
 
     def test_version_error_is_not_retried(self):
         calls = {"n": 0}

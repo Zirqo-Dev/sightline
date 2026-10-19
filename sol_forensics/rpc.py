@@ -173,6 +173,10 @@ class RpcClient:
 
     def _backoff(self, attempt):
         self._sleep(min(2**attempt, 20))
+        # Stay slower after a 429 or 5xx. Public mainnet keeps rejecting a
+        # client that returns to 8 requests/second. Cap at one request per 5s.
+        # The configured max_rps is still a ceiling, never a floor.
+        self.min_interval = min(max(self.min_interval * 2, 1.0), 5.0)
 
 
 def _redact_query(text, mark):

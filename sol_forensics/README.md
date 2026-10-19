@@ -29,7 +29,7 @@ python3 -m sol_forensics --watchlist --holders
 python3 -m unittest discover -s sol_forensics/tests -v
 ```
 
-`SOLANA_RPC_URL` is the endpoint when it is set (the GitHub Actions secret). Otherwise the client uses the public mainnet endpoint. The URL is never printed or written into a report. The client allows only `getSignaturesForAddress`, `getTransaction`, `getTokenSupply`, `getTokenLargestAccounts`, `getAccountInfo`, and `getTokenAccountsByOwner`. It stays at or under 8 requests per second, backs off on HTTP 429 and 5xx, and stops at the call budget (default 5000) with `data_quality.partial = true`.
+`SOLANA_RPC_URL` is the endpoint when it is set (the GitHub Actions secret). Otherwise the client uses the public mainnet endpoint. The URL is never printed or written into a report. The client allows only `getSignaturesForAddress`, `getTransaction`, `getTokenSupply`, `getTokenLargestAccounts`, `getAccountInfo`, and `getTokenAccountsByOwner`. A configured endpoint stays at or under 8 requests per second. The public mainnet endpoint starts at 2 per second, and after each HTTP 429 or 5xx the gap widens up to one request every 5 seconds. Retries stop at 5. The call budget (default 5000) ends the run with `data_quality.partial = true`.
 
 Useful knobs: `--hops`, `--window-buys`, `--window-seconds`, `--budget`, `--max-pages`, `--wallet-pages`, `--holders`, `--force`.
 

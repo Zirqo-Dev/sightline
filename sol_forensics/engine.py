@@ -679,31 +679,18 @@ def _fill_buyers(report, run, sigs, *, mint, pump, stables, supply_raw, window_b
             found = True
             slot = tx.get("slot")
             offset = None if slot is None or creation_slot is None else int(slot) - int(creation_slot)
-            prev = buyers.get(owner)
-            if prev is None:
-                buyers[owner] = {
-                    "wallet": owner,
-                    "slot": slot,
-                    "slot_offset": offset,
-                    "block_time": bt,
-                    "amount_raw": int(amt),
-                    "signature": sig["signature"],
-                    "fee_payer": fp,
-                    "fee_payer_signature": sig["signature"] if fp and fp != owner else None,
-                    "fee_payer_is_buyer": fp == owner,
-                    "label": _label_text(labels.get(owner)),
-                }
-            else:
-                prev["amount_raw"] += int(amt)
-                if slot is not None and (prev["slot"] is None or slot < prev["slot"]):
-                    prev["slot"] = slot
-                    prev["slot_offset"] = offset
-                    prev["block_time"] = bt
-                    prev["signature"] = sig["signature"]
-                if fp and fp != owner:
-                    prev["fee_payer"] = fp
-                    prev["fee_payer_is_buyer"] = False
-                    prev["fee_payer_signature"] = sig["signature"]
+            _touch_buyer(
+                buyers,
+                owner,
+                amt,
+                slot=slot,
+                offset=offset,
+                block_time=bt,
+                signature=sig["signature"],
+                fee_payer=fp,
+                dev=dev,
+                label=_label_text(labels.get(owner)),
+            )
         if found:
             buy_txs += 1
             if buy_txs >= window_buys and not in_time:
@@ -714,13 +701,56 @@ def _fill_buyers(report, run, sigs, *, mint, pump, stables, supply_raw, window_b
     ordered = sorted(buyers.values(), key=lambda b: (b["slot"] or 0, -b["amount_raw"], b["wallet"]))
     for row in ordered:
         row["pct_supply"] = _pct(row["amount_raw"], supply_raw)
+        row["pct_supply_slot0"] = _pct(row["amount_slot0_raw"], supply_raw)
         row["amount_raw"] = str(row["amount_raw"])
+        row["amount_slot0_raw"] = str(row["amount_slot0_raw"])
     report["buyers"] = ordered
     dev_raw = 0
     for row in ordered:
         if row["wallet"] == dev:
-            dev_raw = int(row["amount_raw"])
+            dev_raw = int(row["amount_slot0_raw"])
     report["dev_pct_supply"] = _pct(dev_raw, supply_raw)
+
+
+def _touch_buyer(buyers, owner, amt, *, slot, offset, block_time, signature, fee_payer, dev, label):
+    """Add one positive delta. Slot 0 supply stays separate from later receipts.
+
+    signature and fee_payer stay on the earliest acquisition, so a later
+    transfer cannot relabel who paid for the first buy. A deployer-paid fee
+    anywhere in the window is kept on dev_paid_signature.
+    """
+    amount = int(amt)
+    slot0 = amount if offset == 0 else 0
+    dev_paid = bool(dev and fee_payer and fee_payer == dev and fee_payer != owner)
+    prev = buyers.get(owner)
+    if prev is None:
+        buyers[owner] = {
+            "wallet": owner,
+            "slot": slot,
+            "slot_offset": offset,
+            "block_time": block_time,
+            "amount_raw": amount,
+            "amount_slot0_raw": slot0,
+            "signature": signature,
+            "fee_payer": fee_payer,
+            "fee_payer_signature": signature if fee_payer and fee_payer != owner else None,
+            "fee_payer_is_buyer": fee_payer == owner,
+            "dev_paid_signature": signature if dev_paid else None,
+            "label": label,
+        }
+        return
+    prev["amount_raw"] += amount
+    prev["amount_slot0_raw"] += slot0
+    if dev_paid and not prev.get("dev_paid_signature"):
+        prev["dev_paid_signature"] = signature
+    if slot is not None and (prev["slot"] is None or slot < prev["slot"]):
+        prev["slot"] = slot
+        prev["slot_offset"] = offset
+        prev["block_time"] = block_time
+        prev["signature"] = signature
+        prev["fee_payer"] = fee_payer
+        prev["fee_payer_is_buyer"] = fee_payer == owner
+        prev["fee_payer_signature"] = signature if fee_payer and fee_payer != owner else None
 
 
 def _label_text(lab):
@@ -925,7 +955,7 @@ def _cluster_and_summarise(report, transfers, *, labels, hub_k, proximity, hub_t
 
     buyers = report["buyers"]
     slot0 = [b for b in buyers if b.get("slot_offset") == 0]
-    slot0_raw = sum(int(b["amount_raw"]) for b in slot0)
+    slot0_raw = sum(int(b.get("amount_slot0_raw") or 0) for b in buyers)
     window_raw = sum(int(b["amount_raw"]) for b in buyers)
     analysed = [b for b in buyers if b.get("analysed")]
     fresh = [b for b in analysed if (b.get("funding") or {}).get("fresh")]
@@ -979,7 +1009,12 @@ def _flags(report, cfg):
     over("STILL_LOADED", s.get("largest_cluster_still_held_pct"), 5)
     dev = report.get("dev_wallet")
     for buyer in report["buyers"]:
-        if buyer["wallet"] != dev and buyer.get("fee_payer") == dev and not buyer.get("fee_payer_is_buyer", True):
+        if buyer["wallet"] == dev:
+            continue
+        paid = buyer.get("dev_paid_signature") or (
+            buyer.get("fee_payer") == dev and not buyer.get("fee_payer_is_buyer", True)
+        )
+        if paid:
             out.append("DEV_PAID_BUY")
             break
     return out
@@ -1109,10 +1144,15 @@ def recently_reported(index_path, mint, *, now, hours=24):
 
 def make_client(config, url, budget=None, transport=None, now=None, sleep=None):
     rpc_cfg = config.get("rpc") or {}
+    max_rps = float(rpc_cfg.get("max_rps", 8))
+    # 8/s is the ceiling for a configured endpoint. The public mainnet endpoint
+    # starts at 2/s; backoff then stretches the gap after each 429.
+    if url == PUBLIC_RPC_URL:
+        max_rps = min(max_rps, 2.0)
     return RpcClient(
         url,
         budget=rpc_cfg.get("budget", 5000) if budget is None else budget,
-        max_rps=rpc_cfg.get("max_rps", 8),
+        max_rps=max_rps,
         max_retries=rpc_cfg.get("max_retries", 5),
         commitment=rpc_cfg.get("commitment", "confirmed"),
         transport=transport,

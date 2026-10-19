@@ -4,7 +4,7 @@ import json
 import pathlib
 import unittest
 
-from sol_forensics.engine import analyse, labels_from_config
+from sol_forensics.engine import analyse, labels_from_config, _touch_buyer
 from sol_forensics.parse import USDC_MINT
 from sol_forensics.rpc import BudgetExceeded
 
@@ -409,6 +409,69 @@ class EngineTests(unittest.TestCase):
             self.assertTrue(stopped["data_quality"]["partial"])
             self.assertEqual(stopped["data_quality"]["partial_reason"], "call budget reached")
             self.assertTrue((tmp / "reports" / f"{MINT}.json").is_file())
+
+    def test_later_receipt_does_not_inflate_slot0_or_rewrite_the_first_fee_payer(self):
+        buyers = {}
+        _touch_buyer(
+            buyers,
+            "Wallet",
+            100,
+            slot=10,
+            offset=0,
+            block_time=1,
+            signature="first",
+            fee_payer="Wallet",
+            dev="Dev",
+            label=None,
+        )
+        _touch_buyer(
+            buyers,
+            "Wallet",
+            900,
+            slot=80,
+            offset=70,
+            block_time=40,
+            signature="later",
+            fee_payer="Someone",
+            dev="Dev",
+            label=None,
+        )
+        _touch_buyer(
+            buyers,
+            "Other",
+            50,
+            slot=20,
+            offset=10,
+            block_time=5,
+            signature="self",
+            fee_payer="Other",
+            dev="Dev",
+            label=None,
+        )
+        _touch_buyer(
+            buyers,
+            "Other",
+            25,
+            slot=30,
+            offset=20,
+            block_time=9,
+            signature="devpaid",
+            fee_payer="Dev",
+            dev="Dev",
+            label=None,
+        )
+        row = buyers["Wallet"]
+        self.assertEqual(row["amount_raw"], 1000)
+        self.assertEqual(row["amount_slot0_raw"], 100)
+        self.assertEqual(row["signature"], "first")
+        self.assertEqual(row["fee_payer"], "Wallet")
+        self.assertTrue(row["fee_payer_is_buyer"])
+        self.assertIsNone(row["dev_paid_signature"])
+        other = buyers["Other"]
+        self.assertEqual(other["signature"], "self")
+        self.assertTrue(other["fee_payer_is_buyer"])
+        self.assertEqual(other["dev_paid_signature"], "devpaid")
+        self.assertEqual(other["amount_slot0_raw"], 0)
 
     def test_shipped_labels_have_sources_and_include_the_solada_deployer(self):
         cfg = json.loads((ROOT / "solada" / "forensics" / "config.json").read_text(encoding="utf-8"))
