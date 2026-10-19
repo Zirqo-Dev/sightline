@@ -13,152 +13,7 @@
     "3": "Watch: lots of holders early that stick through first dip",
     "4": "High-conviction lottery: L3 + cross-chain/bigger accounts, improving ADA-side pool, holder growth through first dip, prior similar shapes worked in paper book"
   },
-  "open": [
-    {
-      "id": "RAIN-7cc1-20261019-1000",
-      "ticker": "RAIN",
-      "name": "RAIN (RAIN-3)",
-      "side": "cardano",
-      "launchpad": "solada.fun",
-      "chain": "cardano",
-      "asset_id": "7cc11ddeba48ac007c6af09715aebbc188fe0032563ba99207f0fc840014df105241494e",
-      "solada_id": "draft-rain-3",
-      "opened_at": "2026-10-19T10:00:00-04:00",
-      "window_ends_at": "2026-10-21T10:00:00-04:00",
-      "size": 100,
-      "level": 3,
-      "entry_type": "pullback re-hold (pre-graduation curve)",
-      "status": "open",
-      "entry": {
-        "mcap_ada": 44893,
-        "curve_pct": 92.9,
-        "curve_ada": 9610,
-        "holders_onchain": 67,
-        "holders_solada": 65,
-        "top10_pct": 28.23,
-        "top1_pct": 3.99,
-        "price_basis": "Solada curve marketCapLovelace",
-        "source": "Solada /api/launches + Koios asset_addresses (~10:09 AM ET)"
-      },
-      "thesis": [
-        "Holder density from nothing: 5 holders at 3 AM to 63 on-chain by 9:52 AM, crowned King of the Hill at 92.7% (8:57 AM)",
-        "Survived its first fade: curve 92.7% -> 83.9% on 9 AM selling (~3.75k ADA out vs ~2.1k in), then back to 92.9% by 10:09 with holders 63 -> 67 (rule a, daily-2026-10-18 pullback lesson)",
-        "No sniper overhang: first-block keys uytg09zr, u8a2m6, uyt8xs9q, u97c3csuc5 and the launcher already sold out; top-10 28.2%, top-1 4.0%",
-        "Busiest name on #soladafun-buys 7:58-10:02 AM (50 buys, ~9.5k ADA) with a 1,000 ADA buy at 8:48"
-      ],
-      "risks": [
-        "Discord chat called it a 'scam token' / 'farmed' (unverified)",
-        "Graduation at 100% moves it to a Minswap pool whose LP tokens sit unburned in Solada's wallet, so liquidity depends on trusting Solada",
-        "Graduation alone is not a signal (rule f): many graduates faded to 19-30k ADA"
-      ],
-      "kill_line": {
-        "text": "Before graduation: curve under 80% or on-chain holders under 55. After graduation: pool ADA side under 8k or on-chain holders under 55, or pool mcap under 31k ADA (-30%).",
-        "curve_below": 80,
-        "holders_below": 55,
-        "post_grad_ada_side_below": 8000,
-        "mcap_ada_below": 31400
-      },
-      "custody": "Cardano native token in the holder wallet (non-custodial); post-graduation LP held unburned by Solada",
-      "rules_applied": [
-        "a",
-        "f",
-        "h",
-        "i",
-        "j",
-        "l",
-        "p",
-        "daily-2026-10-18"
-      ],
-      "marks": [
-        {
-          "at": "2026-10-19T10:15:00-04:00",
-          "mcap_ada": 50000,
-          "curve_pct": 100.0,
-          "curve_ada": 10344,
-          "holders_onchain": 68,
-          "holders_solada": 67,
-          "pct_vs_entry_mcap": 11.4,
-          "result": {
-            "pnl": 11.4,
-            "pct": 11.4,
-            "unit": "ADA"
-          },
-          "kill_line_hit": false,
-          "note": "Curve filled to 100% (graduation pending) with on-chain holders 67 -> 68; above every pre-graduation line (curve 100% vs 80%, holders 68 vs 55). No swarm key holds. After graduation the post-grad lines apply (ADA side 8k, mcap 31.4k).",
-          "source": "hourly pulse: Solada /api/launches curve, Koios asset_addresses (stake-grouped, ex curve)"
-        },
-        {
-          "at": "2026-10-19T11:30:00-04:00",
-          "mcap_ada": 70729,
-          "curve_pct": null,
-          "graduated": "minswap-v2",
-          "pool_ada": 12322,
-          "holders_onchain": 71,
-          "holders_solada": 69,
-          "pct_vs_entry_mcap": 57.6,
-          "result": {
-            "pnl": 57.6,
-            "pct": 57.6,
-            "unit": "ADA"
-          },
-          "kill_line_hit": false,
-          "note": "Graduated to Minswap; post-graduation lines now apply and all are clear: pool ADA side 12,322 vs 8,000, on-chain holders 71 vs 55, pool mcap 70,729 vs 31,400 ADA. GT h1 18 buys / 3 sells; no swarm key holds.",
-          "source": "hourly pulse: Blockfrost Minswap pool UTxO reserves, Koios asset_addresses (stake-grouped, ex pool), GeckoTerminal pool"
-        },
-        {
-          "at": "2026-10-19T12:15:00-04:00",
-          "mcap_ada": 70904,
-          "graduated": "minswap-v2",
-          "pool_ada": 12322,
-          "holders_onchain": 72,
-          "holders_solada": 70,
-          "pct_vs_entry_mcap": 57.9,
-          "result": {
-            "pnl": 57.9,
-            "pct": 57.9,
-            "unit": "ADA"
-          },
-          "kill_line_hit": false,
-          "note": "Post-graduation lines clear: pool ADA side ~12.3k vs 8k (11:30 pulse read; GeckoTerminal shows ~$5.6k reserve on the Minswap pool), holders 72 on-chain vs 55, mcap 70.9k vs 31.4k. No swarm key holding. Keep; graduation LP stays unburned in Solada's wallet.",
-          "source": "Solada /api/market quote, Blockfrost asset holders, pulse 11:30"
-        },
-        {
-          "at": "2026-10-19T12:40:00-04:00",
-          "mcap_ada": 38873,
-          "graduated": "minswap-v2",
-          "pool_ada": 9164,
-          "holders_onchain": 68,
-          "holders_solada": 68,
-          "pct_vs_entry_mcap": -13.4,
-          "result": {
-            "pnl": -13.4,
-            "pct": -13.4,
-            "unit": "ADA"
-          },
-          "kill_line_hit": false,
-          "note": "Post-graduation dump: pool mcap 70.7k -> 38.9k ADA in about an hour (GT h1 -36.6%, m30 -46%), pool ADA side 12,322 -> 9,164. Kill lines still clear (pool 9,164 vs 8,000, holders 68 vs 55, mcap 38,873 vs 31,400). On-chain holders 72 -> 68 is the first drop with price below entry; rule o closes it if the next mark drops again.",
-          "source": "hourly pulse: Blockfrost Minswap pool UTxO reserves, Koios asset_addresses (stake-grouped, ex pool), GeckoTerminal pool"
-        }
-      ],
-      "last_mark": {
-        "at": "2026-10-19T12:15:00-04:00",
-        "mcap_ada": 70904,
-        "graduated": "minswap-v2",
-        "pool_ada": 12322,
-        "holders_onchain": 72,
-        "holders_solada": 70,
-        "pct_vs_entry_mcap": 57.9,
-        "result": {
-          "pnl": 57.9,
-          "pct": 57.9,
-          "unit": "ADA"
-        },
-        "kill_line_hit": false,
-        "note": "Post-graduation lines clear: pool ADA side ~12.3k vs 8k (11:30 pulse read; GeckoTerminal shows ~$5.6k reserve on the Minswap pool), holders 72 on-chain vs 55, mcap 70.9k vs 31.4k. No swarm key holding. Keep; graduation LP stays unburned in Solada's wallet.",
-        "source": "Solada /api/market quote, Blockfrost asset holders, pulse 11:30"
-      }
-    }
-  ],
+  "open": [],
   "closed": [
     {
       "id": "BOLT-20261017-1125",
@@ -568,6 +423,193 @@
         "failed": [
           "On-chain holders stayed flat at 263-267 the whole time, so the bounce never had new demand behind it (rule h)",
           "Liquidity left the pool after 9 PM while swarm keys uytg09zr and u9q3xusf and launcher keys u9rwdkfjtr and uyetfdape9 still held, and hourly volume shrank from ~5.8k to ~1.3k ADA"
+        ]
+      }
+    },
+    {
+      "id": "RAIN-7cc1-20261019-1000",
+      "ticker": "RAIN",
+      "name": "RAIN (RAIN-3)",
+      "side": "cardano",
+      "launchpad": "solada.fun",
+      "chain": "cardano",
+      "asset_id": "7cc11ddeba48ac007c6af09715aebbc188fe0032563ba99207f0fc840014df105241494e",
+      "solada_id": "draft-rain-3",
+      "opened_at": "2026-10-19T10:00:00-04:00",
+      "window_ends_at": "2026-10-21T10:00:00-04:00",
+      "size": 100,
+      "level": 3,
+      "entry_type": "pullback re-hold (pre-graduation curve)",
+      "status": "closed",
+      "entry": {
+        "mcap_ada": 44893,
+        "curve_pct": 92.9,
+        "curve_ada": 9610,
+        "holders_onchain": 67,
+        "holders_solada": 65,
+        "top10_pct": 28.23,
+        "top1_pct": 3.99,
+        "price_basis": "Solada curve marketCapLovelace",
+        "source": "Solada /api/launches + Koios asset_addresses (~10:09 AM ET)"
+      },
+      "thesis": [
+        "Holder density from nothing: 5 holders at 3 AM to 63 on-chain by 9:52 AM, crowned King of the Hill at 92.7% (8:57 AM)",
+        "Survived its first fade: curve 92.7% -> 83.9% on 9 AM selling (~3.75k ADA out vs ~2.1k in), then back to 92.9% by 10:09 with holders 63 -> 67 (rule a, daily-2026-10-18 pullback lesson)",
+        "No sniper overhang: first-block keys uytg09zr, u8a2m6, uyt8xs9q, u97c3csuc5 and the launcher already sold out; top-10 28.2%, top-1 4.0%",
+        "Busiest name on #soladafun-buys 7:58-10:02 AM (50 buys, ~9.5k ADA) with a 1,000 ADA buy at 8:48"
+      ],
+      "risks": [
+        "Discord chat called it a 'scam token' / 'farmed' (unverified)",
+        "Graduation at 100% moves it to a Minswap pool whose LP tokens sit unburned in Solada's wallet, so liquidity depends on trusting Solada",
+        "Graduation alone is not a signal (rule f): many graduates faded to 19-30k ADA"
+      ],
+      "kill_line": {
+        "text": "Before graduation: curve under 80% or on-chain holders under 55. After graduation: pool ADA side under 8k or on-chain holders under 55, or pool mcap under 31k ADA (-30%).",
+        "curve_below": 80,
+        "holders_below": 55,
+        "post_grad_ada_side_below": 8000,
+        "mcap_ada_below": 31400
+      },
+      "custody": "Cardano native token in the holder wallet (non-custodial); post-graduation LP held unburned by Solada",
+      "rules_applied": [
+        "a",
+        "f",
+        "h",
+        "i",
+        "j",
+        "l",
+        "p",
+        "daily-2026-10-18"
+      ],
+      "marks": [
+        {
+          "at": "2026-10-19T10:15:00-04:00",
+          "mcap_ada": 50000,
+          "curve_pct": 100.0,
+          "curve_ada": 10344,
+          "holders_onchain": 68,
+          "holders_solada": 67,
+          "pct_vs_entry_mcap": 11.4,
+          "result": {
+            "pnl": 11.4,
+            "pct": 11.4,
+            "unit": "ADA"
+          },
+          "kill_line_hit": false,
+          "note": "Curve filled to 100% (graduation pending) with on-chain holders 67 -> 68; above every pre-graduation line (curve 100% vs 80%, holders 68 vs 55). No swarm key holds. After graduation the post-grad lines apply (ADA side 8k, mcap 31.4k).",
+          "source": "hourly pulse: Solada /api/launches curve, Koios asset_addresses (stake-grouped, ex curve)"
+        },
+        {
+          "at": "2026-10-19T11:30:00-04:00",
+          "mcap_ada": 70729,
+          "curve_pct": null,
+          "graduated": "minswap-v2",
+          "pool_ada": 12322,
+          "holders_onchain": 71,
+          "holders_solada": 69,
+          "pct_vs_entry_mcap": 57.6,
+          "result": {
+            "pnl": 57.6,
+            "pct": 57.6,
+            "unit": "ADA"
+          },
+          "kill_line_hit": false,
+          "note": "Graduated to Minswap; post-graduation lines now apply and all are clear: pool ADA side 12,322 vs 8,000, on-chain holders 71 vs 55, pool mcap 70,729 vs 31,400 ADA. GT h1 18 buys / 3 sells; no swarm key holds.",
+          "source": "hourly pulse: Blockfrost Minswap pool UTxO reserves, Koios asset_addresses (stake-grouped, ex pool), GeckoTerminal pool"
+        },
+        {
+          "at": "2026-10-19T12:15:00-04:00",
+          "mcap_ada": 70904,
+          "graduated": "minswap-v2",
+          "pool_ada": 12322,
+          "holders_onchain": 72,
+          "holders_solada": 70,
+          "pct_vs_entry_mcap": 57.9,
+          "result": {
+            "pnl": 57.9,
+            "pct": 57.9,
+            "unit": "ADA"
+          },
+          "kill_line_hit": false,
+          "note": "Post-graduation lines clear: pool ADA side ~12.3k vs 8k (11:30 pulse read; GeckoTerminal shows ~$5.6k reserve on the Minswap pool), holders 72 on-chain vs 55, mcap 70.9k vs 31.4k. No swarm key holding. Keep; graduation LP stays unburned in Solada's wallet.",
+          "source": "Solada /api/market quote, Blockfrost asset holders, pulse 11:30"
+        },
+        {
+          "at": "2026-10-19T12:40:00-04:00",
+          "mcap_ada": 38873,
+          "graduated": "minswap-v2",
+          "pool_ada": 9164,
+          "holders_onchain": 68,
+          "holders_solada": 68,
+          "pct_vs_entry_mcap": -13.4,
+          "result": {
+            "pnl": -13.4,
+            "pct": -13.4,
+            "unit": "ADA"
+          },
+          "kill_line_hit": false,
+          "note": "Post-graduation dump: pool mcap 70.7k -> 38.9k ADA in about an hour (GT h1 -36.6%, m30 -46%), pool ADA side 12,322 -> 9,164. Kill lines still clear (pool 9,164 vs 8,000, holders 68 vs 55, mcap 38,873 vs 31,400). On-chain holders 72 -> 68 is the first drop with price below entry; rule o closes it if the next mark drops again.",
+          "source": "hourly pulse: Blockfrost Minswap pool UTxO reserves, Koios asset_addresses (stake-grouped, ex pool), GeckoTerminal pool"
+        },
+        {
+          "at": "2026-10-19T13:08:00-04:00",
+          "mcap_ada": 12168,
+          "graduated": "minswap-v2",
+          "pool_ada": 5158,
+          "holders_onchain": 59,
+          "holders_solada": 59,
+          "pct_vs_entry_mcap": -72.9,
+          "result": {
+            "pnl": -72.9,
+            "pct": -72.9,
+            "unit": "ADA"
+          },
+          "kill_line_hit": true,
+          "flow": "GeckoTerminal h1 5 buys / 14 sells, price h1 -82.3%, m30 1 buy / 10 sells (-69.8%)",
+          "note": "Kill line hit: pool mcap 12,168 vs the 31,400 line and pool ADA side 5,158 vs 8,000. Net selling, not an LP pull (token side 2.36e14 -> 4.24e14 units while the ADA side fell 9,164 -> 5,158, pool invariant flat), so rule u does not delay the close. On-chain holders 72 -> 68 -> 59 also met rule o. Closed at this mark.",
+          "source": "hourly pulse: Blockfrost Minswap pool UTxO reserves (~1:08 PM ET), Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 12,152, GeckoTerminal pool"
+        }
+      ],
+      "last_mark": {
+        "at": "2026-10-19T12:15:00-04:00",
+        "mcap_ada": 70904,
+        "graduated": "minswap-v2",
+        "pool_ada": 12322,
+        "holders_onchain": 72,
+        "holders_solada": 70,
+        "pct_vs_entry_mcap": 57.9,
+        "result": {
+          "pnl": 57.9,
+          "pct": 57.9,
+          "unit": "ADA"
+        },
+        "kill_line_hit": false,
+        "note": "Post-graduation lines clear: pool ADA side ~12.3k vs 8k (11:30 pulse read; GeckoTerminal shows ~$5.6k reserve on the Minswap pool), holders 72 on-chain vs 55, mcap 70.9k vs 31.4k. No swarm key holding. Keep; graduation LP stays unburned in Solada's wallet.",
+        "source": "Solada /api/market quote, Blockfrost asset holders, pulse 11:30"
+      },
+      "closed_at": "2026-10-19T13:08:00-04:00",
+      "exit": {
+        "mcap_ada": 12168,
+        "pool_ada": 5158,
+        "holders_onchain": 59,
+        "holders_solada": 59,
+        "graduated": "minswap-v2",
+        "source": "hourly pulse: Blockfrost Minswap pool UTxO reserves (~1:08 PM ET), Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 12,152, GeckoTerminal pool"
+      },
+      "exit_reason": "Kill line hit: after graduating to Minswap, pool mcap fell 70.7k -> 38.9k -> 12.2k ADA, under the 31,400 line, and the pool ADA side fell to 5,158, under the 8,000 line. The drop was net selling (token side up ~80%, ADA side down, invariant flat), not a liquidity pull. Rule o also fired: on-chain holders fell at two marks in a row (72 -> 68 -> 59) with price below entry.",
+      "result": {
+        "pnl": -72.9,
+        "pct": -72.9,
+        "unit": "ADA"
+      },
+      "review": {
+        "worked": [
+          "The pullback re-hold entry before graduation caught the curve fill and a post-graduation peak of +57.9% (12:15 PM)",
+          "Every first-block and swarm key had already sold out, so this was not a swarm dump"
+        ],
+        "failed": [
+          "There was no profit-taking rule: the ticket rode +57.9% to -72.9% in under an hour after graduation",
+          "Graduation into a ~12k ADA Minswap pool left it too thin to absorb holder exits (rule f): two selling waves took the pool mcap from 70.7k to 12.2k"
         ]
       }
     }
@@ -1004,6 +1046,11 @@
         "t",
         "u"
       ]
+    },
+    {
+      "at": "2026-10-19T13:08:00-04:00",
+      "type": "pulse-close",
+      "note": "Closed RAIN-7cc1-20261019-1000 at -72.9% (12,168 ADA pool mcap vs 44,893 entry). Kill line hit: pool mcap under 31,400 and pool ADA side 5,158 under 8,000 after a post-graduation dump driven by net selling; rule o also fired (holders 72 -> 68 -> 59). Research/lottery/NFA."
     }
   ]
 }
