@@ -89,6 +89,15 @@ class SmokeTests(unittest.TestCase):
         self.assertNotIn("supersecret", text)
         self.assertIn("api_key_len=11", text)
 
+    def test_zero_width_characters_are_removed_from_the_key(self):
+        uuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+        raw = "https://mainnet.helius-rpc.com/?api-key=" + "\u200b" + uuid + "\u200b"
+        cleaned = clean_rpc_url(raw)
+        shape = endpoint_shape(cleaned)
+        self.assertIn("api_key_len=36", shape)
+        self.assertIn("api_key_form=uuid", shape)
+        self.assertNotIn(uuid, shape)
+
     def test_quoted_api_key_is_trimmed_to_the_uuid(self):
         raw = "https://mainnet.helius-rpc.com/?api-key=%22" + ("a" * 8) + "-bbbb-cccc-dddd-eeeeeeeeeeee%22"
         cleaned = clean_rpc_url(raw)
