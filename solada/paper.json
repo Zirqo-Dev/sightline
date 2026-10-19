@@ -86,6 +86,24 @@
      "kill_line_hit": false,
      "note": "Curve filled to 100% (graduation pending) with on-chain holders 67 -> 68; above every pre-graduation line (curve 100% vs 80%, holders 68 vs 55). No swarm key holds. After graduation the post-grad lines apply (ADA side 8k, mcap 31.4k).",
      "source": "hourly pulse: Solada /api/launches curve, Koios asset_addresses (stake-grouped, ex curve)"
+    },
+    {
+     "at": "2026-10-19T11:30:00-04:00",
+     "mcap_ada": 70729,
+     "curve_pct": null,
+     "graduated": "minswap-v2",
+     "pool_ada": 12322,
+     "holders_onchain": 71,
+     "holders_solada": 69,
+     "pct_vs_entry_mcap": 57.6,
+     "result": {
+      "pnl": 57.6,
+      "pct": 57.6,
+      "unit": "ADA"
+     },
+     "kill_line_hit": false,
+     "note": "Graduated to Minswap; post-graduation lines now apply and all are clear: pool ADA side 12,322 vs 8,000, on-chain holders 71 vs 55, pool mcap 70,729 vs 31,400 ADA. GT h1 18 buys / 3 sells; no swarm key holds.",
+     "source": "hourly pulse: Blockfrost Minswap pool UTxO reserves, Koios asset_addresses (stake-grouped, ex pool), GeckoTerminal pool"
     }
    ]
   }

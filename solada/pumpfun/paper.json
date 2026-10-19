@@ -115,22 +115,22 @@
     "pf-q"
    ],
    "last_mark": {
-    "at": "2026-10-19T10:15:00-04:00",
-    "mcap_usd": 1671118,
-    "price_usd": 0.00176,
-    "price_sol": 1.693e-05,
-    "holders": 4516,
-    "pool_quote_sol": 624.45,
-    "liq_usd": 130992,
-    "pnl_pct_usd": 27.4,
-    "pnl_pct_sol": 28.1,
+    "at": "2026-10-19T11:30:00-04:00",
+    "mcap_usd": 955310,
+    "price_usd": 0.001006,
+    "price_sol": 9.594e-06,
+    "holders": 4537,
+    "pool_quote_sol": 466.9,
+    "liq_usd": 99740,
+    "pnl_pct_usd": -27.2,
+    "pnl_pct_sol": -27.4,
     "result": {
-     "pnl": 28.1,
-     "pct": 28.1,
+     "pnl": -27.4,
+     "pct": -27.4,
      "unit": "ADA-equivalent"
     },
     "kill_line_hit": false,
-    "note": "h1 +27.1% (464 buys / 550 sells), h6 -0.7%; holders 4,506 (10:00) -> 4,516, above entry 4,478; all kill lines clear; pf-m not triggered (price above entry)",
+    "note": "h1 -41.7% (1645 buys / 1234 sells), h6 -50.8%; holders 4,516 -> 4,537, still rising, so pf-m is not triggered; kill lines clear but mcap is close (mcap $955,310 vs $918k, holders 4,537 vs 4,030, pool 466.9 vs 382 SOL)",
     "source": "hourly pulse: DexScreener pair, pump.fun /coins/top-holders and /coins-v2"
    },
    "marks": [
@@ -152,112 +152,27 @@
      "kill_line_hit": false,
      "note": "h1 +27.1% (464 buys / 550 sells), h6 -0.7%; holders 4,506 (10:00) -> 4,516, above entry 4,478; all kill lines clear; pf-m not triggered (price above entry)",
      "source": "hourly pulse: DexScreener pair, pump.fun /coins/top-holders and /coins-v2"
-    }
-   ]
-  },
-  {
-   "id": "UHI-FGkC-20261019-1000",
-   "ticker": "UHI",
-   "name": "UHI",
-   "side": "solana",
-   "launchpad": "pump.fun",
-   "mint": "FGkCj28xhabWTYg9QyzACvs4NsN6LUyesP6EwiHepump",
-   "pool": "3ENsvQnHuHtQzMBxpDG4pkxwbBnzJvFcz2yyCfxC9QNH",
-   "pool_dex": "pumpswap",
-   "pool_quote_token": "SOL",
-   "opened_at": "2026-10-19T10:00:00-04:00",
-   "window_ends_at": "2026-10-21T10:00:00-04:00",
-   "size": 100,
-   "ticket_sol": 0.20837,
-   "ticket_conversion": {
-    "at": "2026-10-19T10:00:00-04:00",
-    "ada_usd": 0.217565,
-    "sol_usd": 104.41,
-    "source": "api.coingecko.com simple/price"
-   },
-   "level": 2,
-   "entry_type": "strongest-L2 (first-block check unresolved)",
-   "status": "open",
-   "entry": {
-    "mcap_usd": 911692,
-    "price_usd": 0.0009491,
-    "price_sol": 9.107e-06,
-    "holders": 3369,
-    "gt_holders_stale": 660,
-    "pool_quote_sol": 459.86,
-    "liq_usd": 98099,
-    "liq_to_mcap_pct": 10.8,
-    "top10_ex_pool_pct": 17.71,
-    "top1_ex_pool_pct": 2.54,
-    "paper_qty_tokens": 22880,
-    "source": "DexScreener pair 3ENsvQ..., pump.fun /coins/top-holders (~9:57 AM ET)"
-   },
-   "thesis": [
-    "Holder growth through the first fade: pump.fun holders 2,835 at 7:50 AM (when price was -21% h1 after a +222% h6 spike) -> 3,369 (+18.8%) by 9:57 AM",
-    "Re-held and extended: h6 +99%, h1 -2.5%; about 13h old",
-    "Flow not dust: h6 13,535 buys / 11,421 sells on ~$2.46M volume (~$99 average fill, pf-q); liq 10.8% of mcap",
-    "Concentration clean: top-10 ex-pool 17.7%, top-1 2.5%; 0 snipers, 0 bundlers, no identical-balance band (pf1, pf-n)",
-    "The GeckoTerminal holder mismatch that kept it L1 at 7:50 comes from a stale GT snapshot (last updated 9:43 PM ET Oct 18, about an hour after launch), see rule pf-s"
-   ],
-   "not_l3_because": "First-block / create-slot bundle check not run this run (rule i unresolved), and GeckoTerminal holders are stale so there is no second source for the holder count",
-   "kill_line": {
-    "text": "mcap < $638k (-30%) or holders < 3,032 (-10%) or pool quote < 322 SOL (-30%); pf-m early exit (holders down at two marks in a row with price below entry)",
-    "mcap_usd_below": 638000,
-    "holders_below": 3032,
-    "pool_quote_sol_below": 322
-   },
-   "custody": "Solana SPL token on PumpSwap; non-custodial, no bridge (pump.fun arm)",
-   "rules_applied": [
-    "i",
-    "k",
-    "pf1",
-    "pf-l",
-    "pf-m",
-    "pf-n",
-    "pf-o",
-    "pf-q",
-    "pf-s"
-   ],
-   "marks": [
+    },
     {
-     "at": "2026-10-19T10:15:00-04:00",
-     "mcap_usd": 847424,
-     "price_usd": 0.0008822,
-     "price_sol": 8.488e-06,
-     "holders": 3322,
-     "pool_quote_sol": 445.69,
-     "liq_usd": 94484,
-     "pnl_pct_usd": -7.0,
-     "pnl_pct_sol": -6.8,
+     "at": "2026-10-19T11:30:00-04:00",
+     "mcap_usd": 955310,
+     "price_usd": 0.001006,
+     "price_sol": 9.594e-06,
+     "holders": 4537,
+     "pool_quote_sol": 466.9,
+     "liq_usd": 99740,
+     "pnl_pct_usd": -27.2,
+     "pnl_pct_sol": -27.4,
      "result": {
-      "pnl": -6.8,
-      "pct": -6.8,
+      "pnl": -27.4,
+      "pct": -27.4,
       "unit": "ADA-equivalent"
      },
      "kill_line_hit": false,
-     "note": "h1 -12.7% (1026 buys / 921 sells), h6 -14.2%; holders 3,369 (entry) -> 3,322, first drop with price below entry, so pf-m closes it if the next mark drops again with price still below entry; kill lines clear (mcap $847k vs $638k, holders 3,322 vs 3,032, pool 445.7 vs 322 SOL)",
+     "note": "h1 -41.7% (1645 buys / 1234 sells), h6 -50.8%; holders 4,516 -> 4,537, still rising, so pf-m is not triggered; kill lines clear but mcap is close (mcap $955,310 vs $918k, holders 4,537 vs 4,030, pool 466.9 vs 382 SOL)",
      "source": "hourly pulse: DexScreener pair, pump.fun /coins/top-holders and /coins-v2"
     }
-   ],
-   "last_mark": {
-    "at": "2026-10-19T10:15:00-04:00",
-    "mcap_usd": 847424,
-    "price_usd": 0.0008822,
-    "price_sol": 8.488e-06,
-    "holders": 3322,
-    "pool_quote_sol": 445.69,
-    "liq_usd": 94484,
-    "pnl_pct_usd": -7.0,
-    "pnl_pct_sol": -6.8,
-    "result": {
-     "pnl": -6.8,
-     "pct": -6.8,
-     "unit": "ADA-equivalent"
-    },
-    "kill_line_hit": false,
-    "note": "h1 -12.7% (1026 buys / 921 sells), h6 -14.2%; holders 3,369 (entry) -> 3,322, first drop with price below entry, so pf-m closes it if the next mark drops again with price still below entry; kill lines clear (mcap $847k vs $638k, holders 3,322 vs 3,032, pool 445.7 vs 322 SOL)",
-    "source": "hourly pulse: DexScreener pair, pump.fun /coins/top-holders and /coins-v2"
-   }
+   ]
   }
  ],
  "closed": [
@@ -1276,6 +1191,155 @@
     "pf-m",
     "pf-p"
    ]
+  },
+  {
+   "id": "UHI-FGkC-20261019-1000",
+   "ticker": "UHI",
+   "name": "UHI",
+   "side": "solana",
+   "launchpad": "pump.fun",
+   "mint": "FGkCj28xhabWTYg9QyzACvs4NsN6LUyesP6EwiHepump",
+   "pool": "3ENsvQnHuHtQzMBxpDG4pkxwbBnzJvFcz2yyCfxC9QNH",
+   "pool_dex": "pumpswap",
+   "pool_quote_token": "SOL",
+   "opened_at": "2026-10-19T10:00:00-04:00",
+   "window_ends_at": "2026-10-21T10:00:00-04:00",
+   "size": 100,
+   "ticket_sol": 0.20837,
+   "ticket_conversion": {
+    "at": "2026-10-19T10:00:00-04:00",
+    "ada_usd": 0.217565,
+    "sol_usd": 104.41,
+    "source": "api.coingecko.com simple/price"
+   },
+   "level": 2,
+   "entry_type": "strongest-L2 (first-block check unresolved)",
+   "status": "closed",
+   "entry": {
+    "mcap_usd": 911692,
+    "price_usd": 0.0009491,
+    "price_sol": 9.107e-06,
+    "holders": 3369,
+    "gt_holders_stale": 660,
+    "pool_quote_sol": 459.86,
+    "liq_usd": 98099,
+    "liq_to_mcap_pct": 10.8,
+    "top10_ex_pool_pct": 17.71,
+    "top1_ex_pool_pct": 2.54,
+    "paper_qty_tokens": 22880,
+    "source": "DexScreener pair 3ENsvQ..., pump.fun /coins/top-holders (~9:57 AM ET)"
+   },
+   "thesis": [
+    "Holder growth through the first fade: pump.fun holders 2,835 at 7:50 AM (when price was -21% h1 after a +222% h6 spike) -> 3,369 (+18.8%) by 9:57 AM",
+    "Re-held and extended: h6 +99%, h1 -2.5%; about 13h old",
+    "Flow not dust: h6 13,535 buys / 11,421 sells on ~$2.46M volume (~$99 average fill, pf-q); liq 10.8% of mcap",
+    "Concentration clean: top-10 ex-pool 17.7%, top-1 2.5%; 0 snipers, 0 bundlers, no identical-balance band (pf1, pf-n)",
+    "The GeckoTerminal holder mismatch that kept it L1 at 7:50 comes from a stale GT snapshot (last updated 9:43 PM ET Oct 18, about an hour after launch), see rule pf-s"
+   ],
+   "not_l3_because": "First-block / create-slot bundle check not run this run (rule i unresolved), and GeckoTerminal holders are stale so there is no second source for the holder count",
+   "kill_line": {
+    "text": "mcap < $638k (-30%) or holders < 3,032 (-10%) or pool quote < 322 SOL (-30%); pf-m early exit (holders down at two marks in a row with price below entry)",
+    "mcap_usd_below": 638000,
+    "holders_below": 3032,
+    "pool_quote_sol_below": 322
+   },
+   "custody": "Solana SPL token on PumpSwap; non-custodial, no bridge (pump.fun arm)",
+   "rules_applied": [
+    "i",
+    "k",
+    "pf1",
+    "pf-l",
+    "pf-m",
+    "pf-n",
+    "pf-o",
+    "pf-q",
+    "pf-s"
+   ],
+   "marks": [
+    {
+     "at": "2026-10-19T10:15:00-04:00",
+     "mcap_usd": 847424,
+     "price_usd": 0.0008822,
+     "price_sol": 8.488e-06,
+     "holders": 3322,
+     "pool_quote_sol": 445.69,
+     "liq_usd": 94484,
+     "pnl_pct_usd": -7.0,
+     "pnl_pct_sol": -6.8,
+     "result": {
+      "pnl": -6.8,
+      "pct": -6.8,
+      "unit": "ADA-equivalent"
+     },
+     "kill_line_hit": false,
+     "note": "h1 -12.7% (1026 buys / 921 sells), h6 -14.2%; holders 3,369 (entry) -> 3,322, first drop with price below entry, so pf-m closes it if the next mark drops again with price still below entry; kill lines clear (mcap $847k vs $638k, holders 3,322 vs 3,032, pool 445.7 vs 322 SOL)",
+     "source": "hourly pulse: DexScreener pair, pump.fun /coins/top-holders and /coins-v2"
+    },
+    {
+     "at": "2026-10-19T11:30:00-04:00",
+     "mcap_usd": 685615,
+     "price_usd": 0.0007137,
+     "price_sol": 6.806e-06,
+     "holders": 3277,
+     "pool_quote_sol": 396.81,
+     "liq_usd": 85413,
+     "pnl_pct_usd": -24.8,
+     "pnl_pct_sol": -25.3,
+     "result": {
+      "pnl": -25.3,
+      "pct": -25.3,
+      "unit": "ADA-equivalent"
+     },
+     "kill_line_hit": false,
+     "note": "h1 -4.8% (762 buys / 673 sells), h6 -40.6%; holders 3,322 -> 3,277, second drop in a row with price below entry: pf-m early exit",
+     "source": "hourly pulse: DexScreener pair, pump.fun /coins/top-holders and /coins-v2"
+    }
+   ],
+   "last_mark": {
+    "at": "2026-10-19T11:30:00-04:00",
+    "mcap_usd": 685615,
+    "price_usd": 0.0007137,
+    "price_sol": 6.806e-06,
+    "holders": 3277,
+    "pool_quote_sol": 396.81,
+    "liq_usd": 85413,
+    "pnl_pct_usd": -24.8,
+    "pnl_pct_sol": -25.3,
+    "result": {
+     "pnl": -25.3,
+     "pct": -25.3,
+     "unit": "ADA-equivalent"
+    },
+    "kill_line_hit": false,
+    "note": "h1 -4.8% (762 buys / 673 sells), h6 -40.6%; holders 3,322 -> 3,277, second drop in a row with price below entry: pf-m early exit",
+    "source": "hourly pulse: DexScreener pair, pump.fun /coins/top-holders and /coins-v2"
+   },
+   "closed_at": "2026-10-19T11:30:00-04:00",
+   "exit": {
+    "mcap_usd": 685615,
+    "price_usd": 0.0007137,
+    "price_sol": 6.806e-06,
+    "holders": 3277,
+    "pool_quote_sol": 396.81,
+    "liq_usd": 85413,
+    "source": "DexScreener pumpswap pair 3ENsvQ…; pump.fun top-holders (totalHolders) and coins-v2"
+   },
+   "exit_reason": "Early exit under pf-m: holders fell at two marks in a row (3,369 -> 3,322 -> 3,277) with price below entry (-24.8% USD). No kill line was hit: mcap $686k vs $638k, holders 3,277 vs 3,032, pool 396.8 vs 322 SOL.",
+   "result": {
+    "unit": "ADA-equivalent",
+    "pct": -25.3,
+    "pnl": -25.3
+   },
+   "review": {
+    "worked": [
+     "pf-m closed it on the second holder drop at about -25%, before the -30% mcap line ($638k) that was getting close",
+     "The stale GeckoTerminal holder count was correctly kept out of the decision (pf-s); pump.fun totalHolders drove it"
+    ],
+    "failed": [
+     "Entered at $912k right after a big run (h24 +1,600%); price fell 40% over six hours with holders slipping, so there was no fresh demand behind the L2 entry",
+     "First-block / bundle check was never run (rule i), so the entry rested on one holder source"
+    ]
+   }
   }
  ],
  "rules": [
