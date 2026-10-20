@@ -1,0 +1,196 @@
+name: Solana forensics
+
+# Research scan. Reads the SOLANA_RPC_URL secret and never prints it.
+# Commits reports only from main, with pull --rebase and no force-push.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mint:
+        description: "Token mint to scan. Leave empty to scan the watchlist."
+        required: false
+        type: string
+        default: ""
+  schedule:
+    - cron: "30 8 * * *"
+  # These two run the secret check from this branch before the file is on main.
+  # workflow_dispatch and the cron do not fire until then. The cron job below
+  # does not run the smoke test. Report-only pushes do not retrigger it.
+  push:
+    branches:
+      - cursor/sol-forensics-v01-6802
+    paths-ignore:
+      - "solada/forensics/**"
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "solada/forensics/**"
+
+permissions:
+  contents: write
+
+jobs:
+  # One getSlot and one getTokenSupply. Not part of the daily schedule.
+  smoke:
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/cursor/sol-forensics-v01-6802') ||
+      (github.event_name == 'pull_request' && github.head_ref == 'cursor/sol-forensics-v01-6802')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Secret smoke test
+        env:
+          SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}
+        run: python3 -m sol_forensics.smoke_rpc
+
+  # Holders and the Bonk holder pass were blocked on the public endpoint.
+  # This runs once per push of this branch, after the smoke test passes.
+  # It does not commit. Artifacts are the reports.
+  accept:
+    needs: smoke
+    if: github.event_name == 'push' && github.ref == 'refs/heads/cursor/sol-forensics-v01-6802'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Acceptance scans
+        env:
+          SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SOLANA_RPC_URL:-}" ]; then
+            echo "SOLANA_RPC_URL secret is empty"
+            exit 1
+          fi
+          python3 -m sol_forensics --mint Ceuu7uQHwhtHuMhPWrWL9dgri3FaGJZFkTy6FoDow7NA --holders
+          python3 -m sol_forensics --mint DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263 --max-pages 50 --holders
+          python3 -m sol_forensics --mint 2m2m1dpqQPa97MU1voKG2p7G9ts4eR7GjmYNeXiTpump --holders
+          python3 - << 'PY'
+          import json
+          import pathlib
+          for path in sorted(pathlib.Path("solada/forensics/reports").glob("*.json")):
+              report = json.loads(path.read_text(encoding="utf-8"))
+              quality = report["data_quality"]
+              flags = ",".join(report["summary"]["flags"]) or "-"
+              print(
+                  f"report {report.get('symbol') or report['mint']} "
+                  f"partial={quality['partial']} history_too_deep={quality['history_too_deep']} "
+                  f"buyers={len(report['buyers'])} holders={len(report.get('holders') or [])} "
+                  f"calls={quality['calls_total']} calls_used={quality.get('calls_used')} flags={flags}"
+              )
+              summary = report.get("summary") or {}
+              print(
+                  f"summary slot0={summary.get('pct_supply_slot0')} "
+                  f"window={summary.get('pct_supply_window')} "
+                  f"n_slot0={summary.get('n_buyers_slot0')} "
+                  f"fresh={summary.get('fresh_wallet_ratio')} "
+                  f"cluster={summary.get('largest_cluster_pct')} "
+                  f"held={summary.get('largest_cluster_still_held_pct')}"
+              )
+          PY
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forensics-reports
+          path: |
+            solada/forensics/reports
+            solada/forensics/index.jsonl
+            solada/forensics/panel.json
+            solada/forensics/cache
+          if-no-files-found: warn
+
+  forensics:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    concurrency:
+      group: sol-forensics
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Existing checks
+        env:
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+        run: |
+          bash scripts/privacy-guard.sh
+          pip install --quiet "jsonschema>=4.18"
+          python3 scripts/validate-desks.py
+
+      - name: Unit tests
+        run: python3 -m unittest discover -s sol_forensics/tests -v
+
+      - name: Scan
+        env:
+          SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}
+          MINT: ${{ github.event.inputs.mint }}
+        run: |
+          set -euo pipefail
+          if [ -n "${MINT}" ]; then
+            case "${MINT}" in
+              *[!1-9A-HJ-NP-Za-km-z]*|"" ) echo "mint is not a base58 address"; exit 1 ;;
+            esac
+            if [ "${#MINT}" -lt 32 ] || [ "${#MINT}" -gt 44 ]; then
+              echo "mint is not a Solana address"
+              exit 1
+            fi
+            python3 -m sol_forensics --mint "${MINT}" --holders
+          else
+            python3 -m sol_forensics --watchlist --holders
+          fi
+
+      - name: Checks before commit
+        env:
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+        run: |
+          # Pass the forensics tree so a brand-new report is scanned before git add.
+          # With no arguments the guard only sees tracked files.
+          bash scripts/privacy-guard.sh $(find solada/forensics -type f | sort)
+          python3 scripts/validate-desks.py
+
+      - name: Commit reports
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "Refusing to push reports from ${GITHUB_REF}. Run this workflow on main."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add solada/forensics
+          if git diff --cached --quiet; then
+            echo "No report changes."
+            exit 0
+          fi
+          git commit -m "Update sol_forensics reports"
+          ok=0
+          for i in 1 2 3; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              ok=1
+              break
+            fi
+            echo "Rebase or push failed (attempt ${i}). Not force-pushing."
+            sleep $((i * 5))
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo "Push failed after rebase retries. No force-push was used."
+            exit 1
+          fi

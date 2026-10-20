@@ -8,6 +8,8 @@ The site root is the shared dashboard: a combined Home page, one page per desk, 
 
 The older NFT finder still runs at [nft/site/](nft/site/). After deploy: `https://zirqo-dev.github.io/sightline/nft/site/`. Paste an OpenSea key in that page only. Never commit it.
 
+Experimental Solana early-buyer forensics lives in [sol_forensics/](sol_forensics/README.md). Reports go in `solada/forensics/`. Research only: no trading and no keys. The desk page shows an Experimental forensics panel; the uncalibrated labels are not signals.
+
 ## Build
 
 ```bash
