@@ -101,14 +101,16 @@
       ],
       "not_l3_because": "liq/mcap is 4.95%, just under the L3 5% floor, so it stays L2. TTWO quote means ADA-equivalent P&L also moves with the TTWO token.",
       "kill_line": {
-        "text": "mcap < $4.37M or holders < 7,829 or pool quote < 521.3 TTWO (~1,004 SOL-equivalent) (default -30%/-10%/-30%); early exit per pf-m if holders fall at two marks in a row with price below entry; per pf-u the kill moves up to entry once a mark is +25% or more",
-        "mcap_usd_below": 4374660,
+        "text": "mcap < $6.25M (entry; raised by pf-u at the 7:10 PM Oct 20 mark of +45.5%) or holders < 7,829 or pool quote < 521.3 TTWO (~1,004 SOL-equivalent); early exit per pf-m if holders fall at two marks in a row with price below entry",
+        "mcap_usd_below": 6249514,
         "holders_below": 7829,
         "pool_quote_sol_below": 1004,
         "pool_quote_native_below": {
           "amount": 521.3,
           "token": "TTWO"
-        }
+        },
+        "moved_at": "2026-10-20T19:10:00-04:00",
+        "moved_by": "pf-u (mark +45.5%)"
       },
       "first_block_check": "not run (9-day-old coin); pump.fun flags clean; Helius 3 requests (supply, largest accounts, owners)",
       "custody": "SPL token, non-custodial (paper only); no Solada bridge involved",
@@ -139,6 +141,33 @@
           "flags_top": 0,
           "note": "DexScreener h1 303 buys / 252 sells, price h1 -15.8%, h6 -11.0%; holders 8,699 (entry) -> 8,648, first drop with price below entry, so pf-m closes it if the next mark drops again with price still below entry. Kill lines clear ($5.44M vs $4.37M mcap, 8,648 vs 7,829 holders, 695.3 vs 521.3 TTWO pool quote).",
           "source": "hourly pulse: DexScreener pair, pump.fun /coins/top-holders and /coins-v2; no Helius used"
+        },
+        {
+          "at": "2026-10-20T19:10:00-04:00",
+          "mcap_usd": 9011178,
+          "mcap_usd_pumpfun": 9543486,
+          "price_usd": 0.009178,
+          "price_sol": 8.62351e-05,
+          "price_quote_ttwo": 4.42e-05,
+          "holders": 12198,
+          "pool_quote_sol": 1777.8,
+          "pool_quote_native": {
+            "amount": 911.2,
+            "token": "TTWO"
+          },
+          "ttwo_usd_implied": 207.65,
+          "liq_usd": 379649,
+          "pnl_pct_usd": 44.2,
+          "pnl_pct_sol": 45.5,
+          "pnl_pct_ada": 44.9,
+          "result": {
+            "pnl": 45.5,
+            "pct": 45.5,
+            "unit": "ADA-equivalent"
+          },
+          "kill_line_hit": false,
+          "note": "DexScreener h1 2,389 buys / 1,570 sells (price h1 -16.4%), h6 12,347 / 8,161 (+5.0%), h24 +55.6%; pump.fun holders 8,648 -> 12,198 (+41%), so pf-m resets. Mark is +45.5% (SOL basis; +44.9% ADA, +44.2% USD), past the pf-u +25% trigger, so the kill line moves up to entry ($6.25M mcap). Pool quote 911.2 TTWO vs 521.3 line.",
+          "source": "data-only run: DexScreener pair, pump.fun /coins-v2 and /coins/top-holders, CoinGecko"
         }
       ],
       "review": null
