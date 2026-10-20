@@ -1603,6 +1603,24 @@
       ],
       "rule": "Don't open an L2 on a pump.fun coin that is up more than ~10x in the last 24h until it has pulled back at least ~30% from its high and held that level for one pulse with holders still rising. PIERRE opened at $1.31M after a ~17x day and hit its $918k mcap kill in ~4.5h (-42.3%) even though holders kept rising (4,478 -> 4,518); UHI opened after a +222% h6 spike and closed under pf-m at -25.3%. Holder growth on a coin this extended doesn't protect price.",
       "source": "desk run 2026-10-19 12:15 (review of PIERRE-D3S6-20261019-0750 close)"
+    },
+    {
+      "id": "pf-daily-2026-10-19",
+      "added_at": "2026-10-19T21:00:00-04:00",
+      "source": "Snek Sentinel 9 PM run, Oct 19 (day review)",
+      "title": "Oct 19 review: holder-drop exits lose less than kill-line exits",
+      "category": "review",
+      "evidence": [
+        "Dacity",
+        "UHI",
+        "PIERRE",
+        "CATE",
+        "swordcat",
+        "CyberAxe",
+        "FTR",
+        "Macca"
+      ],
+      "rule": "Day review: 3 Pump.fun closes today (Dacity -16.8% and UHI -25.3% on pf-m, PIERRE -42.3% at its kill line), so the arm is 0-8 (avg -24.3%). Across the book, pure pf-m exits (swordcat, CATE, Dacity, UHI) averaged -13.5% while kill-line exits (CyberAxe, FTR, Macca, PIERRE) averaged -35.1%: the holder-drop exit is the arm's best risk control, so check it first at every mark. Tonight's 1-hour-old runners (GDC, aDOGymous, GM) all had their top-12 balances in one band, so pf-n is now catching most fresh pump.fun runners."
     }
   ],
   "summaries": [
@@ -2422,6 +2440,77 @@
           ],
           "needs": "pf-o: 2%+ holder growth between snapshots on a 10-day-old coin"
         }
+      }
+    },
+    {
+      "at": "2026-10-19T21:00:00-04:00",
+      "type": "run",
+      "note": "No open Pump.fun tickets and none opened. GDC ($433k, 4,668 holders), aDOGymous and GM are 0.2-1.4h old with all 12 top balances in one band (pf-n). MRBEAST ($1.10M) is one of two MrBeast mints on a 10x day (pf2, pf-t). COLLECTOOOR (holders 2,120 -> 3,345, h1 -22%) waits for a pf-t re-hold. UHI holders 3,506 -> 3,439 with h6 -35% (pf-m). NTRNDM +0.7% holders (pf-o); Dacity holders 7,250 -> 7,220. Research/lottery/NFA.",
+      "helius_usage": {
+        "requests": 2,
+        "credits_estimate": "~20 (MISS and CORE Solana-side token accounts, shared budget)"
+      },
+      "watch_next": {
+        "COLLECTOOOR": {
+          "mint": "ESnW5ZbLmoEAg2QEMxnMsY9R3aS8Kw58HJacYURmpump",
+          "holders_snapshots": [
+            {
+              "at": "2026-10-19T19:00:00-04:00",
+              "holders": 2120
+            },
+            {
+              "at": "2026-10-19T21:00:00-04:00",
+              "holders": 3345
+            }
+          ],
+          "needs": "pf-t: a ~30% pullback from the high, held for one pulse with holders rising"
+        },
+        "NTRNDM": {
+          "mint": "NTRNDMqQSiwEC2jJs3wJiZS6bpGYQJtMNQJgiX3WyV6",
+          "holders_snapshots": [
+            {
+              "at": "2026-10-19T19:03:00-04:00",
+              "holders": 2612
+            },
+            {
+              "at": "2026-10-19T21:00:00-04:00",
+              "holders": 2630
+            }
+          ],
+          "needs": "pf-o: 2%+ holder growth between snapshots"
+        },
+        "UHI": {
+          "mint": "FGkCj28xhabWTYg9QyzACvs4NsN6LUyesP6EwiHepump",
+          "holders_snapshots": [
+            {
+              "at": "2026-10-19T19:03:00-04:00",
+              "holders": 3506
+            },
+            {
+              "at": "2026-10-19T21:00:00-04:00",
+              "holders": 3439
+            }
+          ],
+          "needs": "pf-m: holders rising and h6 price >= -10%"
+        }
+      }
+    },
+    {
+      "at": "2026-10-19T21:00:00-04:00",
+      "type": "interim",
+      "period": "2026-10-18 21:15 to 2026-10-19 21:00",
+      "note": "Interim summary (5 closes since the Oct 18 weekly). Opened 3 (Dacity, PIERRE, UHI), closed 5: Macca -32.0% (kill + pf-m), CATE -0.3% (pf-m), Dacity -16.8% (pf-m), UHI -25.3% (pf-m), PIERRE -42.3% (kill). 0 wins, avg -23.3%. All-time 0-8, avg -24.3%, realized -194.5 ADA-equivalent. Best: CATE -0.3%; worst: PIERRE -42.3%. Rules added since the weekly: pf-q, pf-r, pf-s, pf-t, pf-daily-2026-10-19. pf-m early exits held up best.",
+      "opened": 3,
+      "closed": 5,
+      "wins": 0,
+      "losses": 5,
+      "avg_closed_pct": -23.34,
+      "alltime": {
+        "closed": 8,
+        "wins": 0,
+        "avg_closed_pct": -24.31,
+        "realized_pnl": -194.5,
+        "unit": "ADA-equivalent"
       }
     }
   ]

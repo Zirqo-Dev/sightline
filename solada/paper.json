@@ -902,6 +902,32 @@
         "QUIN"
       ],
       "rule": "Swarm and sweep keys make their money in the first ~15 minutes after go-live and sell into the first run. Across BRO, DEXY (first 300 trades), IAGONE, GUINEA and BESSTIVE on Oct 19, the 28 closed swarm round trips that entered within 15 minutes won 25 times (~4.7k ADA in -> ~9.9k out, median hold 19 min, median +49 ADA). The 18 later entries won 7 times (median -23 ADA; the total stayed positive only because of two DEXY exits). QUIN's five swarm keys were all out within 13 minutes and its curve went back to 0%. A swarm key buying after the first 15 minutes adds nothing to a name's score. A launch whose early swarm keys have all left by +15 min stays Pass (with rule p)."
+    },
+    {
+      "id": "y",
+      "added_at": "2026-10-19T21:00:00-04:00",
+      "source": "Snek Sentinel 9 PM run, Oct 19 (pulse history review)",
+      "title": "Thin-pool rebounds need two pulses of holder growth",
+      "category": "review",
+      "evidence": [
+        "DEXY",
+        "SER"
+      ],
+      "rule": "On graduated pools with an ADA side under ~17k, one pulse of holder growth is not a re-hold. On Oct 19 DEXY bounced three times (64.9k -> 97.1k -> 126.7k ADA) and gave back 16% within the hour after the 8:13 PM peak (holders 81 -> 78, h1 5 buys / 9 sells); SER ran 58.3k -> 145.9k and faded to 109.2k with holders 87 -> 77. Before raising such a name above L2, require holder growth at two pulses in a row with the ADA side also rising (the Cardano-side twin of rule t). A single-pulse pop on a thin pool stays L2."
+    },
+    {
+      "id": "daily-2026-10-19",
+      "added_at": "2026-10-19T21:00:00-04:00",
+      "source": "Snek Sentinel 9 PM run, Oct 19 (day review)",
+      "title": "Oct 19 review: the holding gate kept the book out of whipsaws",
+      "category": "review",
+      "evidence": [
+        "RAIN",
+        "DEXY",
+        "SER",
+        "BOLT"
+      ],
+      "rule": "Day review: one Solada close today, RAIN -72.9% (a fresh graduate on a thin pool, rule v), so the book is 0-4 (avg -29.3%). No ticket opened after 10 AM because nothing cleared rule k, and that kept the book out of DEXY's and SER's +/-30% swings (rule y). The day's clearest edge was timing, not shape: swarm keys that entered within 15 minutes won 25 of 28 round trips (rule x), which a 100-ADA paper ticket on a two-hour cadence can't capture. Keep rule k as the ticket gate; a paper copy test needs per-block entry prices first."
     }
   ],
   "summaries": [
@@ -1170,6 +1196,49 @@
         "w",
         "x"
       ]
+    },
+    {
+      "at": "2026-10-19T21:00:00-04:00",
+      "type": "run",
+      "note": "Monday 9 PM run. No Solada ticket open or opened. DEXY (106.8k ADA, 78 holders, 15.1k side) and SER (109.2k, 77, 15.3k) faded after their 8 PM bounces and fail rule k (new rule y). BOLT 442.8k on flat holders (h); CLOVE 20.9k side. BRO and WOLF hit their kill lines. No Solana-side snipe (CORE 28 natives). Research/lottery/NFA.",
+      "rules_applied": [
+        "a",
+        "e",
+        "g",
+        "h",
+        "i",
+        "j",
+        "k",
+        "l",
+        "n",
+        "p",
+        "q",
+        "r",
+        "s",
+        "t",
+        "v",
+        "w",
+        "x",
+        "y"
+      ]
+    },
+    {
+      "at": "2026-10-19T21:00:00-04:00",
+      "type": "interim",
+      "period": "2026-10-18 21:15 to 2026-10-19 21:00",
+      "note": "Interim summary (the Pump.fun arm passed 5 closes since the Oct 18 weekly). Solada: 1 opened (RAIN), 2 closed (BOLT-20261018-1020 -10.8%, RAIN-7cc1-20261019-1000 -72.9%), 0 wins, avg -41.9%. All-time 0-4, avg -29.3%, realized -117.0 ADA. Best close: BOLT -10.8% (LP pull, rule u). Worst: RAIN -72.9% (fresh-graduate thin pool, rule v). Rules added since the weekly: u, v, w, x, y.",
+      "opened": 1,
+      "closed": 2,
+      "wins": 0,
+      "losses": 2,
+      "avg_closed_pct": -41.85,
+      "alltime": {
+        "closed": 4,
+        "wins": 0,
+        "avg_closed_pct": -29.25,
+        "realized_pnl": -117.0,
+        "unit": "ADA"
+      }
     }
   ]
 }
