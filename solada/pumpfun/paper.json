@@ -50,7 +50,72 @@
     "kill_line_default": "mcap -30% from entry OR holders -10% from entry OR pool quote side -30% from entry OR full exit by any identified first-block sniper/bundler wallet",
     "selection": "5-10 names per run (recent graduates/near-graduates + GeckoTerminal/pump.fun trending); paper-trade L3+ plus the run's strongest L2; max 2 new tickets per run; no duplicates (one open ticket per mint)."
   },
-  "open": [],
+  "open": [
+    {
+      "id": "Dacity-nxPq-20261020-1015",
+      "ticker": "Dacity",
+      "name": "Dacity",
+      "side": "solana",
+      "launchpad": "pump.fun",
+      "mint": "nxPqZ4F7ux8Vph5NFu25rEP6Kx9Gr1U6Fmj36Rjpump",
+      "pool": "G2UuRbmVDzDFP4qyoBJrSKBXSi7d6V4bPP9tHPs36y4b",
+      "pool_dex": "pumpswap",
+      "pool_quote_token": "TTWO (tokenized Take-Two stock), not SOL (pf-p)",
+      "opened_at": "2026-10-20T10:15:00-04:00",
+      "window_ends_at": "2026-10-22T10:15:00-04:00",
+      "size": 100,
+      "ticket_sol": 0.2089,
+      "ticket_conversion": {
+        "at": "2026-10-20T10:15:00-04:00",
+        "ada_usd": 0.224296,
+        "sol_usd": 107.37,
+        "source": "api.coingecko.com simple/price"
+      },
+      "level": 2,
+      "entry_type": "strongest-L2 (re-entry on a previously closed mint; no other open ticket on it)",
+      "status": "open",
+      "entry": {
+        "mcap_usd": 6249514,
+        "price_usd": 0.006365,
+        "price_sol": 5.9281e-05,
+        "price_quote_ttwo": 3.079e-05,
+        "ttwo_usd_implied": 206.72,
+        "holders": 8699,
+        "holders_geckoterminal": 8830,
+        "pool_quote_sol": 1433.9,
+        "pool_quote_native": {
+          "amount": 744.76,
+          "token": "TTWO"
+        },
+        "liq_usd": 309282,
+        "liq_to_mcap_pct": 4.95,
+        "paper_qty_tokens": 3524,
+        "top10_ex_pool_pct": 17.13,
+        "top1_ex_pool_pct": 2.59
+      },
+      "thesis": [
+        "pf-o passes on an old coin (9 days): pump.fun holders 7,220 (9 PM Oct 19) -> 8,699 (10:15 AM Oct 20), +20.5% across snapshots; GeckoTerminal 8,830 (updated ~4:40 AM), no mismatch (pf1, pf-s)",
+        "Held a first fade: 48h high ~$0.0082 (2 PM Oct 19) -> ~$0.0047 (9 PM, -43%), then 13 hourly closes between $0.0055 and $0.0071; now $0.00637 (~78% of the high) with holders rising, so it is not a fresh spike (pf-l, pf-t)",
+        "Flow passes pf-k and pf-m: DexScreener h6 1,462/1,263 (+2.9%), h1 442/351 (+10.1%); average h6 fill ~$79 (no tiny-fill farm, pf-q)",
+        "Pool quote 744.8 TTWO (~$154k, ~1,434 SOL-equivalent per pf-p); Helius top-10 ex-pool 17.13%, top-1 2.59%; pump.fun 0 sniper/bundler flags in the top holders, no identical balances"
+      ],
+      "not_l3_because": "liq/mcap is 4.95%, just under the L3 5% floor, so it stays L2. TTWO quote means ADA-equivalent P&L also moves with the TTWO token.",
+      "kill_line": {
+        "text": "mcap < $4.37M or holders < 7,829 or pool quote < 521.3 TTWO (~1,004 SOL-equivalent) (default -30%/-10%/-30%); early exit per pf-m if holders fall at two marks in a row with price below entry; per pf-u the kill moves up to entry once a mark is +25% or more",
+        "mcap_usd_below": 4374660,
+        "holders_below": 7829,
+        "pool_quote_sol_below": 1004,
+        "pool_quote_native_below": {
+          "amount": 521.3,
+          "token": "TTWO"
+        }
+      },
+      "first_block_check": "not run (9-day-old coin); pump.fun flags clean; Helius 3 requests (supply, largest accounts, owners)",
+      "custody": "SPL token, non-custodial (paper only); no Solada bridge involved",
+      "marks": [],
+      "review": null
+    }
+  ],
   "closed": [
     {
       "id": "CyberAxe-20261017-1141",
@@ -2523,6 +2588,90 @@
         "avg_closed_pct": -24.31,
         "realized_pnl": -194.5,
         "unit": "ADA-equivalent"
+      }
+    },
+    {
+      "at": "2026-10-20T10:15:00-04:00",
+      "type": "run",
+      "note": "Tuesday 10 AM run. Opened one paper ticket: Dacity as the strongest L2 ($6.25M, holders 7,220 -> 8,699, held a -43% fade overnight; liq/mcap 4.95% keeps it off L3). AOP ($266k, 2,227 pump.fun holders, 3.6h old) is the strongest fresh name but GeckoTerminal shows 23 holders on a ~3.5h-old snapshot (pf1/pf-s mismatch) and it has had no pullback. MONEYBIZ is 16x in 1.3h with 11 of the top 12 in one band (pf-n, pf-t). BORLY is down 42% over 6h (pf-k). COLLECTOOOR fell $664k -> $280k with h6 -28%, so its buy counts don't count (pf-m). NTRNDM holders 2,630 -> 2,588 (pf-o). ONEPIECE is paired with CARDS (pf-p) and has 1,027 holders. Research/lottery/NFA.",
+      "rules_applied": [
+        "a",
+        "k",
+        "pf1",
+        "pf2",
+        "pf-l",
+        "pf-m",
+        "pf-n",
+        "pf-o",
+        "pf-p",
+        "pf-q",
+        "pf-s",
+        "pf-t",
+        "pf-u"
+      ],
+      "helius_usage": {
+        "requests": 5,
+        "credits_estimate": "~23 (MISS and CORE token accounts plus Dacity supply/largest/owners, shared budget)"
+      },
+      "watch_next": {
+        "AOP": {
+          "mint": "8ikdGCtt5gcc3Lf9eQrwMgQqRmg24Py5abrzDovopump",
+          "holders_snapshots": [
+            {
+              "at": "2026-10-20T10:15:00-04:00",
+              "holders": 2227
+            }
+          ],
+          "needs": "GeckoTerminal holder count to catch up (pf-s), a ~30% pullback that holds, then a second holder snapshot"
+        },
+        "PUNANI": {
+          "mint": "6KEiPuRtAEcGgv9Ryi9Zx27yg4mZXm69sZpHUrBZKD9D",
+          "holders_snapshots": [
+            {
+              "at": "2026-10-20T10:15:00-04:00",
+              "holders": 1145
+            }
+          ],
+          "needs": "1,500+ holders after a pullback; GT shows 274 on a 1.4h-old snapshot"
+        },
+        "COLLECTOOOR": {
+          "mint": "ESnW5ZbLmoEAg2QEMxnMsY9R3aS8Kw58HJacYURmpump",
+          "holders_snapshots": [
+            {
+              "at": "2026-10-19T21:00:00-04:00",
+              "holders": 3345
+            },
+            {
+              "at": "2026-10-20T10:15:00-04:00",
+              "holders": 3568
+            }
+          ],
+          "needs": "h6 price back above -10% (pf-m) after the $664k -> $280k drop"
+        },
+        "NTRNDM": {
+          "mint": "NTRNDMqQSiwEC2jJs3wJiZS6bpGYQJtMNQJgiX3WyV6",
+          "holders_snapshots": [
+            {
+              "at": "2026-10-19T21:00:00-04:00",
+              "holders": 2630
+            },
+            {
+              "at": "2026-10-20T10:15:00-04:00",
+              "holders": 2588
+            }
+          ],
+          "needs": "pf-o: 2%+ holder growth between snapshots"
+        },
+        "EXFIL": {
+          "mint": "6FhVPctYg363pQbs4iSvqyHe2cJzfsvFD96gePy6pump",
+          "holders_snapshots": [
+            {
+              "at": "2026-10-20T10:15:00-04:00",
+              "holders": 1026
+            }
+          ],
+          "needs": "pf-o second snapshot (17-day-old coin); $2.75M, h6 +30.6%"
+        }
       }
     }
   ]
