@@ -112,7 +112,35 @@
       },
       "first_block_check": "not run (9-day-old coin); pump.fun flags clean; Helius 3 requests (supply, largest accounts, owners)",
       "custody": "SPL token, non-custodial (paper only); no Solada bridge involved",
-      "marks": [],
+      "marks": [
+        {
+          "at": "2026-10-20T11:18:00-04:00",
+          "mcap_usd": 5440990,
+          "price_usd": 0.005541,
+          "price_sol": 5.2397e-05,
+          "price_quote_ttwo": 2.689e-05,
+          "holders": 8648,
+          "pool_quote_sol": 1354.9,
+          "pool_quote_native": {
+            "amount": 695.32,
+            "token": "TTWO"
+          },
+          "ttwo_usd_implied": 206.06,
+          "liq_usd": 288090,
+          "pnl_pct_usd": -12.9,
+          "pnl_pct_sol": -11.6,
+          "result": {
+            "pnl": -11.6,
+            "pct": -11.6,
+            "unit": "ADA-equivalent"
+          },
+          "kill_line_hit": false,
+          "top10_ex_pool": 16.82,
+          "flags_top": 0,
+          "note": "DexScreener h1 303 buys / 252 sells, price h1 -15.8%, h6 -11.0%; holders 8,699 (entry) -> 8,648, first drop with price below entry, so pf-m closes it if the next mark drops again with price still below entry. Kill lines clear ($5.44M vs $4.37M mcap, 8,648 vs 7,829 holders, 695.3 vs 521.3 TTWO pool quote).",
+          "source": "hourly pulse: DexScreener pair, pump.fun /coins/top-holders and /coins-v2; no Helius used"
+        }
+      ],
       "review": null
     }
   ],
