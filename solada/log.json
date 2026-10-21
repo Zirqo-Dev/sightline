@@ -1,24 +1,25 @@
 {
   "schema_version": 2,
   "desk": "solada",
-  "asof": "2026-10-20T19:10:00-04:00",
-  "source": "Snek Sentinel data-only run, Tuesday 7 PM ET (token-saving plan)",
+  "asof": "2026-10-21T19:05:00-04:00",
+  "source": "Snek Sentinel data-only run, Wednesday 7 PM ET (token-saving plan)",
   "rate": {
-    "ADA_USD": 0.22327,
-    "ADA_CAD": 0.313987,
-    "SOL_USD": 106.43,
-    "source": "CoinGecko (~7:10 PM ET)"
+    "ADA_USD": 0.226271,
+    "ADA_CAD": 0.317879,
+    "SOL_USD": 107.32,
+    "source": "CoinGecko (~7:05 PM ET)"
   },
-  "headline": "Pump arm Dacity is +45.5% ADA-eq ($9.01M mcap, holders 8,648 -> 12,198), so pf-u lifts its kill line to entry ($6.25M). Solada book stays empty: SER 109 holders / 18.4k side and CLOVE 223k (+34% h6) both still under rule k; DEXY hit its pool-side kill line (11.5k vs 13k); SHARKY graduated and dumped to 19.6k ADA. Founder whale sold a small ASCEND slice and part of its COCK LP.",
+  "headline": "Pump arm Dacity is +80.9% ADA-eq ($11.30M mcap, holders 12,198 -> 16,087); kill line at entry stays clear. Solada book stays empty: SER jumped +41% h6 but it is the founder whale buying ~3.7k ADA while holders slipped to 104, so rule k still fails. HATCH is King of the Hill at 73.7% with 71 holders. CLOVE (157.5k vs 160k) and CORE (curve 54%) hit kill lines; the founder whale pulled more COCK LP.",
   "levels": {
-    "SER": "L2: 109 on-chain holders, mcap 157.4k ADA, side 18.4k; fails rule k",
-    "CLOVE": "L2: mcap 223.3k ADA, side 21.9k, 159 holders; fails rule k on side",
-    "BOLT": "L2: mcap 460.0k ADA, side 31.5k, 286 holders; flat flow",
-    "GUINEA": "L1: curve 100% awaiting graduation, 50 holders",
-    "HATCH": "L1: new, 27.7% curve",
-    "DEXY": "L1 Pass: pool side kill hit",
-    "SHARKY": "L1 Pass: post-graduation dump",
-    "CORE": "L1: curve stalled at 70.75%"
+    "SER": "L2: whale-driven pump, 104 holders, side 19.1k; fails rule k",
+    "HATCH": "L2: King of the Hill 73.7%, 71 holders, pre-graduation",
+    "CNET": "L1: new graduate, 92.9k mcap, 111 holders",
+    "BOLT": "L2: 412.3k mcap vs 400k line",
+    "CLOVE": "L1 Pass: mcap kill hit",
+    "GUINEA": "L1 Pass: graduation dump",
+    "DEXY": "L1 Pass: pool side kill",
+    "SHARKY": "L1 Pass: 49 holders, under 50",
+    "CORE": "L1 Pass: curve kill hit"
   },
   "kill_lines": {
     "DEXY": "pool ADA side under 13k, on-chain holders under 80, or the swarm keys exiting in one hour",
@@ -42,25 +43,28 @@
     "COCK": "founder whale selling COCK into the pool or pulling its LP, or the pool ADA side under ~150k ADA"
   },
   "kill_hits": [
-    "DEXY: pool ADA side ~11.5k under 13k",
-    "HERO: still under its line (3.8k side, 32 holders)",
-    "MISS: still past its line (natives not re-checked)",
-    "JUSTQ: still under ($8.2k mcap)"
+    "CLOVE: mcap 157.5k ADA under 160k",
+    "CORE: Solana curve 54.0% under 60%",
+    "COCK: founder whale pulled more LP (2M LP units for ~995 ADA + 158k COCK, 5:12 PM), second partial pull confirms the clause (rule u)",
+    "DEXY: pool side ~11.7k still under 13k",
+    "HERO, MISS, JUSTQ: still past their lines",
+    "SHARKY: 49 on-chain holders under 50"
   ],
   "founder_whale": {
     "handle": "$cockwhale",
     "address": "addr1q8wd…7jvk",
     "stake_prefix": "uylu74g0",
-    "line": "ASCEND: sold 1,332 ASCEND for ~1,356 ADA at 4:47 PM (about 0.5% of its ~270k); STRIKE: no moves. SER: kept clipping, ~962 ADA for ~5.0M SER (12:37-5:50 PM). SOLADA: ~11 clips of 71.6-81.6 ADA (~800 ADA). COCK/ADA LP: added ~0.5k ADA of LP 1:54-1:59 PM, then pulled 2M LP units for 981 ADA + 160k COCK at 2:42 PM (partial pull; COCK kill clause on watch). Sold ~1.49M BOLT for 649 ADA (1:54 PM) and exited SHARKY (139 ADA, 2:03 PM). New buys: Guinea Pig ~753 ADA, BabySNEK 502 ADA, FEED 252 ADA, GUINEA ~225 ADA, BLUE BULL ~6 x 72-82 ADA. Sold 3,244 NIGHT for 571 ADA."
+    "line": "ASCEND: four small buys, ~264 ASCEND for ~315 ADA (4:23-6:40 PM); STRIKE: no moves. SER: big buyer, ~23.1M SER for ~3,720 ADA in 14 buys (4:45-7:02 PM, one 2,002 ADA). COCK/ADA LP: added a little LP at 4:46 PM then pulled 2M LP units for ~995 ADA + 158k COCK at 5:12 PM; also four 71 ADA COCK clips. SOLADA: 3 clips (~346 ADA). Small buys in BabySNEK, BLUE BULL, GUINEA."
   },
   "paper_actions": [
-    "pumpfun: marked Dacity-nxPq-20261020-1015 at +45.5% ADA-eq; kill line raised to entry ($6.25M mcap) per pf-u",
+    "pumpfun: marked Dacity-nxPq-20261020-1015 at +80.9% ADA-eq; kill line clear",
     "solada: no open tickets; no new tickets (data-only run)"
   ],
   "rules_added": [],
   "rules_applied": [
     "k",
-    "y",
+    "s",
+    "u",
     "pf-u",
     "pf-m"
   ],
@@ -78,9 +82,93 @@
     "CoinGecko"
   ],
   "followups": [
-    "Restore the lean schedule on Saturday Oct 24 per the token-saving plan"
+    "Restore the lean schedule on Saturday Oct 24 per the token-saving plan",
+    "Watch HATCH graduation and whether SER holders follow the whale"
   ],
   "history": [
+    {
+      "schema_version": 2,
+      "desk": "solada",
+      "asof": "2026-10-20T19:10:00-04:00",
+      "source": "Snek Sentinel data-only run, Tuesday 7 PM ET (token-saving plan)",
+      "rate": {
+        "ADA_USD": 0.22327,
+        "ADA_CAD": 0.313987,
+        "SOL_USD": 106.43,
+        "source": "CoinGecko (~7:10 PM ET)"
+      },
+      "headline": "Pump arm Dacity is +45.5% ADA-eq ($9.01M mcap, holders 8,648 -> 12,198), so pf-u lifts its kill line to entry ($6.25M). Solada book stays empty: SER 109 holders / 18.4k side and CLOVE 223k (+34% h6) both still under rule k; DEXY hit its pool-side kill line (11.5k vs 13k); SHARKY graduated and dumped to 19.6k ADA. Founder whale sold a small ASCEND slice and part of its COCK LP.",
+      "levels": {
+        "SER": "L2: 109 on-chain holders, mcap 157.4k ADA, side 18.4k; fails rule k",
+        "CLOVE": "L2: mcap 223.3k ADA, side 21.9k, 159 holders; fails rule k on side",
+        "BOLT": "L2: mcap 460.0k ADA, side 31.5k, 286 holders; flat flow",
+        "GUINEA": "L1: curve 100% awaiting graduation, 50 holders",
+        "HATCH": "L1: new, 27.7% curve",
+        "DEXY": "L1 Pass: pool side kill hit",
+        "SHARKY": "L1 Pass: post-graduation dump",
+        "CORE": "L1: curve stalled at 70.75%"
+      },
+      "kill_lines": {
+        "DEXY": "pool ADA side under 13k, on-chain holders under 80, or the swarm keys exiting in one hour",
+        "SER": "pool ADA side under 13k, holders under 80, or the founder whale selling SER into the pool",
+        "BOLT": "pool mcap under 400k ADA or holders under 265 (net-sell driven; LP pulls confirm next pulse, rule u)",
+        "SHARKY": "curve under 70% before graduation, holders under 50, or u8a2m6 and the launcher selling into the curve",
+        "CLOVE": "mcap under 160k ADA or holders under 125",
+        "HIVE": "pool ADA side under 7k or on-chain holders under 60",
+        "FEED": "pool ADA side under 7k or holders under 50",
+        "BEAST": "pool ADA side under 6k or holders under 50",
+        "GOLFY": "curve under 40% or holders under 40",
+        "JUICE": "pool ADA side under 4k or holders under 40",
+        "HERO": "hit: pool ADA side under ~4k with 29 holders",
+        "SOLADA": "on-chain holders under 430 or a 1M+ SOLADA dump into the pool from the founder whale or its side wallets",
+        "KNOPPIES": "curve under 5%",
+        "LIXI": "curve under 12%",
+        "GUINEA": "curve under 20% or swarm keys holding more than 15% before graduation",
+        "MISS": "hit: 16 Solana-native holders (line 25); re-watch only on 30+ natives across two pulses (rule t)",
+        "CORE": "curve under 60% or Solana-native holders under 25",
+        "JUSTQ": "hit: under 230 Solana-native holders and under $16k mcap",
+        "COCK": "founder whale selling COCK into the pool or pulling its LP, or the pool ADA side under ~150k ADA"
+      },
+      "kill_hits": [
+        "DEXY: pool ADA side ~11.5k under 13k",
+        "HERO: still under its line (3.8k side, 32 holders)",
+        "MISS: still past its line (natives not re-checked)",
+        "JUSTQ: still under ($8.2k mcap)"
+      ],
+      "founder_whale": {
+        "handle": "$cockwhale",
+        "address": "addr1q8wd…7jvk",
+        "stake_prefix": "uylu74g0",
+        "line": "ASCEND: sold 1,332 ASCEND for ~1,356 ADA at 4:47 PM (about 0.5% of its ~270k); STRIKE: no moves. SER: kept clipping, ~962 ADA for ~5.0M SER (12:37-5:50 PM). SOLADA: ~11 clips of 71.6-81.6 ADA (~800 ADA). COCK/ADA LP: added ~0.5k ADA of LP 1:54-1:59 PM, then pulled 2M LP units for 981 ADA + 160k COCK at 2:42 PM (partial pull; COCK kill clause on watch). Sold ~1.49M BOLT for 649 ADA (1:54 PM) and exited SHARKY (139 ADA, 2:03 PM). New buys: Guinea Pig ~753 ADA, BabySNEK 502 ADA, FEED 252 ADA, GUINEA ~225 ADA, BLUE BULL ~6 x 72-82 ADA. Sold 3,244 NIGHT for 571 ADA."
+      },
+      "paper_actions": [
+        "pumpfun: marked Dacity-nxPq-20261020-1015 at +45.5% ADA-eq; kill line raised to entry ($6.25M mcap) per pf-u",
+        "solada: no open tickets; no new tickets (data-only run)"
+      ],
+      "rules_added": [],
+      "rules_applied": [
+        "k",
+        "y",
+        "pf-u",
+        "pf-m"
+      ],
+      "helius_credits_est": 0,
+      "notes": [
+        "Data-only run: no browser, Discord, X or new pump.fun scans."
+      ],
+      "sources": [
+        "https://www.solada.fun/api/launches",
+        "https://www.solada.fun/api/market",
+        "Blockfrost mainnet",
+        "GeckoTerminal",
+        "DexScreener",
+        "pump.fun frontend-api-v3 (coins-v2, top-holders)",
+        "CoinGecko"
+      ],
+      "followups": [
+        "Restore the lean schedule on Saturday Oct 24 per the token-saving plan"
+      ]
+    },
     {
       "schema_version": 2,
       "desk": "solada",
@@ -6269,394 +6357,6 @@
         "CORE": "triggered (79.65% < 80%) -> Pass",
         "FEED": "Pass -> Tiny lottery; new line: under 40k ADA or holders under 64",
         "IAGONAUT": "graduated; new line: under 40k ADA, holders under 60, or top holder uytg09zr exits"
-      }
-    },
-    {
-      "asof": "2026-10-17T08:35:00-04:00",
-      "source": "Snek Sentinel (off-schedule overnight pass)",
-      "rate": "ADA~0.2219 USD (Solada /api/market), CoinGecko 0.2220 USD / 0.3143 CAD",
-      "headline": "Holdings: FEED Watch -> Pass (pool live, ~30.0k ADA / ~CA$9.4k, holders 64: kill line hit). HERO graduated ~11:26 PM ET but now ~19.1k ADA (~62% under the 50k cap) with 60 holders: stays Tiny lottery. JUICE Pass (24.3k, holders 89->79). BOLT Tiny lottery (flat ~465k ADA / ~CA$146k, holders 279). CLOVE +42% to ~276k ADA, holders 120: still Pass, 5 holders short of revisit. HIVE curve 53->74%, holders 80: still Pass. GOLFY Tiny lottery (68%, 53). BEAST/MISS Pass. SOLADA now has a live price: ~1.85M ADA mcap from an on-chain pool (98k ADA side), Tiny lottery. New: IAGONAUT (8:12 AM, 38 holders, KOTH) has insider-loop key u8a2m6 in its first public block: Tiny lottery. Linked pair u8a2m6+u978t4 also sniped FONE and LUNINEX first blocks: Pass. CORE 80.7%, 0.7 pts above kill. KILLUA/HIGH/MONEY/CHARLETT/PEPEDANO Pass.",
-      "sources": [
-        "solada.fun /api/launches, /api/market (08:31 + 08:36 ET)",
-        "CoinGecko ADA/USD/CAD",
-        "Blockfrost mainnet: first-block buyers for IAGONAUT/HIGH/LUNINEX/FONE, holder lists + Minswap V2 pool UTxOs for HERO/FEED/JUICE/BEAST/BOLT/CLOVE, IAGONAUT top holders, SOLADA holders + pool UTxO",
-        "GeckoTerminal token pools + DexScreener search for SOLADA (no listing)",
-        "X public search: solada mentions since 10:45 PM ET Fri (3 pages), ticker search, from:cryptodramz/soladafun/snekdotfun/daveonada1"
-      ],
-      "alerts": [
-        {
-          "name": "FEEd BabySNEK",
-          "ticker": "FEED",
-          "age": "~13.3h",
-          "chain": "Cardano-side (graduated ~8:57 PM ET Fri; Minswap V2 pool live)",
-          "mcap": "~30.0k ADA (~CA$9.4k)",
-          "volume_24h": "~95.0k ADA (~CA$29.9k)",
-          "holders": 64,
-          "trades_24h": 418,
-          "delta_since_2050ET": "mcap 50.0k (curve top) -> 30.0k ADA (-40%) once the pool opened; holders 60->64",
-          "x_temperature": "Only the token's own account (@FEEdBabySNEK, 10 followers) posting '$FEED ON @MinswapDEX'; @soladafun listed it in its 4:41 AM top-5 by volume.",
-          "flags": [
-            "Kill line hit: pool live, mcap under ~40k ADA, holders stuck at 64",
-            "Pool ADA side ~8.0k ADA (~27% of mcap, thin in absolute terms)",
-            "Top-10 ex-pool ~34.6%, top wallet ~5.1%",
-            "Cardano-side native token (non-custodial); risk is curve/pool, not custody"
-          ],
-          "verdict": "Pass (downgraded from Watch)",
-          "kill": "Already triggered. Revisit only if holders top ~80 with mcap back over ~40k ADA."
-        },
-        {
-          "name": "HERO (Guitar HERO)",
-          "ticker": "HERO",
-          "age": "~13.3h",
-          "chain": "Cardano-side (graduated ~11:26 PM ET Fri; Minswap V2 pool live)",
-          "mcap": "~19.1k ADA (~CA$6.0k)",
-          "volume_24h": "~80.5k ADA (~CA$25.3k)",
-          "holders": 60,
-          "trades_24h": 408,
-          "delta_since_2050ET": "curve 46% -> graduated (KOTH at 10:46 PM, 36.7k ADA / 80.7%); mcap 18.1k -> 19.1k ADA after a 50k-cap top; holders 35->60",
-          "x_temperature": "@soladafun automated KOTH post (10:46 PM, 21 likes) and top-5 by volume. @songoncardano (1.7k) posted at 7:05 AM that the $SONG team has NOT launched anything on Solada (the HERO pulse had asked 'could be $song team?').",
-          "flags": [
-            "Old kill line (curve <40% / holders <40) not hit: it graduated and holders rose to 60",
-            "But price is ~62% below the 50k graduation cap: same fade path as JUICE/FEED",
-            "Pool ADA side ~6.5k ADA (~34% of mcap)",
-            "Top-10 ex-pool ~31.3%",
-            "SONG team disclaims any Solada launch: any 'SONG team' story around HERO is unverified",
-            "Cardano-side native token (non-custodial); risk is curve/pool, not custody"
-          ],
-          "verdict": "Tiny lottery only",
-          "kill": "Mcap under ~15k ADA, or holders back under ~55."
-        },
-        {
-          "name": "MIDNIGHT JUICE",
-          "ticker": "JUICE",
-          "age": "~18.1h",
-          "chain": "Cardano-side (graduated Minswap V2)",
-          "mcap": "~24.3k ADA (~CA$7.6k)",
-          "volume_24h": "~103.1k ADA (~CA$32.4k)",
-          "holders": 79,
-          "trades_24h": 513,
-          "delta_since_2050ET": "mcap 34.9k -> 24.3k ADA (-30%), holders 89->79",
-          "x_temperature": "Token account @NightJuiceCoin (6 followers) opened a 'Night Juice Club' at 5:03 AM; @CardanoJones (180) echo. No KOL.",
-          "flags": [
-            "Holder bleed continuing (92 peak -> 79)",
-            "Pool ADA side ~7.3k ADA",
-            "Cardano-side native token (non-custodial); risk is curve/pool, not custody"
-          ],
-          "verdict": "Pass",
-          "kill": "Already triggered. Revisit only if holders climb back over ~100 with mcap over ~40k ADA."
-        },
-        {
-          "name": "Bolt The Striker",
-          "ticker": "BOLT",
-          "age": "~67h",
-          "chain": "Cardano-side (graduated Minswap V2)",
-          "mcap": "~465.0k ADA (~CA$146.1k)",
-          "volume_24h": "~147.8k ADA (~CA$46.4k)",
-          "holders": 279,
-          "trades_24h": 311,
-          "delta_since_2050ET": "mcap 469.6k -> 465.0k ADA (flat), holders 279->279",
-          "x_temperature": "@soladafun lists it #1 by 24h volume (4:41 AM). Replies only ('GM $BOLT'); @virtuoso1333 notes the team account still has ~179 followers.",
-          "flags": [
-            "Minswap ADA side ~32.1k ADA, ~6.9% of mcap: thin vs size",
-            "Top-10 ex-pool ~25.8%",
-            "Cardano-side native token (non-custodial); risk is curve/pool, not custody"
-          ],
-          "verdict": "Tiny lottery only",
-          "kill": "Holders slip under ~270, or mcap under ~400k ADA."
-        },
-        {
-          "name": "Clove",
-          "ticker": "CLOVE",
-          "age": "~50h",
-          "chain": "Cardano-side (graduated Minswap V2)",
-          "mcap": "~275.6k ADA (~CA$86.6k) (pool reserves imply ~294k)",
-          "volume_24h": "~125.1k ADA (~CA$39.3k)",
-          "holders": 120,
-          "trades_24h": 396,
-          "delta_since_2050ET": "mcap 194.7k -> ~275.6k ADA (+42%), holders 115->120",
-          "x_temperature": "@CloveOnAscend (34 followers) 7:10 AM: 120 holders earning $ASCEND, says a top holder locked 2.3% of supply yesterday (15 likes). Small community replies only.",
-          "flags": [
-            "Overnight price recovery, but holders only +5",
-            "Pool ADA side ~25.5k ADA (~9% of mcap)",
-            "Top-10 ex-pool ~35%, top wallet ~5.5%",
-            "2.3% supply lock is a team claim, not verified here",
-            "Cardano-side native token (non-custodial); risk is curve/pool, not custody"
-          ],
-          "verdict": "Pass",
-          "kill": "Still Pass. Revisit only if holders break ~125 with a new Ascend catalyst (5 short)."
-        },
-        {
-          "name": "Beast",
-          "ticker": "BEAST",
-          "age": "~76h",
-          "chain": "Cardano-side (graduated Minswap V2)",
-          "mcap": "~28.5k ADA (~CA$8.9k)",
-          "volume_24h": "~19.2k ADA (~CA$6.0k)",
-          "holders": 71,
-          "trades_24h": 80,
-          "delta_since_2050ET": "mcap 32.9k -> 28.5k ADA (-13%), holders 73->71",
-          "x_temperature": "@OddballsCNFT (181) posted a $BEAST origin story/update (5:51 AM, 2 likes); @NeonHiveCNFT 'BEASTHIVE' meme. Quiet.",
-          "flags": [
-            "Pool ADA side ~7.8k ADA",
-            "Top-10 ex-pool ~30%",
-            "Cardano-side native token (non-custodial); risk is curve/pool, not custody"
-          ],
-          "verdict": "Pass",
-          "kill": "Holders under ~65 or mcap under ~25k ADA."
-        },
-        {
-          "name": "Hive",
-          "ticker": "HIVE",
-          "age": "~49h",
-          "chain": "Cardano-side curve (~73.8%)",
-          "mcap": "~32.5k ADA (~CA$10.2k)",
-          "volume_24h": "~20.9k ADA (~CA$6.6k)",
-          "holders": 80,
-          "trades_24h": 116,
-          "delta_since_2050ET": "mcap 21.3k -> 32.5k ADA (+53%), curve 53.1% -> 73.8%, holders 74->80",
-          "x_temperature": "@NeonHiveCNFT (57) 'here to stay / more utility coming' (4:25 AM, 7 likes) plus BEASTHIVE meme; small fans only.",
-          "flags": [
-            "Curve rebound is real but holders +6 only",
-            "Half of the revisit test met (curve >65%); holders still under ~85",
-            "Cardano-side native token (non-custodial); risk is curve/pool, not custody"
-          ],
-          "verdict": "Pass",
-          "kill": "Still Pass. Revisit only if holders get over ~85 with the curve holding over 65%."
-        },
-        {
-          "name": "GOLFY",
-          "ticker": "GOLFY",
-          "age": "~140h (revived old coin)",
-          "chain": "Cardano-side curve (~68.2%)",
-          "mcap": "~30.4k ADA (~CA$9.6k)",
-          "volume_24h": "~33.1k ADA (~CA$10.4k)",
-          "holders": 53,
-          "trades_24h": 119,
-          "delta_since_2050ET": "mcap 28.8k -> 30.4k ADA, curve 65% -> 68.2%, holders 51->53",
-          "x_temperature": "Silent on X.",
-          "flags": [
-            "Thin holder base for a 140h-old coin",
-            "Cardano-side native token (non-custodial); risk is curve/pool, not custody"
-          ],
-          "verdict": "Tiny lottery only",
-          "kill": "Holders under ~50 or curve under ~60%."
-        },
-        {
-          "name": "Miss Jak",
-          "ticker": "MISS",
-          "age": "~40h",
-          "chain": "Solana-side (pump.fun curve ~56.2%)",
-          "mcap": "~52.7k ADA ($11.7k, ~CA$16.6k)",
-          "volume_24h": "~9.2k ADA ($2.0k)",
-          "holders": 82,
-          "trades_24h": 40,
-          "delta_since_2050ET": "mcap 48.7k -> 52.7k ADA, holders 86->82",
-          "x_temperature": "@WojakBlueADA (1.7k) 7:38 AM: 48h giveaway, each MissJak NFT set bought enters a 500 ADA-of-$SOLADA draw. Promo, not organic demand.",
-          "flags": [
-            "Solana-side: relies on Solada bridge/escrow (custodial bridge risk)",
-            "Holders slipping"
-          ],
-          "verdict": "Pass",
-          "kill": "Revisit only if holders get back over ~95 with pump progress over 65%."
-        },
-        {
-          "name": "SOLADA (platform token)",
-          "ticker": "SOLADA",
-          "age": "n/a (SnekFun token)",
-          "chain": "Cardano native (policy e7c77b27...; live AMM pool on shared DEX script addr1x89ksjnf..., i64-max LP style, not Minswap V2)",
-          "mcap": "~1.85M ADA on-chain (~$410k, ~CA$581k)",
-          "volume_24h": "n/a (pool trading every few minutes: 5 txs 8:03-8:33 AM ET)",
-          "holders": "n/a",
-          "trades_24h": null,
-          "delta_since_2050ET": "Price now found: pool UTxO 98,230 ADA vs 53.13M of 1.0B units -> ~0.00185 ADA/unit, ~1.85M ADA mcap",
-          "x_temperature": "@snekdotfun (16.2k) 7:07 AM: '$SOLADA just climbed over 2M ADA MCap' (39 likes). @Jared59836926 and @fblthp_cryp: Solada passed 50k ADA fees/rewards in week one. @WojakBlueADA giveaway pays in $SOLADA.",
-          "flags": [
-            "No GeckoTerminal/DexScreener listing; price is from a single on-chain pool read",
-            "Pool ADA side ~98k ADA (~5% of mcap)",
-            "Second-largest holder is a script (addr1w8wma0rz..., ~8%) with small UTxOs, likely a Solada rewards/escrow vault, not a pool"
-          ],
-          "verdict": "Tiny lottery only",
-          "kill": "Pool ADA side under ~80k ADA, or mcap back under ~1.5M ADA."
-        },
-        {
-          "name": "IAGONAUT",
-          "ticker": "IAGONAUT",
-          "age": "~0.3h (live 8:12 AM ET)",
-          "chain": "Cardano-side curve (~55%, KOTH crowned 8:18 AM)",
-          "mcap": "~22.1k ADA (~CA$7.0k)",
-          "volume_24h": "~20.9k ADA (~CA$6.6k)",
-          "holders": 38,
-          "trades_24h": 80,
-          "delta_since_2050ET": "new",
-          "x_temperature": "Nothing on X yet.",
-          "flags": [
-            "INSIDER LOOP: stake1u8a2m6... bought in the first public block (14080033) with stake1u9n6w6w8, stake1ux2r5p7l, stake1uytg09zr; all four still in the top 10 (~16% together)",
-            "stake1uytg09zr also sniped FONE's first block",
-            "Curve already slipping (59.7% -> 54.7% within minutes)",
-            "Top-10 ex-curve ~38%",
-            "Cardano-side native token (non-custodial); risk is curve/pool, not custody"
-          ],
-          "verdict": "Tiny lottery only",
-          "kill": "Curve under ~45%, holders under ~35, or the first-block cluster starts selling."
-        },
-        {
-          "name": "CORE",
-          "ticker": "CORE",
-          "age": "~182h",
-          "chain": "Solana-side (pump.fun, KOTH since Oct 15)",
-          "mcap": "~110.6k ADA ($24.5k, ~CA$34.8k)",
-          "volume_24h": "~47.0k ADA ($10.4k)",
-          "holders": 124,
-          "trades_24h": 132,
-          "delta_since_2050ET": "KOTH progress 83.8% -> 80.7%; holders 123->124",
-          "x_temperature": "Silent.",
-          "flags": [
-            "Solana-side: relies on Solada bridge/escrow (custodial bridge risk)",
-            "Sitting 0.7 pts above the kill line"
-          ],
-          "verdict": "Tiny lottery only",
-          "kill": "KOTH progress under 80%."
-        },
-        {
-          "name": "FONE",
-          "ticker": "FONE",
-          "age": "~7.4h (live 1:06 AM ET)",
-          "chain": "Cardano-side curve (~12.8%)",
-          "mcap": "~6.3k ADA (~CA$2.0k)",
-          "volume_24h": "~9.7k ADA",
-          "holders": 17,
-          "trades_24h": 58,
-          "delta_since_2050ET": "new",
-          "x_temperature": "Silent.",
-          "flags": [
-            "INSIDER LOOP: linked pair stake1u8a2m6 + stake1u978t4 both in the first public block (14078757), with 5 others incl. uytg09zr and uyyyjqps",
-            "Cardano-side native token (non-custodial); risk is curve/pool, not custody"
-          ],
-          "verdict": "Pass",
-          "kill": "Revisit only if holders exceed ~40 with the curve over 30%."
-        },
-        {
-          "name": "LUNINEX",
-          "ticker": "LUNINEX",
-          "age": "~1.7h (live 6:51 AM ET)",
-          "chain": "Cardano-side curve (~1%)",
-          "mcap": "~3.6k ADA",
-          "volume_24h": "~1.8k ADA",
-          "holders": 1,
-          "trades_24h": 15,
-          "delta_since_2050ET": "new",
-          "x_temperature": "@LuminexADA (67) replies only.",
-          "flags": [
-            "INSIDER LOOP: linked pair u8a2m6 + u978t4 in the first public block (14079758), with uyyyjqps",
-            "1 holder left: snipers already out",
-            "Cardano-side native token (non-custodial); risk is curve/pool, not custody"
-          ],
-          "verdict": "Pass",
-          "kill": "n/a, dead on arrival unless holders exceed ~20."
-        },
-        {
-          "name": "HIGH",
-          "ticker": "HIGH",
-          "age": "~1.2h (live 7:21 AM ET)",
-          "chain": "Cardano-side curve (~8.9%)",
-          "mcap": "~5.3k ADA",
-          "volume_24h": "~11.8k ADA",
-          "holders": 12,
-          "trades_24h": 76,
-          "delta_since_2050ET": "new",
-          "x_temperature": "Silent. Description says rewards go to $BODEGA staking.",
-          "flags": [
-            "No flagged stake keys in the first blocks",
-            "Volume is 2x mcap with 12 holders: churn",
-            "Cardano-side native token (non-custodial); risk is curve/pool, not custody"
-          ],
-          "verdict": "Pass",
-          "kill": "Revisit only if holders exceed ~30."
-        },
-        {
-          "name": "KILLUA",
-          "ticker": "KILLUA",
-          "age": "~7.3h (live 1:16 AM ET)",
-          "chain": "Solana-side (pump.fun ~0.6%)",
-          "mcap": "~18.2k ADA ($4.0k)",
-          "volume_24h": "~4.8k ADA",
-          "holders": 6,
-          "trades_24h": 22,
-          "delta_since_2050ET": "new",
-          "x_temperature": "Silent; website link is an unrelated Philippine Star post.",
-          "flags": [
-            "Solana-side: relies on Solada bridge/escrow (custodial bridge risk)"
-          ],
-          "verdict": "Pass",
-          "kill": "n/a, revisit only if holders exceed ~30."
-        },
-        {
-          "name": "MONEY",
-          "ticker": "MONEY",
-          "age": "~11.1h (live 9:28 PM ET Fri)",
-          "chain": "Solana-side (pump.fun ~1.9%)",
-          "mcap": "~18.5k ADA ($4.1k)",
-          "volume_24h": "~4.9k ADA",
-          "holders": 6,
-          "trades_24h": 22,
-          "delta_since_2050ET": "n/a",
-          "x_temperature": "Silent.",
-          "flags": [
-            "Solana-side: relies on Solada bridge/escrow (custodial bridge risk)"
-          ],
-          "verdict": "Pass",
-          "kill": "n/a, revisit only if holders exceed ~30."
-        },
-        {
-          "name": "CHARLETT",
-          "ticker": "CHARLETT",
-          "age": "~11.4h",
-          "chain": "Cardano-side curve (~0.5%)",
-          "mcap": "~3.5k ADA",
-          "volume_24h": "~3.0k ADA",
-          "holders": 1,
-          "trades_24h": 22,
-          "delta_since_2050ET": "n/a",
-          "x_temperature": "Silent.",
-          "flags": [
-            "Cardano-side native token (non-custodial); risk is curve/pool, not custody"
-          ],
-          "verdict": "Pass",
-          "kill": "n/a."
-        },
-        {
-          "name": "PEPEDANO",
-          "ticker": "PEPEDANO",
-          "age": "~11.4h",
-          "chain": "Cardano-side curve (0%)",
-          "mcap": "~3.4k ADA",
-          "volume_24h": "~2.1k ADA",
-          "holders": 0,
-          "trades_24h": 19,
-          "delta_since_2050ET": "n/a",
-          "x_temperature": "Silent.",
-          "flags": [
-            "Cardano-side native token (non-custodial); risk is curve/pool, not custody"
-          ],
-          "verdict": "Pass",
-          "kill": "n/a."
-        }
-      ],
-      "notes": "FEED's post-grad test failed: the Minswap pool opened at the 50k cap and price fell ~40% to ~30k ADA, while holders only went 60->64, the same fade as JUICE. Pass. HERO took KOTH at 10:46 PM (36.7k ADA, 80.7%) and finished its curve at 11:26 PM, so the old curve/holder kill line is moot. Holders nearly doubled to 60 but price is ~19k ADA, ~62% under the grad cap, with ~6.5k ADA in the pool. That is the same post-grad fade pattern, so Tiny lottery with a new line at 15k ADA/55 holders. Every fast graduate this week (JUICE, FEED, HERO, BEAST) has settled at 19-30k ADA with 60-80 holders and 6.5-8k ADA pools. Older coins moved the other way overnight: CLOVE +42%, HIVE curve +21 pts, BOLT flat at 279 holders. But holder growth there is small (+5/+6), so no verdict upgrades. SOLADA price: a single pool UTxO at shared DEX script addr1x89ksjnf... holds 98,230 ADA vs 53.13M of the 1.0B units, giving ~1.85M ADA mcap. That matches @snekdotfun's 'over 2M ADA' post. Not on GeckoTerminal/DexScreener. Insider loop: the linked pair (u8a2m6 + u978t4) hit the first public block of FONE (1:06 AM) and LUNINEX (6:51 AM); LUNINEX is down to 1 holder. u8a2m6 alone hit IAGONAUT (8:12 AM) alongside u9n6w6w8, ux2r5p7l and uytg09zr; uytg09zr and uyyyjqps recur across launches and look like new co-snipers to track. u9w6dd not seen. @songoncardano warned at 7:05 AM that SONG has launched nothing on Solada. @cryptodramz posted only generic 'soladafun FTW' (11:44 PM Fri); still no drop.",
-      "new_list_candidates": [
-        {
-          "handle": "snekdotfun",
-          "followers": 16166,
-          "reason": "SnekFun launchpad account; 7:07 AM post on $SOLADA crossing 2M ADA mcap (39 likes). Caveat: platform/venue account (SOLADA was launched there), not an individual KOL; consider as a source, not a whale."
-        }
-      ],
-      "new_list_candidates_note": "No strong individual KOL/whale this window. Rejected: @perpsonx (2.9k, BERP/PERP team promo), @daveonada1 (302, DAVE fan/shill account spamming 'buy and lock $dave'), @Reo_C1 and @OliviaCryptoX (follow-back spam), @Moneymike_813 (16k, one-word reply), @Akki_Nft (1.1k, shill replies). Already listed: Jared59836926, fblthp_cryp, tsvetanbuilds, WojakBlueADA, cryptodramz, soladafun.",
-      "kill_line_changes": {
-        "FEED": "triggered -> Pass",
-        "HERO": "old curve/holder line moot (graduated); new: mcap <15k ADA or holders <55",
-        "IAGONAUT": "new: curve <45%, holders <35, or first-block cluster sells",
-        "SOLADA": "new: pool ADA side <80k or mcap <1.5M ADA",
-        "GOLFY": "holders <50 or curve <60%"
       }
     }
   ]
