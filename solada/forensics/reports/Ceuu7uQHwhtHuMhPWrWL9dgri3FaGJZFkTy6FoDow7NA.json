@@ -8,8 +8,8 @@
   "mint": "Ceuu7uQHwhtHuMhPWrWL9dgri3FaGJZFkTy6FoDow7NA",
   "symbol": "QBITS",
   "symbol_source": "dexscreener",
-  "run_at": "2026-10-19T11:21:13Z",
-  "run_at_unix": 1792408873,
+  "run_at": "2026-10-21T13:59:11Z",
+  "run_at_unix": 1792591151,
   "creation_slot": 458581711,
   "creation_time": 1792358369,
   "creation_time_iso": "2026-10-18T21:19:29Z",
@@ -123,8 +123,8 @@
       "pct_supply": 8.6307,
       "pct_supply_slot0": 0.0,
       "analysed": true,
-      "still_holding_raw": "149214658000000",
-      "still_holding_pct": 14.9215,
+      "still_holding_raw": "206673577000000",
+      "still_holding_pct": 20.6674,
       "funding": {
         "status": "known_infra",
         "fresh": false,
@@ -273,8 +273,8 @@
       "pct_supply": 2.4705,
       "pct_supply_slot0": 0.0,
       "analysed": true,
-      "still_holding_raw": "24705323036796",
-      "still_holding_pct": 2.4705,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
       "funding": {
         "status": "unresolved_busy",
         "fresh": false,
@@ -311,8 +311,8 @@
       "pct_supply": 1.943,
       "pct_supply_slot0": 0.0,
       "analysed": true,
-      "still_holding_raw": "19430179323827",
-      "still_holding_pct": 1.943,
+      "still_holding_raw": "0",
+      "still_holding_pct": 0.0,
       "funding": {
         "status": "old_wallet",
         "fresh": false,
@@ -587,8 +587,8 @@
       "pct_supply": 0.4586,
       "pct_supply_slot0": 0.0,
       "analysed": true,
-      "still_holding_raw": "0",
-      "still_holding_pct": 0.0,
+      "still_holding_raw": "4419768657123",
+      "still_holding_pct": 0.442,
       "funding": {
         "status": "unresolved_busy",
         "fresh": false,
@@ -690,26 +690,51 @@
     {
       "token_account": "4BkwXTSz7xWPMwLsio6GC6JDHDho1dPsBomBmbE6oZay",
       "owner": "HCYvN1ukbRjWiBi1wXaU4fSRh8ottmA9KZCifJAPFi7Z",
-      "amount_raw": "149214658000000",
-      "pct_supply": 14.9215,
+      "amount_raw": "206673577000000",
+      "pct_supply": 20.6674,
       "label": "INFRA:Solada backing wallet",
       "source": "holder"
     },
     {
-      "token_account": "EGLZ8pTQ2zFan94VpreHJogKNMwCvMnHL5d2tWWWaCv2",
-      "owner": "FZU56d9iPqohXM5XBrYYBZLi2UoUnZT4V5Qf2631tEzb",
-      "amount_raw": "24705323036796",
-      "pct_supply": 2.4705,
+      "token_account": "Dk85Rfe3DCUchotaa6bgT6VZtUB5ZhpwCESs87pfL886",
+      "owner": "DheLK2GrLgo5yAVKHfiZXciHma6TXqn9D12cBFQvT6Q5",
+      "amount_raw": "15151309714425",
+      "pct_supply": 1.5151,
       "label": null,
-      "source": "holder"
-    },
-    {
-      "token_account": "Da59Wa6a5ySQrALNzf231zSzrCuBFj4xAR49qEmgPNyF",
-      "owner": "ExfMqYHCdyfDwgLy4xTVYdB1wG2Drs3Rf4jrYKseiUzp",
-      "amount_raw": "19430179323827",
-      "pct_supply": 1.943,
-      "label": null,
-      "source": "holder"
+      "source": "holder",
+      "funding": {
+        "status": "old_wallet",
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "DheLK2GrLgo5yAVKHfiZXciHma6TXqn9D12cBFQvT6Q5",
+            "status": "old_wallet",
+            "funder": "AobVSwdW9BbpMdJvTqeCN4hPAmh4rHm7vwLnQ5ATSyrS",
+            "asset": "SOL",
+            "amount_raw": "2990000000",
+            "kind": "system.transfer",
+            "funded_at": 1754480247,
+            "signature": "3D6YVgTZEgd1xP6c4xh6oySLa4A69BWZ2F8XNHSrciCjDXDCGimoN9uSukXN2NVLsGe8NoWez9qNK3Su6z9sKYJT",
+            "label": null,
+            "reached_oldest": true,
+            "wallet_age_seconds": 37878122
+          },
+          {
+            "hop": 2,
+            "wallet": "AobVSwdW9BbpMdJvTqeCN4hPAmh4rHm7vwLnQ5ATSyrS",
+            "status": "unresolved_busy",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "reached_oldest": false,
+            "wallet_age_seconds": null
+          }
+        ]
+      }
     },
     {
       "token_account": "4sfEaf7hxJjcAoK2eRzQ759i3HpMNbgpkMvARXBeJ4Pf",
@@ -737,6 +762,14 @@
           }
         ]
       }
+    },
+    {
+      "token_account": "Ck9KctBhiV1vr6fdc7jA7gmfp8khWshsdRmZ5rnpDiZN",
+      "owner": "sssssCUP5wgSW3sxjtQNa7u88ytE4st2Z7goX5kKNwi",
+      "amount_raw": "4419768657123",
+      "pct_supply": 0.442,
+      "label": null,
+      "source": "holder"
     },
     {
       "token_account": "CVW8irU1Xc27fx4P6tNPZwnmQQU7TAoP6Bw5qnLhnpw3",
@@ -807,37 +840,10 @@
       }
     },
     {
-      "token_account": "9oS77Fxctm95kPVjfEGJwwvZouhcXk7fPzvCGVXPRj5a",
-      "owner": "4MGBpFkLAbg1UDekwCGuMsniSjDbtaKJ9NC79odBpxJC",
-      "amount_raw": "252176808598",
-      "pct_supply": 0.0252,
-      "label": null,
-      "source": "holder",
-      "funding": {
-        "status": "no_incoming",
-        "hops": [
-          {
-            "hop": 1,
-            "wallet": "4MGBpFkLAbg1UDekwCGuMsniSjDbtaKJ9NC79odBpxJC",
-            "status": "no_incoming",
-            "funder": null,
-            "asset": null,
-            "amount_raw": null,
-            "kind": null,
-            "funded_at": null,
-            "signature": null,
-            "label": null,
-            "reached_oldest": true,
-            "wallet_age_seconds": -2913
-          }
-        ]
-      }
-    },
-    {
       "token_account": "4YmPakbkotsPweBTaPjK2StVitkWhte89StzkFg5qifE",
       "owner": "Ct9dKCvDeJzQ5g48TyYxk6gXakvfzDZETrZcq7c1Lmkx",
-      "amount_raw": "171993637201",
-      "pct_supply": 0.0172,
+      "amount_raw": "1778044058964",
+      "pct_supply": 0.1778,
       "label": null,
       "source": "holder",
       "funding": {
@@ -875,12 +881,66 @@
       }
     },
     {
+      "token_account": "9oS77Fxctm95kPVjfEGJwwvZouhcXk7fPzvCGVXPRj5a",
+      "owner": "4MGBpFkLAbg1UDekwCGuMsniSjDbtaKJ9NC79odBpxJC",
+      "amount_raw": "252176808598",
+      "pct_supply": 0.0252,
+      "label": null,
+      "source": "holder",
+      "funding": {
+        "status": "no_incoming",
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "4MGBpFkLAbg1UDekwCGuMsniSjDbtaKJ9NC79odBpxJC",
+            "status": "no_incoming",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "reached_oldest": true,
+            "wallet_age_seconds": -2913
+          }
+        ]
+      }
+    },
+    {
       "token_account": "9hjhZNqJmZpXXA8vCG5wKHHqxXontrUPv9N4yS8qcdab",
       "owner": "A1qaJWQDfC9T7AcSRNwfxgiJrHUzhpJ3f8qTDUMVVcXQ",
       "amount_raw": "131506047134",
       "pct_supply": 0.0132,
       "label": "INFRA:Solada deployer",
       "source": "holder"
+    },
+    {
+      "token_account": "4gna1HcuTEU6ws75r5BmQ5jWyMh6wmXfWurV2QBzk76u",
+      "owner": "BSFv9baDjEySSFoDMrkGfjb5R8Xg9YQ1DZoJaoXi5sLK",
+      "amount_raw": "50000000000",
+      "pct_supply": 0.005,
+      "label": null,
+      "source": "holder",
+      "funding": {
+        "status": "old_wallet",
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "BSFv9baDjEySSFoDMrkGfjb5R8Xg9YQ1DZoJaoXi5sLK",
+            "status": "old_wallet",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "reached_oldest": true,
+            "wallet_age_seconds": 23929096
+          }
+        ]
+      }
     }
   ],
   "clusters": [
@@ -890,7 +950,7 @@
         "HCYvN1ukbRjWiBi1wXaU4fSRh8ottmA9KZCifJAPFi7Z"
       ],
       "pct_supply_bought": 17.2745,
-      "pct_supply_still_held": 14.9346,
+      "pct_supply_still_held": 20.6805,
       "edges": [
         {
           "wallets": [
@@ -998,7 +1058,7 @@
     "n_buyers_slot0": 1,
     "fresh_wallet_ratio": 0.0667,
     "largest_cluster_pct": 17.2745,
-    "largest_cluster_still_held_pct": 14.9346,
+    "largest_cluster_still_held_pct": 20.6805,
     "flags": [
       "CLUSTERED",
       "STILL_LOADED",
@@ -1011,17 +1071,17 @@
     "history_too_deep": false,
     "calls_used": {
       "getTokenSupply": 1,
-      "getSignaturesForAddress": 82,
-      "getTransaction": 43,
-      "getTokenAccountsByOwner": 20,
+      "getSignaturesForAddress": 85,
+      "getTransaction": 41,
+      "getTokenAccountsByOwner": 22,
       "getTokenLargestAccounts": 1,
-      "getAccountInfo": 19
+      "getAccountInfo": 21
     },
-    "calls_total": 166,
+    "calls_total": 171,
     "budget": 5000,
-    "wallets_skipped_old": 4,
+    "wallets_skipped_old": 6,
     "wallets_unresolved_busy": 9,
-    "cache_hits": 10,
+    "cache_hits": 14,
     "version_unsupported": 0,
     "probable_infra_hubs": [],
     "labels_dropped": [],
