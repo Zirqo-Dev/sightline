@@ -1,0 +1,66 @@
+name: Solana desk scan
+
+# Paper-only Solana desk scanner (plan v6.4). No AI, no keys, no wallets.
+# Runs every 30 min in scan-only mode; commits generated files ONLY to the
+# desk-data branch with pull --rebase retries and no force-push.
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  repository_dispatch:
+    types: [solana-desk-scan]   # external fallback trigger (cron-job.org)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "scan (default) or fill (refused until config is frozen)"
+        required: false
+        default: scan
+
+permissions:
+  contents: write
+
+concurrency:
+  group: solana-desk-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out main (code)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: code
+      - name: Check out desk-data (generated files)
+        uses: actions/checkout@v4
+        with:
+          ref: desk-data
+          path: data
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run scanner
+        env:
+          JUPITER_API_KEY: ${{ secrets.JUPITER_API_KEY }}
+          MODE: ${{ github.event.inputs.mode || 'scan' }}
+        working-directory: code/solana-desk
+        run: |
+          if [ -z "$JUPITER_API_KEY" ]; then echo "::warning::JUPITER_API_KEY secret not set; using keyless Jupiter (noted in health.json)"; fi
+          timeout 420 python3 -m desk.run --mode "$MODE" --data-dir "$GITHUB_WORKSPACE/data/solana-desk"
+      - name: Commit to desk-data
+        if: always()
+        working-directory: data
+        run: |
+          git config user.name "solana-desk-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A solana-desk
+          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
+          git commit -q -m "desk scan $(date -u +%Y-%m-%dT%H:%MZ)"
+          for i in 1 2 3 4 5; do
+            git push origin HEAD:desk-data && exit 0
+            echo "push conflict, retry $i"; sleep $((i * 5))
+            git pull --rebase origin desk-data || { git rebase --abort; exit 1; }
+          done
+          exit 1
