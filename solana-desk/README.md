@@ -11,9 +11,7 @@ recorded in a ledger with a fixed 0.5 SOL paper ticket.
 
 ## How it runs
 Since v6.4 the scanner runs on **GitHub Actions every 30 minutes**
-(`.github/workflows/solana-desk-scan.yml`, plus manual runs; the file ships as
-`solana-desk/workflow/solana-desk-scan.yml` until it is copied into `.github/workflows/`,
-because the bot token cannot write workflow files). It is a plain Python
+(`.github/workflows/solana-desk-scan.yml`, plus manual runs). It is a plain Python
 script (no AI): `python -m desk.run --mode scan --data-dir PATH`. Runs never overlap
 (concurrency group). It moved off the Grok Bot box because the box is not awake 24/7
 (a heartbeat test showed a ~6h gap). Trade-off: 30-min cadence instead of 10-15 min.
