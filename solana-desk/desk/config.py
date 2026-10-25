@@ -1,5 +1,5 @@
 """Desk config (v6.2). Bousky edits; bots never do. Frozen at end of day 3: set FROZEN=True and bump CFG_VERSION."""
-CFG_VERSION = "v1-draft-v6.3"
+CFG_VERSION = "v1-draft-v6.5"
 FROZEN = False
 PAPER = True  # always
 
@@ -28,6 +28,7 @@ LP_LOCK_RULE = {
     "pump_fun": "bonding_curve",    # not graduated -> out of scope, safety skip "not_graduated"
     "meteoraDlmm": "not_applicable",# lpTotalSupply 0 -> lpLockedPct 0 structurally; skip check
     "meteora_dbc": "bonding_curve",
+    "raydium_launchlab": "bonding_curve",  # v6.5: Raydium LaunchLab curve
     "meteora_damm_v2": "check",
     "raydium": "check",
     "orca": "check",

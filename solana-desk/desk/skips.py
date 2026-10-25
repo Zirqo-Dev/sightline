@@ -73,8 +73,26 @@ def execution_check(pair, quote, ticket_sol=None):
     if (_get(pair, "txns", "h1", "sells") or 0) < e["min_sells_1h"]: return "nobody_can_sell"
     return None
 
-def classify(pair, rc, quote, now=None):
-    """-> (skip_type, reason) ; skip_type in data/safety/execution/None"""
+# RugCheck market types that mean "still on a launchpad curve" (single source: config.LP_LOCK_RULE)
+BONDING_MARKET_TYPES = {k for k, v in C.LP_LOCK_RULE.items() if v == "bonding_curve"}
+
+def eligibility_check(pair, rc):
+    """Lead is out of scope (not a data failure). Called only after all fetches succeeded."""
+    if pair is None:  # DexScreener answered but no SOL-quoted pair on solana
+        mts = {m.get("marketType") for m in (rc or {}).get("markets") or []}
+        if mts and mts <= BONDING_MARKET_TYPES: return ("safety", "not_graduated")
+        return ("eligibility", "no_sol_pair")
+    if pair.get("dexId") in C.BONDING_DEX_IDS: return ("safety", "not_graduated")
+    return None
+
+def classify(pair, rc, quote, now=None, errors=()):
+    """-> (skip_type, reason) ; skip_type in data/eligibility/safety/execution/None.
+    errors: names of fetches that raised ("dex", "rug", "jup"); only those (and genuinely
+    absent fields on an in-scope pair) count as data failures."""
+    if "dex" in errors or "rug" in errors or rc is None: return ("data", "missing_data")
+    e = eligibility_check(pair, rc)
+    if e: return e
+    if "jup" in errors or quote is None: return ("data", "quote_error")
     r = data_check(pair, rc, quote)
     if r: return ("data", r)
     r = safety_check(pair, rc, now)
