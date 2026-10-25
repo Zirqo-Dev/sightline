@@ -101,3 +101,31 @@ class Decide(unittest.TestCase):
         self.assertEqual((C.TICKET_SOL, C.MIN_F_CLOSES, C.EARLY_STOP_EXP), (0.5, 20, -0.15))
 
 if __name__ == "__main__": unittest.main()
+
+class Runner(unittest.TestCase):
+    def fake(self, fail_rug=False):
+        pair = dict(PAIRS["DUxnHr"]); q = L("jup_lite_quote.json"); rc = L("rugcheck_full_DUxnHr.json")
+        def get(url, headers=None):
+            if "token-profiles" in url: return [{"chainId": "solana", "tokenAddress": "MINT1"}, {"chainId": "base", "tokenAddress": "X"}]
+            if "token-boosts" in url: return [{"chainId": "solana", "tokenAddress": "MINT1"}]
+            if "/latest/dex/tokens/" in url: return {"pairs": [pair]}
+            if "rugcheck" in url:
+                if fail_rug: raise OSError("down")
+                return rc
+            if "jup.ag" in url: self.urls.append((url, headers)); return q
+        self.urls = []; return get
+    def test_scan_writes_tasks_and_health(self):
+        from desk import run
+        with tempfile.TemporaryDirectory() as d:
+            h = run.scan(d, self.fake(), key=None, now=NOW)
+            self.assertEqual((h["runs"], h["checks"], h["ai"], h["mode"]), (1, 1, False, "scan"))
+            self.assertIn("JUPITER_API_KEY missing", h["notes"][0]); self.assertIn("lite-api", self.urls[0][0])
+            h = run.scan(d, self.fake(fail_rug=True), key="k", now=NOW + 1800)
+            self.assertEqual((h["runs"], h["checks"], h["data_failure_rate"]), (2, 2, 0.5))
+            self.assertEqual(self.urls[0][1], {"x-api-key": "k"})
+            self.assertFalse(os.path.exists(os.path.join(d, "trades.csv")))
+            self.assertEqual(sum(1 for _ in open(os.path.join(d, "tasks.csv"))), 3)
+    def test_fill_refused_until_frozen(self):
+        from desk import run
+        self.assertFalse(C.FROZEN); self.assertFalse(run.mode_allowed("fill")); self.assertTrue(run.mode_allowed("scan"))
+        self.assertEqual(run.main(["--mode", "fill", "--data-dir", tempfile.mkdtemp()]), 2)
