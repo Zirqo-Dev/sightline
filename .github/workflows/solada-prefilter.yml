@@ -13,6 +13,10 @@ on:
         description: "true = evaluate but never POST the webhook"
         required: false
         default: "false"
+      ping:
+        description: "true = skip the scan and only POST a test payload to the webhook"
+        required: false
+        default: "false"
   schedule:
     - cron: "17 */2 * * *"
 
@@ -33,21 +37,32 @@ jobs:
         with:
           ref: main
           path: code
+      - name: Webhook ping (no scan, no state)
+        if: github.event.inputs.ping == 'true'
+        env:
+          SOLADA_WEBHOOK_URL: ${{ secrets.SOLADA_WEBHOOK_URL }}
+          SOLADA_WEBHOOK_KEY: ${{ secrets.SOLADA_WEBHOOK_KEY }}
+        working-directory: code
+        run: python3 solada-prefilter/prefilter.py --ping --data-dir /tmp/unused
       - name: Check out desk-data (state + results)
+        if: github.event.inputs.ping != 'true'
         uses: actions/checkout@v4
         with:
           ref: desk-data
           path: data
       - uses: actions/setup-python@v5
+        if: github.event.inputs.ping != 'true'
         with:
           python-version: "3.12"
       - name: Restore private whale snapshot (Actions cache, never committed)
+        if: github.event.inputs.ping != 'true'
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/prefilter-cache
           key: solada-prefilter-whale-${{ github.run_id }}
           restore-keys: solada-prefilter-whale-
       - name: Run prefilter
+        if: github.event.inputs.ping != 'true'
         env:
           BLOCKFROST_PROJECT_ID: ${{ secrets.BLOCKFROST_PROJECT_ID }}
           SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}
@@ -63,13 +78,13 @@ jobs:
           flag=""; [ "$DRY_RUN" = "true" ] && flag="--dry-run"
           timeout 780 python3 solada-prefilter/prefilter.py --repo . --data-dir "$GITHUB_WORKSPACE/data/solada-prefilter" $flag
       - name: Save private whale snapshot
-        if: always()
+        if: always() && github.event.inputs.ping != 'true'
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.temp }}/prefilter-cache
           key: solada-prefilter-whale-${{ github.run_id }}
       - name: Commit to desk-data
-        if: always()
+        if: always() && github.event.inputs.ping != 'true'
         working-directory: data
         run: |
           git config user.name "solada-prefilter-bot"
