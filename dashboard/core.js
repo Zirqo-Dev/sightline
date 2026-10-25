@@ -518,8 +518,18 @@ window.S = (function () {
     else if (ms >= 90 * 60 * 1000) cls = "age-amber";
     return { text, cls, ms };
   }
-  function freshestAt(log, pulse) {
+  /* health.json (scan-only desks): last_run_utc "YYYYMMDDTHHMM" or run_times_utc[]. */
+  function healthAt(h) {
+    if (!h || typeof h !== "object") return null;
+    const m = String(h.last_run_utc || "").match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:00Z`;
+    const t = (h.run_times_utc || []).slice(-1)[0];
+    return t || null;
+  }
+  function freshestAt(log, pulse, health) {
     const cands = [];
+    const ha = healthAt(health);
+    if (ha) cands.push(new Date(ha).getTime());
     if (log && log.asof) cands.push(new Date(log.asof).getTime());
     if (pulse && pulse.updated_at) cands.push(new Date(pulse.updated_at).getTime());
     const ok = cands.filter(n => isFinite(n));
@@ -574,7 +584,7 @@ window.S = (function () {
     get, getText, isDeskData, deskDataUrl, pickNewer, pick, esc, rich, walletTag, walletLabel, walletHue, fmt, pct, pnlNum, pnlClass, when, join, register, registry,
     renderPanel, desks, panelsFor, bookFiles, briefsOf, score, avgRet, pnlCards,
     metricCards, unitNote, killDistance, allOpen, pointsFor, pulsePath, panelAsRadar,
-    ageInfo, freshestAt, ageTag, ago, runButton,
+    ageInfo, freshestAt, healthAt, ageTag, ago, runButton,
     loadIcons, coinIcon, nftIcon, chainIcon, assetIcon, mono, unitTag, spark, seriesOf, pnlBar, scoreBar, killMeter, pill
   };
 })();

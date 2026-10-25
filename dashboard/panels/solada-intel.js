@@ -23,6 +23,31 @@
   const ms = s => { const t = new Date(s).getTime(); return isFinite(t) ? t : NaN; };
   const arrow = d => d == null || isNaN(d) ? "" : d > 0 ? `<span class="up">▲${S.fmt(d, 0)}</span>` : d < 0 ? `<span class="down">▼${S.fmt(-d, 0)}</span>` : `<span class="muted">=0</span>`;
 
+  /* Asset names decoded from hex can be binary (DEX LP tokens are 28-32 byte hashes).
+     Unprintable names become a short hex label: LP·4b52… (hash-length, or marked lp) or asset·4b52…. */
+  const PRINTABLE = /^[\x20-\x7E]{1,32}$/;
+  function hexOf(s) {
+    let bytes;
+    try { bytes = unescape(encodeURIComponent(String(s))); } catch (e) { bytes = String(s); }
+    return { hex: [...bytes].map(c => c.charCodeAt(0).toString(16).padStart(2, "0")).join(""), n: bytes.length };
+  }
+  function cleanName(name, f) {
+    const s = String(name == null ? "" : name);
+    if (PRINTABLE.test(s) && !/[\uFFFD]/.test(s)) return { name: s, lp: !!(f && f.lp) };
+    const { hex, n } = hexOf(s);
+    const lp = !!(f && (f.lp || f.dex)) || n >= 16;
+    return { name: (lp ? "LP·" : "asset·") + hex.slice(0, 4) + "…", lp, binary: true };
+  }
+  /* Whale moves before the valuation fix (#18) carry ada_equiv from raw units with no value_basis. */
+  function normalize(f) {
+    const g = Object.assign({}, f);
+    if (g.ticker != null) { const c = cleanName(g.ticker, g); g.ticker = c.name; if (c.lp) g.lp = true; }
+    if (g.kind === "founder_whale_move") {
+      if (g.ada_equiv != null && !g.value_basis) { delete g.ada_equiv; g.raw_units = true; }
+      if (g.lp || g.raw_units) g.severity = "low";
+    }
+    return g;
+  }
   function allFlags(fj) {
     if (!fj || typeof fj !== "object") return [];
     const seen = new Set(), out = [];
@@ -30,7 +55,7 @@
       if (!f || !f.kind) continue;
       const k = JSON.stringify(f);
       if (seen.has(k)) continue;
-      seen.add(k); out.push(f);
+      seen.add(k); out.push(normalize(f));
     }
     return out.sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")));
   }
@@ -61,11 +86,11 @@
     if ((!w || typeof w !== "object") && !moves.length) return "";
     const first = t => /ASCEND|STRIKE/i.test(String(t)) ? 0 : 1;
     const lines = w && w.line ? String(w.line).split(/(?<=\.)\s+(?=[A-Z$])/).sort((a, b) => first(a) - first(b)) : [];
-    const mv = moves.slice().sort((a, b) => first(a.ticker) - first(b.ticker)).slice(0, 8);
+    const mv = moves.slice().sort((a, b) => ((a.lp || a.raw_units) - (b.lp || b.raw_units)) || first(a.ticker) - first(b.ticker)).slice(0, 8);
     const net = w && typeof w.net_flow_ada === "number" ? w.net_flow_ada : null;
     const tagged = safeTag(w && w.stake_prefix) || safeTag(moves[0] && moves[0].tag);
     return `<div class="si-whale"><div class="si-whead"><b>Founder whale</b> ${tagged ? chips([tagged]) : ""}${net != null ? ` <span class="${net >= 0 ? "up" : "down"} mono">net ${net > 0 ? "+" : ""}${S.fmt(net, 0)} ADA</span>` : ""}</div>
-      ${mv.length ? `<div class="si-moves">${mv.map(m => `<span class="si-move ${/ASCEND|STRIKE/i.test(m.ticker) ? "key" : ""}"><b>${S.esc(m.ticker)}</b> <span class="${m.delta >= 0 ? "up" : "down"}">${m.delta > 0 ? "+" : ""}${S.fmt(m.delta, 0)}</span>${m.ada_equiv ? ` ≈${S.fmt(m.ada_equiv, 0)}₳` : ""}</span>`).join("")}</div>` : ""}
+      ${mv.length ? `<div class="si-moves">${mv.map(m => `<span class="si-move ${/ASCEND|STRIKE/i.test(m.ticker) ? "key" : ""}${m.lp || m.raw_units ? " dim" : ""}"><b>${S.esc(m.ticker)}</b> ${m.lp ? S.pill("LP", "pass") + " " : ""}<span class="${m.delta >= 0 ? "up" : "down"}">${m.delta > 0 ? "+" : ""}${S.fmt(m.delta, 0)}</span>${m.raw_units ? ` <span class="si-dim">raw units · unvalued</span>` : m.ada_equiv ? ` ≈${S.fmt(m.ada_equiv, 0)}₳` : ""}</span>`).join("")}</div>` : ""}
       ${lines.map(l => `<div class="si-wline ${first(l) ? "" : "key"}">${S.rich(l)}</div>`).join("")}</div>`;
   }
 
@@ -81,7 +106,7 @@
   }
 
   function drill(tk, flags, pulse, log, paper) {
-    const fl = flags.filter(f => f.ticker === tk);
+    const fl = flags.filter(f => f.ticker === tk || String(f.ticker || "").toUpperCase() === tk);
     const { h, a } = seriesFor(pulse, log, tk);
     const ticket = ((paper && paper.open) || []).find(t => String(t.ticker).toUpperCase() === tk) ||
       (log && log.kill_lines && log.kill_lines[tk] ? { ticker: tk, kill_line: { text: String(log.kill_lines[tk]) } } : null);
@@ -138,7 +163,7 @@
       const now = opt.now ? new Date(opt.now).getTime() : Date.now();
       const flags = allFlags(fj);
       const top = (log && Array.isArray(log.cardano_top10)) ? log.cardano_top10 : [];
-      const tks = [...new Set([...top.map(r => r.ticker), ...flags.map(f => f.ticker)].filter(Boolean).map(t => String(t).toUpperCase()))].slice(0, 20);
+      const tks = [...new Set([...top.map(r => r.ticker), ...flags.map(f => f.ticker)].filter(Boolean).map(t => /·/.test(t) ? String(t) : String(t).toUpperCase()))].slice(0, 20);
       const w = whale(log, flags);
       return `<div class="si">
         <div class="si-sec"><div class="si-h">Flags · 24h</div>${strip(flags, now)}</div>
