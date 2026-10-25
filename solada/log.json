@@ -1,27 +1,23 @@
 {
   "schema_version": 2,
   "desk": "solada",
-  "asof": "2026-10-23T19:10:00-04:00",
-  "source": "Snek Sentinel data-only run, Friday 7 PM ET (token-saving plan, last one)",
+  "asof": "2026-10-25T09:50:00-04:00",
+  "source": "Snek Sentinel on-demand run (Sightline Run Solada button), Sunday 9:50 AM ET, lean Solada-only scope",
   "rate": {
-    "ADA_USD": 0.208772,
-    "ADA_CAD": 0.292366,
-    "SOL_USD": 102.34,
-    "source": "CoinGecko (~7:10 PM ET)"
+    "ADA_USD": 0.204329,
+    "source": "prefilter run ~9:44 AM ET"
   },
-  "headline": "Both books empty; no marks or closes. CLOVE doubled its on-chain holders (156 -> 312) at a 324k ADA mcap, its second mark above the 160k line. BOLT slipped under its 400k mcap line (369k). New graduates TOOLS and SBROKERS (42 and 34 holders). The founder whale sold 4,000 ASCEND for ~4,524 ADA, sold ~2.0M SNEK for ~5.3k ADA, and pulled 2M more COCK LP units.",
+  "headline": "Both books empty; no new tickets. Nothing passes rules k and y (0 of 40 candidates). BOLT kept falling (305k mcap, 274 holders) and SER broke its pool-side line (12.4k vs 13k, 96 holders). CLOVE holds above its line at 330k with 306 holders. New curve name VAMP sits at 73% with 54 holders, and the founder whale opened a small position in it at 9:09 AM. The whale added ~4.1k ADA of Minswap V2 liquidity, bought ~1.14M SOLADA for ~2.7k ADA, and sold 10k NIGHT for ~1.8k ADA.",
   "levels": {
-    "CLOVE": "L2: 324.3k mcap, 312 holders (doubled), side 28.8k; second mark above the line",
-    "SER": "L2: 103 holders, side 14.6k; fails rule k",
-    "BOLT": "L1 Pass: 369.4k mcap under the 400k line, 291 holders",
-    "CNET": "L1: 59.2k mcap (h24 -31.7%), 99 holders",
-    "TOOLS": "L1: new graduate, 18.9k mcap, 42 holders (rule aa caution)",
-    "SBROKERS": "L1 Pass: new graduate, 14.0k mcap, 34 holders; founder whale round-tripped it",
-    "HATCH": "L1 Pass: curve 15.4%, 39 holders",
-    "CORE": "L1 Pass: King of the Hill (pump side) at 47.5%, under its 60% line",
-    "DEXY": "L1 Pass: side ~5.9k, 65 holders",
-    "SHARKY": "L1 Pass: 43 holders",
-    "GUINEA": "L1 Pass: 40 holders"
+    "CLOVE": "L2: 330.3k mcap, 306 holders (312 Fri), side 29.1k; third mark above the 160k line",
+    "BOLT": "L1 Pass: 304.6k mcap (369k Fri), 274 holders, still under the 400k line",
+    "SER": "L1 Pass: 72.0k mcap, 96 holders, side 12.4k under 13k",
+    "VAMP": "L1 watch: new curve name, 73.0% curve, 54 holders, side 7.5k; founder whale bought ~25 ADA",
+    "FEED": "L1 Pass: 33.0k mcap, side 8.4k",
+    "SHARKY": "L1 Pass: 32.1k mcap, side 8.3k",
+    "SBROKERS": "L1 Pass: 16.0k mcap, 32 holders",
+    "DEXY": "L1 Pass: 12.7k mcap, 56 holders",
+    "HIVE": "L1 Pass: side 5.9k, 68 holders"
   },
   "kill_lines": {
     "DEXY": "pool ADA side under 13k, on-chain holders under 80, or the swarm keys exiting in one hour",
@@ -45,50 +41,49 @@
     "COCK": "founder whale selling COCK into the pool or pulling its LP, or the pool ADA side under ~150k ADA"
   },
   "kill_hits": [
-    "BOLT: mcap 369.4k ADA under 400k (holders 291 still above 265)",
-    "DEXY: pool side ~5.9k under 13k and 65 holders under 80",
-    "SHARKY: 43 holders under 50",
-    "CORE: curve 47.5% under 60%",
-    "HATCH: curve 15.4%",
-    "COCK: founder whale pulled 2M more LP units (~969 ADA + ~162k COCK, 7:35 PM Thu and 1:13 PM Fri)",
-    "HIVE, JUICE, HERO, MISS, JUSTQ: still past their lines"
+    "BOLT: mcap 304.6k under 400k (holders 274 above 265)",
+    "SER: pool side 12.4k under 13k",
+    "DEXY: side 5.2k and 56 holders",
+    "GOLFY: 37 holders under 40",
+    "HERO: side 3.6k under 4k",
+    "HIVE: side 5.9k under 7k",
+    "JUICE: side 2.9k and 35 holders"
   ],
   "founder_whale": {
     "handle": "$cockwhale",
     "address": "addr1q8wd…7jvk",
     "stake_prefix": "uylu74g0",
-    "line": "ASCEND: sold 4,000 ASCEND for ~4,524 ADA (5:35 PM Fri), its biggest ASCEND move this week; STRIKE: no moves. SNEK: sold ~2.0M SNEK for ~5.3k ADA (9:25 AM, 2:15 PM, 4:54 PM). COCK/ADA LP: pulled 2 x 1M LP units (~969 ADA + ~162k COCK). SOLADA: ~14 clips of ~25k (~1.1k ADA), then 2.21M SOLADA left the wallet at 5:51 PM with ADA also going out (not a pool sale; looks like a transfer or LP add). CRAWJU ~716 ADA in 10 clips; TOOLS ~404 ADA; SBROKERS round trip (-373 in, +225 out); small clips in BOLT, CLOVE, SER, CNET."
+    "line": "ASCEND: bought ~331 ASCEND in five ~66 clips for ~355 ADA (Sat 10:26-11:01 PM), then sold 314 ASCEND for ~322 ADA at 9:14 AM Sun; net about flat. STRIKE: no trades (a dust receipt of ~1.2 STRIKE in a 9:11 AM multi-token receipt). Liquidity: ~34 Minswap V2 LP moves netting +8.9M LP units for ~4.1k ADA (mostly ~100 ADA clips, one paired with 100k COCK, so likely COCK/ADA), plus one 1M-unit pull (~487 ADA + ~81k COCK) Sat 11:26 PM; this reverses part of last week's COCK LP pulls. SOLADA: bought ~1.14M for ~2.7k ADA in 13 clips. NIGHT: sold 10,000 for ~1.83k ADA (Sat 10:51 PM). SNEK: sold ~588k for ~773 ADA. CLOVE ~715 ADA, CRAWJU ~644 ADA, SER ~213 ADA of buys; new VAMP position ~25 ADA (9:09 AM Sun); sent out 5M GPIG."
   },
   "paper_actions": [
-    "pumpfun: no open tickets",
-    "solada: no open tickets; no new tickets (data-only run)"
+    "pumpfun: no open tickets (Pump.fun arm off under the lean scope)",
+    "solada: no open tickets; nothing qualifies (0 pass k and y)"
   ],
   "rules_added": [],
   "rules_applied": [
     "k",
-    "u",
     "y",
-    "aa"
+    "aa",
+    "u"
   ],
   "helius_credits_est": 0,
   "notes": [
-    "Data-only run: no browser, Discord, X or new pump.fun scans.",
-    "CLOVE's holder jump came alongside the founder whale's small CLOVE clips and a 2.2M SOLADA move; worth checking for distribution to many fresh wallets on the next full run."
+    "Lean scope approved Oct 25: Solada only, no Discord pass, no Pump.fun arm; X used only for intel on candidates, and no candidate qualified, so no X pass.",
+    "Data from the zero-AI prefilter dry run (Solada API, GeckoTerminal, Blockfrost) plus a Blockfrost pass on the founder whale's stake key since Fri 7:10 PM."
   ],
   "sources": [
     "https://www.solada.fun/api/launches",
     "https://www.solada.fun/api/market",
     "Blockfrost mainnet",
     "GeckoTerminal",
-    "DexScreener",
-    "pump.fun frontend-api-v3 (coins-v2, top-holders)",
-    "CoinGecko"
+    "DexScreener"
   ],
   "followups": [
-    "Restore the lean schedule on Saturday Oct 24 (desk weekdays 10 AM, 2 PM, 7 PM; nightly brief back on; pulse 9 AM-9 PM only if a ticket opens) and delete the data-only routine",
-    "Check whether CLOVE's new holders are organic or an airdrop-style spread",
-    "Track where the founder whale's 2.21M SOLADA went"
+    "Watch VAMP for graduation and whether the curve holds with holders rising",
+    "Identify which Minswap pools the whale's LP adds went into",
+    "Track where the 2.21M SOLADA moved Friday went"
   ],
+  "trigger": "on-demand",
   "history": [
     {
       "schema_version": 2,
@@ -6541,6 +6536,96 @@
         "FEED": "Pass -> Tiny lottery; new line: under 40k ADA or holders under 64",
         "IAGONAUT": "graduated; new line: under 40k ADA, holders under 60, or top holder uytg09zr exits"
       }
+    },
+    {
+      "asof": "2026-10-23T19:10:00-04:00",
+      "source": "Snek Sentinel data-only run, Friday 7 PM ET (token-saving plan, last one)",
+      "rate": {
+        "ADA_USD": 0.208772,
+        "ADA_CAD": 0.292366,
+        "SOL_USD": 102.34,
+        "source": "CoinGecko (~7:10 PM ET)"
+      },
+      "headline": "Both books empty; no marks or closes. CLOVE doubled its on-chain holders (156 -> 312) at a 324k ADA mcap, its second mark above the 160k line. BOLT slipped under its 400k mcap line (369k). New graduates TOOLS and SBROKERS (42 and 34 holders). The founder whale sold 4,000 ASCEND for ~4,524 ADA, sold ~2.0M SNEK for ~5.3k ADA, and pulled 2M more COCK LP units.",
+      "levels": {
+        "CLOVE": "L2: 324.3k mcap, 312 holders (doubled), side 28.8k; second mark above the line",
+        "SER": "L2: 103 holders, side 14.6k; fails rule k",
+        "BOLT": "L1 Pass: 369.4k mcap under the 400k line, 291 holders",
+        "CNET": "L1: 59.2k mcap (h24 -31.7%), 99 holders",
+        "TOOLS": "L1: new graduate, 18.9k mcap, 42 holders (rule aa caution)",
+        "SBROKERS": "L1 Pass: new graduate, 14.0k mcap, 34 holders; founder whale round-tripped it",
+        "HATCH": "L1 Pass: curve 15.4%, 39 holders",
+        "CORE": "L1 Pass: King of the Hill (pump side) at 47.5%, under its 60% line",
+        "DEXY": "L1 Pass: side ~5.9k, 65 holders",
+        "SHARKY": "L1 Pass: 43 holders",
+        "GUINEA": "L1 Pass: 40 holders"
+      },
+      "kill_lines": {
+        "DEXY": "pool ADA side under 13k, on-chain holders under 80, or the swarm keys exiting in one hour",
+        "SER": "pool ADA side under 13k, holders under 80, or the founder whale selling SER into the pool",
+        "BOLT": "pool mcap under 400k ADA or holders under 265 (net-sell driven; LP pulls confirm next pulse, rule u)",
+        "SHARKY": "curve under 70% before graduation, holders under 50, or u8a2m6 and the launcher selling into the curve",
+        "CLOVE": "mcap under 160k ADA or holders under 125",
+        "HIVE": "pool ADA side under 7k or on-chain holders under 60",
+        "FEED": "pool ADA side under 7k or holders under 50",
+        "BEAST": "pool ADA side under 6k or holders under 50",
+        "GOLFY": "curve under 40% or holders under 40",
+        "JUICE": "pool ADA side under 4k or holders under 40",
+        "HERO": "hit: pool ADA side under ~4k with 29 holders",
+        "SOLADA": "on-chain holders under 430 or a 1M+ SOLADA dump into the pool from the founder whale or its side wallets",
+        "KNOPPIES": "curve under 5%",
+        "LIXI": "curve under 12%",
+        "GUINEA": "curve under 20% or swarm keys holding more than 15% before graduation",
+        "MISS": "hit: 16 Solana-native holders (line 25); re-watch only on 30+ natives across two pulses (rule t)",
+        "CORE": "curve under 60% or Solana-native holders under 25",
+        "JUSTQ": "hit: under 230 Solana-native holders and under $16k mcap",
+        "COCK": "founder whale selling COCK into the pool or pulling its LP, or the pool ADA side under ~150k ADA"
+      },
+      "kill_hits": [
+        "BOLT: mcap 369.4k ADA under 400k (holders 291 still above 265)",
+        "DEXY: pool side ~5.9k under 13k and 65 holders under 80",
+        "SHARKY: 43 holders under 50",
+        "CORE: curve 47.5% under 60%",
+        "HATCH: curve 15.4%",
+        "COCK: founder whale pulled 2M more LP units (~969 ADA + ~162k COCK, 7:35 PM Thu and 1:13 PM Fri)",
+        "HIVE, JUICE, HERO, MISS, JUSTQ: still past their lines"
+      ],
+      "founder_whale": {
+        "handle": "$cockwhale",
+        "address": "addr1q8wd…7jvk",
+        "stake_prefix": "uylu74g0",
+        "line": "ASCEND: sold 4,000 ASCEND for ~4,524 ADA (5:35 PM Fri), its biggest ASCEND move this week; STRIKE: no moves. SNEK: sold ~2.0M SNEK for ~5.3k ADA (9:25 AM, 2:15 PM, 4:54 PM). COCK/ADA LP: pulled 2 x 1M LP units (~969 ADA + ~162k COCK). SOLADA: ~14 clips of ~25k (~1.1k ADA), then 2.21M SOLADA left the wallet at 5:51 PM with ADA also going out (not a pool sale; looks like a transfer or LP add). CRAWJU ~716 ADA in 10 clips; TOOLS ~404 ADA; SBROKERS round trip (-373 in, +225 out); small clips in BOLT, CLOVE, SER, CNET."
+      },
+      "paper_actions": [
+        "pumpfun: no open tickets",
+        "solada: no open tickets; no new tickets (data-only run)"
+      ],
+      "rules_added": [],
+      "rules_applied": [
+        "k",
+        "u",
+        "y",
+        "aa"
+      ],
+      "helius_credits_est": 0,
+      "notes": [
+        "Data-only run: no browser, Discord, X or new pump.fun scans.",
+        "CLOVE's holder jump came alongside the founder whale's small CLOVE clips and a 2.2M SOLADA move; worth checking for distribution to many fresh wallets on the next full run."
+      ],
+      "sources": [
+        "https://www.solada.fun/api/launches",
+        "https://www.solada.fun/api/market",
+        "Blockfrost mainnet",
+        "GeckoTerminal",
+        "DexScreener",
+        "pump.fun frontend-api-v3 (coins-v2, top-holders)",
+        "CoinGecko"
+      ],
+      "followups": [
+        "Restore the lean schedule on Saturday Oct 24 (desk weekdays 10 AM, 2 PM, 7 PM; nightly brief back on; pulse 9 AM-9 PM only if a ticket opens) and delete the data-only routine",
+        "Check whether CLOVE's new holders are organic or an airdrop-style spread",
+        "Track where the founder whale's 2.21M SOLADA went"
+      ]
     }
   ]
 }
