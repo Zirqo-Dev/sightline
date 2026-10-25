@@ -4,6 +4,22 @@
   "max_new_first_block_checks": 25,
   "max_holder_lookups": 40,
   "max_holder_pages": 10,
+  "rule_defaults": {
+    "_note": "Pinned numeric k/y thresholds used only when parsing solada/paper.json rules prose fails (logged as a warning).",
+    "min_holders": 120,
+    "min_ada_side_k": 25000,
+    "min_ada_side_y": 17000
+  },
+  "kill_dedupe": {
+    "_note": "Kill lines dedupe on ticker + crossed metric names. Re-fire only when a value is refire_deeper_pct% below the last reported value; recovery needs recover_runs consecutive full-data runs back above the line by recover_margin_pct%.",
+    "refire_deeper_pct": 25,
+    "recover_margin_pct": 10,
+    "recover_runs": 2
+  },
+  "webhook": {
+    "_note": "Idempotency-Key = hash(run slot of this many minutes + trigger keys).",
+    "idempotency_slot_minutes": 120
+  },
   "whale": {
     "handle": "cockwhale",
     "handle_policy": "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a",

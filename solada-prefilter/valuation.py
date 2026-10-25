@@ -6,7 +6,9 @@
 - Raw units: on-chain quantities are raw integer units. A move is valued by the
   ADA (lovelace) leg of the transactions that carried it; only when no ADA leg is
   known do we fall back to raw / 10**decimals * pool price. Never raw * price.
-- Kill-line dedupe signature: a kill line re-fires only when its crossed values change.
+- Kill-line dedupe: keyed by ticker + crossed metric names (not live values). A crossed line re-fires
+  only when a value is >= refire_deeper_pct deeper than the last reported value; a recovery needs
+  hysteresis (back above the line by recover_margin_pct with full data on recover_runs runs).
 """
 import hashlib, json
 
@@ -75,5 +77,90 @@ def value_ada(raw_delta, ada_leg=None, decimals=None, price_ada=None):
 
 
 def kill_signature(crossed):
-    """Stable signature of a crossed kill line (its crossed metrics and values)."""
-    return hashlib.sha256(json.dumps(sorted(crossed)).encode()).hexdigest()[:12]
+    """Stable signature of a crossed kill line: the crossed metric NAMES only (no live numbers).
+
+    Accepts {metric: (value, line)} / [metric, ...] or legacy strings like "holders 55 < 80"."""
+    names = sorted({str(c).split()[0] for c in crossed})
+    return hashlib.sha256(json.dumps(names).encode()).hexdigest()[:12]
+
+
+KILL_DEFAULTS = {"refire_deeper_pct": 25.0, "recover_margin_pct": 10.0, "recover_runs": 2}
+
+
+def kill_cfg(cfg=None):
+    out = dict(KILL_DEFAULTS)
+    out.update({k: v for k, v in ((cfg or {}).get("kill_dedupe") or {}).items() if not k.startswith("_")})
+    return out
+
+
+def parse_crossed(text):
+    """Legacy crossed string "metric value < line" -> (metric, value, line) or None."""
+    p = str(text).split()
+    try:
+        return p[0], float(p[1]), float(p[3])
+    except (IndexError, ValueError):
+        return None
+
+
+def migrate_kill_entry(entry):
+    """Old {sig, crossed: ["holders 55 < 80"], at} -> new {metrics: {name: {value, line}}, at, recover_streak}.
+    The values already reported become the baseline, so currently crossed lines do not re-fire."""
+    if not isinstance(entry, dict):
+        return None
+    if "metrics" in entry:
+        entry.setdefault("recover_streak", 0)
+        return entry
+    mets = {}
+    for c in entry.get("crossed") or []:
+        pc = parse_crossed(c)
+        if pc:
+            mets[pc[0]] = {"value": pc[1], "line": pc[2]}
+    return {"metrics": mets, "at": entry.get("at"), "recover_streak": 0, "migrated_from_sig": entry.get("sig")}
+
+
+def deeper(value, last, pct):
+    """True when value is at least pct% deeper (lower) than the last reported value."""
+    if last is None:
+        return True
+    if last <= 0:
+        return value < last
+    return value <= last * (1 - pct / 100.0)
+
+
+def kill_decide(entry, crossed, values, lines, complete, kc):
+    """Decide one tracked ticker's kill line for this run.
+
+    entry: migrated kill_reported entry or None. crossed: {metric: (value, line)} currently below the line.
+    values/lines: {metric: value or None} / {metric: line} for every metric the kill line checks.
+    complete: every checked metric was read. Returns (fire, new_entry_or_None, reasons) where new_entry
+    is the state to keep if the report is delivered (fire) or right now (no fire)."""
+    entry = migrate_kill_entry(entry) if entry else None
+    if crossed:
+        prev = (entry or {}).get("metrics") or {}
+        reasons = []
+        for m, (v, line) in sorted(crossed.items()):
+            if m not in prev:
+                reasons.append(f"{m} newly crossed")
+            elif deeper(v, prev[m].get("value"), kc["refire_deeper_pct"]):
+                reasons.append(f"{m} {kc['refire_deeper_pct']:g}%+ deeper")
+        if reasons:
+            mets = dict(prev)
+            for m, (v, line) in crossed.items():
+                mets[m] = {"value": v, "line": line}
+            return True, {"metrics": mets, "recover_streak": 0}, reasons
+        if entry:
+            entry["recover_streak"] = 0
+        return False, entry, []
+    if not entry:
+        return False, None, []
+    if not complete:
+        return False, entry, []  # a data gap is never a recovery (streak unchanged)
+    margin = 1 + kc["recover_margin_pct"] / 100.0
+    clear = all(values.get(m) is not None and values[m] >= line * margin for m, line in lines.items())
+    if not clear:
+        entry["recover_streak"] = 0
+        return False, entry, []
+    entry["recover_streak"] = entry.get("recover_streak", 0) + 1
+    if entry["recover_streak"] >= kc["recover_runs"]:
+        return False, None, ["recovered"]
+    return False, entry, []

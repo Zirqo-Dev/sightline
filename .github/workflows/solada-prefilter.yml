@@ -83,7 +83,7 @@ jobs:
           [ -z "$BLOCKFROST_PROJECT_ID" ] && echo "::warning::BLOCKFROST_PROJECT_ID not set; using Koios"
           [ -z "$SOLADA_WEBHOOK_URL" ] && echo "::warning::SOLADA_WEBHOOK_URL not set; triggers are logged, not sent"
           flag=""; [ "$DRY_RUN" = "true" ] && flag="--dry-run"
-          timeout 780 python3 solada-prefilter/prefilter.py --repo . --data-dir "$GITHUB_WORKSPACE/data/solada-prefilter" $flag
+          timeout 780 python3 solada-prefilter/prefilter.py --repo . --data-dir "$GITHUB_WORKSPACE/data/solada-prefilter" --desk-data "$GITHUB_WORKSPACE/data" $flag
       - name: Save private whale snapshot
         if: always() && github.event.inputs.ping != 'true'
         uses: actions/cache/save@v4
@@ -92,6 +92,8 @@ jobs:
           key: solada-prefilter-whale-${{ github.run_id }}
       - name: Commit to desk-data
         if: always() && github.event.inputs.ping != 'true'
+        env:
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
         working-directory: data
         run: |
           git config user.name "solada-prefilter-bot"
@@ -99,6 +101,13 @@ jobs:
           [ -d solada-prefilter ] || { echo "no output"; exit 0; }
           git add -A solada-prefilter
           git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
+          # Privacy guard on the staged desk-data files before commit/push (run-forensics.yml pattern).
+          # A failure aborts the push; nothing is committed or pushed.
+          if ! bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"; then
+            echo "::error::privacy guard failed on desk-data changes; not committing or pushing"
+            git reset -q
+            exit 1
+          fi
           git commit -q -m "solada prefilter $(date -u +%Y-%m-%dT%H:%MZ)"
           for i in 1 2 3 4 5; do
             git push origin HEAD:desk-data && exit 0
