@@ -1,1295 +1,1300 @@
 {
-  "schema_version": 2,
-  "desk": "Snek Sentinel",
-  "book": "solada",
-  "chain": "cardano",
-  "unit": "ADA",
-  "disclaimer": "Paper trades only: research/lottery/NFA. No real execution.",
-  "ticket_size": 100,
-  "default_window_hours": 48,
-  "levels": {
-    "1": "Pass/ignore",
-    "2": "Tiny lottery only",
-    "3": "Watch: lots of holders early that stick through first dip",
-    "4": "High-conviction lottery: L3 + cross-chain/bigger accounts, improving ADA-side pool, holder growth through first dip, prior similar shapes worked in paper book"
+ "schema_version": 2,
+ "desk": "Snek Sentinel",
+ "book": "solada",
+ "chain": "cardano",
+ "unit": "ADA",
+ "disclaimer": "Paper trades only: research/lottery/NFA. No real execution.",
+ "ticket_size": 100,
+ "default_window_hours": 48,
+ "levels": {
+  "1": "Pass/ignore",
+  "2": "Tiny lottery only",
+  "3": "Watch: lots of holders early that stick through first dip",
+  "4": "High-conviction lottery: L3 + cross-chain/bigger accounts, improving ADA-side pool, holder growth through first dip, prior similar shapes worked in paper book"
+ },
+ "open": [],
+ "closed": [
+  {
+   "id": "BOLT-20261017-1125",
+   "ticker": "BOLT",
+   "side": "cardano",
+   "asset_id": "14628c260a749e78e69e58acca32d0baa09808d50388c84fa7e1ae470014df10424f4c54",
+   "opened_at": "2026-10-17T11:25:00-04:00",
+   "window_ends_at": "2026-10-19T11:25:00-04:00",
+   "size": 100,
+   "level": 3,
+   "entry": {
+    "mcap_ada": 530461,
+    "price_ada": 0.000530461,
+    "holders": 277,
+    "ada_side": 34834
+   },
+   "thesis": [
+    "277 holders, top-10 ex-pool 26%, no cluster >3.2%",
+    "6h 46 buys/25 sells, +13.5% h6",
+    "ADA side ~35k (up from ~32k Oct 15)",
+    "SpiritSigma (5.2k) said wants to bridge for $BOLT"
+   ],
+   "kill_line": {
+    "text": "mcap < 450k ADA or holders < 250 or ADA side < 28k",
+    "mcap_ada_below": 450000,
+    "holders_below": 250
+   },
+   "custody": "Cardano native token, non-custodial",
+   "status": "closed",
+   "closed_at": "2026-10-17T13:20:00-04:00",
+   "exit": {
+    "mcap_ada": 421252,
+    "price_ada": 0.000421252,
+    "holders": 264,
+    "ada_side": 30598,
+    "source": "on-chain Minswap V2 pool UTxO via Blockfrost; Solada /api/market 421,311"
+   },
+   "exit_reason": "Kill line hit: pool mcap 421k ADA < 450k stop. Holders (264) and ADA side (30.6k) were still above their lines.",
+   "result": {
+    "unit": "ADA",
+    "pct": -20.6,
+    "pnl": -20.6
+   },
+   "review": {
+    "worked": [
+     "Holder depth held: 277 -> 264, still above the 250 line",
+     "ADA side held ~30.6k (above 28k)"
+    ],
+    "failed": [
+     "Entry came right after the copy-trade-bot promo pop (+12% on flat holders); price gave it all back",
+     "6h flow flipped: GeckoTerminal h6 48 buys/40 sells, h1 6 buys/12 sells, price h6 -27.6%",
+     "An L3 holder base doesn't stop a ~7%-of-mcap ADA side from chopping 20% in two hours"
+    ]
+   },
+   "rules_applied": [
+    "l"
+   ]
   },
-  "open": [],
-  "closed": [
+  {
+   "id": "CLOVE-20261017-1125",
+   "ticker": "CLOVE",
+   "side": "cardano",
+   "asset_id": "c1b89ed48dfc2b82167c1548b88942d367af1e517947c3dd8bdead0b0014df10434c4f56452d33",
+   "opened_at": "2026-10-17T11:25:00-04:00",
+   "window_ends_at": "2026-10-19T11:25:00-04:00",
+   "size": 100,
+   "level": 3,
+   "entry": {
+    "mcap_ada": 314750,
+    "price_ada": 0.00031475,
+    "holders": 125,
+    "ada_side": 26452
+   },
+   "thesis": [
+    "+152% 24h, 6h 52 buys/34 sells, +20% h1",
+    "125 holders, ADA side ~26k",
+    "top-10 ex-pool 35.7%, top 5.9% (watch)"
+   ],
+   "kill_line": {
+    "text": "mcap < 250k ADA or holders < 110",
+    "mcap_ada_below": 250000,
+    "holders_below": 110
+   },
+   "custody": "Cardano native token, non-custodial",
+   "status": "closed",
+   "marks": [
     {
-      "id": "BOLT-20261017-1125",
-      "ticker": "BOLT",
-      "side": "cardano",
-      "asset_id": "14628c260a749e78e69e58acca32d0baa09808d50388c84fa7e1ae470014df10424f4c54",
-      "opened_at": "2026-10-17T11:25:00-04:00",
-      "window_ends_at": "2026-10-19T11:25:00-04:00",
-      "size": 100,
-      "level": 3,
-      "entry": {
-        "mcap_ada": 530461,
-        "price_ada": 0.000530461,
-        "holders": 277,
-        "ada_side": 34834
-      },
-      "thesis": [
-        "277 holders, top-10 ex-pool 26%, no cluster >3.2%",
-        "6h 46 buys/25 sells, +13.5% h6",
-        "ADA side ~35k (up from ~32k Oct 15)",
-        "SpiritSigma (5.2k) said wants to bridge for $BOLT"
-      ],
-      "kill_line": {
-        "text": "mcap < 450k ADA or holders < 250 or ADA side < 28k",
-        "mcap_ada_below": 450000,
-        "holders_below": 250
-      },
-      "custody": "Cardano native token, non-custodial",
-      "status": "closed",
-      "closed_at": "2026-10-17T13:20:00-04:00",
-      "exit": {
-        "mcap_ada": 421252,
-        "price_ada": 0.000421252,
-        "holders": 264,
-        "ada_side": 30598,
-        "source": "on-chain Minswap V2 pool UTxO via Blockfrost; Solada /api/market 421,311"
-      },
-      "exit_reason": "Kill line hit: pool mcap 421k ADA < 450k stop. Holders (264) and ADA side (30.6k) were still above their lines.",
-      "result": {
-        "unit": "ADA",
-        "pct": -20.6,
-        "pnl": -20.6
-      },
-      "review": {
-        "worked": [
-          "Holder depth held: 277 -> 264, still above the 250 line",
-          "ADA side held ~30.6k (above 28k)"
-        ],
-        "failed": [
-          "Entry came right after the copy-trade-bot promo pop (+12% on flat holders); price gave it all back",
-          "6h flow flipped: GeckoTerminal h6 48 buys/40 sells, h1 6 buys/12 sells, price h6 -27.6%",
-          "An L3 holder base doesn't stop a ~7%-of-mcap ADA side from chopping 20% in two hours"
-        ]
-      },
-      "rules_applied": [
-        "l"
-      ]
+     "at": "2026-10-17T13:20:00-04:00",
+     "mcap_ada": 296954,
+     "solada_mcap_ada": 275580,
+     "holders": 128,
+     "ada_side": 25710,
+     "pct_vs_entry": -5.7,
+     "top10_ex_pool": 36.4,
+     "top1": 6.06,
+     "gt_h6": "87 buys/41 sells, price -13.3%",
+     "gt_h1": "20 buys/4 sells, price -20.2%",
+     "note": "Above the 250k/110-holder stop. Team airdropped 3M+ CLOVE to holders in the last few hours (@CloveOnAscend 12:25 PM ET), so part of the holder gain is airdrop-driven (rule m). ADA side 25.7k is now just above rule k's 25k floor."
     },
     {
-      "id": "CLOVE-20261017-1125",
-      "ticker": "CLOVE",
-      "side": "cardano",
-      "asset_id": "c1b89ed48dfc2b82167c1548b88942d367af1e517947c3dd8bdead0b0014df10434c4f56452d33",
-      "opened_at": "2026-10-17T11:25:00-04:00",
-      "window_ends_at": "2026-10-19T11:25:00-04:00",
-      "size": 100,
-      "level": 3,
-      "entry": {
-        "mcap_ada": 314750,
-        "price_ada": 0.00031475,
-        "holders": 125,
-        "ada_side": 26452
-      },
-      "thesis": [
-        "+152% 24h, 6h 52 buys/34 sells, +20% h1",
-        "125 holders, ADA side ~26k",
-        "top-10 ex-pool 35.7%, top 5.9% (watch)"
-      ],
-      "kill_line": {
-        "text": "mcap < 250k ADA or holders < 110",
-        "mcap_ada_below": 250000,
-        "holders_below": 110
-      },
-      "custody": "Cardano native token, non-custodial",
-      "status": "closed",
-      "marks": [
-        {
-          "at": "2026-10-17T13:20:00-04:00",
-          "mcap_ada": 296954,
-          "solada_mcap_ada": 275580,
-          "holders": 128,
-          "ada_side": 25710,
-          "pct_vs_entry": -5.7,
-          "top10_ex_pool": 36.4,
-          "top1": 6.06,
-          "gt_h6": "87 buys/41 sells, price -13.3%",
-          "gt_h1": "20 buys/4 sells, price -20.2%",
-          "note": "Above the 250k/110-holder stop. Team airdropped 3M+ CLOVE to holders in the last few hours (@CloveOnAscend 12:25 PM ET), so part of the holder gain is airdrop-driven (rule m). ADA side 25.7k is now just above rule k's 25k floor."
-        },
-        {
-          "at": "2026-10-17T15:30:00-04:00",
-          "mcap_ada": 261678,
-          "solada_mcap_ada": 257349,
-          "holders": 126,
-          "onchain_holders_ex_pool": 116,
-          "ada_side": 24074,
-          "pct_vs_entry": -16.9,
-          "top10_ex_pool": 42.85,
-          "top1": 6.14,
-          "gt_h6": "85 buys/37 sells, price +9.7%",
-          "gt_h1": "5 buys/3 sells, price -9.7%",
-          "note": "Still above the 250k/110-holder stop, about 4.7% over the mcap line. ADA side 24.1k is now under rule k's 25k entry floor. The team's wallet-drop thread is still collecting addresses on X, so holder counts stay airdrop-inflated (rule m). 116 stake keys on-chain ex-pool, still above 110. Repeat buyer addr1q9ac…u9wwut still holds 1.25%. Level cut from L3 to L2; ticket stays open because no kill line has been hit."
-        },
-        {
-          "at": "2026-10-17T19:18:00-04:00",
-          "mcap_ada": 274894,
-          "solada_mcap_ada": 298567,
-          "holders": 123,
-          "onchain_holders_ex_pool": 114,
-          "ada_side": 24326,
-          "pct_vs_entry": -12.7,
-          "top10_ex_pool": 42.64,
-          "top1": 6.16,
-          "gt_h6": "42 buys/32 sells, price +3.3%",
-          "gt_h1": "2 buys/9 sells, price -28.3%",
-          "note": "Ran from ~240k at 3 PM to a ~397k hourly high at 5 PM ET (+26% over entry), then gave it back: 7 of the last 9 swaps (6:55-7:18 PM) were sells. Solada holders 128 -> 126 -> 123 over three marks, on-chain stake keys 116 -> 114. Price is below entry. The team teased '$SOLADA airdrops to $CLOVE holders?' at 5:59 PM, more airdrop-style promo (rule m). ADA side 24.3k is still under rule k's 25k floor."
-        }
-      ],
-      "level_now": 2,
-      "closed_at": "2026-10-17T19:18:00-04:00",
-      "exit": {
-        "mcap_ada": 274894,
-        "price_ada": 0.000274894,
-        "holders": 123,
-        "onchain_holders_ex_pool": 114,
-        "ada_side": 24326,
-        "source": "on-chain Minswap V2 pool UTxO via Blockfrost (~7:20 PM ET); Solada /api/market 298,567; GeckoTerminal trades"
-      },
-      "exit_reason": "Holders leaving (new rule o): Solada holders fell at two marks in a row (128 -> 126 -> 123, on-chain 116 -> 114) with price below entry, and the 5 PM pop was fading on 2 buys/9 sells in h1. The 250k mcap / 110-holder kill line wasn't hit; closed early under rule o instead.",
-      "result": {
-        "unit": "ADA",
-        "pct": -12.7,
-        "pnl": -12.7
-      },
-      "review": {
-        "worked": [
-          "Top holders held: no top-5 wallet sold, top-1 6.16% (stake1u9q8ncwj) unchanged",
-          "Pool stayed liquid at ~24k ADA; the 5 PM spike to ~397k showed there were buyers on news"
-        ],
-        "failed": [
-          "Airdrop-inflated holders (rule m) leaked once the airdrop window passed: 128 -> 123",
-          "ADA side drifted 26.5k -> 24.3k, under rule k's floor, while mcap chopped ±30% on a few hundred ADA a swap",
-          "Each pop (1 PM airdrop, 5 PM SOLADA-airdrop tease) came from team promo and faded inside two hours"
-        ]
-      },
-      "rules_applied": [
-        "m",
-        "o"
-      ]
+     "at": "2026-10-17T15:30:00-04:00",
+     "mcap_ada": 261678,
+     "solada_mcap_ada": 257349,
+     "holders": 126,
+     "onchain_holders_ex_pool": 116,
+     "ada_side": 24074,
+     "pct_vs_entry": -16.9,
+     "top10_ex_pool": 42.85,
+     "top1": 6.14,
+     "gt_h6": "85 buys/37 sells, price +9.7%",
+     "gt_h1": "5 buys/3 sells, price -9.7%",
+     "note": "Still above the 250k/110-holder stop, about 4.7% over the mcap line. ADA side 24.1k is now under rule k's 25k entry floor. The team's wallet-drop thread is still collecting addresses on X, so holder counts stay airdrop-inflated (rule m). 116 stake keys on-chain ex-pool, still above 110. Repeat buyer addr1q9ac…u9wwut still holds 1.25%. Level cut from L3 to L2; ticket stays open because no kill line has been hit."
     },
     {
-      "id": "BOLT-20261018-1020",
-      "ticker": "BOLT",
-      "side": "cardano",
-      "asset_id": "14628c260a749e78e69e58acca32d0baa09808d50388c84fa7e1ae470014df10424f4c54",
-      "opened_at": "2026-10-18T10:20:00-04:00",
-      "window_ends_at": "2026-10-20T10:20:00-04:00",
-      "size": 100,
-      "level": 2,
-      "status": "closed",
-      "entry_type": "strongest-L2 re-hold",
-      "entry": {
-        "mcap_ada": 406244,
-        "price_ada": 0.000406244,
-        "holders": 274,
-        "onchain_holders_ex_pool": 263,
-        "ada_side": 32170,
-        "source": "on-chain Minswap V2 pool UTxO via Blockfrost (~10:25 AM ET); Solada /api/market 406,086"
-      },
-      "thesis": [
-        "Pullback that holders survived (daily-2026-10-17 / rule l): 530k (Oct 17 11 AM) -> ~305k (10 PM) with holders 277 -> 263, then a re-hold: hourly closes 380-461k since midnight with higher lows",
-        "Rule k passes: 263 on-chain holders (274 Solada), ADA side 32.2k (up from 29.5k at 9:18 PM), 6h on-chain 33 buys / 13 sells, and price +0.9% over 6h so rule o's flow test passes (GeckoTerminal h6 35/14, +3.5%)",
-        "No promo pop in the last 6h (rule l); no airdrop window (rule m); top-10 ex-pool 26.4%, top-1 4.99%",
-        "Repeat buyers addr1q9ac..u9wwut (1.34%) and addr1q9yt..ct2n4q (0.50%) still hold"
-      ],
-      "not_l3_because": "Holders are flat on the bounce (263 at 9:18 PM and now), so price is rising with flat holders (rule h): L2 at best",
-      "kill_line": {
-        "text": "pool mcap < 340k ADA or on-chain holders < 250 or ADA side < 28k; early exit under rule o (holders down at two marks in a row with price below entry)",
-        "mcap_ada_below": 340000,
-        "holders_below": 250,
-        "ada_side_below": 28000
-      },
-      "custody": "Cardano native token, non-custodial; Minswap V2 pool, ADA side ~8% of mcap",
-      "rules_applied": [
-        "h",
-        "k",
-        "l",
-        "m",
-        "o",
-        "daily-2026-10-17"
-      ],
-      "marks": [
-        {
-          "at": "2026-10-18T12:51:00-04:00",
-          "mcap_ada": 373864,
-          "price_ada": 0.000373864,
-          "holders": 279,
-          "onchain_holders_ex_pool": 271,
-          "ada_side": 30795,
-          "pct_vs_entry_mcap": -8.0,
-          "flow": "GeckoTerminal h1 6/1 buys/sells (+6.8%), h6 37/14 (-10.2%), h24 194/103 (-19.5%); last full hour (11 AM) 5,879 ADA vs 3,100 avg prior 6h",
-          "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 372,139",
-          "note": "Above every kill line (373.9k vs 340k mcap, 271 vs 250 on-chain holders, 30,795 vs 28,000 ADA side). Price -8.0% vs entry, but holders are up (Solada 274 -> 279), so rule o's early exit isn't triggered. On-chain count is now stake-grouped (271); the entry's 263 used a different grouping. h6 -10.2% fails rule o's flow test by a hair, so buys > sells doesn't count this hour."
-        },
-        {
-          "at": "2026-10-18T13:15:00-04:00",
-          "mcap_ada": 370519,
-          "price_ada": 0.000370519,
-          "holders": 278,
-          "onchain_holders_ex_pool": 270,
-          "ada_side": 30659,
-          "pct_vs_entry_mcap": -8.8,
-          "flow": "GeckoTerminal h1 5/2 buys/sells (+1.0%), h6 35/14 (-15.2%), h24 -13.9%; last full hour (12 PM) 1,401 ADA vs 3,216 avg prior 5h",
-          "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 370,453",
-          "note": "Above every kill line (370.5k vs 340k mcap, 270 vs 250 on-chain holders, 30,659 vs 28,000 ADA side). Price -8.8% vs entry. Holders fell one this mark (Solada 279 -> 278, on-chain 271 -> 270), the first drop since entry; rule o needs two marks in a row, so no early exit yet. Another drop next mark with price below entry closes it."
-        },
-        {
-          "at": "2026-10-18T13:20:00-04:00",
-          "mcap_ada": 364691,
-          "solada_mcap_ada": 370453,
-          "price_ada": 0.000364691,
-          "holders": 278,
-          "onchain_holders_ex_pool": 270,
-          "ada_side": 30607,
-          "pct_vs_entry_mcap": -10.2,
-          "top10_ex_pool_pct": 29.11,
-          "top1_ex_pool_pct": 5.49,
-          "flow": "GeckoTerminal h1 4/2 (+/-1%), h6 34/14 (-9.4%), h24 191/98 (-18.9%); vol_h6 ~$3.7k",
-          "source": "desk afternoon: GeckoTerminal BOLT/ADA; Blockfrost asset addresses ex Minswap V2/curve/order (270); Solada /api/market 370,453; ADA side = pool token reserve * spot (~30.6k)",
-          "note": "Desk mark 5 min after 13:15 pulse. Above every kill line (364.7k vs 340k, 270 vs 250 holders, 30.6k vs 28k ADA). Holders flat vs pulse (278/270), so still only one down-mark since entry — rule o needs two in a row. Pool-implied mcap 364.7k is a touch under the pulse's on-chain 370.5k; both clear 340k. h6 -9.4% fails rule o flow by a hair."
-        },
-        {
-          "at": "2026-10-18T14:15:00-04:00",
-          "mcap_ada": 382925,
-          "price_ada": 0.000382925,
-          "holders": 278,
-          "onchain_holders_ex_pool": 270,
-          "ada_side": 31173,
-          "pct_vs_entry_mcap": -5.7,
-          "flow": "GeckoTerminal h1 3/1 buys/sells (+1.9%), h6 27/14 (-20.1%), h24 -6.8%; last full hour (1 PM) 212 ADA vs 2,760 avg prior 5h",
-          "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 377,996",
-          "note": "Above every kill line (382.9k vs 340k mcap, 270 vs 250 on-chain holders, 31,173 vs 28,000 ADA side). Price -5.7% vs entry. Holders flat vs the 13:15 and 13:20 marks (278/270), so rule o still has only one down-mark and no early exit."
-        },
-        {
-          "at": "2026-10-18T15:15:00-04:00",
-          "mcap_ada": 391756,
-          "price_ada": 0.000391756,
-          "holders": 279,
-          "onchain_holders_ex_pool": 271,
-          "ada_side": 31534,
-          "pct_vs_entry_mcap": -3.6,
-          "flow": "GeckoTerminal h1 3/0 buys/sells (+1.6%), h6 24/7 (-2.5%), h24 +0.7%; last full hour (2 PM) 649 ADA vs 2,093 avg prior 5h",
-          "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 391,653",
-          "note": "Above every kill line (391.8k vs 340k mcap, 271 vs 250 on-chain holders, 31,534 vs 28,000 ADA side). Price -3.6% vs entry. Holders up vs the 14:15 mark (270 -> 271), so rule o has no down-mark and no early exit."
-        },
-        {
-          "at": "2026-10-18T16:10:00-04:00",
-          "mcap_ada": 345665,
-          "price_ada": 0.000345665,
-          "holders": 279,
-          "onchain_holders_ex_pool": 269,
-          "ada_side": 29651,
-          "pct_vs_entry_mcap": -14.9,
-          "flow": "GeckoTerminal h1 3/4 buys/sells (-11.3%), h6 27/10 but price h6 -18.4% (rule o: counts do not count), h24 -9.3%; last full hour (3 PM) 1,226 ADA vs 1,766 avg prior 5h",
-          "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 350,164",
-          "note": "Still above every kill line, but close: 345.7k vs 340k mcap (~1.7% away), 269 vs 250 on-chain holders, 29,651 vs 28,000 ADA side. Price -14.9% vs entry. On-chain holders fell 271 -> 269 (Solada 279 flat), the first down-mark after the 15:15 tick up, so rule o is one mark from an early exit."
-        },
-        {
-          "at": "2026-10-18T17:12:00-04:00",
-          "mcap_ada": 411871,
-          "price_ada": 0.000411871,
-          "holders": 275,
-          "onchain_holders_ex_pool": 266,
-          "ada_side": 32370,
-          "pct_vs_entry_mcap": 1.4,
-          "flow": "GeckoTerminal h1 11/3 buys/sells (+22.8%), h6 34/13 (+8.4%), h24 +2.9%; last full hour (4 PM) 6,268 ADA vs 1,896 avg prior 5h",
-          "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 411,748",
-          "note": "Above every kill line (411.9k vs 340k mcap, 266 vs 250 on-chain holders, 32,370 vs 28,000 ADA side). Price back above entry (+1.4%). Holders fell at a second mark in a row (on-chain 271 -> 269 -> 266, Solada 279 -> 275), but rule o also needs price below entry, so no early exit. Rule h warning: the bounce came with falling holders."
-        },
-        {
-          "at": "2026-10-18T18:07:00-04:00",
-          "mcap_ada": 401391,
-          "price_ada": 0.000401391,
-          "holders": 274,
-          "onchain_holders_ex_pool": 266,
-          "ada_side": 31926,
-          "pct_vs_entry_mcap": -1.2,
-          "flow": "GeckoTerminal h1 0/3 buys/sells (-1.5%), h6 26/13 (+10.7%), h24 -1.3%; last full hour (5 PM) 602 ADA vs 6,125 at 4 PM",
-          "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 401,282",
-          "note": "Above every kill line (401.4k vs 340k mcap, 266 vs 250 on-chain holders, 31,926 vs 28,000 ADA side). Price slipped just under entry (-1.2%). On-chain holders held at 266 (Solada 275 -> 274), so the on-chain count the kill line uses did not fall this mark and rule o is not triggered. If on-chain holders drop next mark with price still under entry, rule o closes it."
-        },
-        {
-          "at": "2026-10-18T19:08:00-04:00",
-          "mcap_ada": 379540,
-          "price_ada": 0.00037954,
-          "holders": 275,
-          "onchain_holders_ex_pool": 266,
-          "ada_side": 31054,
-          "pct_vs_entry_mcap": -6.6,
-          "flow": "GeckoTerminal h1 0/3 buys/sells (-4.3%), h6 20/15 (+2.9%), h24 -2.5%; last full hour (6 PM) 867 ADA vs 599 at 5 PM",
-          "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market",
-          "note": "Above every kill line (379,540 vs 340k mcap, 266 vs 250 on-chain holders, 31,054 vs 28,000 ADA side). Price is under entry (-6.6%), but on-chain holders held at 266 for a second mark (Solada 274 -> 275), so rule o is not triggered. If on-chain holders drop at the next two marks with price still under entry, rule o closes it."
-        },
-        {
-          "at": "2026-10-18T19:15:00-04:00",
-          "mcap_ada": 384310,
-          "price_ada": 0.00038431,
-          "holders": 275,
-          "onchain_holders_ex_pool": 266,
-          "ada_side": 30650,
-          "pct_vs_entry_mcap": -5.4,
-          "flow": "GeckoTerminal h1 1/5 buys/sells (price h1 -4.6%), h6 21/16 (-1.2%), h24 -0.9%; pool reserve ~$13.4k",
-          "source": "desk run: Solada /api/market (pool-priced) 384,310 ADA at ~7:14 PM; on-chain holders from 7:08 PM pulse (Koios stake-grouped ex pool); ADA side from GeckoTerminal reserve / 2 at ADA $0.2188",
-          "note": "Above every kill line (384.3k vs 340k mcap, 266 vs 250 holders, ~30.7k vs 28k ADA side). Holders flat at 266 for a third mark, so rule o's two-drop exit is not triggered. Thin evening selling; window runs to Oct 20 10:20 AM."
-        },
-        {
-          "at": "2026-10-18T20:13:00-04:00",
-          "mcap_ada": 414222,
-          "price_ada": 0.000414222,
-          "holders": 275,
-          "onchain_holders_ex_pool": 266,
-          "ada_side": 32445,
-          "pct_vs_entry_mcap": 2.0,
-          "flow": "GeckoTerminal h1 3/4 buys/sells (+15.0%), h6 21/18 (+10.1%), h24 +34.1%; last full hour (7 PM) 1,094 ADA vs 859 at 6 PM",
-          "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market",
-          "note": "Above every kill line (414,222 vs 340k mcap, 266 vs 250 on-chain holders, 32,445 vs 28,000 ADA side). Price is back above entry (+2.0%) on an 8 PM pop, while on-chain holders held at 266 for a fourth mark, so rule o is not in play."
-        },
-        {
-          "at": "2026-10-18T21:13:00-04:00",
-          "mcap_ada": 438410,
-          "price_ada": 0.00043841,
-          "holders": 274,
-          "onchain_holders_ex_pool": 265,
-          "ada_side": 33409,
-          "pct_vs_entry_mcap": 7.9,
-          "flow": "GeckoTerminal h1 3/3 buys/sells (+2.5%), h6 20/21 (+16.9%), h24 +27.7%; last full hour (8 PM) 5,849 ADA vs 1,094 at 7 PM",
-          "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market",
-          "note": "Above every kill line (438,410 vs 340k mcap, 266 vs 250 on-chain holders, 33,409 vs 28,000 ADA side). Price is above entry (+7.9%) after a busy 8 PM hour; on-chain holders slipped 266 -> 265, but with price above entry rule o is not in play."
-        },
-        {
-          "at": "2026-10-18T21:25:00-04:00",
-          "mcap_ada": 424750,
-          "price_ada": 0.00042475,
-          "holders": 274,
-          "onchain_holders_ex_pool": 266,
-          "ada_side": 32899,
-          "pct_vs_entry_mcap": 4.6,
-          "flow": "GeckoTerminal h1 2/3 buys/sells (+1.0%), h6 19/21 (+11.3%), h24 +29.4%; vol h6 ~$3.5k",
-          "source": "desk run: Minswap V2 pool UTxO via Blockfrost (~9:24 PM), Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 438,265",
-          "note": "Above every kill line (424,750 vs 340k mcap, 266 vs 250 on-chain holders, 32,899 vs 28,000 ADA side). Gave back ~3% from the 9:13 PM pulse mark (438.4k) but still +4.6% vs entry. On-chain holders back to 266; swarm keys uytg09zr, u9q3xusf, u9rwdkfjtr, uyetfdape9 still hold (no first-block full exit, rule j clear). Rule o not in play (price above entry). Window to Oct 20 10:20 AM."
-        },
-        {
-          "at": "2026-10-18T22:12:00-04:00",
-          "mcap_ada": 398054,
-          "price_ada": 0.000398054,
-          "holders": 276,
-          "onchain_holders_ex_pool": 267,
-          "ada_side": 29239,
-          "pct_vs_entry_mcap": -2.0,
-          "flow": "GeckoTerminal h1 6/4 buys/sells (-5.7%), h6 23/21 (+23.0%), h24 +7.0%; last full hour (9 PM) 3,633 ADA vs 5,828 at 8 PM",
-          "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market",
-          "note": "Above every kill line (398,054 vs 340k mcap, 267 vs 250 on-chain holders, 29,239 vs 28,000 ADA side), but the ADA side is now only about 1.2k above its line: both pool sides fell since 9:13 PM (invariant down ~16%), so liquidity was withdrawn. Price -2.0% vs entry; on-chain holders rose 266 -> 267, so rule o is not in play."
-        },
-        {
-          "at": "2026-10-18T23:12:00-04:00",
-          "mcap_ada": 362467,
-          "price_ada": 0.000362467,
-          "holders": 275,
-          "onchain_holders_ex_pool": 266,
-          "ada_side": 27872,
-          "pct_vs_entry_mcap": -10.8,
-          "flow": "GeckoTerminal h1 1/2 buys/sells (-4.5%), h6 13/20 (-7.3%), h24 +12.8%; last full hour (10 PM) 1,307 ADA vs 3,640 at 9 PM",
-          "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost (~11:14 PM ET), Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 362,349",
-          "note": "Kill line hit: ADA side 27,872 is under the 28,000 line (29,239 at 10:12 PM, 33,409 at 9:13 PM). Mcap 362,467 vs 340k and on-chain holders 266 vs 250 were still above their lines. Closed at this mark."
-        }
-      ],
-      "closed_at": "2026-10-18T23:12:00-04:00",
-      "exit": {
-        "mcap_ada": 362467,
-        "price_ada": 0.000362467,
-        "holders": 275,
-        "onchain_holders_ex_pool": 266,
-        "ada_side": 27872,
-        "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost (~11:14 PM ET), Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 362,349; GeckoTerminal trades"
-      },
-      "exit_reason": "Kill line hit: the pool ADA side fell to 27,872, under the 28,000 line, after liquidity was pulled from the pool around 9-10 PM (33.4k -> 29.2k -> 27.9k in two hours). Mcap (362.5k vs 340k) and on-chain holders (266 vs 250) were still above their lines; rule o did not fire because holders were flat, not falling twice.",
-      "result": {
-        "unit": "ADA",
-        "pct": -10.8,
-        "pnl": -10.8
-      },
-      "review": {
-        "worked": [
-          "Entering after a pullback that holders survived (rule l) gave the book its first green marks: low -10.2% at 1:20 PM, high +7.9% at 9:13 PM",
-          "The ADA-side kill line caught the liquidity pull before the mcap or holder lines were hit"
-        ],
-        "failed": [
-          "On-chain holders stayed flat at 263-267 the whole time, so the bounce never had new demand behind it (rule h)",
-          "Liquidity left the pool after 9 PM while swarm keys uytg09zr and u9q3xusf and launcher keys u9rwdkfjtr and uyetfdape9 still held, and hourly volume shrank from ~5.8k to ~1.3k ADA"
-        ]
-      }
-    },
-    {
-      "id": "RAIN-7cc1-20261019-1000",
-      "ticker": "RAIN",
-      "name": "RAIN (RAIN-3)",
-      "side": "cardano",
-      "launchpad": "solada.fun",
-      "chain": "cardano",
-      "asset_id": "7cc11ddeba48ac007c6af09715aebbc188fe0032563ba99207f0fc840014df105241494e",
-      "solada_id": "draft-rain-3",
-      "opened_at": "2026-10-19T10:00:00-04:00",
-      "window_ends_at": "2026-10-21T10:00:00-04:00",
-      "size": 100,
-      "level": 3,
-      "entry_type": "pullback re-hold (pre-graduation curve)",
-      "status": "closed",
-      "entry": {
-        "mcap_ada": 44893,
-        "curve_pct": 92.9,
-        "curve_ada": 9610,
-        "holders_onchain": 67,
-        "holders_solada": 65,
-        "top10_pct": 28.23,
-        "top1_pct": 3.99,
-        "price_basis": "Solada curve marketCapLovelace",
-        "source": "Solada /api/launches + Koios asset_addresses (~10:09 AM ET)"
-      },
-      "thesis": [
-        "Holder density from nothing: 5 holders at 3 AM to 63 on-chain by 9:52 AM, crowned King of the Hill at 92.7% (8:57 AM)",
-        "Survived its first fade: curve 92.7% -> 83.9% on 9 AM selling (~3.75k ADA out vs ~2.1k in), then back to 92.9% by 10:09 with holders 63 -> 67 (rule a, daily-2026-10-18 pullback lesson)",
-        "No sniper overhang: first-block keys uytg09zr, u8a2m6, uyt8xs9q, u97c3csuc5 and the launcher already sold out; top-10 28.2%, top-1 4.0%",
-        "Busiest name on #soladafun-buys 7:58-10:02 AM (50 buys, ~9.5k ADA) with a 1,000 ADA buy at 8:48"
-      ],
-      "risks": [
-        "Discord chat called it a 'scam token' / 'farmed' (unverified)",
-        "Graduation at 100% moves it to a Minswap pool whose LP tokens sit unburned in Solada's wallet, so liquidity depends on trusting Solada",
-        "Graduation alone is not a signal (rule f): many graduates faded to 19-30k ADA"
-      ],
-      "kill_line": {
-        "text": "Before graduation: curve under 80% or on-chain holders under 55. After graduation: pool ADA side under 8k or on-chain holders under 55, or pool mcap under 31k ADA (-30%).",
-        "curve_below": 80,
-        "holders_below": 55,
-        "post_grad_ada_side_below": 8000,
-        "mcap_ada_below": 31400
-      },
-      "custody": "Cardano native token in the holder wallet (non-custodial); post-graduation LP held unburned by Solada",
-      "rules_applied": [
-        "a",
-        "f",
-        "h",
-        "i",
-        "j",
-        "l",
-        "p",
-        "daily-2026-10-18"
-      ],
-      "marks": [
-        {
-          "at": "2026-10-19T10:15:00-04:00",
-          "mcap_ada": 50000,
-          "curve_pct": 100.0,
-          "curve_ada": 10344,
-          "holders_onchain": 68,
-          "holders_solada": 67,
-          "pct_vs_entry_mcap": 11.4,
-          "result": {
-            "pnl": 11.4,
-            "pct": 11.4,
-            "unit": "ADA"
-          },
-          "kill_line_hit": false,
-          "note": "Curve filled to 100% (graduation pending) with on-chain holders 67 -> 68; above every pre-graduation line (curve 100% vs 80%, holders 68 vs 55). No swarm key holds. After graduation the post-grad lines apply (ADA side 8k, mcap 31.4k).",
-          "source": "hourly pulse: Solada /api/launches curve, Koios asset_addresses (stake-grouped, ex curve)"
-        },
-        {
-          "at": "2026-10-19T11:30:00-04:00",
-          "mcap_ada": 70729,
-          "curve_pct": null,
-          "graduated": "minswap-v2",
-          "pool_ada": 12322,
-          "holders_onchain": 71,
-          "holders_solada": 69,
-          "pct_vs_entry_mcap": 57.6,
-          "result": {
-            "pnl": 57.6,
-            "pct": 57.6,
-            "unit": "ADA"
-          },
-          "kill_line_hit": false,
-          "note": "Graduated to Minswap; post-graduation lines now apply and all are clear: pool ADA side 12,322 vs 8,000, on-chain holders 71 vs 55, pool mcap 70,729 vs 31,400 ADA. GT h1 18 buys / 3 sells; no swarm key holds.",
-          "source": "hourly pulse: Blockfrost Minswap pool UTxO reserves, Koios asset_addresses (stake-grouped, ex pool), GeckoTerminal pool"
-        },
-        {
-          "at": "2026-10-19T12:15:00-04:00",
-          "mcap_ada": 70904,
-          "graduated": "minswap-v2",
-          "pool_ada": 12322,
-          "holders_onchain": 72,
-          "holders_solada": 70,
-          "pct_vs_entry_mcap": 57.9,
-          "result": {
-            "pnl": 57.9,
-            "pct": 57.9,
-            "unit": "ADA"
-          },
-          "kill_line_hit": false,
-          "note": "Post-graduation lines clear: pool ADA side ~12.3k vs 8k (11:30 pulse read; GeckoTerminal shows ~$5.6k reserve on the Minswap pool), holders 72 on-chain vs 55, mcap 70.9k vs 31.4k. No swarm key holding. Keep; graduation LP stays unburned in Solada's wallet.",
-          "source": "Solada /api/market quote, Blockfrost asset holders, pulse 11:30"
-        },
-        {
-          "at": "2026-10-19T12:40:00-04:00",
-          "mcap_ada": 38873,
-          "graduated": "minswap-v2",
-          "pool_ada": 9164,
-          "holders_onchain": 68,
-          "holders_solada": 68,
-          "pct_vs_entry_mcap": -13.4,
-          "result": {
-            "pnl": -13.4,
-            "pct": -13.4,
-            "unit": "ADA"
-          },
-          "kill_line_hit": false,
-          "note": "Post-graduation dump: pool mcap 70.7k -> 38.9k ADA in about an hour (GT h1 -36.6%, m30 -46%), pool ADA side 12,322 -> 9,164. Kill lines still clear (pool 9,164 vs 8,000, holders 68 vs 55, mcap 38,873 vs 31,400). On-chain holders 72 -> 68 is the first drop with price below entry; rule o closes it if the next mark drops again.",
-          "source": "hourly pulse: Blockfrost Minswap pool UTxO reserves, Koios asset_addresses (stake-grouped, ex pool), GeckoTerminal pool"
-        },
-        {
-          "at": "2026-10-19T13:08:00-04:00",
-          "mcap_ada": 12168,
-          "graduated": "minswap-v2",
-          "pool_ada": 5158,
-          "holders_onchain": 59,
-          "holders_solada": 59,
-          "pct_vs_entry_mcap": -72.9,
-          "result": {
-            "pnl": -72.9,
-            "pct": -72.9,
-            "unit": "ADA"
-          },
-          "kill_line_hit": true,
-          "flow": "GeckoTerminal h1 5 buys / 14 sells, price h1 -82.3%, m30 1 buy / 10 sells (-69.8%)",
-          "note": "Kill line hit: pool mcap 12,168 vs the 31,400 line and pool ADA side 5,158 vs 8,000. Net selling, not an LP pull (token side 2.36e14 -> 4.24e14 units while the ADA side fell 9,164 -> 5,158, pool invariant flat), so rule u does not delay the close. On-chain holders 72 -> 68 -> 59 also met rule o. Closed at this mark.",
-          "source": "hourly pulse: Blockfrost Minswap pool UTxO reserves (~1:08 PM ET), Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 12,152, GeckoTerminal pool"
-        }
-      ],
-      "last_mark": {
-        "at": "2026-10-19T12:15:00-04:00",
-        "mcap_ada": 70904,
-        "graduated": "minswap-v2",
-        "pool_ada": 12322,
-        "holders_onchain": 72,
-        "holders_solada": 70,
-        "pct_vs_entry_mcap": 57.9,
-        "result": {
-          "pnl": 57.9,
-          "pct": 57.9,
-          "unit": "ADA"
-        },
-        "kill_line_hit": false,
-        "note": "Post-graduation lines clear: pool ADA side ~12.3k vs 8k (11:30 pulse read; GeckoTerminal shows ~$5.6k reserve on the Minswap pool), holders 72 on-chain vs 55, mcap 70.9k vs 31.4k. No swarm key holding. Keep; graduation LP stays unburned in Solada's wallet.",
-        "source": "Solada /api/market quote, Blockfrost asset holders, pulse 11:30"
-      },
-      "closed_at": "2026-10-19T13:08:00-04:00",
-      "exit": {
-        "mcap_ada": 12168,
-        "pool_ada": 5158,
-        "holders_onchain": 59,
-        "holders_solada": 59,
-        "graduated": "minswap-v2",
-        "source": "hourly pulse: Blockfrost Minswap pool UTxO reserves (~1:08 PM ET), Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 12,152, GeckoTerminal pool"
-      },
-      "exit_reason": "Kill line hit: after graduating to Minswap, pool mcap fell 70.7k -> 38.9k -> 12.2k ADA, under the 31,400 line, and the pool ADA side fell to 5,158, under the 8,000 line. The drop was net selling (token side up ~80%, ADA side down, invariant flat), not a liquidity pull. Rule o also fired: on-chain holders fell at two marks in a row (72 -> 68 -> 59) with price below entry.",
-      "result": {
-        "pnl": -72.9,
-        "pct": -72.9,
-        "unit": "ADA"
-      },
-      "review": {
-        "worked": [
-          "The pullback re-hold entry before graduation caught the curve fill and a post-graduation peak of +57.9% (12:15 PM)",
-          "Every first-block and swarm key had already sold out, so this was not a swarm dump"
-        ],
-        "failed": [
-          "There was no profit-taking rule: the ticket rode +57.9% to -72.9% in under an hour after graduation",
-          "Graduation into a ~12k ADA Minswap pool left it too thin to absorb holder exits (rule f): two selling waves took the pool mcap from 70.7k to 12.2k"
-        ]
-      }
+     "at": "2026-10-17T19:18:00-04:00",
+     "mcap_ada": 274894,
+     "solada_mcap_ada": 298567,
+     "holders": 123,
+     "onchain_holders_ex_pool": 114,
+     "ada_side": 24326,
+     "pct_vs_entry": -12.7,
+     "top10_ex_pool": 42.64,
+     "top1": 6.16,
+     "gt_h6": "42 buys/32 sells, price +3.3%",
+     "gt_h1": "2 buys/9 sells, price -28.3%",
+     "note": "Ran from ~240k at 3 PM to a ~397k hourly high at 5 PM ET (+26% over entry), then gave it back: 7 of the last 9 swaps (6:55-7:18 PM) were sells. Solada holders 128 -> 126 -> 123 over three marks, on-chain stake keys 116 -> 114. Price is below entry. The team teased '$SOLADA airdrops to $CLOVE holders?' at 5:59 PM, more airdrop-style promo (rule m). ADA side 24.3k is still under rule k's 25k floor."
     }
-  ],
-  "rules": [
+   ],
+   "level_now": 2,
+   "closed_at": "2026-10-17T19:18:00-04:00",
+   "exit": {
+    "mcap_ada": 274894,
+    "price_ada": 0.000274894,
+    "holders": 123,
+    "onchain_holders_ex_pool": 114,
+    "ada_side": 24326,
+    "source": "on-chain Minswap V2 pool UTxO via Blockfrost (~7:20 PM ET); Solada /api/market 298,567; GeckoTerminal trades"
+   },
+   "exit_reason": "Holders leaving (new rule o): Solada holders fell at two marks in a row (128 -> 126 -> 123, on-chain 116 -> 114) with price below entry, and the 5 PM pop was fading on 2 buys/9 sells in h1. The 250k mcap / 110-holder kill line wasn't hit; closed early under rule o instead.",
+   "result": {
+    "unit": "ADA",
+    "pct": -12.7,
+    "pnl": -12.7
+   },
+   "review": {
+    "worked": [
+     "Top holders held: no top-5 wallet sold, top-1 6.16% (stake1u9q8ncwj) unchanged",
+     "Pool stayed liquid at ~24k ADA; the 5 PM spike to ~397k showed there were buyers on news"
+    ],
+    "failed": [
+     "Airdrop-inflated holders (rule m) leaked once the airdrop window passed: 128 -> 123",
+     "ADA side drifted 26.5k -> 24.3k, under rule k's floor, while mcap chopped ±30% on a few hundred ADA a swap",
+     "Each pop (1 PM airdrop, 5 PM SOLADA-airdrop tease) came from team promo and faded inside two hours"
+    ]
+   },
+   "rules_applied": [
+    "m",
+    "o"
+   ]
+  },
+  {
+   "id": "BOLT-20261018-1020",
+   "ticker": "BOLT",
+   "side": "cardano",
+   "asset_id": "14628c260a749e78e69e58acca32d0baa09808d50388c84fa7e1ae470014df10424f4c54",
+   "opened_at": "2026-10-18T10:20:00-04:00",
+   "window_ends_at": "2026-10-20T10:20:00-04:00",
+   "size": 100,
+   "level": 2,
+   "status": "closed",
+   "entry_type": "strongest-L2 re-hold",
+   "entry": {
+    "mcap_ada": 406244,
+    "price_ada": 0.000406244,
+    "holders": 274,
+    "onchain_holders_ex_pool": 263,
+    "ada_side": 32170,
+    "source": "on-chain Minswap V2 pool UTxO via Blockfrost (~10:25 AM ET); Solada /api/market 406,086"
+   },
+   "thesis": [
+    "Pullback that holders survived (daily-2026-10-17 / rule l): 530k (Oct 17 11 AM) -> ~305k (10 PM) with holders 277 -> 263, then a re-hold: hourly closes 380-461k since midnight with higher lows",
+    "Rule k passes: 263 on-chain holders (274 Solada), ADA side 32.2k (up from 29.5k at 9:18 PM), 6h on-chain 33 buys / 13 sells, and price +0.9% over 6h so rule o's flow test passes (GeckoTerminal h6 35/14, +3.5%)",
+    "No promo pop in the last 6h (rule l); no airdrop window (rule m); top-10 ex-pool 26.4%, top-1 4.99%",
+    "Repeat buyers addr1q9ac..u9wwut (1.34%) and addr1q9yt..ct2n4q (0.50%) still hold"
+   ],
+   "not_l3_because": "Holders are flat on the bounce (263 at 9:18 PM and now), so price is rising with flat holders (rule h): L2 at best",
+   "kill_line": {
+    "text": "pool mcap < 340k ADA or on-chain holders < 250 or ADA side < 28k; early exit under rule o (holders down at two marks in a row with price below entry)",
+    "mcap_ada_below": 340000,
+    "holders_below": 250,
+    "ada_side_below": 28000
+   },
+   "custody": "Cardano native token, non-custodial; Minswap V2 pool, ADA side ~8% of mcap",
+   "rules_applied": [
+    "h",
+    "k",
+    "l",
+    "m",
+    "o",
+    "daily-2026-10-17"
+   ],
+   "marks": [
     {
-      "id": "a",
-      "added_at": "2026-10-17T11:05:00-04:00",
-      "rule": "Watch (L3) needs early holder density that holds through the first fade; an mcap spike alone isn't enough.",
-      "source": "desk history Oct 15-17",
-      "title": "Watch needs holder density that survives the first fade",
-      "category": "entry",
-      "evidence": []
+     "at": "2026-10-18T12:51:00-04:00",
+     "mcap_ada": 373864,
+     "price_ada": 0.000373864,
+     "holders": 279,
+     "onchain_holders_ex_pool": 271,
+     "ada_side": 30795,
+     "pct_vs_entry_mcap": -8.0,
+     "flow": "GeckoTerminal h1 6/1 buys/sells (+6.8%), h6 37/14 (-10.2%), h24 194/103 (-19.5%); last full hour (11 AM) 5,879 ADA vs 3,100 avg prior 6h",
+     "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 372,139",
+     "note": "Above every kill line (373.9k vs 340k mcap, 271 vs 250 on-chain holders, 30,795 vs 28,000 ADA side). Price -8.0% vs entry, but holders are up (Solada 274 -> 279), so rule o's early exit isn't triggered. On-chain count is now stake-grouped (271); the entry's 263 used a different grouping. h6 -10.2% fails rule o's flow test by a hair, so buys > sells doesn't count this hour."
     },
     {
-      "id": "b",
-      "added_at": "2026-10-17T11:05:00-04:00",
-      "rule": "KOTH loss + curve progress reversing + holder bleed = Pass (L1).",
-      "source": "desk history Oct 15-17",
-      "title": "Pass on a KOTH loss with curve and holders reversing",
-      "category": "entry",
-      "evidence": []
+     "at": "2026-10-18T13:15:00-04:00",
+     "mcap_ada": 370519,
+     "price_ada": 0.000370519,
+     "holders": 278,
+     "onchain_holders_ex_pool": 270,
+     "ada_side": 30659,
+     "pct_vs_entry_mcap": -8.8,
+     "flow": "GeckoTerminal h1 5/2 buys/sells (+1.0%), h6 35/14 (-15.2%), h24 -13.9%; last full hour (12 PM) 1,401 ADA vs 3,216 avg prior 5h",
+     "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 370,453",
+     "note": "Above every kill line (370.5k vs 340k mcap, 270 vs 250 on-chain holders, 30,659 vs 28,000 ADA side). Price -8.8% vs entry. Holders fell one this mark (Solada 279 -> 278, on-chain 271 -> 270), the first drop since entry; rule o needs two marks in a row, so no early exit yet. Another drop next mark with price below entry closes it."
     },
     {
-      "id": "c",
-      "added_at": "2026-10-17T11:05:00-04:00",
-      "rule": "Copycats appearing often mark peak attention for the original.",
-      "source": "desk history Oct 15-17",
-      "title": "Copycats mark peak attention for the original",
-      "category": "entry",
-      "evidence": []
+     "at": "2026-10-18T13:20:00-04:00",
+     "mcap_ada": 364691,
+     "solada_mcap_ada": 370453,
+     "price_ada": 0.000364691,
+     "holders": 278,
+     "onchain_holders_ex_pool": 270,
+     "ada_side": 30607,
+     "pct_vs_entry_mcap": -10.2,
+     "top10_ex_pool_pct": 29.11,
+     "top1_ex_pool_pct": 5.49,
+     "flow": "GeckoTerminal h1 4/2 (+/-1%), h6 34/14 (-9.4%), h24 191/98 (-18.9%); vol_h6 ~$3.7k",
+     "source": "desk afternoon: GeckoTerminal BOLT/ADA; Blockfrost asset addresses ex Minswap V2/curve/order (270); Solada /api/market 370,453; ADA side = pool token reserve * spot (~30.6k)",
+     "note": "Desk mark 5 min after 13:15 pulse. Above every kill line (364.7k vs 340k, 270 vs 250 holders, 30.6k vs 28k ADA). Holders flat vs pulse (278/270), so still only one down-mark since entry — rule o needs two in a row. Pool-implied mcap 364.7k is a touch under the pulse's on-chain 370.5k; both clear 340k. h6 -9.4% fails rule o flow by a hair."
     },
     {
-      "id": "d",
-      "added_at": "2026-10-17T11:05:00-04:00",
-      "rule": "Solada headline 24h volume can be stale post-graduation; check real pool flow over the last 6h.",
-      "source": "desk history Oct 15-17",
-      "title": "Check real pool flow, not stale headline volume",
-      "category": "liq",
-      "evidence": []
+     "at": "2026-10-18T14:15:00-04:00",
+     "mcap_ada": 382925,
+     "price_ada": 0.000382925,
+     "holders": 278,
+     "onchain_holders_ex_pool": 270,
+     "ada_side": 31173,
+     "pct_vs_entry_mcap": -5.7,
+     "flow": "GeckoTerminal h1 3/1 buys/sells (+1.9%), h6 27/14 (-20.1%), h24 -6.8%; last full hour (1 PM) 212 ADA vs 2,760 avg prior 5h",
+     "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 377,996",
+     "note": "Above every kill line (382.9k vs 340k mcap, 270 vs 250 on-chain holders, 31,173 vs 28,000 ADA side). Price -5.7% vs entry. Holders flat vs the 13:15 and 13:20 marks (278/270), so rule o still has only one down-mark and no early exit."
     },
     {
-      "id": "e",
-      "added_at": "2026-10-17T11:05:00-04:00",
-      "rule": "Holders > trades suggests airdrop/bridge/bundle distribution.",
-      "source": "desk history Oct 15-17",
-      "title": "More holders than trades points to airdrop or bundles",
-      "category": "sybil",
-      "evidence": []
+     "at": "2026-10-18T15:15:00-04:00",
+     "mcap_ada": 391756,
+     "price_ada": 0.000391756,
+     "holders": 279,
+     "onchain_holders_ex_pool": 271,
+     "ada_side": 31534,
+     "pct_vs_entry_mcap": -3.6,
+     "flow": "GeckoTerminal h1 3/0 buys/sells (+1.6%), h6 24/7 (-2.5%), h24 +0.7%; last full hour (2 PM) 649 ADA vs 2,093 avg prior 5h",
+     "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 391,653",
+     "note": "Above every kill line (391.8k vs 340k mcap, 271 vs 250 on-chain holders, 31,534 vs 28,000 ADA side). Price -3.6% vs entry. Holders up vs the 14:15 mark (270 -> 271), so rule o has no down-mark and no early exit."
     },
     {
-      "id": "f",
-      "added_at": "2026-10-17T11:05:00-04:00",
-      "rule": "Graduation alone isn't a signal: JUICE, FEED, HERO, BEAST all faded to 19-30k ADA with 60-80 holders after pools opened.",
-      "source": "desk history Oct 15-17",
-      "title": "Graduation alone is not a signal",
-      "category": "entry",
-      "evidence": [
-        "JUICE",
-        "FEED",
-        "HERO",
-        "BEAST"
-      ]
+     "at": "2026-10-18T16:10:00-04:00",
+     "mcap_ada": 345665,
+     "price_ada": 0.000345665,
+     "holders": 279,
+     "onchain_holders_ex_pool": 269,
+     "ada_side": 29651,
+     "pct_vs_entry_mcap": -14.9,
+     "flow": "GeckoTerminal h1 3/4 buys/sells (-11.3%), h6 27/10 but price h6 -18.4% (rule o: counts do not count), h24 -9.3%; last full hour (3 PM) 1,226 ADA vs 1,766 avg prior 5h",
+     "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 350,164",
+     "note": "Still above every kill line, but close: 345.7k vs 340k mcap (~1.7% away), 269 vs 250 on-chain holders, 29,651 vs 28,000 ADA side. Price -14.9% vs entry. On-chain holders fell 271 -> 269 (Solada 279 flat), the first down-mark after the 15:15 tick up, so rule o is one mark from an early exit."
     },
     {
-      "id": "g",
-      "added_at": "2026-10-17T11:05:00-04:00",
-      "rule": "Pools with an ADA side under ~11k swing 30-80% on a handful of wallets; holder count is the signal.",
-      "source": "desk history Oct 15-17",
-      "title": "Pools under ~11k ADA side swing on a few wallets",
-      "category": "liq",
-      "evidence": []
+     "at": "2026-10-18T17:12:00-04:00",
+     "mcap_ada": 411871,
+     "price_ada": 0.000411871,
+     "holders": 275,
+     "onchain_holders_ex_pool": 266,
+     "ada_side": 32370,
+     "pct_vs_entry_mcap": 1.4,
+     "flow": "GeckoTerminal h1 11/3 buys/sells (+22.8%), h6 34/13 (+8.4%), h24 +2.9%; last full hour (4 PM) 6,268 ADA vs 1,896 avg prior 5h",
+     "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 411,748",
+     "note": "Above every kill line (411.9k vs 340k mcap, 266 vs 250 on-chain holders, 32,370 vs 28,000 ADA side). Price back above entry (+1.4%). Holders fell at a second mark in a row (on-chain 271 -> 269 -> 266, Solada 279 -> 275), but rule o also needs price below entry, so no early exit. Rule h warning: the bounce came with falling holders."
     },
     {
-      "id": "h",
-      "added_at": "2026-10-17T11:05:00-04:00",
-      "rule": "Price rising with flat holders = Tiny lottery (L2) at best.",
-      "source": "desk history Oct 15-17",
-      "title": "Rising price on flat holders caps at Tiny lottery",
-      "category": "entry",
-      "evidence": []
+     "at": "2026-10-18T18:07:00-04:00",
+     "mcap_ada": 401391,
+     "price_ada": 0.000401391,
+     "holders": 274,
+     "onchain_holders_ex_pool": 266,
+     "ada_side": 31926,
+     "pct_vs_entry_mcap": -1.2,
+     "flow": "GeckoTerminal h1 0/3 buys/sells (-1.5%), h6 26/13 (+10.7%), h24 -1.3%; last full hour (5 PM) 602 ADA vs 6,125 at 4 PM",
+     "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 401,282",
+     "note": "Above every kill line (401.4k vs 340k mcap, 266 vs 250 on-chain holders, 31,926 vs 28,000 ADA side). Price slipped just under entry (-1.2%). On-chain holders held at 266 (Solada 275 -> 274), so the on-chain count the kill line uses did not fall this mark and rule o is not triggered. If on-chain holders drop next mark with price still under entry, rule o closes it."
     },
     {
-      "id": "i",
-      "added_at": "2026-10-17T11:05:00-04:00",
-      "rule": "Linked flip pair u8a2m6+u978t4 and snipers u9w6dd/uytg09zr/uyyyjqps in the first block = rotation risk; watch whether they sell into the run.",
-      "source": "desk history Oct 15-17",
-      "title": "Flip pair and first-block snipers mean rotation risk",
-      "category": "swarm",
-      "evidence": []
+     "at": "2026-10-18T19:08:00-04:00",
+     "mcap_ada": 379540,
+     "price_ada": 0.00037954,
+     "holders": 275,
+     "onchain_holders_ex_pool": 266,
+     "ada_side": 31054,
+     "pct_vs_entry_mcap": -6.6,
+     "flow": "GeckoTerminal h1 0/3 buys/sells (-4.3%), h6 20/15 (+2.9%), h24 -2.5%; last full hour (6 PM) 867 ADA vs 599 at 5 PM",
+     "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market",
+     "note": "Above every kill line (379,540 vs 340k mcap, 266 vs 250 on-chain holders, 31,054 vs 28,000 ADA side). Price is under entry (-6.6%), but on-chain holders held at 266 for a second mark (Solada 274 -> 275), so rule o is not triggered. If on-chain holders drop at the next two marks with price still under entry, rule o closes it."
     },
     {
-      "added_at": "2026-10-17T11:25:00-04:00",
-      "id": "j",
-      "rule": "First-block sniper full exit = kill trigger; IAGONAUT faded 47.8k→32.2k within ~45 min after top sniper uytg09zr sold out (Oct 17).",
-      "source": "IAGONAUT Oct 17",
-      "title": "Exit when the first-block sniper sells out",
-      "category": "kill",
-      "evidence": [
-        "IAGONAUT"
-      ]
+     "at": "2026-10-18T19:15:00-04:00",
+     "mcap_ada": 384310,
+     "price_ada": 0.00038431,
+     "holders": 275,
+     "onchain_holders_ex_pool": 266,
+     "ada_side": 30650,
+     "pct_vs_entry_mcap": -5.4,
+     "flow": "GeckoTerminal h1 1/5 buys/sells (price h1 -4.6%), h6 21/16 (-1.2%), h24 -0.9%; pool reserve ~$13.4k",
+     "source": "desk run: Solada /api/market (pool-priced) 384,310 ADA at ~7:14 PM; on-chain holders from 7:08 PM pulse (Koios stake-grouped ex pool); ADA side from GeckoTerminal reserve / 2 at ADA $0.2188",
+     "note": "Above every kill line (384.3k vs 340k mcap, 266 vs 250 holders, ~30.7k vs 28k ADA side). Holders flat at 266 for a third mark, so rule o's two-drop exit is not triggered. Thin evening selling; window runs to Oct 20 10:20 AM."
     },
     {
-      "added_at": "2026-10-17T11:25:00-04:00",
-      "id": "k",
-      "rule": "Holding-tier shape: only names with 120+ holders, ADA-side ≥25k and 6h buys > sells qualify for paper tickets; post-graduation names under ~11k ADA side with 6h price down >40% (HERO -76%, JUICE -41%, ROBIN -55%) are Pass regardless of 24h headline gains.",
-      "source": "run 2026-10-17 11:10",
-      "title": "Holding tier: 120+ holders, 25k ADA side, 6h flow up",
-      "category": "entry",
-      "evidence": [
-        "HERO",
-        "JUICE",
-        "ROBIN"
-      ]
+     "at": "2026-10-18T20:13:00-04:00",
+     "mcap_ada": 414222,
+     "price_ada": 0.000414222,
+     "holders": 275,
+     "onchain_holders_ex_pool": 266,
+     "ada_side": 32445,
+     "pct_vs_entry_mcap": 2.0,
+     "flow": "GeckoTerminal h1 3/4 buys/sells (+15.0%), h6 21/18 (+10.1%), h24 +34.1%; last full hour (7 PM) 1,094 ADA vs 859 at 6 PM",
+     "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market",
+     "note": "Above every kill line (414,222 vs 340k mcap, 266 vs 250 on-chain holders, 32,445 vs 28,000 ADA side). Price is back above entry (+2.0%) on an 8 PM pop, while on-chain holders held at 266 for a fourth mark, so rule o is not in play."
     },
     {
-      "added_at": "2026-10-17T13:45:00-04:00",
-      "id": "l",
-      "rule": "Promo-pop entries: don't ticket a name whose last 6h gain came from a promo/perk announcement on flat holders. Wait for the pullback and a re-hold. BOLT opened at 530k right after the copy-trade-bot promo (+12%) and hit its 450k kill within ~2h (-20.6%) while holders barely moved.",
-      "source": "BOLT-20261017-1125 close",
-      "title": "Skip promo-pop gains on flat holders",
-      "category": "entry",
-      "evidence": [
-        "BOLT"
-      ]
+     "at": "2026-10-18T21:13:00-04:00",
+     "mcap_ada": 438410,
+     "price_ada": 0.00043841,
+     "holders": 274,
+     "onchain_holders_ex_pool": 265,
+     "ada_side": 33409,
+     "pct_vs_entry_mcap": 7.9,
+     "flow": "GeckoTerminal h1 3/3 buys/sells (+2.5%), h6 20/21 (+16.9%), h24 +27.7%; last full hour (8 PM) 5,849 ADA vs 1,094 at 7 PM",
+     "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market",
+     "note": "Above every kill line (438,410 vs 340k mcap, 266 vs 250 on-chain holders, 33,409 vs 28,000 ADA side). Price is above entry (+7.9%) after a busy 8 PM hour; on-chain holders slipped 266 -> 265, but with price above entry rule o is not in play."
     },
     {
-      "added_at": "2026-10-17T13:45:00-04:00",
-      "id": "m",
-      "rule": "Team airdrops inflate holder counts: holders gained during a team airdrop window (CLOVE 3M+ airdrop, Oct 17) don't count toward rule k or L3 holder growth.",
-      "source": "CLOVE Oct 17",
-      "title": "Team airdrop holders don't count as growth",
-      "category": "sybil",
-      "evidence": [
-        "CLOVE"
-      ]
+     "at": "2026-10-18T21:25:00-04:00",
+     "mcap_ada": 424750,
+     "price_ada": 0.00042475,
+     "holders": 274,
+     "onchain_holders_ex_pool": 266,
+     "ada_side": 32899,
+     "pct_vs_entry_mcap": 4.6,
+     "flow": "GeckoTerminal h1 2/3 buys/sells (+1.0%), h6 19/21 (+11.3%), h24 +29.4%; vol h6 ~$3.5k",
+     "source": "desk run: Minswap V2 pool UTxO via Blockfrost (~9:24 PM), Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 438,265",
+     "note": "Above every kill line (424,750 vs 340k mcap, 266 vs 250 on-chain holders, 32,899 vs 28,000 ADA side). Gave back ~3% from the 9:13 PM pulse mark (438.4k) but still +4.6% vs entry. On-chain holders back to 266; swarm keys uytg09zr, u9q3xusf, u9rwdkfjtr, uyetfdape9 still hold (no first-block full exit, rule j clear). Rule o not in play (price above entry). Window to Oct 20 10:20 AM."
     },
     {
-      "added_at": "2026-10-17T13:45:00-04:00",
-      "id": "n",
-      "rule": "Solana-side snipe hunt: Solada's holder count for Solana-side coins mixes both chains (CORE shows 119 on Solada vs ~35 Solana holders on pump.fun). Score Solana traction on pump.fun/Helius Solana-native holders, excluding the Solada escrow wallet HCYvN1... and deployer A1qaJW....",
-      "source": "run 2026-10-17 13:20",
-      "title": "Score Solana-side coins on native holders",
-      "category": "sybil",
-      "evidence": [
-        "CORE"
-      ]
+     "at": "2026-10-18T22:12:00-04:00",
+     "mcap_ada": 398054,
+     "price_ada": 0.000398054,
+     "holders": 276,
+     "onchain_holders_ex_pool": 267,
+     "ada_side": 29239,
+     "pct_vs_entry_mcap": -2.0,
+     "flow": "GeckoTerminal h1 6/4 buys/sells (-5.7%), h6 23/21 (+23.0%), h24 +7.0%; last full hour (9 PM) 3,633 ADA vs 5,828 at 8 PM",
+     "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost, Koios asset_addresses (stake-grouped, ex pool), Solada /api/market",
+     "note": "Above every kill line (398,054 vs 340k mcap, 267 vs 250 on-chain holders, 29,239 vs 28,000 ADA side), but the ADA side is now only about 1.2k above its line: both pool sides fell since 9:13 PM (invariant down ~16%), so liquidity was withdrawn. Price -2.0% vs entry; on-chain holders rose 266 -> 267, so rule o is not in play."
     },
     {
-      "added_at": "2026-10-17T19:18:00-04:00",
-      "id": "o",
-      "rule": "Count-based flow and holder leaks: 'buys > sells' counts only if h6 price change is also >= -10% (FTR showed 2,665 buys/1,584 sells over h6 while price fell 34%; BOLT 104/49 at -14.5%). Close an open ticket early when holders fall at two marks in a row and price is below entry, instead of waiting for the kill line: FTR bled 18,434 -> 18,111 -> 17,599 holders into its -34.5% kill, and CLOVE 128 -> 126 -> 123 (closed -12.7%).",
-      "source": "FTR-DFMt-20261017-1340 close (pump arm) + CLOVE-20261017-1125 close",
-      "title": "Exit after two holder drops below entry",
-      "category": "kill",
-      "evidence": [
-        "FTR",
-        "BOLT",
-        "CLOVE"
-      ]
-    },
-    {
-      "added_at": "2026-10-17T21:18:00-04:00",
-      "id": "p",
-      "rule": "Swarm launchers: early-swarm keys now launch coins themselves. uyt8xs9q (early in CRAWJI) launched PPC at 8:37 PM with u9w6dd/uxfernv7/uxz6fvju in its first blocks; u9rwdkfjtr launched HUMAN and DINO 8 min apart and uxz5cts5ww launched RED and RBULL 6 min apart, with flip pair u8a2m6+u978t4 early in all four. A launch whose launcher is a swarm key, or with 2+ swarm keys in its first 10 buyers, is L1 until it shows 60+ holders outside the swarm list.",
-      "source": "run 2026-10-17 21:18 (9 of 9 new Cardano launches swarm-sniped, all back to 0-1 holders)",
-      "title": "Swarm-launched coins stay Pass until 60 outside holders",
-      "category": "swarm",
-      "evidence": [
-        "CRAWJI",
-        "PPC",
-        "HUMAN",
-        "DINO",
-        "RED",
-        "RBULL"
-      ]
-    },
-    {
-      "added_at": "2026-10-17T21:18:00-04:00",
-      "id": "q",
-      "rule": "Solana-side snipe hunt: team-driven King/Queen-of-the-hill pushes move the curve and Solada's mixed holder count, not Solana-native holders. MISS went 68.8% -> 83.7% curve and 90 -> 106 Solada holders on its own team's 'Queen of the hill' posts, but only 8 -> 17 Solana-native holders. An early-snipe ticket needs 50+ Solana-native holders (rule n) and 20%+ native growth between two runs, not curve % alone.",
-      "source": "MISS 2026-10-17 19:18 -> 21:18",
-      "title": "Curve pushes need native holder growth, not curve %",
-      "category": "entry",
-      "evidence": [
-        "MISS"
-      ]
-    },
-    {
-      "added_at": "2026-10-17T21:18:00-04:00",
-      "id": "r",
-      "rule": "Wallet tracking: Solada holder-reward claims add tokens (a single claim can return the platform token plus several reward tokens for a small net ADA cost). Check whether a balance increase came from a reward-claim tx before calling it a buy.",
-      "source": "desk observation 2026-10-17",
-      "title": "Rule out reward claims before reading a balance increase",
-      "category": "review",
-      "evidence": []
-    },
-    {
-      "added_at": "2026-10-17T21:18:00-04:00",
-      "id": "daily-2026-10-17",
-      "rule": "Day review: 2 Solada paper closes (BOLT -20.6%, CLOVE -12.7%), both opened at L3 after a 6h pop and both lost to holders that didn't grow. Every ticket today was entered after a run-up; the next ticket should come after a pullback that holders survive (rule l), and rule o's two-mark holder exit cut CLOVE's loss. Graduates keep fading to 20-35k ADA unless holders keep climbing.",
-      "source": "daily rule update, last run of 2026-10-17",
-      "title": "Oct 17 review: wait for a pullback that holders survive",
-      "category": "review",
-      "evidence": [
-        "BOLT",
-        "CLOVE"
-      ]
-    },
-    {
-      "id": "s",
-      "added_at": "2026-10-18T21:15:00-04:00",
-      "title": "Count a whale's repeat clips as one buyer",
-      "category": "sybil",
-      "evidence": [
-        "SER"
-      ],
-      "rule": "Repeated same-size buys from one tracked wallet are one buyer, not flow. The founder whale bought SER in five identical 71-ADA clips (7:23-7:59 PM, ~5.99M SER, now ~5.5% of supply) while SER's pool slid 11.0k -> 10.6k ADA, holders went 68 -> 66 and the pool then went a full hour with no trades. Don't count one wallet's clips toward 6h buys > sells (rule k/o) or holder growth.",
-      "source": "run 2026-10-18 21:15 (founder-whale watch)"
-    },
-    {
-      "id": "daily-2026-10-18",
-      "added_at": "2026-10-18T21:15:00-04:00",
-      "title": "Oct 18 review: the pullback re-entry is the first green ticket",
-      "category": "review",
-      "evidence": [
-        "BOLT",
-        "SER",
-        "MISS",
-        "CLOVE"
-      ],
-      "rule": "Day review: no Solada closes today (book 0-2). The only ticket opened today, BOLT L2 after a pullback that holders survived (rule l / daily-2026-10-17), is the first green Solada mark: 406k entry, low mark -10.2% at 1:20 PM, now +4.6% to +7.9% with on-chain holders flat at 263-266 and every kill line clear. So entering after a survived pullback beat yesterday's run-up entries, but flat holders still cap it at L2 (rule h). SER graduated at 4:27 PM into a swarm-held pool and drained within hours (rule p). MISS added 9 Solana-native holders in 2h (23 -> 32) on giveaway/promo posts; confirm that growth holds at the next run before it counts toward rule q. No threshold change.",
-      "source": "daily rule update, last run of 2026-10-18"
-    },
-    {
-      "id": "t",
-      "added_at": "2026-10-18T21:50:00-04:00",
-      "rule": "Solana-native holder counts on Solada cross-chain coins swing by several holders from hour to hour, so one reading is not growth. MISS went 11 -> 18 -> 24 -> 23 -> 19 -> 32 natives across the 12:51-9:13 PM pulses on Oct 18, giving back 5 between 7 and 8 PM before jumping 13 on giveaway posts. For rule q (and any Solana-side snipe), use the lowest native count of the last three hourly pulses, and count growth only when it holds on two consecutive pulses.",
-      "source": "daily learning brief 2026-10-18 (hourly pulse review)",
-      "title": "Native holder growth must hold across two pulses",
-      "category": "sybil",
-      "evidence": [
-        "MISS",
-        "CORE"
-      ]
-    },
-    {
-      "id": "u",
-      "added_at": "2026-10-19T07:50:00-04:00",
-      "title": "Confirm an ADA-side kill caused by an LP pull",
-      "category": "kill",
-      "evidence": [
-        "BOLT"
-      ],
-      "rule": "Liquidity pulls are not selling. BOLT's paper ticket closed at 362k (-10.8%) at 11:12 PM Oct 18 when the pool ADA side fell 33.4k -> 27.9k, under its 28k line, because LP was withdrawn (both pool sides fell, invariant down ~16%) while on-chain holders held at 266 and mcap stayed above 340k. By 7:50 AM Oct 19 BOLT was back to ~446k pool mcap with the ADA side at ~31.0k and 271 holders (+23% vs the exit, +9.7% vs entry). When the ADA-side line breaks because both pool sides shrank and holders are flat or rising, confirm it on the next pulse before closing; an ADA-side drop driven by net selling (token side up, ADA side down) still closes at once.",
-      "source": "desk run 2026-10-19 07:50 (review of BOLT-20261018-1020 close)"
-    },
-    {
-      "id": "v",
-      "title": "Fresh graduates open on a thin pool",
-      "category": "kill",
-      "evidence": [
-        "RAIN"
-      ],
-      "rule": "Solada curves graduate with about 10.3k ADA, so every fresh graduate opens under rule g's ~11k ADA side, and curve buyers sell into the new pool. RAIN was ticketed at L3 on a 92.9% curve re-hold, graduated at 10:36 AM Oct 19, peaked near 70.9k ADA, then fell to 12.2k by 1:08 PM (-72.9% close) and 5.5k by 1:54 PM with holders 72 -> 44. Pre-graduation curve tickets now close on the first post-graduation holder drop below entry (no second mark), and coins under about 3 hours past graduation stay L2 at most until the pool ADA side is 15k+ and holders survive a first post-graduation fade.",
-      "added_at": "2026-10-19T14:00:00-04:00"
-    },
-    {
-      "id": "w",
-      "title": "Solana-side bonds shed natives too",
-      "category": "review",
-      "evidence": [
-        "MISS"
-      ],
-      "rule": "Rule v holds on the Solana side. MISS bonded on pump.fun around 3:20 PM Oct 19 after a 93% -> 99% curve run, and Solana-native holders fell 38 -> 29 within about 30 minutes while the first post-bond hour printed 21 buys / 35 sells (-6.2%). A pump.fun bond is a liquidity event for curve buyers, not proof of new demand. Solana-side names stay L2 for the first 2 hours after bonding, and an early-snipe or post-bond ticket needs native holders back above the pre-bond peak plus rule q's 50+ natives.",
-      "added_at": "2026-10-19T16:00:00-04:00"
-    },
-    {
-      "id": "x",
-      "added_at": "2026-10-19T19:00:00-04:00",
-      "source": "Snek Sentinel 7 PM run, Oct 19 (Blockfrost round-trip study)",
-      "title": "Late swarm entries are not a signal",
-      "category": "swarm",
-      "evidence": [
-        "BRO",
-        "DEXY",
-        "IAGONE",
-        "GUINEA",
-        "BESSTIVE",
-        "QUIN"
-      ],
-      "rule": "Swarm and sweep keys make their money in the first ~15 minutes after go-live and sell into the first run. Across BRO, DEXY (first 300 trades), IAGONE, GUINEA and BESSTIVE on Oct 19, the 28 closed swarm round trips that entered within 15 minutes won 25 times (~4.7k ADA in -> ~9.9k out, median hold 19 min, median +49 ADA). The 18 later entries won 7 times (median -23 ADA; the total stayed positive only because of two DEXY exits). QUIN's five swarm keys were all out within 13 minutes and its curve went back to 0%. A swarm key buying after the first 15 minutes adds nothing to a name's score. A launch whose early swarm keys have all left by +15 min stays Pass (with rule p)."
-    },
-    {
-      "id": "y",
-      "added_at": "2026-10-19T21:00:00-04:00",
-      "source": "Snek Sentinel 9 PM run, Oct 19 (pulse history review)",
-      "title": "Thin-pool rebounds need two pulses of holder growth",
-      "category": "review",
-      "evidence": [
-        "DEXY",
-        "SER"
-      ],
-      "rule": "On graduated pools with an ADA side under ~17k, one pulse of holder growth is not a re-hold. On Oct 19 DEXY bounced three times (64.9k -> 97.1k -> 126.7k ADA) and gave back 16% within the hour after the 8:13 PM peak (holders 81 -> 78, h1 5 buys / 9 sells); SER ran 58.3k -> 145.9k and faded to 109.2k with holders 87 -> 77. Before raising such a name above L2, require holder growth at two pulses in a row with the ADA side also rising (the Cardano-side twin of rule t). A single-pulse pop on a thin pool stays L2."
-    },
-    {
-      "id": "daily-2026-10-19",
-      "added_at": "2026-10-19T21:00:00-04:00",
-      "source": "Snek Sentinel 9 PM run, Oct 19 (day review)",
-      "title": "Oct 19 review: the holding gate kept the book out of whipsaws",
-      "category": "review",
-      "evidence": [
-        "RAIN",
-        "DEXY",
-        "SER",
-        "BOLT"
-      ],
-      "rule": "Day review: one Solada close today, RAIN -72.9% (a fresh graduate on a thin pool, rule v), so the book is 0-4 (avg -29.3%). No ticket opened after 10 AM because nothing cleared rule k, and that kept the book out of DEXY's and SER's +/-30% swings (rule y). The day's clearest edge was timing, not shape: swarm keys that entered within 15 minutes won 25 of 28 round trips (rule x), which a 100-ADA paper ticket on a two-hour cadence can't capture. Keep rule k as the ticket gate; a paper copy test needs per-block entry prices first."
-    },
-    {
-      "id": "z",
-      "added_at": "2026-10-19T21:55:00-04:00",
-      "source": "Snek Sentinel daily learning brief, Oct 19 (ticket marks review)",
-      "title": "Move the kill line to entry after a big paper gain on a thin pool",
-      "category": "kill",
-      "evidence": [
-        "RAIN"
-      ],
-      "rule": "Once a ticket on a pool with an ADA side under ~15k marks +50% or more, its kill line moves up to the entry price. RAIN marked +57.9% at 12:15 PM Oct 19 (70.9k ADA pool mcap, 12.3k side, 72 holders), was already below entry by the 12:40 PM pulse (38.9k, -13.4%, holders 68, side 9.2k), and closed at the 1:08 PM pulse at -72.9% (12.2k) because the original -30% line sat at 31.4k. With the line at entry it would have closed at the 12:40 mark near -13%. The original kill lines still apply underneath; this only tightens them."
-    },
-    {
-      "id": "aa",
-      "added_at": "2026-10-20T10:15:00-04:00",
-      "source": "Snek Sentinel 10 AM ET run, Oct 20",
-      "title": "Zero-holder copycat tickers are farm noise, not peak attention",
-      "category": "sybil",
-      "evidence": [
-        "DEXY",
-        "SER"
-      ],
-      "rule": "Rule c only counts copycats that pick up real holders or volume. Repeat launcher uy3gz02eqt put out two SER and two DEXY copies (plus BLACK, DOGE, BAT, POLS) between 9:22 and 11:45 PM Oct 19; each was a 4-10 trade round trip that ended at 0 holders within ~3 minutes (launcher in at +1 min, flip pair u978t4 + u8a2m6 in at +2-3 min, everyone out by +3 min). The originals didn't peak: DEXY went 106.8k -> 140.1k ADA (78 -> 94 on-chain holders) and SER 109.2k -> 155.0k (77 -> 98) by 10:15 AM Oct 20. Treat zero-holder copies from farm launchers as swarm activity (rules i, p), not as a top signal for the original."
+     "at": "2026-10-18T23:12:00-04:00",
+     "mcap_ada": 362467,
+     "price_ada": 0.000362467,
+     "holders": 275,
+     "onchain_holders_ex_pool": 266,
+     "ada_side": 27872,
+     "pct_vs_entry_mcap": -10.8,
+     "flow": "GeckoTerminal h1 1/2 buys/sells (-4.5%), h6 13/20 (-7.3%), h24 +12.8%; last full hour (10 PM) 1,307 ADA vs 3,640 at 9 PM",
+     "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost (~11:14 PM ET), Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 362,349",
+     "note": "Kill line hit: ADA side 27,872 is under the 28,000 line (29,239 at 10:12 PM, 33,409 at 9:13 PM). Mcap 362,467 vs 340k and on-chain holders 266 vs 250 were still above their lines. Closed at this mark."
     }
-  ],
-  "summaries": [
+   ],
+   "closed_at": "2026-10-18T23:12:00-04:00",
+   "exit": {
+    "mcap_ada": 362467,
+    "price_ada": 0.000362467,
+    "holders": 275,
+    "onchain_holders_ex_pool": 266,
+    "ada_side": 27872,
+    "source": "hourly pulse: Minswap V2 pool UTxO via Blockfrost (~11:14 PM ET), Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 362,349; GeckoTerminal trades"
+   },
+   "exit_reason": "Kill line hit: the pool ADA side fell to 27,872, under the 28,000 line, after liquidity was pulled from the pool around 9-10 PM (33.4k -> 29.2k -> 27.9k in two hours). Mcap (362.5k vs 340k) and on-chain holders (266 vs 250) were still above their lines; rule o did not fire because holders were flat, not falling twice.",
+   "result": {
+    "unit": "ADA",
+    "pct": -10.8,
+    "pnl": -10.8
+   },
+   "review": {
+    "worked": [
+     "Entering after a pullback that holders survived (rule l) gave the book its first green marks: low -10.2% at 1:20 PM, high +7.9% at 9:13 PM",
+     "The ADA-side kill line caught the liquidity pull before the mcap or holder lines were hit"
+    ],
+    "failed": [
+     "On-chain holders stayed flat at 263-267 the whole time, so the bounce never had new demand behind it (rule h)",
+     "Liquidity left the pool after 9 PM while swarm keys uytg09zr and u9q3xusf and launcher keys u9rwdkfjtr and uyetfdape9 still held, and hourly volume shrank from ~5.8k to ~1.3k ADA"
+    ]
+   }
+  },
+  {
+   "id": "RAIN-7cc1-20261019-1000",
+   "ticker": "RAIN",
+   "name": "RAIN (RAIN-3)",
+   "side": "cardano",
+   "launchpad": "solada.fun",
+   "chain": "cardano",
+   "asset_id": "7cc11ddeba48ac007c6af09715aebbc188fe0032563ba99207f0fc840014df105241494e",
+   "solada_id": "draft-rain-3",
+   "opened_at": "2026-10-19T10:00:00-04:00",
+   "window_ends_at": "2026-10-21T10:00:00-04:00",
+   "size": 100,
+   "level": 3,
+   "entry_type": "pullback re-hold (pre-graduation curve)",
+   "status": "closed",
+   "entry": {
+    "mcap_ada": 44893,
+    "curve_pct": 92.9,
+    "curve_ada": 9610,
+    "holders_onchain": 67,
+    "holders_solada": 65,
+    "top10_pct": 28.23,
+    "top1_pct": 3.99,
+    "price_basis": "Solada curve marketCapLovelace",
+    "source": "Solada /api/launches + Koios asset_addresses (~10:09 AM ET)"
+   },
+   "thesis": [
+    "Holder density from nothing: 5 holders at 3 AM to 63 on-chain by 9:52 AM, crowned King of the Hill at 92.7% (8:57 AM)",
+    "Survived its first fade: curve 92.7% -> 83.9% on 9 AM selling (~3.75k ADA out vs ~2.1k in), then back to 92.9% by 10:09 with holders 63 -> 67 (rule a, daily-2026-10-18 pullback lesson)",
+    "No sniper overhang: first-block keys uytg09zr, u8a2m6, uyt8xs9q, u97c3csuc5 and the launcher already sold out; top-10 28.2%, top-1 4.0%",
+    "Busiest name on #soladafun-buys 7:58-10:02 AM (50 buys, ~9.5k ADA) with a 1,000 ADA buy at 8:48"
+   ],
+   "risks": [
+    "Discord chat called it a 'scam token' / 'farmed' (unverified)",
+    "Graduation at 100% moves it to a Minswap pool whose LP tokens sit unburned in Solada's wallet, so liquidity depends on trusting Solada",
+    "Graduation alone is not a signal (rule f): many graduates faded to 19-30k ADA"
+   ],
+   "kill_line": {
+    "text": "Before graduation: curve under 80% or on-chain holders under 55. After graduation: pool ADA side under 8k or on-chain holders under 55, or pool mcap under 31k ADA (-30%).",
+    "curve_below": 80,
+    "holders_below": 55,
+    "post_grad_ada_side_below": 8000,
+    "mcap_ada_below": 31400
+   },
+   "custody": "Cardano native token in the holder wallet (non-custodial); post-graduation LP held unburned by Solada",
+   "rules_applied": [
+    "a",
+    "f",
+    "h",
+    "i",
+    "j",
+    "l",
+    "p",
+    "daily-2026-10-18"
+   ],
+   "marks": [
     {
-      "at": "2026-10-17T11:05:00-04:00",
-      "type": "seed_skipped",
-      "note": "Both seed candidates checked at 11:03-11:05 -04:00 and neither was opened. A paper entry shouldn't open below its own kill line.",
-      "data_sources": [
-        "https://www.solada.fun/api/market (at 2026-10-17T11:03:29-04:00)",
-        "https://www.solada.fun/api/launches",
-        "Blockfrost: Minswap V2 pool UTxO, holder list, swaps in the last 6h"
-      ],
-      "candidates": [
-        {
-          "ticker": "IAGONAUT",
-          "side": "cardano",
-          "launchpad": "solada",
-          "asset_id": "4849e0d9e18061861a88acea1df431b3e39cdf65dfeee22ba024315b0014df104941474f4e415554",
-          "intended_level": 2,
-          "intended_stop": {
-            "text": "mcap < ~40k ADA or holders < 60 or top holder uytg09zr sells out",
-            "mcap_ada_below": 40000,
-            "holders_below": 60,
-            "wallet_exit": "stake1uytg09zr..."
-          },
-          "snapshot": {
-            "solada_mcap_ada": 35977,
-            "pool_mcap_ada": 32208,
-            "pool_price_ada": 3.2208e-05,
-            "pool_ada_side": 8607,
-            "solada_holders": 67,
-            "onchain_owners_ex_pool": 66,
-            "graduated_at": "2026-10-17T08:57:19-04:00"
-          },
-          "pool_flow_6h": {
-            "swaps": 59,
-            "buys": 34,
-            "sells": 25,
-            "net_ada_into_pool": -1646,
-            "path": "~47.8k at 10:50 -> 37.2k after a 1,216 ADA sell at 10:55 -> 32.2k at 11:03"
-          },
-          "reason": "Two of the three stop conditions were already hit when seeding: pool mcap 32.2k ADA (below 40k), and uytg09zr no longer holds any (not among on-chain holders). Holders at 67 were still above 60. Sniper uyyyjqps (2.3%) and flip-pair wallet u8a2m6 (1.0%) still hold. Rules (g) and (i) applied."
-        },
-        {
-          "ticker": "FEED",
-          "side": "cardano",
-          "launchpad": "solada",
-          "asset_id": "00e049b5a595740efcf34e90c4a209705f75c41d349c7e1a5a9cd5af0014df1046454544",
-          "intended_level": 2,
-          "intended_stop": {
-            "text": "mcap < 40k ADA or holders < 64",
-            "mcap_ada_below": 40000,
-            "holders_below": 64
-          },
-          "snapshot": {
-            "solada_mcap_ada": 40120,
-            "pool_mcap_ada": 40129,
-            "pool_price_ada": 4.0129e-05,
-            "pool_ada_side": 9266,
-            "solada_holders": 69,
-            "graduated_at": "2026-10-16T20:57:17-04:00"
-          },
-          "pool_flow_6h": {
-            "swaps": 38,
-            "buys": 16,
-            "sells": 20,
-            "net_ada_into_pool": 478,
-            "path": "~50.5k at 10:28 -> 47.8k at 10:38 -> 40.1k at 10:57 after a 741 ADA sell at 10:41"
-          },
-          "reason": "Its shape no longer looks strongest-in-class. The bounce to ~55k faded to 40.1k, right on the stop line. Sells outnumber buys 20 to 16 over 6h, and holders are flat at 69. Rules (f), (g) and (h) applied."
-        }
-      ]
+     "at": "2026-10-19T10:15:00-04:00",
+     "mcap_ada": 50000,
+     "curve_pct": 100.0,
+     "curve_ada": 10344,
+     "holders_onchain": 68,
+     "holders_solada": 67,
+     "pct_vs_entry_mcap": 11.4,
+     "result": {
+      "pnl": 11.4,
+      "pct": 11.4,
+      "unit": "ADA"
+     },
+     "kill_line_hit": false,
+     "note": "Curve filled to 100% (graduation pending) with on-chain holders 67 -> 68; above every pre-graduation line (curve 100% vs 80%, holders 68 vs 55). No swarm key holds. After graduation the post-grad lines apply (ADA side 8k, mcap 31.4k).",
+     "source": "hourly pulse: Solada /api/launches curve, Koios asset_addresses (stake-grouped, ex curve)"
     },
     {
-      "at": "2026-10-17T11:25:00-04:00",
-      "type": "run",
-      "note": "Opened BOLT and CLOVE L3 paper tickets (100 ADA each). Passed IAGONAUT (below kill, rule j), HERO/JUICE/ROBIN (rule k). FEED stays L2 at its 40k line, no ticket."
+     "at": "2026-10-19T11:30:00-04:00",
+     "mcap_ada": 70729,
+     "curve_pct": null,
+     "graduated": "minswap-v2",
+     "pool_ada": 12322,
+     "holders_onchain": 71,
+     "holders_solada": 69,
+     "pct_vs_entry_mcap": 57.6,
+     "result": {
+      "pnl": 57.6,
+      "pct": 57.6,
+      "unit": "ADA"
+     },
+     "kill_line_hit": false,
+     "note": "Graduated to Minswap; post-graduation lines now apply and all are clear: pool ADA side 12,322 vs 8,000, on-chain holders 71 vs 55, pool mcap 70,729 vs 31,400 ADA. GT h1 18 buys / 3 sells; no swarm key holds.",
+     "source": "hourly pulse: Blockfrost Minswap pool UTxO reserves, Koios asset_addresses (stake-grouped, ex pool), GeckoTerminal pool"
     },
     {
-      "at": "2026-10-17T13:45:00-04:00",
-      "type": "run",
-      "note": "Closed BOLT at its 450k mcap kill (-20.6%, 421k). CLOVE marked -5.7% (297k pool mcap, 128 holders), still open. No new tickets: BTC/FEED fail rule k (holders <120, ADA side <25k); STARS fails insider filter; no Solana-side name qualifies. Rules l, m, n added."
+     "at": "2026-10-19T12:15:00-04:00",
+     "mcap_ada": 70904,
+     "graduated": "minswap-v2",
+     "pool_ada": 12322,
+     "holders_onchain": 72,
+     "holders_solada": 70,
+     "pct_vs_entry_mcap": 57.9,
+     "result": {
+      "pnl": 57.9,
+      "pct": 57.9,
+      "unit": "ADA"
+     },
+     "kill_line_hit": false,
+     "note": "Post-graduation lines clear: pool ADA side ~12.3k vs 8k (11:30 pulse read; GeckoTerminal shows ~$5.6k reserve on the Minswap pool), holders 72 on-chain vs 55, mcap 70.9k vs 31.4k. No swarm key holding. Keep; graduation LP stays unburned in Solada's wallet.",
+     "source": "Solada /api/market quote, Blockfrost asset holders, pulse 11:30"
     },
     {
-      "at": "2026-10-17T15:30:00-04:00",
-      "type": "run",
-      "note": "Ad-hoc run ('run the tape now'). CLOVE marked -16.9% (261.7k pool mcap, 126 Solada / 116 on-chain holders, ADA side 24.1k). Level cut to L2, ticket open, 4.7% above its 250k kill. No new Solada tickets: no name passes rule k. BTC (40.0k after a 4% holder exited at 3:27 PM, 70 holders, 9.3k ADA side) fails holders and ADA side. Kill lines hit (level only, no tickets): FEED (53-57 holders < 60), GOLFY (49 holders, curve 57.2%), PAWS (on-chain pool mcap 28.4k < 30k). No trade closed, no rule changes."
+     "at": "2026-10-19T12:40:00-04:00",
+     "mcap_ada": 38873,
+     "graduated": "minswap-v2",
+     "pool_ada": 9164,
+     "holders_onchain": 68,
+     "holders_solada": 68,
+     "pct_vs_entry_mcap": -13.4,
+     "result": {
+      "pnl": -13.4,
+      "pct": -13.4,
+      "unit": "ADA"
+     },
+     "kill_line_hit": false,
+     "note": "Post-graduation dump: pool mcap 70.7k -> 38.9k ADA in about an hour (GT h1 -36.6%, m30 -46%), pool ADA side 12,322 -> 9,164. Kill lines still clear (pool 9,164 vs 8,000, holders 68 vs 55, mcap 38,873 vs 31,400). On-chain holders 72 -> 68 is the first drop with price below entry; rule o closes it if the next mark drops again.",
+     "source": "hourly pulse: Blockfrost Minswap pool UTxO reserves, Koios asset_addresses (stake-grouped, ex pool), GeckoTerminal pool"
     },
     {
-      "at": "2026-10-17T19:18:00-04:00",
-      "type": "run",
-      "note": "Closed CLOVE at 274.9k pool mcap (-12.7%) under the new rule o: holders fell 128 -> 126 -> 123 with price below entry after the 5 PM pop (~397k) faded. No new Solada tickets. BOLT meets rule k on counts (264 holders, 31.2k ADA side, h6 104/49), but price is -14.5% h6, so it fails rule o's flow test. JUSTQ is the closest Solana-side name (251 Solana-native holders, +21 since 3:30 PM) but its USDC pool side is ~$5.0k (~22.9k ADA), under rule k's 25k floor. BTC kill hit: flip-pair wallet u8a2m6 fully exited and pool mcap is 25.8k. The insider swarm (u8a2m6/u978t4 + u9kp4sxa/u8x8h2hc, snipers uytg09zr/u9w6dd) was early in 12 of 13 new Cardano launches since 3:30 PM. Rule o added."
-    },
-    {
-      "at": "2026-10-17T21:18:00-04:00",
-      "type": "run",
-      "note": "No open Solada tickets and none opened. JUSTQ's USDC pool side is now ~$5.8k (~26.4k ADA), so it passes rule k depth, but Solana-native holders fell 251 -> 244 and the price is under the 2.11e-5 entry trigger (h1 -9%). CLOVE rebounded to 302k (+10% vs its close) with 117 on-chain / 127 Solada holders, but h6 unique buyers 18 vs sellers 19 and airdrop-inflated holders (rule m) keep it at L2. BOLT 339k, ADA side 29.5k (1.5k above its 28k kill), fails rule o (h6 -12.5%). MISS ran to 83.7% curve on team promo with 17 Solana-native holders (rule q). Rules p, q, r and the daily review added."
-    },
-    {
-      "at": "2026-10-18T10:20:00-04:00",
-      "type": "run",
-      "note": "Opened BOLT-20261018-1020 (L2, 100 ADA) at 406.2k pool mcap as the strongest L2 and the only name passing rule k: a re-hold of 380-461k since midnight after the ~305k low, 263 on-chain holders, ADA side 32.2k, 6h on-chain 33 buys / 13 sells at +0.9%. Kill hits, no tickets: CLOVE (240.9k < 250k at 10:25; 283k by 10:55) and JUSTQ (mcap $15.3k < $16.0k). SURFY (91% curve, King of the Hill, 48 holders) is L1 under rule p. PAWS (87 holders, ADA side ~12k) fails rule k. CORE fails rule q. No trade closed, no rule changes."
-    },
-    {
-      "at": "2026-10-18T13:20:00-04:00",
-      "type": "run",
-      "note": "Afternoon mark only. BOLT L2 ticket still open at 364.7k pool mcap (-10.2% vs 406k entry), above all three kill lines. No new Solada tickets: PAWS (94 holders, ADA side ~12k) and SURFY (51 holders, swarm first-block, ADA side ~6.6k) fail rule k; CLOVE 221k with airdrop-inflated holders stays L1; no L3 shape. No Solana-side early-snipe ticket (CORE closest at 38 native). No closes, no new rules."
-    },
-    {
-      "at": "2026-10-18T19:15:00-04:00",
-      "type": "run",
-      "note": "Sunday evening mark. BOLT L2 ticket marked -5.4% (384.3k Solada pool mcap vs 406k entry), above all kill lines with on-chain holders flat at 266. No new Solada tickets: no L3 shape; SER (graduated 3 PM) is swarm-rotated and draining (rule p); 18 new Cardano/Solana launches since 1 PM all thin or swarm-touched. No Solana-side early-snipe ticket: MISS is King at 90.4% curve but only ~23 Solana-native holders (rules n, q); CORE 35 native; JUSTQ native base 222 is now under 230 and mcap $12.3k under $16k. No closes, no new rules."
-    },
-    {
-      "at": "2026-10-18T21:15:00-04:00",
-      "type": "run",
-      "note": "Last run of Sunday. BOLT L2 ticket marked +4.6% (424.8k on-chain pool mcap vs 406.2k entry; 438.4k at the 9:13 PM pulse), all kill lines clear, swarm keys still holding. No new Solada ticket: no L3 shape and BOLT (the strongest L2) is already open; CLOVE (237.5k, 133 holders) is still under its 250k kill and rule k's 25k ADA side (22.6k); SER is draining (rule p). No new Solada launches since INTERN at 7:16 PM. No Solana-side early-snipe ticket: MISS is closest (32 Solana-native holders, +39% since 7:15 PM, curve 90.75%) but rule q needs 50+ natives; CORE 34; JUSTQ still under both kill lines (223 natives, $11.5k). Added rules s and daily-2026-10-18."
-    },
-    {
-      "at": "2026-10-18T21:15:00-04:00",
-      "type": "weekly",
-      "period": "2026-10-12 to 2026-10-18 (book started 2026-10-17)",
-      "opened": 3,
-      "closed": 2,
-      "wins": 0,
-      "losses": 2,
-      "avg_closed_pct": -16.65,
-      "realized_pnl": -33.3,
-      "unit": "ADA",
-      "best": "BOLT-20261018-1020 open at +4.6% (unrealized); best close CLOVE-20261017-1125 -12.7%",
-      "worst": "BOLT-20261017-1125 -20.6% (kill line, ~2h after a promo pop)",
-      "worked": [
-        "Entering after a pullback that holders survived (BOLT re-entry, rule l / daily-2026-10-17)",
-        "Rule o's two-mark holder exit cut CLOVE to -12.7% before its -20% line",
-        "Rules p and q kept the book out of swarm-launched coins (SER, SURFY, MAC, ZILLA) and team-pushed Solana curves (MISS)"
-      ],
-      "failed": [
-        "L3 entries straight after a 6h pop (BOLT and CLOVE on Oct 17)",
-        "Airdrop-inflated holder counts (CLOVE, rule m)"
-      ],
-      "rule_changes": "Started with rules a-k on Oct 17; added l-r plus daily-2026-10-17 on Oct 17-18, then s and daily-2026-10-18 tonight (21 rules).",
-      "note": "Closed record 0-2 (-33.3 ADA on 200 ADA of tickets). Open: BOLT +4.6%. Smaller average loss than the Pump.fun arm (-16.7% vs -25.9%)."
-    },
-    {
-      "at": "2026-10-19T07:50:00-04:00",
-      "type": "run",
-      "note": "Monday morning. No Solada ticket open or opened. BOLT popped back to ~446k pool mcap (+26% h1 on 3 buys, holders 270 -> 271), above the 362k ticket exit, but flat holders keep it L2 (rule h) and a 1-hour pop is not a re-hold (rule l). SER is the busiest name (80 on-chain holders, ADA side 13.1k) but fails rule k's 25k side. 27 overnight launches, 20 from copycat launcher uyetfdape9 (rule p). No Solana-side snipe (MISS 23 natives, CORE kill hit). Added rule u. Research/lottery/NFA.",
-      "rules_applied": [
-        "h",
-        "k",
-        "l",
-        "m",
-        "n",
-        "o",
-        "p",
-        "q",
-        "s",
-        "t",
-        "u"
-      ]
-    },
-    {
-      "at": "2026-10-19T10:00:00-04:00",
-      "type": "run",
-      "note": "Opened RAIN-7cc1-20261019-1000 (L3, 100 ADA) at 44.9k ADA mcap / 92.9% curve. RAIN (RAIN-3) went from 5 holders at 3 AM to 63 on-chain, was crowned King at 92.7% (8:57 AM), faded to 83.9% on 9 AM selling, then re-held at 92.9% with 67 on-chain holders by 10:09, and all first-block keys and the launcher had already sold out (no overhang). BOLT holds ~456-473k with flow passing rule k but holders flat (271 to 274 on-chain), so rules h and l keep it L2. No Solana-side snipe (MISS 26 natives). Research/lottery/NFA.",
-      "rules_applied": [
-        "a",
-        "b",
-        "h",
-        "j",
-        "k",
-        "l",
-        "n",
-        "p",
-        "q",
-        "r",
-        "s",
-        "t",
-        "u"
-      ]
-    },
-    {
-      "at": "2026-10-19T13:08:00-04:00",
-      "type": "pulse-close",
-      "note": "Closed RAIN-7cc1-20261019-1000 at -72.9% (12,168 ADA pool mcap vs 44,893 entry). Kill line hit: pool mcap under 31,400 and pool ADA side 5,158 under 8,000 after a post-graduation dump driven by net selling; rule o also fired (holders 72 -> 68 -> 59). Research/lottery/NFA."
-    },
-    {
-      "at": "2026-10-19T14:00:00-04:00",
-      "type": "run",
-      "note": "Monday 2 PM run. No Solada ticket open or opened. DEXY graduated in under 2 hours (112.3k ADA pool mcap, 16.0k ADA side, 71 holders, 1 PM hour ~55k ADA) but fails rule k (holders, depth), carries seven swarm keys (rule p) and is a fresh graduate under new rule v, so L2. BOLT 459.5k with flat holders (rules h, l). SER holders 83 -> 78 (rule k). No Solana-side snipe (MISS 18 natives). Added rule v from RAIN's -72.9% close. Research/lottery/NFA.",
-      "rules_applied": [
-        "a",
-        "f",
-        "g",
-        "h",
-        "k",
-        "l",
-        "n",
-        "p",
-        "q",
-        "s",
-        "t",
-        "v"
-      ]
-    },
-    {
-      "at": "2026-10-19T16:00:00-04:00",
-      "type": "run",
-      "note": "Monday 4 PM run. No Solada ticket open or opened. MISS bonded on pump.fun (~3:20 PM) but natives fell 38 -> 29 and the first hour was sell-led (rules n, q, new w). DEXY rebounded to 100.7k ADA pool mcap (14.9k ADA side, 71 holders, h1 +51%) as four swarm keys exited; still under rule k and inside rule v's 3-hour window. SER fading toward its kill line (11.7k ADA side, 75 holders). BOLT flat at 460k. Research/lottery/NFA.",
-      "rules_applied": [
-        "a",
-        "f",
-        "g",
-        "h",
-        "k",
-        "l",
-        "n",
-        "p",
-        "q",
-        "s",
-        "t",
-        "v",
-        "w"
-      ]
-    },
-    {
-      "at": "2026-10-19T17:00:00-04:00",
-      "type": "run",
-      "note": "Monday 5 PM run. No Solada ticket open or opened. MISS hit its kill line on the Solana side (natives 29 -> 24, line 25; h1 10 buys / 26 sells, -22%) as the escrow released tokens into sells (rules n, w). SER bounced (79 holders, 12.4k ADA side) but stays under rule k. DEXY slid to 87.3k ADA (13.7k side, 70 holders) as u8a2m6 exited (rules k, v). BOLT 424.7k on flat holders (rules h, l). BRO's curve ran 17.8% -> 30.5% on 26 holders with a team-fund promo (rule l). Research/lottery/NFA.",
-      "rules_applied": [
-        "a",
-        "e",
-        "f",
-        "g",
-        "h",
-        "i",
-        "k",
-        "l",
-        "n",
-        "p",
-        "q",
-        "s",
-        "t",
-        "v",
-        "w"
-      ]
-    },
-    {
-      "at": "2026-10-19T19:00:00-04:00",
-      "type": "run",
-      "note": "Monday 7 PM run. No Solada ticket open or opened. DEXY is the best shape (72 on-chain holders, 14.2k ADA side, h1 buy-led, first real X thesis) but fails rule k; SER's ~9.4% founder-whale stake counts as one buyer (rule s); BOLT clears k's depth with flat holders (h) and sits 0.3% above its 400k kill line; CLOVE's 20.6k side is under 25k. QUIN and QNLGS were swarm round trips (rule x added). No Solana-side snipe (CORE 27 natives, MISS 22). Research/lottery/NFA.",
-      "rules_applied": [
-        "a",
-        "e",
-        "g",
-        "h",
-        "i",
-        "k",
-        "l",
-        "n",
-        "p",
-        "q",
-        "s",
-        "t",
-        "v",
-        "w",
-        "x"
-      ]
-    },
-    {
-      "at": "2026-10-19T21:00:00-04:00",
-      "type": "run",
-      "note": "Monday 9 PM run. No Solada ticket open or opened. DEXY (106.8k ADA, 78 holders, 15.1k side) and SER (109.2k, 77, 15.3k) faded after their 8 PM bounces and fail rule k (new rule y). BOLT 442.8k on flat holders (h); CLOVE 20.9k side. BRO and WOLF hit their kill lines. No Solana-side snipe (CORE 28 natives). Research/lottery/NFA.",
-      "rules_applied": [
-        "a",
-        "e",
-        "g",
-        "h",
-        "i",
-        "j",
-        "k",
-        "l",
-        "n",
-        "p",
-        "q",
-        "r",
-        "s",
-        "t",
-        "v",
-        "w",
-        "x",
-        "y"
-      ]
-    },
-    {
-      "at": "2026-10-19T21:00:00-04:00",
-      "type": "interim",
-      "period": "2026-10-18 21:15 to 2026-10-19 21:00",
-      "note": "Interim summary (the Pump.fun arm passed 5 closes since the Oct 18 weekly). Solada: 1 opened (RAIN), 2 closed (BOLT-20261018-1020 -10.8%, RAIN-7cc1-20261019-1000 -72.9%), 0 wins, avg -41.9%. All-time 0-4, avg -29.3%, realized -117.0 ADA. Best close: BOLT -10.8% (LP pull, rule u). Worst: RAIN -72.9% (fresh-graduate thin pool, rule v). Rules added since the weekly: u, v, w, x, y.",
-      "opened": 1,
-      "closed": 2,
-      "wins": 0,
-      "losses": 2,
-      "avg_closed_pct": -41.85,
-      "alltime": {
-        "closed": 4,
-        "wins": 0,
-        "avg_closed_pct": -29.25,
-        "realized_pnl": -117.0,
-        "unit": "ADA"
-      }
-    },
-    {
-      "at": "2026-10-20T10:15:00-04:00",
-      "type": "run",
-      "note": "Tuesday 10 AM run (first of the day). No Solada ticket open or opened. Overnight DEXY rose 106.8k -> 140.1k ADA (on-chain holders 78 -> 94, side 17.4k) and SER 109.2k -> 155.0k (77 -> 98, side 18.2k), but both still fail rule k and the growth is a single reading with the hourly pulse paused (rule y). BOLT 522.5k on flat holders 276 with h6 sells leading (h, o). CLOVE 167.9k on a 19.0k side. SHARKY (King of the Hill, 84.1% curve, 65 holders) is pre-graduation (rule v). No Solana-side snipe (CORE 28 natives, curve flat at 72.7%). New rule aa (zero-holder copycats are farm noise). Research/lottery/NFA.",
-      "rules_applied": [
-        "a",
-        "c",
-        "e",
-        "g",
-        "h",
-        "i",
-        "j",
-        "k",
-        "l",
-        "n",
-        "o",
-        "p",
-        "q",
-        "r",
-        "s",
-        "t",
-        "v",
-        "w",
-        "x",
-        "y",
-        "aa"
-      ]
+     "at": "2026-10-19T13:08:00-04:00",
+     "mcap_ada": 12168,
+     "graduated": "minswap-v2",
+     "pool_ada": 5158,
+     "holders_onchain": 59,
+     "holders_solada": 59,
+     "pct_vs_entry_mcap": -72.9,
+     "result": {
+      "pnl": -72.9,
+      "pct": -72.9,
+      "unit": "ADA"
+     },
+     "kill_line_hit": true,
+     "flow": "GeckoTerminal h1 5 buys / 14 sells, price h1 -82.3%, m30 1 buy / 10 sells (-69.8%)",
+     "note": "Kill line hit: pool mcap 12,168 vs the 31,400 line and pool ADA side 5,158 vs 8,000. Net selling, not an LP pull (token side 2.36e14 -> 4.24e14 units while the ADA side fell 9,164 -> 5,158, pool invariant flat), so rule u does not delay the close. On-chain holders 72 -> 68 -> 59 also met rule o. Closed at this mark.",
+     "source": "hourly pulse: Blockfrost Minswap pool UTxO reserves (~1:08 PM ET), Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 12,152, GeckoTerminal pool"
     }
-  ]
+   ],
+   "last_mark": {
+    "at": "2026-10-19T12:15:00-04:00",
+    "mcap_ada": 70904,
+    "graduated": "minswap-v2",
+    "pool_ada": 12322,
+    "holders_onchain": 72,
+    "holders_solada": 70,
+    "pct_vs_entry_mcap": 57.9,
+    "result": {
+     "pnl": 57.9,
+     "pct": 57.9,
+     "unit": "ADA"
+    },
+    "kill_line_hit": false,
+    "note": "Post-graduation lines clear: pool ADA side ~12.3k vs 8k (11:30 pulse read; GeckoTerminal shows ~$5.6k reserve on the Minswap pool), holders 72 on-chain vs 55, mcap 70.9k vs 31.4k. No swarm key holding. Keep; graduation LP stays unburned in Solada's wallet.",
+    "source": "Solada /api/market quote, Blockfrost asset holders, pulse 11:30"
+   },
+   "closed_at": "2026-10-19T13:08:00-04:00",
+   "exit": {
+    "mcap_ada": 12168,
+    "pool_ada": 5158,
+    "holders_onchain": 59,
+    "holders_solada": 59,
+    "graduated": "minswap-v2",
+    "source": "hourly pulse: Blockfrost Minswap pool UTxO reserves (~1:08 PM ET), Koios asset_addresses (stake-grouped, ex pool), Solada /api/market 12,152, GeckoTerminal pool"
+   },
+   "exit_reason": "Kill line hit: after graduating to Minswap, pool mcap fell 70.7k -> 38.9k -> 12.2k ADA, under the 31,400 line, and the pool ADA side fell to 5,158, under the 8,000 line. The drop was net selling (token side up ~80%, ADA side down, invariant flat), not a liquidity pull. Rule o also fired: on-chain holders fell at two marks in a row (72 -> 68 -> 59) with price below entry.",
+   "result": {
+    "pnl": -72.9,
+    "pct": -72.9,
+    "unit": "ADA"
+   },
+   "review": {
+    "worked": [
+     "The pullback re-hold entry before graduation caught the curve fill and a post-graduation peak of +57.9% (12:15 PM)",
+     "Every first-block and swarm key had already sold out, so this was not a swarm dump"
+    ],
+    "failed": [
+     "There was no profit-taking rule: the ticket rode +57.9% to -72.9% in under an hour after graduation",
+     "Graduation into a ~12k ADA Minswap pool left it too thin to absorb holder exits (rule f): two selling waves took the pool mcap from 70.7k to 12.2k"
+    ]
+   }
+  }
+ ],
+ "rules": [
+  {
+   "id": "a",
+   "added_at": "2026-10-17T11:05:00-04:00",
+   "rule": "Watch (L3) needs early holder density that holds through the first fade; an mcap spike alone isn't enough.",
+   "source": "desk history Oct 15-17",
+   "title": "Watch needs holder density that survives the first fade",
+   "category": "entry",
+   "evidence": []
+  },
+  {
+   "id": "b",
+   "added_at": "2026-10-17T11:05:00-04:00",
+   "rule": "KOTH loss + curve progress reversing + holder bleed = Pass (L1).",
+   "source": "desk history Oct 15-17",
+   "title": "Pass on a KOTH loss with curve and holders reversing",
+   "category": "entry",
+   "evidence": []
+  },
+  {
+   "id": "c",
+   "added_at": "2026-10-17T11:05:00-04:00",
+   "rule": "Copycats appearing often mark peak attention for the original.",
+   "source": "desk history Oct 15-17",
+   "title": "Copycats mark peak attention for the original",
+   "category": "entry",
+   "evidence": []
+  },
+  {
+   "id": "d",
+   "added_at": "2026-10-17T11:05:00-04:00",
+   "rule": "Solada headline 24h volume can be stale post-graduation; check real pool flow over the last 6h.",
+   "source": "desk history Oct 15-17",
+   "title": "Check real pool flow, not stale headline volume",
+   "category": "liq",
+   "evidence": []
+  },
+  {
+   "id": "e",
+   "added_at": "2026-10-17T11:05:00-04:00",
+   "rule": "Holders > trades suggests airdrop/bridge/bundle distribution.",
+   "source": "desk history Oct 15-17",
+   "title": "More holders than trades points to airdrop or bundles",
+   "category": "sybil",
+   "evidence": []
+  },
+  {
+   "id": "f",
+   "added_at": "2026-10-17T11:05:00-04:00",
+   "rule": "Graduation alone isn't a signal: JUICE, FEED, HERO, BEAST all faded to 19-30k ADA with 60-80 holders after pools opened.",
+   "source": "desk history Oct 15-17",
+   "title": "Graduation alone is not a signal",
+   "category": "entry",
+   "evidence": [
+    "JUICE",
+    "FEED",
+    "HERO",
+    "BEAST"
+   ]
+  },
+  {
+   "id": "g",
+   "added_at": "2026-10-17T11:05:00-04:00",
+   "rule": "Pools with an ADA side under ~11k swing 30-80% on a handful of wallets; holder count is the signal.",
+   "source": "desk history Oct 15-17",
+   "title": "Pools under ~11k ADA side swing on a few wallets",
+   "category": "liq",
+   "evidence": []
+  },
+  {
+   "id": "h",
+   "added_at": "2026-10-17T11:05:00-04:00",
+   "rule": "Price rising with flat holders = Tiny lottery (L2) at best.",
+   "source": "desk history Oct 15-17",
+   "title": "Rising price on flat holders caps at Tiny lottery",
+   "category": "entry",
+   "evidence": []
+  },
+  {
+   "id": "i",
+   "added_at": "2026-10-17T11:05:00-04:00",
+   "rule": "Linked flip pair u8a2m6+u978t4 and snipers u9w6dd/uytg09zr/uyyyjqps in the first block = rotation risk; watch whether they sell into the run.",
+   "source": "desk history Oct 15-17",
+   "title": "Flip pair and first-block snipers mean rotation risk",
+   "category": "swarm",
+   "evidence": []
+  },
+  {
+   "added_at": "2026-10-17T11:25:00-04:00",
+   "id": "j",
+   "rule": "First-block sniper full exit = kill trigger; IAGONAUT faded 47.8k→32.2k within ~45 min after top sniper uytg09zr sold out (Oct 17).",
+   "source": "IAGONAUT Oct 17",
+   "title": "Exit when the first-block sniper sells out",
+   "category": "kill",
+   "evidence": [
+    "IAGONAUT"
+   ]
+  },
+  {
+   "added_at": "2026-10-17T11:25:00-04:00",
+   "id": "k",
+   "rule": "Holding-tier shape: only names with 120+ holders, ADA-side ≥25k and 6h buys > sells qualify for paper tickets; post-graduation names under ~11k ADA side with 6h price down >40% (HERO -76%, JUICE -41%, ROBIN -55%) are Pass regardless of 24h headline gains.",
+   "source": "run 2026-10-17 11:10",
+   "title": "Holding tier: 120+ holders, 25k ADA side, 6h flow up",
+   "category": "entry",
+   "evidence": [
+    "HERO",
+    "JUICE",
+    "ROBIN"
+   ]
+  },
+  {
+   "added_at": "2026-10-17T13:45:00-04:00",
+   "id": "l",
+   "rule": "Promo-pop entries: don't ticket a name whose last 6h gain came from a promo/perk announcement on flat holders. Wait for the pullback and a re-hold. BOLT opened at 530k right after the copy-trade-bot promo (+12%) and hit its 450k kill within ~2h (-20.6%) while holders barely moved.",
+   "source": "BOLT-20261017-1125 close",
+   "title": "Skip promo-pop gains on flat holders",
+   "category": "entry",
+   "evidence": [
+    "BOLT"
+   ]
+  },
+  {
+   "added_at": "2026-10-17T13:45:00-04:00",
+   "id": "m",
+   "rule": "Team airdrops inflate holder counts: holders gained during a team airdrop window (CLOVE 3M+ airdrop, Oct 17) don't count toward rule k or L3 holder growth.",
+   "source": "CLOVE Oct 17",
+   "title": "Team airdrop holders don't count as growth",
+   "category": "sybil",
+   "evidence": [
+    "CLOVE"
+   ]
+  },
+  {
+   "added_at": "2026-10-17T13:45:00-04:00",
+   "id": "n",
+   "rule": "Solana-side snipe hunt: Solada's holder count for Solana-side coins mixes both chains (CORE shows 119 on Solada vs ~35 Solana holders on pump.fun). Score Solana traction on pump.fun/Helius Solana-native holders, excluding the Solada escrow wallet HCYvN1... and deployer A1qaJW....",
+   "source": "run 2026-10-17 13:20",
+   "title": "Score Solana-side coins on native holders",
+   "category": "sybil",
+   "evidence": [
+    "CORE"
+   ]
+  },
+  {
+   "added_at": "2026-10-17T19:18:00-04:00",
+   "id": "o",
+   "rule": "Count-based flow and holder leaks: 'buys > sells' counts only if h6 price change is also >= -10% (FTR showed 2,665 buys/1,584 sells over h6 while price fell 34%; BOLT 104/49 at -14.5%). Close an open ticket early when holders fall at two marks in a row and price is below entry, instead of waiting for the kill line: FTR bled 18,434 -> 18,111 -> 17,599 holders into its -34.5% kill, and CLOVE 128 -> 126 -> 123 (closed -12.7%).",
+   "source": "FTR-DFMt-20261017-1340 close (pump arm) + CLOVE-20261017-1125 close",
+   "title": "Exit after two holder drops below entry",
+   "category": "kill",
+   "evidence": [
+    "FTR",
+    "BOLT",
+    "CLOVE"
+   ]
+  },
+  {
+   "added_at": "2026-10-17T21:18:00-04:00",
+   "id": "p",
+   "rule": "Swarm launchers: early-swarm keys now launch coins themselves. uyt8xs9q (early in CRAWJI) launched PPC at 8:37 PM with u9w6dd/uxfernv7/uxz6fvju in its first blocks; u9rwdkfjtr launched HUMAN and DINO 8 min apart and uxz5cts5ww launched RED and RBULL 6 min apart, with flip pair u8a2m6+u978t4 early in all four. A launch whose launcher is a swarm key, or with 2+ swarm keys in its first 10 buyers, is L1 until it shows 60+ holders outside the swarm list.",
+   "source": "run 2026-10-17 21:18 (9 of 9 new Cardano launches swarm-sniped, all back to 0-1 holders)",
+   "title": "Swarm-launched coins stay Pass until 60 outside holders",
+   "category": "swarm",
+   "evidence": [
+    "CRAWJI",
+    "PPC",
+    "HUMAN",
+    "DINO",
+    "RED",
+    "RBULL"
+   ]
+  },
+  {
+   "added_at": "2026-10-17T21:18:00-04:00",
+   "id": "q",
+   "rule": "Solana-side snipe hunt: team-driven King/Queen-of-the-hill pushes move the curve and Solada's mixed holder count, not Solana-native holders. MISS went 68.8% -> 83.7% curve and 90 -> 106 Solada holders on its own team's 'Queen of the hill' posts, but only 8 -> 17 Solana-native holders. An early-snipe ticket needs 50+ Solana-native holders (rule n) and 20%+ native growth between two runs, not curve % alone.",
+   "source": "MISS 2026-10-17 19:18 -> 21:18",
+   "title": "Curve pushes need native holder growth, not curve %",
+   "category": "entry",
+   "evidence": [
+    "MISS"
+   ]
+  },
+  {
+   "added_at": "2026-10-17T21:18:00-04:00",
+   "id": "r",
+   "rule": "Wallet tracking: Solada holder-reward claims add tokens (a single claim can return the platform token plus several reward tokens for a small net ADA cost). Check whether a balance increase came from a reward-claim tx before calling it a buy.",
+   "source": "desk observation 2026-10-17",
+   "title": "Rule out reward claims before reading a balance increase",
+   "category": "review",
+   "evidence": []
+  },
+  {
+   "added_at": "2026-10-17T21:18:00-04:00",
+   "id": "daily-2026-10-17",
+   "rule": "Day review: 2 Solada paper closes (BOLT -20.6%, CLOVE -12.7%), both opened at L3 after a 6h pop and both lost to holders that didn't grow. Every ticket today was entered after a run-up; the next ticket should come after a pullback that holders survive (rule l), and rule o's two-mark holder exit cut CLOVE's loss. Graduates keep fading to 20-35k ADA unless holders keep climbing.",
+   "source": "daily rule update, last run of 2026-10-17",
+   "title": "Oct 17 review: wait for a pullback that holders survive",
+   "category": "review",
+   "evidence": [
+    "BOLT",
+    "CLOVE"
+   ]
+  },
+  {
+   "id": "s",
+   "added_at": "2026-10-18T21:15:00-04:00",
+   "title": "Count a whale's repeat clips as one buyer",
+   "category": "sybil",
+   "evidence": [
+    "SER"
+   ],
+   "rule": "Repeated same-size buys from one tracked wallet are one buyer, not flow. The founder whale bought SER in five identical 71-ADA clips (7:23-7:59 PM, ~5.99M SER, now ~5.5% of supply) while SER's pool slid 11.0k -> 10.6k ADA, holders went 68 -> 66 and the pool then went a full hour with no trades. Don't count one wallet's clips toward 6h buys > sells (rule k/o) or holder growth.",
+   "source": "run 2026-10-18 21:15 (founder-whale watch)"
+  },
+  {
+   "id": "daily-2026-10-18",
+   "added_at": "2026-10-18T21:15:00-04:00",
+   "title": "Oct 18 review: the pullback re-entry is the first green ticket",
+   "category": "review",
+   "evidence": [
+    "BOLT",
+    "SER",
+    "MISS",
+    "CLOVE"
+   ],
+   "rule": "Day review: no Solada closes today (book 0-2). The only ticket opened today, BOLT L2 after a pullback that holders survived (rule l / daily-2026-10-17), is the first green Solada mark: 406k entry, low mark -10.2% at 1:20 PM, now +4.6% to +7.9% with on-chain holders flat at 263-266 and every kill line clear. So entering after a survived pullback beat yesterday's run-up entries, but flat holders still cap it at L2 (rule h). SER graduated at 4:27 PM into a swarm-held pool and drained within hours (rule p). MISS added 9 Solana-native holders in 2h (23 -> 32) on giveaway/promo posts; confirm that growth holds at the next run before it counts toward rule q. No threshold change.",
+   "source": "daily rule update, last run of 2026-10-18"
+  },
+  {
+   "id": "t",
+   "added_at": "2026-10-18T21:50:00-04:00",
+   "rule": "Solana-native holder counts on Solada cross-chain coins swing by several holders from hour to hour, so one reading is not growth. MISS went 11 -> 18 -> 24 -> 23 -> 19 -> 32 natives across the 12:51-9:13 PM pulses on Oct 18, giving back 5 between 7 and 8 PM before jumping 13 on giveaway posts. For rule q (and any Solana-side snipe), use the lowest native count of the last three hourly pulses, and count growth only when it holds on two consecutive pulses.",
+   "source": "daily learning brief 2026-10-18 (hourly pulse review)",
+   "title": "Native holder growth must hold across two pulses",
+   "category": "sybil",
+   "evidence": [
+    "MISS",
+    "CORE"
+   ]
+  },
+  {
+   "id": "u",
+   "added_at": "2026-10-19T07:50:00-04:00",
+   "title": "Confirm an ADA-side kill caused by an LP pull",
+   "category": "kill",
+   "evidence": [
+    "BOLT"
+   ],
+   "rule": "Liquidity pulls are not selling. BOLT's paper ticket closed at 362k (-10.8%) at 11:12 PM Oct 18 when the pool ADA side fell 33.4k -> 27.9k, under its 28k line, because LP was withdrawn (both pool sides fell, invariant down ~16%) while on-chain holders held at 266 and mcap stayed above 340k. By 7:50 AM Oct 19 BOLT was back to ~446k pool mcap with the ADA side at ~31.0k and 271 holders (+23% vs the exit, +9.7% vs entry). When the ADA-side line breaks because both pool sides shrank and holders are flat or rising, confirm it on the next pulse before closing; an ADA-side drop driven by net selling (token side up, ADA side down) still closes at once.",
+   "source": "desk run 2026-10-19 07:50 (review of BOLT-20261018-1020 close)"
+  },
+  {
+   "id": "v",
+   "title": "Fresh graduates open on a thin pool",
+   "category": "kill",
+   "evidence": [
+    "RAIN"
+   ],
+   "rule": "Solada curves graduate with about 10.3k ADA, so every fresh graduate opens under rule g's ~11k ADA side, and curve buyers sell into the new pool. RAIN was ticketed at L3 on a 92.9% curve re-hold, graduated at 10:36 AM Oct 19, peaked near 70.9k ADA, then fell to 12.2k by 1:08 PM (-72.9% close) and 5.5k by 1:54 PM with holders 72 -> 44. Pre-graduation curve tickets now close on the first post-graduation holder drop below entry (no second mark), and coins under about 3 hours past graduation stay L2 at most until the pool ADA side is 15k+ and holders survive a first post-graduation fade.",
+   "added_at": "2026-10-19T14:00:00-04:00"
+  },
+  {
+   "id": "w",
+   "title": "Solana-side bonds shed natives too",
+   "category": "review",
+   "evidence": [
+    "MISS"
+   ],
+   "rule": "Rule v holds on the Solana side. MISS bonded on pump.fun around 3:20 PM Oct 19 after a 93% -> 99% curve run, and Solana-native holders fell 38 -> 29 within about 30 minutes while the first post-bond hour printed 21 buys / 35 sells (-6.2%). A pump.fun bond is a liquidity event for curve buyers, not proof of new demand. Solana-side names stay L2 for the first 2 hours after bonding, and an early-snipe or post-bond ticket needs native holders back above the pre-bond peak plus rule q's 50+ natives.",
+   "added_at": "2026-10-19T16:00:00-04:00"
+  },
+  {
+   "id": "x",
+   "added_at": "2026-10-19T19:00:00-04:00",
+   "source": "Snek Sentinel 7 PM run, Oct 19 (Blockfrost round-trip study)",
+   "title": "Late swarm entries are not a signal",
+   "category": "swarm",
+   "evidence": [
+    "BRO",
+    "DEXY",
+    "IAGONE",
+    "GUINEA",
+    "BESSTIVE",
+    "QUIN"
+   ],
+   "rule": "Swarm and sweep keys make their money in the first ~15 minutes after go-live and sell into the first run. Across BRO, DEXY (first 300 trades), IAGONE, GUINEA and BESSTIVE on Oct 19, the 28 closed swarm round trips that entered within 15 minutes won 25 times (~4.7k ADA in -> ~9.9k out, median hold 19 min, median +49 ADA). The 18 later entries won 7 times (median -23 ADA; the total stayed positive only because of two DEXY exits). QUIN's five swarm keys were all out within 13 minutes and its curve went back to 0%. A swarm key buying after the first 15 minutes adds nothing to a name's score. A launch whose early swarm keys have all left by +15 min stays Pass (with rule p)."
+  },
+  {
+   "id": "y",
+   "added_at": "2026-10-19T21:00:00-04:00",
+   "source": "Snek Sentinel 9 PM run, Oct 19 (pulse history review)",
+   "title": "Thin-pool rebounds need two pulses of holder growth",
+   "category": "review",
+   "evidence": [
+    "DEXY",
+    "SER"
+   ],
+   "rule": "On graduated pools with an ADA side under ~17k, one pulse of holder growth is not a re-hold. On Oct 19 DEXY bounced three times (64.9k -> 97.1k -> 126.7k ADA) and gave back 16% within the hour after the 8:13 PM peak (holders 81 -> 78, h1 5 buys / 9 sells); SER ran 58.3k -> 145.9k and faded to 109.2k with holders 87 -> 77. Before raising such a name above L2, require holder growth at two pulses in a row with the ADA side also rising (the Cardano-side twin of rule t). A single-pulse pop on a thin pool stays L2."
+  },
+  {
+   "id": "daily-2026-10-19",
+   "added_at": "2026-10-19T21:00:00-04:00",
+   "source": "Snek Sentinel 9 PM run, Oct 19 (day review)",
+   "title": "Oct 19 review: the holding gate kept the book out of whipsaws",
+   "category": "review",
+   "evidence": [
+    "RAIN",
+    "DEXY",
+    "SER",
+    "BOLT"
+   ],
+   "rule": "Day review: one Solada close today, RAIN -72.9% (a fresh graduate on a thin pool, rule v), so the book is 0-4 (avg -29.3%). No ticket opened after 10 AM because nothing cleared rule k, and that kept the book out of DEXY's and SER's +/-30% swings (rule y). The day's clearest edge was timing, not shape: swarm keys that entered within 15 minutes won 25 of 28 round trips (rule x), which a 100-ADA paper ticket on a two-hour cadence can't capture. Keep rule k as the ticket gate; a paper copy test needs per-block entry prices first."
+  },
+  {
+   "id": "z",
+   "added_at": "2026-10-19T21:55:00-04:00",
+   "source": "Snek Sentinel daily learning brief, Oct 19 (ticket marks review)",
+   "title": "Move the kill line to entry after a big paper gain on a thin pool",
+   "category": "kill",
+   "evidence": [
+    "RAIN"
+   ],
+   "rule": "Once a ticket on a pool with an ADA side under ~15k marks +50% or more, its kill line moves up to the entry price. RAIN marked +57.9% at 12:15 PM Oct 19 (70.9k ADA pool mcap, 12.3k side, 72 holders), was already below entry by the 12:40 PM pulse (38.9k, -13.4%, holders 68, side 9.2k), and closed at the 1:08 PM pulse at -72.9% (12.2k) because the original -30% line sat at 31.4k. With the line at entry it would have closed at the 12:40 mark near -13%. The original kill lines still apply underneath; this only tightens them."
+  },
+  {
+   "id": "aa",
+   "added_at": "2026-10-20T10:15:00-04:00",
+   "source": "Snek Sentinel 10 AM ET run, Oct 20",
+   "title": "Zero-holder copycat tickers are farm noise, not peak attention",
+   "category": "sybil",
+   "evidence": [
+    "DEXY",
+    "SER"
+   ],
+   "rule": "Rule c only counts copycats that pick up real holders or volume. Repeat launcher uy3gz02eqt put out two SER and two DEXY copies (plus BLACK, DOGE, BAT, POLS) between 9:22 and 11:45 PM Oct 19; each was a 4-10 trade round trip that ended at 0 holders within ~3 minutes (launcher in at +1 min, flip pair u978t4 + u8a2m6 in at +2-3 min, everyone out by +3 min). The originals didn't peak: DEXY went 106.8k -> 140.1k ADA (78 -> 94 on-chain holders) and SER 109.2k -> 155.0k (77 -> 98) by 10:15 AM Oct 20. Treat zero-holder copies from farm launchers as swarm activity (rules i, p), not as a top signal for the original."
+  }
+ ],
+ "summaries": [
+  {
+   "at": "2026-10-17T11:05:00-04:00",
+   "type": "seed_skipped",
+   "note": "Both seed candidates checked at 11:03-11:05 -04:00 and neither was opened. A paper entry shouldn't open below its own kill line.",
+   "data_sources": [
+    "https://www.solada.fun/api/market (at 2026-10-17T11:03:29-04:00)",
+    "https://www.solada.fun/api/launches",
+    "Blockfrost: Minswap V2 pool UTxO, holder list, swaps in the last 6h"
+   ],
+   "candidates": [
+    {
+     "ticker": "IAGONAUT",
+     "side": "cardano",
+     "launchpad": "solada",
+     "asset_id": "4849e0d9e18061861a88acea1df431b3e39cdf65dfeee22ba024315b0014df104941474f4e415554",
+     "intended_level": 2,
+     "intended_stop": {
+      "text": "mcap < ~40k ADA or holders < 60 or top holder uytg09zr sells out",
+      "mcap_ada_below": 40000,
+      "holders_below": 60,
+      "wallet_exit": "stake1uytg09zr..."
+     },
+     "snapshot": {
+      "solada_mcap_ada": 35977,
+      "pool_mcap_ada": 32208,
+      "pool_price_ada": 3.2208e-05,
+      "pool_ada_side": 8607,
+      "solada_holders": 67,
+      "onchain_owners_ex_pool": 66,
+      "graduated_at": "2026-10-17T08:57:19-04:00"
+     },
+     "pool_flow_6h": {
+      "swaps": 59,
+      "buys": 34,
+      "sells": 25,
+      "net_ada_into_pool": -1646,
+      "path": "~47.8k at 10:50 -> 37.2k after a 1,216 ADA sell at 10:55 -> 32.2k at 11:03"
+     },
+     "reason": "Two of the three stop conditions were already hit when seeding: pool mcap 32.2k ADA (below 40k), and uytg09zr no longer holds any (not among on-chain holders). Holders at 67 were still above 60. Sniper uyyyjqps (2.3%) and flip-pair wallet u8a2m6 (1.0%) still hold. Rules (g) and (i) applied."
+    },
+    {
+     "ticker": "FEED",
+     "side": "cardano",
+     "launchpad": "solada",
+     "asset_id": "00e049b5a595740efcf34e90c4a209705f75c41d349c7e1a5a9cd5af0014df1046454544",
+     "intended_level": 2,
+     "intended_stop": {
+      "text": "mcap < 40k ADA or holders < 64",
+      "mcap_ada_below": 40000,
+      "holders_below": 64
+     },
+     "snapshot": {
+      "solada_mcap_ada": 40120,
+      "pool_mcap_ada": 40129,
+      "pool_price_ada": 4.0129e-05,
+      "pool_ada_side": 9266,
+      "solada_holders": 69,
+      "graduated_at": "2026-10-16T20:57:17-04:00"
+     },
+     "pool_flow_6h": {
+      "swaps": 38,
+      "buys": 16,
+      "sells": 20,
+      "net_ada_into_pool": 478,
+      "path": "~50.5k at 10:28 -> 47.8k at 10:38 -> 40.1k at 10:57 after a 741 ADA sell at 10:41"
+     },
+     "reason": "Its shape no longer looks strongest-in-class. The bounce to ~55k faded to 40.1k, right on the stop line. Sells outnumber buys 20 to 16 over 6h, and holders are flat at 69. Rules (f), (g) and (h) applied."
+    }
+   ]
+  },
+  {
+   "at": "2026-10-17T11:25:00-04:00",
+   "type": "run",
+   "note": "Opened BOLT and CLOVE L3 paper tickets (100 ADA each). Passed IAGONAUT (below kill, rule j), HERO/JUICE/ROBIN (rule k). FEED stays L2 at its 40k line, no ticket."
+  },
+  {
+   "at": "2026-10-17T13:45:00-04:00",
+   "type": "run",
+   "note": "Closed BOLT at its 450k mcap kill (-20.6%, 421k). CLOVE marked -5.7% (297k pool mcap, 128 holders), still open. No new tickets: BTC/FEED fail rule k (holders <120, ADA side <25k); STARS fails insider filter; no Solana-side name qualifies. Rules l, m, n added."
+  },
+  {
+   "at": "2026-10-17T15:30:00-04:00",
+   "type": "run",
+   "note": "Ad-hoc run ('run the tape now'). CLOVE marked -16.9% (261.7k pool mcap, 126 Solada / 116 on-chain holders, ADA side 24.1k). Level cut to L2, ticket open, 4.7% above its 250k kill. No new Solada tickets: no name passes rule k. BTC (40.0k after a 4% holder exited at 3:27 PM, 70 holders, 9.3k ADA side) fails holders and ADA side. Kill lines hit (level only, no tickets): FEED (53-57 holders < 60), GOLFY (49 holders, curve 57.2%), PAWS (on-chain pool mcap 28.4k < 30k). No trade closed, no rule changes."
+  },
+  {
+   "at": "2026-10-17T19:18:00-04:00",
+   "type": "run",
+   "note": "Closed CLOVE at 274.9k pool mcap (-12.7%) under the new rule o: holders fell 128 -> 126 -> 123 with price below entry after the 5 PM pop (~397k) faded. No new Solada tickets. BOLT meets rule k on counts (264 holders, 31.2k ADA side, h6 104/49), but price is -14.5% h6, so it fails rule o's flow test. JUSTQ is the closest Solana-side name (251 Solana-native holders, +21 since 3:30 PM) but its USDC pool side is ~$5.0k (~22.9k ADA), under rule k's 25k floor. BTC kill hit: flip-pair wallet u8a2m6 fully exited and pool mcap is 25.8k. The insider swarm (u8a2m6/u978t4 + u9kp4sxa/u8x8h2hc, snipers uytg09zr/u9w6dd) was early in 12 of 13 new Cardano launches since 3:30 PM. Rule o added."
+  },
+  {
+   "at": "2026-10-17T21:18:00-04:00",
+   "type": "run",
+   "note": "No open Solada tickets and none opened. JUSTQ's USDC pool side is now ~$5.8k (~26.4k ADA), so it passes rule k depth, but Solana-native holders fell 251 -> 244 and the price is under the 2.11e-5 entry trigger (h1 -9%). CLOVE rebounded to 302k (+10% vs its close) with 117 on-chain / 127 Solada holders, but h6 unique buyers 18 vs sellers 19 and airdrop-inflated holders (rule m) keep it at L2. BOLT 339k, ADA side 29.5k (1.5k above its 28k kill), fails rule o (h6 -12.5%). MISS ran to 83.7% curve on team promo with 17 Solana-native holders (rule q). Rules p, q, r and the daily review added."
+  },
+  {
+   "at": "2026-10-18T10:20:00-04:00",
+   "type": "run",
+   "note": "Opened BOLT-20261018-1020 (L2, 100 ADA) at 406.2k pool mcap as the strongest L2 and the only name passing rule k: a re-hold of 380-461k since midnight after the ~305k low, 263 on-chain holders, ADA side 32.2k, 6h on-chain 33 buys / 13 sells at +0.9%. Kill hits, no tickets: CLOVE (240.9k < 250k at 10:25; 283k by 10:55) and JUSTQ (mcap $15.3k < $16.0k). SURFY (91% curve, King of the Hill, 48 holders) is L1 under rule p. PAWS (87 holders, ADA side ~12k) fails rule k. CORE fails rule q. No trade closed, no rule changes."
+  },
+  {
+   "at": "2026-10-18T13:20:00-04:00",
+   "type": "run",
+   "note": "Afternoon mark only. BOLT L2 ticket still open at 364.7k pool mcap (-10.2% vs 406k entry), above all three kill lines. No new Solada tickets: PAWS (94 holders, ADA side ~12k) and SURFY (51 holders, swarm first-block, ADA side ~6.6k) fail rule k; CLOVE 221k with airdrop-inflated holders stays L1; no L3 shape. No Solana-side early-snipe ticket (CORE closest at 38 native). No closes, no new rules."
+  },
+  {
+   "at": "2026-10-18T19:15:00-04:00",
+   "type": "run",
+   "note": "Sunday evening mark. BOLT L2 ticket marked -5.4% (384.3k Solada pool mcap vs 406k entry), above all kill lines with on-chain holders flat at 266. No new Solada tickets: no L3 shape; SER (graduated 3 PM) is swarm-rotated and draining (rule p); 18 new Cardano/Solana launches since 1 PM all thin or swarm-touched. No Solana-side early-snipe ticket: MISS is King at 90.4% curve but only ~23 Solana-native holders (rules n, q); CORE 35 native; JUSTQ native base 222 is now under 230 and mcap $12.3k under $16k. No closes, no new rules."
+  },
+  {
+   "at": "2026-10-18T21:15:00-04:00",
+   "type": "run",
+   "note": "Last run of Sunday. BOLT L2 ticket marked +4.6% (424.8k on-chain pool mcap vs 406.2k entry; 438.4k at the 9:13 PM pulse), all kill lines clear, swarm keys still holding. No new Solada ticket: no L3 shape and BOLT (the strongest L2) is already open; CLOVE (237.5k, 133 holders) is still under its 250k kill and rule k's 25k ADA side (22.6k); SER is draining (rule p). No new Solada launches since INTERN at 7:16 PM. No Solana-side early-snipe ticket: MISS is closest (32 Solana-native holders, +39% since 7:15 PM, curve 90.75%) but rule q needs 50+ natives; CORE 34; JUSTQ still under both kill lines (223 natives, $11.5k). Added rules s and daily-2026-10-18."
+  },
+  {
+   "at": "2026-10-18T21:15:00-04:00",
+   "type": "weekly",
+   "period": "2026-10-12 to 2026-10-18 (book started 2026-10-17)",
+   "opened": 3,
+   "closed": 2,
+   "wins": 0,
+   "losses": 2,
+   "avg_closed_pct": -16.65,
+   "realized_pnl": -33.3,
+   "unit": "ADA",
+   "best": "BOLT-20261018-1020 open at +4.6% (unrealized); best close CLOVE-20261017-1125 -12.7%",
+   "worst": "BOLT-20261017-1125 -20.6% (kill line, ~2h after a promo pop)",
+   "worked": [
+    "Entering after a pullback that holders survived (BOLT re-entry, rule l / daily-2026-10-17)",
+    "Rule o's two-mark holder exit cut CLOVE to -12.7% before its -20% line",
+    "Rules p and q kept the book out of swarm-launched coins (SER, SURFY, MAC, ZILLA) and team-pushed Solana curves (MISS)"
+   ],
+   "failed": [
+    "L3 entries straight after a 6h pop (BOLT and CLOVE on Oct 17)",
+    "Airdrop-inflated holder counts (CLOVE, rule m)"
+   ],
+   "rule_changes": "Started with rules a-k on Oct 17; added l-r plus daily-2026-10-17 on Oct 17-18, then s and daily-2026-10-18 tonight (21 rules).",
+   "note": "Closed record 0-2 (-33.3 ADA on 200 ADA of tickets). Open: BOLT +4.6%. Smaller average loss than the Pump.fun arm (-16.7% vs -25.9%)."
+  },
+  {
+   "at": "2026-10-19T07:50:00-04:00",
+   "type": "run",
+   "note": "Monday morning. No Solada ticket open or opened. BOLT popped back to ~446k pool mcap (+26% h1 on 3 buys, holders 270 -> 271), above the 362k ticket exit, but flat holders keep it L2 (rule h) and a 1-hour pop is not a re-hold (rule l). SER is the busiest name (80 on-chain holders, ADA side 13.1k) but fails rule k's 25k side. 27 overnight launches, 20 from copycat launcher uyetfdape9 (rule p). No Solana-side snipe (MISS 23 natives, CORE kill hit). Added rule u. Research/lottery/NFA.",
+   "rules_applied": [
+    "h",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "q",
+    "s",
+    "t",
+    "u"
+   ]
+  },
+  {
+   "at": "2026-10-19T10:00:00-04:00",
+   "type": "run",
+   "note": "Opened RAIN-7cc1-20261019-1000 (L3, 100 ADA) at 44.9k ADA mcap / 92.9% curve. RAIN (RAIN-3) went from 5 holders at 3 AM to 63 on-chain, was crowned King at 92.7% (8:57 AM), faded to 83.9% on 9 AM selling, then re-held at 92.9% with 67 on-chain holders by 10:09, and all first-block keys and the launcher had already sold out (no overhang). BOLT holds ~456-473k with flow passing rule k but holders flat (271 to 274 on-chain), so rules h and l keep it L2. No Solana-side snipe (MISS 26 natives). Research/lottery/NFA.",
+   "rules_applied": [
+    "a",
+    "b",
+    "h",
+    "j",
+    "k",
+    "l",
+    "n",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "u"
+   ]
+  },
+  {
+   "at": "2026-10-19T13:08:00-04:00",
+   "type": "pulse-close",
+   "note": "Closed RAIN-7cc1-20261019-1000 at -72.9% (12,168 ADA pool mcap vs 44,893 entry). Kill line hit: pool mcap under 31,400 and pool ADA side 5,158 under 8,000 after a post-graduation dump driven by net selling; rule o also fired (holders 72 -> 68 -> 59). Research/lottery/NFA."
+  },
+  {
+   "at": "2026-10-19T14:00:00-04:00",
+   "type": "run",
+   "note": "Monday 2 PM run. No Solada ticket open or opened. DEXY graduated in under 2 hours (112.3k ADA pool mcap, 16.0k ADA side, 71 holders, 1 PM hour ~55k ADA) but fails rule k (holders, depth), carries seven swarm keys (rule p) and is a fresh graduate under new rule v, so L2. BOLT 459.5k with flat holders (rules h, l). SER holders 83 -> 78 (rule k). No Solana-side snipe (MISS 18 natives). Added rule v from RAIN's -72.9% close. Research/lottery/NFA.",
+   "rules_applied": [
+    "a",
+    "f",
+    "g",
+    "h",
+    "k",
+    "l",
+    "n",
+    "p",
+    "q",
+    "s",
+    "t",
+    "v"
+   ]
+  },
+  {
+   "at": "2026-10-19T16:00:00-04:00",
+   "type": "run",
+   "note": "Monday 4 PM run. No Solada ticket open or opened. MISS bonded on pump.fun (~3:20 PM) but natives fell 38 -> 29 and the first hour was sell-led (rules n, q, new w). DEXY rebounded to 100.7k ADA pool mcap (14.9k ADA side, 71 holders, h1 +51%) as four swarm keys exited; still under rule k and inside rule v's 3-hour window. SER fading toward its kill line (11.7k ADA side, 75 holders). BOLT flat at 460k. Research/lottery/NFA.",
+   "rules_applied": [
+    "a",
+    "f",
+    "g",
+    "h",
+    "k",
+    "l",
+    "n",
+    "p",
+    "q",
+    "s",
+    "t",
+    "v",
+    "w"
+   ]
+  },
+  {
+   "at": "2026-10-19T17:00:00-04:00",
+   "type": "run",
+   "note": "Monday 5 PM run. No Solada ticket open or opened. MISS hit its kill line on the Solana side (natives 29 -> 24, line 25; h1 10 buys / 26 sells, -22%) as the escrow released tokens into sells (rules n, w). SER bounced (79 holders, 12.4k ADA side) but stays under rule k. DEXY slid to 87.3k ADA (13.7k side, 70 holders) as u8a2m6 exited (rules k, v). BOLT 424.7k on flat holders (rules h, l). BRO's curve ran 17.8% -> 30.5% on 26 holders with a team-fund promo (rule l). Research/lottery/NFA.",
+   "rules_applied": [
+    "a",
+    "e",
+    "f",
+    "g",
+    "h",
+    "i",
+    "k",
+    "l",
+    "n",
+    "p",
+    "q",
+    "s",
+    "t",
+    "v",
+    "w"
+   ]
+  },
+  {
+   "at": "2026-10-19T19:00:00-04:00",
+   "type": "run",
+   "note": "Monday 7 PM run. No Solada ticket open or opened. DEXY is the best shape (72 on-chain holders, 14.2k ADA side, h1 buy-led, first real X thesis) but fails rule k; SER's ~9.4% founder-whale stake counts as one buyer (rule s); BOLT clears k's depth with flat holders (h) and sits 0.3% above its 400k kill line; CLOVE's 20.6k side is under 25k. QUIN and QNLGS were swarm round trips (rule x added). No Solana-side snipe (CORE 27 natives, MISS 22). Research/lottery/NFA.",
+   "rules_applied": [
+    "a",
+    "e",
+    "g",
+    "h",
+    "i",
+    "k",
+    "l",
+    "n",
+    "p",
+    "q",
+    "s",
+    "t",
+    "v",
+    "w",
+    "x"
+   ]
+  },
+  {
+   "at": "2026-10-19T21:00:00-04:00",
+   "type": "run",
+   "note": "Monday 9 PM run. No Solada ticket open or opened. DEXY (106.8k ADA, 78 holders, 15.1k side) and SER (109.2k, 77, 15.3k) faded after their 8 PM bounces and fail rule k (new rule y). BOLT 442.8k on flat holders (h); CLOVE 20.9k side. BRO and WOLF hit their kill lines. No Solana-side snipe (CORE 28 natives). Research/lottery/NFA.",
+   "rules_applied": [
+    "a",
+    "e",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "n",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "v",
+    "w",
+    "x",
+    "y"
+   ]
+  },
+  {
+   "at": "2026-10-19T21:00:00-04:00",
+   "type": "interim",
+   "period": "2026-10-18 21:15 to 2026-10-19 21:00",
+   "note": "Interim summary (the Pump.fun arm passed 5 closes since the Oct 18 weekly). Solada: 1 opened (RAIN), 2 closed (BOLT-20261018-1020 -10.8%, RAIN-7cc1-20261019-1000 -72.9%), 0 wins, avg -41.9%. All-time 0-4, avg -29.3%, realized -117.0 ADA. Best close: BOLT -10.8% (LP pull, rule u). Worst: RAIN -72.9% (fresh-graduate thin pool, rule v). Rules added since the weekly: u, v, w, x, y.",
+   "opened": 1,
+   "closed": 2,
+   "wins": 0,
+   "losses": 2,
+   "avg_closed_pct": -41.85,
+   "alltime": {
+    "closed": 4,
+    "wins": 0,
+    "avg_closed_pct": -29.25,
+    "realized_pnl": -117.0,
+    "unit": "ADA"
+   }
+  },
+  {
+   "at": "2026-10-20T10:15:00-04:00",
+   "type": "run",
+   "note": "Tuesday 10 AM run (first of the day). No Solada ticket open or opened. Overnight DEXY rose 106.8k -> 140.1k ADA (on-chain holders 78 -> 94, side 17.4k) and SER 109.2k -> 155.0k (77 -> 98, side 18.2k), but both still fail rule k and the growth is a single reading with the hourly pulse paused (rule y). BOLT 522.5k on flat holders 276 with h6 sells leading (h, o). CLOVE 167.9k on a 19.0k side. SHARKY (King of the Hill, 84.1% curve, 65 holders) is pre-graduation (rule v). No Solana-side snipe (CORE 28 natives, curve flat at 72.7%). New rule aa (zero-holder copycats are farm noise). Research/lottery/NFA.",
+   "rules_applied": [
+    "a",
+    "c",
+    "e",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "n",
+    "o",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "v",
+    "w",
+    "x",
+    "y",
+    "aa"
+   ]
+  },
+  {
+   "at": "2026-10-25T19:00:00-04:00",
+   "type": "weekly",
+   "note": "Week of Oct 19-25: no tickets opened; 0 open, 4 closed lifetime. Nothing passed k/y all week (best: CLOVE ~29k side/304 holders, BOLT under its mcap line). Swarm launches (BET) and kill-hit fades (JUICE, GOLFY, HERO) were the week's pattern. Research/lottery/NFA."
+  }
+ ]
 }
