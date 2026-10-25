@@ -11,7 +11,9 @@ addresses and per-wallet balances stay in the private Actions cache
 (flags-cache.json). assert_public() refuses to write anything that looks like a
 full address or stake key.
 """
-import hashlib, json, os, re, time
+import hashlib, json, os, re, sys, time
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import valuation as V  # noqa: E402
 
 KOIOS = "https://api.koios.rest/api/v1"
 BF = "https://cardano-mainnet.blockfrost.io/api/v0"
@@ -158,10 +160,17 @@ class FlagChain:
 
 
 # ---------------------------------------------------------------- pure analysis (fixture-testable)
-def buyers_from_txs(unit, txs, utxos):
-    """Per tx, net token/ADA change per stake key. Buyer = token in, ADA out. Script (pool) payment parts ignored.
-    Returns [{'stake','addrs','tx','height','time','qty','ada'}] in chain order."""
+def buyers_from_txs(unit, txs, utxos, decimals=None, price_ada=None, lp_pols=None):
+    """Per tx, net token/ADA change per stake key. Script (pool/order) payment parts ignored.
+    Buyer = token in, and either ADA out (the tx's lovelace leg is the size) or, for aggregator/batcher
+    fills where the ADA left in an earlier order tx, sized by raw/10**decimals * pool price.
+    LP tokens are never buys, and a wallet that receives LP tokens in the tx is adding liquidity, not buying.
+    Returns [{'stake','addrs','tx','height','time','qty','ada','ada_basis'}] in chain order ('ada' may be None
+    when it cannot be sized safely; raw units are never treated as ADA)."""
+    pols = V.lp_policies() if lp_pols is None else lp_pols
     rows = []
+    if V.lp_dex(unit, pols):
+        return rows
     for hsh, height, btime in txs:
         u = utxos.get(hsh)
         if not u:
@@ -172,14 +181,22 @@ def buyers_from_txs(unit, txs, utxos):
                 stake, script = addr_info(addr)
                 if script or not stake:
                     continue
-                n = net.setdefault(stake, {"qty": 0, "lov": 0, "addrs": set()})
+                n = net.setdefault(stake, {"qty": 0, "lov": 0, "lp": 0, "addrs": set()})
                 n["qty"] += sign * assets.get(unit, 0)
                 n["lov"] += sign * lov
+                n["lp"] += sign * sum(q for a, q in assets.items() if V.lp_dex(a, pols))
                 n["addrs"].add(addr)
         for stake, n in net.items():
-            if n["qty"] > 0 and n["lov"] < 0:
-                rows.append({"stake": stake, "addrs": n["addrs"], "tx": hsh, "height": height, "time": btime,
-                             "qty": n["qty"], "ada": round(-n["lov"] / 1e6, 2)})
+            if n["qty"] <= 0 or n["lp"] > 0:
+                continue
+            if n["lov"] < 0:
+                ada, basis = round(-n["lov"] / 1e6, 2), "ada_leg"
+            else:
+                ada, basis = V.value_ada(n["qty"], None, decimals, price_ada)
+                if ada is None:
+                    continue  # token in with ADA in too and no safe price: not a sized buy
+            rows.append({"stake": stake, "addrs": n["addrs"], "tx": hsh, "height": height, "time": btime,
+                         "qty": n["qty"], "ada": ada, "ada_basis": basis})
     return rows
 
 
@@ -243,7 +260,10 @@ def analyze_launch(ticker, unit, buyers, watch, cfg, live_at_s=None, first_heigh
         for b in early[i + 1:]:
             if not (a.get("time") and b.get("time")) or abs(b["time"] - a["time"]) > win:
                 continue
-            if abs(b["ada"] - a["ada"]) <= max(tol * a["ada"], 0.5) or abs(b["qty"] - a["qty"]) <= tol * a["qty"]:
+            # same size = same ADA value (lovelace leg or decimals x price, never raw units read as ADA),
+            # or the same token amount within a relative tolerance (scale-free: same unit, same decimals)
+            same_ada = a.get("ada") is not None and b.get("ada") is not None and abs(b["ada"] - a["ada"]) <= max(tol * a["ada"], 0.5)
+            if same_ada or abs(b["qty"] - a["qty"]) <= tol * a["qty"]:
                 grp.add(b["stake"])
         if len(grp) >= cfg["same_size_min_wallets"]:
             key = tuple(sorted(tag(s) for s in grp))
@@ -336,7 +356,8 @@ def _key(fl):
     return hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()[:12]
 
 
-def run_flags(http, bf_key, cfg, launches, new_ids, rows, dists, watch, whale_summary, state, cache_dir, baseline, dry_run, now_iso):
+def run_flags(http, bf_key, cfg, launches, new_ids, rows, dists, watch, whale_summary, state, cache_dir, baseline, dry_run, now_iso,
+              unit_value=None, lp_pols=None):
     """Compute all flags for this run. Returns (new_flags, flags_doc). Never touches triggers."""
     fc = cfg["flags"]
     calls0 = dict(http.calls)
@@ -364,7 +385,8 @@ def run_flags(http, bf_key, cfg, launches, new_ids, rows, dists, watch, whale_su
             continue
         cache["scanned"].append(lid)
         ut = chain.tx_utxos([t[0] for t in txs])
-        buyers = buyers_from_txs(u, txs, ut)
+        uv = (unit_value or {}).get(u) or {}
+        buyers = buyers_from_txs(u, txs, ut, uv.get("decimals", 6 if l.get("curve") else None), uv.get("price_ada"), lp_pols)
         early = []
         for b in buyers:
             if b["stake"] not in early:
@@ -414,7 +436,8 @@ def run_flags(http, bf_key, cfg, launches, new_ids, rows, dists, watch, whale_su
         txs = chain.asset_txs(u, fc["koth_txs"], newest=True)
         if not txs:
             continue
-        buyers = buyers_from_txs(u, txs, chain.tx_utxos([t[0] for t in txs]))
+        uv = (unit_value or {}).get(u) or {}
+        buyers = buyers_from_txs(u, txs, chain.tx_utxos([t[0] for t in txs]), uv.get("decimals", 6), uv.get("price_ada"), lp_pols)
         tg = sorted({p for b in buyers for p in match_tags(b["stake"], watch)})
         fresh = sorted({tag(b["stake"]) for b in buyers if b["stake"] in cache["first_height"]
                         and b["height"] - cache["first_height"][b["stake"]] <= fc["fresh_wallet_max_age_blocks"]})
