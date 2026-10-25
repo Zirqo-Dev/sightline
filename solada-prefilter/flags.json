@@ -1,32 +1,67 @@
 {
- "at": "2026-10-25T20:08:43Z",
+ "at": "2026-10-25T20:57:52Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "founder_whale_move",
-   "ticker": "FLOW",
-   "tag": "w-f3186187",
-   "delta": 224026586,
-   "pct": 0.1,
-   "ada_equiv": 68736323,
-   "at": "2026-10-25T20:08:43Z"
+   "kind": "coordinated_buys",
+   "ticker": "BET",
+   "wallets": [
+    "w-23d4671d",
+    "w-32877ab4",
+    "w-36774446",
+    "w-4bb7d165",
+    "w-6f2dbebd",
+    "w-7753c563",
+    "w-8315deec",
+    "w-8b94a0a0",
+    "w-93852377",
+    "w-956de622",
+    "w-a877b792",
+    "w-af3fd9f3",
+    "w-bb850be2",
+    "w-c5af9630",
+    "w-ca8a5d10",
+    "w-eec7c992",
+    "w-fcc25079"
+   ],
+   "window_s": 120,
+   "at": "2026-10-25T20:57:52Z"
   },
   {
-   "kind": "founder_whale_move",
-   "ticker": "KR4UT^:WIS\nB<VR[J(\u0003",
-   "tag": "w-f3186187",
-   "delta": 11042717,
-   "pct": 10.8,
-   "at": "2026-10-25T20:08:43Z"
+   "kind": "fresh_wallet_swarm",
+   "ticker": "BET",
+   "wallets": [
+    "w-36774446",
+    "w-6f2dbebd",
+    "w-8315deec",
+    "w-93852377",
+    "w-956de622",
+    "w-a877b792",
+    "w-af3fd9f3",
+    "w-bb850be2",
+    "w-c5af9630",
+    "w-ca8a5d10",
+    "w-eec7c992"
+   ],
+   "max_age_blocks": 4320,
+   "at": "2026-10-25T20:57:52Z"
   },
   {
-   "kind": "founder_whale_move",
-   "ticker": "ADA",
-   "tag": "w-f3186187",
-   "delta": -4498,
-   "at": "2026-10-25T20:08:43Z"
+   "kind": "sniper_full_exit",
+   "ticker": "BET",
+   "wallet": "w-c5af9630",
+   "tags": [],
+   "at": "2026-10-25T20:57:52Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 69.0,
+   "top_cluster_pct": 69.0,
+   "top_cluster": "w-13d53c47",
+   "at": "2026-10-25T20:57:52Z"
   }
  ],
  "recent": [
@@ -53,11 +88,70 @@
    "tag": "w-f3186187",
    "delta": -4498,
    "at": "2026-10-25T20:08:43Z"
+  },
+  {
+   "kind": "coordinated_buys",
+   "ticker": "BET",
+   "wallets": [
+    "w-23d4671d",
+    "w-32877ab4",
+    "w-36774446",
+    "w-4bb7d165",
+    "w-6f2dbebd",
+    "w-7753c563",
+    "w-8315deec",
+    "w-8b94a0a0",
+    "w-93852377",
+    "w-956de622",
+    "w-a877b792",
+    "w-af3fd9f3",
+    "w-bb850be2",
+    "w-c5af9630",
+    "w-ca8a5d10",
+    "w-eec7c992",
+    "w-fcc25079"
+   ],
+   "window_s": 120,
+   "at": "2026-10-25T20:57:52Z"
+  },
+  {
+   "kind": "fresh_wallet_swarm",
+   "ticker": "BET",
+   "wallets": [
+    "w-36774446",
+    "w-6f2dbebd",
+    "w-8315deec",
+    "w-93852377",
+    "w-956de622",
+    "w-a877b792",
+    "w-af3fd9f3",
+    "w-bb850be2",
+    "w-c5af9630",
+    "w-ca8a5d10",
+    "w-eec7c992"
+   ],
+   "max_age_blocks": 4320,
+   "at": "2026-10-25T20:57:52Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "BET",
+   "wallet": "w-c5af9630",
+   "tags": [],
+   "at": "2026-10-25T20:57:52Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 69.0,
+   "top_cluster_pct": 69.0,
+   "top_cluster": "w-13d53c47",
+   "at": "2026-10-25T20:57:52Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 3,
-  "koios": 4
+  "blockfrost": 2,
+  "koios": 18
  },
  "thresholds": {
   "enabled": true,
