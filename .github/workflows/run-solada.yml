@@ -1,7 +1,7 @@
 name: Run Solada
 
-# If the routine panel's Authorization header field includes the 'Authorization:' prefix,
-# paste only the part after the colon into *_RUN_WEBHOOK_AUTH.
+# Uses the same secrets as the Solada pre-filter: SOLADA_WEBHOOK_URL and
+# SOLADA_WEBHOOK_KEY (key only, no 'Bearer' prefix).
 
 on:
   workflow_dispatch:
@@ -12,14 +12,14 @@ jobs:
     steps:
       - name: Ask Solada to run
         env:
-          URL: ${{ secrets.SOLADA_RUN_WEBHOOK_URL }}
-          AUTH: ${{ secrets.SOLADA_RUN_WEBHOOK_AUTH }}
+          URL: ${{ secrets.SOLADA_WEBHOOK_URL }}
+          KEY: ${{ secrets.SOLADA_WEBHOOK_KEY }}
           ACTOR: ${{ github.actor }}
         run: |
-          if [ -z "${URL}" ] || [ -z "${AUTH}" ]; then
-            echo "SOLADA_RUN_WEBHOOK_URL or SOLADA_RUN_WEBHOOK_AUTH is not set. No request was sent."
-            exit 0
+          if [ -z "${URL}" ] || [ -z "${KEY}" ]; then
+            echo "SOLADA_WEBHOOK_URL or SOLADA_WEBHOOK_KEY is not set. No request was sent."
+            exit 1
           fi
           body=$(jq -n --arg actor "$ACTOR" '{source:"sightline-run-solada",requested_by:$actor}')
-          curl -fsS -X POST "$URL" -H "Authorization: $AUTH" -H 'Content-Type: application/json' -d "$body"
+          curl -fsS -o /dev/null -w "webhook: HTTP %{http_code}\n" -X POST "$URL" -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' -d "$body"
           echo "Solada run requested."
