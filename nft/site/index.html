@@ -17,6 +17,21 @@
       if (p.charAt(p.length - 1) !== "/") p = p.replace(/[^/]*$/, "");
       return new URL(name, location.origin + p).href;
     };
+    /* Desk data (intel.json, watchlist.json) is read from the desk-data branch first,
+       with this Pages copy as fallback (newer stamp wins). Same rule as dashboard/core.js. */
+    var RAW = "https://raw.githubusercontent.com/Zirqo-Dev/sightline/desk-data/nft/site/";
+    function getJ(u) { return fetch(u, { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }); }
+    function st(j) { if (!j || typeof j !== "object") return NaN; var ks = ["asof", "updated_at", "generated_at", "date"]; for (var i = 0; i < ks.length; i++) { var t = new Date(j[ks[i]]).getTime(); if (j[ks[i]] && isFinite(t)) return t; } return NaN; }
+    window.sightlineData = function (name) {
+      var ts = "?ts=" + Date.now();
+      return Promise.all([getJ(RAW + name + ts), getJ(window.sightlineAsset(name) + ts)]).then(function (r) {
+        var a = r[0], b = r[1];
+        if (a == null) return b;
+        if (b == null) return a;
+        var ta = st(a), tb = st(b);
+        return isFinite(tb) && (!isFinite(ta) || tb > ta) ? b : a;
+      });
+    };
   })();
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />

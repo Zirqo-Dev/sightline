@@ -12,6 +12,8 @@ Each desk has a folder (e.g. `solada/`, `nft/`), listed in `/desks.json`:
 - `<desk>/pulse.json` (optional): hourly pulse, listed as `pulse` on the desk in `desks.json` when set (otherwise the dashboard reads `<desk>/pulse.json`). `schema_version` (= 2), `desk`, `updated_at`, `window_days`, `points[]` (`t`, `ticker`, `asset_id`, `metrics{}`), `radar[]` (`ticker`, `chain`, `asset_id`, `first_seen`, `score`, `signals[]`, `note`). Points older than `window_days` move to `<desk>/archive/pulse-YYYY-MM.json`. Schema: `schema/pulse.schema.json`. CI validates the file when it is present. A missing pulse is normal.
 A new file or desk must be added to `desks.json`; CI validates every file listed there, plus a pulse file when one is present.
 
+**Branches.** Since Oct 24 `main` only accepts PRs, so bots push these data files to the `desk-data` branch at the same paths. The dashboard reads desk data from `desk-data` first and falls back to `main`'s copy (see [dashboard/PLUGINS.md](../dashboard/PLUGINS.md#desk-data-comes-from-the-desk-data-branch)). `desks.json`, `panels.json` and these schemas are always read from `main`. Note: CI (`scripts/validate-desks.py` in the pages workflow) validates only `main`'s copies; files on `desk-data` are not schema-checked or privacy-guarded by CI today, so bots must validate before pushing.
+
 Each desk may also have `<desk>/panels.json`, which chooses the panels on that desk's page. The panel format, built-in types, and how to add a component are in [dashboard/PLUGINS.md](../dashboard/PLUGINS.md).
 
 Bots write daily briefs as `<desk>/briefs/YYYY-MM-DD.json` only. They do not maintain a brief index. The site build writes `<desk>/briefs/index.json` from those files when it publishes.

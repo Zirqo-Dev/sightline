@@ -10,10 +10,45 @@ window.S = (function () {
     if (!BASE || BASE === "." || BASE === "./") return clean;
     return BASE.replace(/\/?$/, "/") + clean;
   }
+  /* Desk data lives on the desk-data branch (bots cannot push to main since Oct 24).
+     Desk data JSON (log, pulse, paper, briefs, site data) is read from raw.githubusercontent
+     on that branch; main's Pages copy is the fallback, and also wins if it is strictly newer.
+     Code and config (desks.json, panels.json, config.json, generated index.json, icons,
+     schema) always come from main. Set window.SIGHTLINE_DESK_DATA = "" to turn this off. */
+  const DESK_DATA = window.SIGHTLINE_DESK_DATA != null
+    ? String(window.SIGHTLINE_DESK_DATA)
+    : "https://raw.githubusercontent.com/Zirqo-Dev/sightline/desk-data/";
+  const CONFIG_NAMES = /(^|\/)(panels|panel|config|index|icons)\.json$/;
+  function isDeskData(path) {
+    const p = String(path).replace(/^\/|^\.\//, "");
+    if (/^(https?:)?\/\//.test(p) || !p.endsWith(".json")) return false;
+    if (!p.includes("/") || CONFIG_NAMES.test(p)) return false;
+    if (/^(dashboard|schema|scripts|tools|\.github)\//.test(p)) return false;
+    return true;
+  }
+  function deskDataUrl(path) {
+    if (!DESK_DATA || !isDeskData(path)) return null;
+    return DESK_DATA.replace(/\/?$/, "/") + String(path).replace(/^\/|^\.\//, "") + "?ts=" + Date.now();
+  }
+  function stamp(j) {
+    if (!j || typeof j !== "object" || Array.isArray(j)) return NaN;
+    for (const k of ["asof", "updated_at", "generated_at", "date"]) {
+      if (j[k]) { const t = new Date(j[k]).getTime(); if (isFinite(t)) return t; }
+    }
+    return NaN;
+  }
+  function pickNewer(branch, mainCopy) {
+    if (branch == null) return mainCopy;
+    if (mainCopy == null) return branch;
+    const a = stamp(branch), b = stamp(mainCopy);
+    return isFinite(b) && (!isFinite(a) || b > a) ? mainCopy : branch;
+  }
+  const getJson = u => fetch(u, { cache: "no-cache" }).then(r => (r.ok ? r.json() : null)).catch(() => null);
   async function get(path) {
     const u = url(path);
     if (!(u in cache)) {
-      cache[u] = fetch(u, { cache: "no-cache" }).then(r => (r.ok ? r.json() : null)).catch(() => null);
+      const d = deskDataUrl(path);
+      cache[u] = d ? Promise.all([getJson(d), getJson(u)]).then(([a, b]) => pickNewer(a, b)) : getJson(u);
     }
     return cache[u];
   }
@@ -525,7 +560,7 @@ window.S = (function () {
   function pill(text, cls) { return `<span class="pill ${esc(cls || String(text).toLowerCase().replace(/[^a-z0-9]+/g, "-"))}">${esc(text)}</span>`; }
 
   return {
-    get, pick, esc, rich, walletTag, walletLabel, walletHue, fmt, pct, pnlNum, pnlClass, when, join, register, registry,
+    get, isDeskData, deskDataUrl, pickNewer, pick, esc, rich, walletTag, walletLabel, walletHue, fmt, pct, pnlNum, pnlClass, when, join, register, registry,
     renderPanel, desks, panelsFor, bookFiles, briefsOf, score, avgRet, pnlCards,
     metricCards, unitNote, killDistance, allOpen, pointsFor, pulsePath, panelAsRadar,
     ageInfo, freshestAt, ageTag, ago, runButton,

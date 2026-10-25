@@ -390,6 +390,47 @@ for (const b of changed) {
 assertLiveShape(changed, "after tickets open and close");
 assert(!changed.some(b => (b.json.open || []).some(t => t.ticker === "CATE" || t.ticker === "argonauts")), "mutation did not drop named tickets");
 
+/* Desk data is read from the desk-data branch (raw.githubusercontent), main's copy is the fallback. */
+for (const p of ["solada/log.json", "nft/log.json", "solada/pulse.json", "nft/pulse.json", "solada/paper.json",
+  "solada/pumpfun/paper.json", "nft/paper.json", "solada/briefs/2026-10-19.json", "nft/site/intel.json"]) {
+  assert(S.isDeskData(p), p + " should be read from desk-data");
+  assert(S.deskDataUrl(p).startsWith("https://raw.githubusercontent.com/Zirqo-Dev/sightline/desk-data/" + p + "?ts="), p + " desk-data url");
+}
+for (const p of ["desks.json", "solada/panels.json", "nft/panels.json", "solada/briefs/index.json", "dashboard/icons/icons.json",
+  "schema/run-log.schema.json", "solada/forensics/config.json", "solada/README.md"]) {
+  assert(!S.isDeskData(p), p + " must stay on main");
+}
+for (const d of load("desks.json").desks) {
+  assert(S.isDeskData(d.log) && S.isDeskData(d.pulse), d.id + " log and pulse come from desk-data");
+  for (const b of d.books || []) assert(S.isDeskData(b.paper), d.id + " paper comes from desk-data");
+}
+assert(S.pickNewer({ asof: "2026-10-25T14:00:00Z" }, { asof: "2026-10-23T09:00:00Z" }).asof.startsWith("2026-10-25"), "desk-data newer wins");
+assert(S.pickNewer(null, { asof: "2026-10-23T09:00:00Z" }).asof.startsWith("2026-10-23"), "missing on desk-data falls back to main");
+assert(S.pickNewer({ asof: "2026-10-20T00:00:00Z" }, { asof: "2026-10-23T09:00:00Z" }).asof.startsWith("2026-10-23"), "strictly newer main copy wins");
+assert(S.pickNewer({ x: 1 }, { x: 2 }).x === 1, "no stamps: desk-data wins");
+{
+  const seen = [];
+  sandbox.fetch = async u => {
+    seen.push(u);
+    if (u.startsWith("https://raw.githubusercontent.com/") && u.includes("solada/log.json")) return { ok: true, json: async () => ({ asof: "2026-10-25T14:00:00Z" }) };
+    if (u.startsWith("https://raw.githubusercontent.com/")) return { ok: false, json: async () => null };
+    return { ok: true, json: async () => ({ asof: "2026-10-23T09:00:00Z", from: "main" }) };
+  };
+  const solLog = await S.get("solada/log.json");
+  assert(solLog.asof === "2026-10-25T14:00:00Z", "get() returns the desk-data log");
+  const nftLog = await S.get("nft/log.json");
+  assert(nftLog.from === "main", "get() falls back to main when desk-data 404s");
+  await S.get("desks.json");
+  assert(!seen.some(u => u.includes("raw.githubusercontent") && u.includes("desks.json")), "desks.json never comes from desk-data");
+  assert(S.freshestAt(solLog, null) === "2026-10-25T14:00:00.000Z", "freshness stamp uses the desk-data asof");
+  delete sandbox.fetch;
+}
+const nftHtml = fs.readFileSync(path.join(root, "nft/site/index.html"), "utf8");
+assert(nftHtml.includes("raw.githubusercontent.com/Zirqo-Dev/sightline/desk-data/nft/site/") && nftHtml.includes("sightlineData"), "nft site reads desk-data");
+for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
+  assert(fs.readFileSync(path.join(root, "nft/site", f), "utf8").includes("window.sightlineData"), f + " uses sightlineData");
+}
+
 console.log("smoke-dashboard: OK");
 console.log("  fixture ADA", sc.byUnit.ADA.pnl, "ADA-equivalent", sc.byUnit["ADA-equivalent"].pnl, "USD", sc.byUnit.USD.pnl);
 console.log("  live books", live.length, "open", live.reduce((n, b) => n + b.json.open.length, 0), "closed", live.reduce((n, b) => n + b.json.closed.length, 0));
