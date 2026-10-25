@@ -1,0 +1,33 @@
+{
+  "note": "Frozen sample for the solada-intel panel. cardano_top10 matches the field Snek adds to solada/log.json; flags match desk-data solada-prefilter/flags.json. Tags only, no addresses.",
+  "now": "2026-10-25T23:30:00Z",
+  "log": {
+    "asof": "2026-10-25T23:00:00Z",
+    "kill_lines": {"ZKOWL": "pool ADA side under 4k or holders under 40"},
+    "founder_whale": {"handle": "$cockwhale", "stake_prefix": "uylu74g0", "net_flow_ada": -4536,
+      "line": "NIGHT: sold 25,000 NIGHT for ~4,536 ADA. ASCEND: no trades since the 9:14 AM sale. STRIKE: no trades."},
+    "cardano_top10": [
+      {"rank": 2, "ticker": "CLOVE", "policy_short": "a1b2c3", "mcap_ada": 330300, "ada_side_depth": 29100, "holders": 306, "holders_delta": -6, "whale_tags": ["w-0e269189"], "note": "third mark above the 160k line", "level": "L2"},
+      {"rank": 1, "ticker": "ZKOWL", "policy_short": "d4e5f6", "mcap_ada": 52000, "ada_side_depth": 6100, "holders": 64, "holders_delta": 12, "whale_tags": ["u8x8h2hc", "u978t4", "w-32877ab4"], "note": "flip pair in first block", "level": "L1"}
+    ],
+    "history": []
+  },
+  "pulse": {"points": [
+    {"t": "2026-10-25T18:00:00Z", "ticker": "ZKOWL", "metrics": {"holders_onchain": 40, "ada_side": 5200}},
+    {"t": "2026-10-25T20:00:00Z", "ticker": "ZKOWL", "metrics": {"holders_onchain": 52, "ada_side": 5800}},
+    {"t": "2026-10-25T22:00:00Z", "ticker": "ZKOWL", "metrics": {"holders_onchain": 64, "ada_side": 6100}}
+  ]},
+  "flags": {
+    "at": "2026-10-25T23:00:00Z",
+    "new": [
+      {"kind": "watch_tags_first_block", "ticker": "ZKOWL", "tags": ["u8x8h2hc", "u978t4"], "at": "2026-10-25T22:00:00Z"},
+      {"kind": "identical_size_buys", "ticker": "ZKOWL", "wallets": ["w-7704fc35", "w-9188b3f2", "w-d107cab9"], "ada_each": 100.19, "window_s": 600, "at": "2026-10-25T22:00:00Z"},
+      {"kind": "sniper_full_exit", "ticker": "ZKOWL", "wallet": "w-7704fc35", "tags": ["u8x8h2hc"], "at": "2026-10-25T22:30:00Z"},
+      {"kind": "repeat_early_buyer", "wallet": "w-32877ab4", "launches": ["ZILLA", "ZKOWL"], "at": "2026-10-25T22:00:00Z"},
+      {"kind": "founder_whale_move", "ticker": "ASCEND", "tag": "w-f3186187", "delta": -1200, "ada_equiv": 2400, "at": "2026-10-25T21:00:00Z"}
+    ],
+    "recent": [
+      {"kind": "coordinated_buys", "ticker": "ZILLA", "wallets": ["w-32877ab4", "w-4dde3a35"], "at": "2026-10-23T10:00:00Z"}
+    ]
+  }
+}
