@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 # Privacy guard: fail if owner wallet data appears in files to be published.
-# Usage: scripts/privacy-guard.sh [files...]   (no args = staged files, or all tracked files if none staged)
+# Usage: scripts/privacy-guard.sh [--root DIR] [files...]   (no args = staged files, or all tracked files if none staged)
+#   --root DIR: scan the git checkout at DIR (e.g. a desk-data worktree) with this script's rules.
 # Extra private patterns (one ERE per line): env PRIVACY_GUARD_PATTERNS and/or gitignored .privacy-patterns
 set -u
-cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+if [ "${1:-}" = "--root" ]; then
+  [ -d "${2:-}" ] || { echo "privacy-guard: --root needs a directory" >&2; exit 2; }
+  cd "$2" || exit 2; shift 2; root_mode=1
+else
+  cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+fi
 
 patterns=(
   '"wallet_snapshot"'
@@ -28,11 +34,14 @@ else
   [ ${#files[@]} -eq 0 ] && mapfile -t files < <(git ls-files)
 fi
 
+if [ -n "${root_mode:-}" ] && [ ${#files[@]} -eq 0 ]; then
+  echo "PRIVACY GUARD FAILED: no tracked files found under --root" >&2; exit 1
+fi
 self="scripts/privacy-guard.sh"
 fail=0
 for f in "${files[@]}"; do
   [ -f "$f" ] || continue
-  case "$f" in "$self"|PRIVACY.md|.privacy-patterns|.github/workflows/privacy-guard.yml) continue;; esac
+  case "$f" in "$self"|PRIVACY.md|.privacy-patterns|.github/workflows/privacy-guard.yml|.github/workflows/desk-data-guard.yml) continue;; esac
   for p in "${patterns[@]}"; do
     if hits=$(grep -nEI -- "$p" "$f" 2>/dev/null); then
       n=$(printf '%s\n' "$hits" | wc -l)

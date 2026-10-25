@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Validate every desk file listed in desks.json against schema/. Needs: pip install jsonschema"""
+"""Validate every desk file listed in desks.json against schema/. Needs: pip install jsonschema
+Usage: validate-desks.py [DATA_DIR]  DATA_DIR (default: repo root) holds desks.json and desk files;
+schemas always come from this script's repo schema/."""
 import json,os,sys,glob
 from jsonschema import Draft202012Validator
-os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)),".."))
-S={k:Draft202012Validator(json.load(open(f"schema/{k}.schema.json"))) for k in("paper-book","run-log","brief","pulse")}
+ROOT=os.path.join(os.path.dirname(os.path.abspath(__file__)),"..")
+SCHEMA=os.path.abspath(os.path.join(ROOT,"schema"))
+os.chdir(sys.argv[1] if len(sys.argv)>1 else ROOT)
+S={k:Draft202012Validator(json.load(open(f"{SCHEMA}/{k}.schema.json"))) for k in("paper-book","run-log","brief","pulse")}
 for v in S.values(): v.check_schema(v.schema)
 jobs=[]
 for d in json.load(open("desks.json"))["desks"]:
