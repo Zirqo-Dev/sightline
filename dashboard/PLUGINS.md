@@ -100,7 +100,14 @@ python3 scripts/build-site.py
 python3 -m http.server -d dist
 ```
 
-`dist/` is a static folder: `index.html`, `dashboard/`, `desks.json`, and each desk's JSON, including the legacy page at `nft/site/`. The browser loads desk JSON from the same origin with relative URLs. Nothing in the frontend assumes GitHub.
+`dist/` is a static folder: `index.html`, `dashboard/`, `desks.json`, and each desk's JSON, including the legacy page at `nft/site/`. The browser loads desk JSON from the same origin with relative URLs.
+
+### Desk data comes from the `desk-data` branch
+
+Since Oct 24 `main` only takes PRs, so the desk bots push their data to the `desk-data` branch. `S.get()` in `dashboard/core.js` reads desk data JSON (each desk's `log`, `pulse`, `paper` books, briefs, and `nft/site/intel.json` / `watchlist.json` via `window.sightlineData` in `nft/site/index.html`) from `https://raw.githubusercontent.com/Zirqo-Dev/sightline/desk-data/<path>?ts=<now>` and the same-origin Pages copy from `main` in parallel. The desk-data copy wins; main's copy is used when the file is missing on desk-data (404/not JSON) or when main's `asof`/`updated_at` is strictly newer. The freshness stamp is computed from whatever was picked, so it reflects the newer data.
+
+Code and config always come from `main`: `desks.json`, `panels.json`, `config.json`, the build-generated `briefs/index.json` (so a brief must also be listed by a main build to appear; each listed brief is then read desk-data-first), icons and schema. raw.githubusercontent has a ~5 minute CDN cache; the `?ts=` buster usually avoids it, but allow a few minutes. Set `window.SIGHTLINE_DESK_DATA = ""` before `core.js` to read main only (or set another base URL). Why client-side rather than overlaying desk-data at build time: a Pages build is only triggered by `main` pushes, and pushes made with the workflow `GITHUB_TOKEN` do not trigger other workflows, so the overlay would go stale between deploys.
+
 
 GitHub Actions (`.github/workflows/pages.yml`) runs `scripts/privacy-guard.sh` and `scripts/validate-desks.py` on every push to `main`, then builds `dist/` and deploys it with `actions/upload-pages-artifact` and `actions/deploy-pages` only if both checks pass.
 

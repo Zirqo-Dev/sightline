@@ -45,9 +45,9 @@ function honestZeros(){
 }
 async function bootIntel(){
   try{
-    const res = await fetch((window.sightlineAsset ? window.sightlineAsset("intel.json") : "intel.json") + "?ts=" + Date.now());
-    if(!res.ok) throw new Error("intel HTTP " + res.status);
-    applyIntel(await res.json());
+    const data = window.sightlineData ? await window.sightlineData("intel.json") : await fetch("intel.json?ts=" + Date.now()).then(r => r.ok ? r.json() : null);
+    if(data == null) throw new Error("intel HTTP " + "missing");
+    applyIntel(data);
   }catch(e){
     const tape = document.getElementById("tape");
     if(tape) tape.innerHTML = '<div class="event social"><time>intel</time><b>CIO</b><p>intel.json missing. Read the 07:00 run in Grok Automations.</p></div>';
