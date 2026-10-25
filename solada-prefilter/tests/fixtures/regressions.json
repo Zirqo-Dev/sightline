@@ -1,0 +1,14 @@
+{
+ "_note": "Synthetic regression fixture for the 2026-10-25 false whale alert. Wallet labels become fake bech32 addresses at test time; no real address or stake key lives in the repo. The LP asset name is a scrambled 32-byte hash, as Minswap V2 LP tokens have.",
+ "minswap_v2_lp_policy": "f5808c2c990d86da54bfc97d89cee6efa20cd8461616359478d96b4c",
+ "lp_asset_name": "6aa2153e1ae896a95539c9d62f76cedcdabdcdf144e564b8955f609d660cf6a2",
+ "lp_delta": 9500000000,
+ "flow_policy": "cd",
+ "flow_asset_name_ascii": "FLOW",
+ "flow_prev_raw": 5000000000,
+ "flow_delta_raw": 224000000,
+ "flow_decimals": 6,
+ "flow_price_ada": 0.3067,
+ "aggregator_tx": {"whale_in_lovelace": 76000000, "whale_out_lovelace": 3000000},
+ "kill": {"ticker": "FAKEKL", "ada_side_below": 5000, "runs_ada_side": [4200, 4200, 3900]}
+}

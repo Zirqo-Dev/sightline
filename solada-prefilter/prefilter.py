@@ -12,6 +12,7 @@ hold a short tag. Never prints secrets.
 import argparse, json, os, re, sys, time, hashlib, urllib.request, urllib.error
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import flags as flagmod  # noqa: E402  flag-only signals, never triggers
+import valuation as V  # noqa: E402  LP detection, raw-unit valuation, kill dedupe
 from datetime import datetime, timezone
 
 UA = "sightline-solada-prefilter/1.0"
@@ -20,6 +21,7 @@ KOIOS = "https://api.koios.rest/api/v1"
 GT = "https://api.geckoterminal.com/api/v2"
 DS = "https://api.dexscreener.com"
 SOLADA = "https://www.solada.fun/api"
+TOKEN_REGISTRY = "https://tokens.cardano.org/metadata"
 
 
 def now_iso():
@@ -256,6 +258,34 @@ class Chain:
                 return out
             off += 1000
 
+    def decimals(self, unit):
+        """Token decimals from Koios asset_info (token registry metadata), else the Cardano token registry.
+        Returns int or None when unknown. Cached per run."""
+        cache = self.__dict__.setdefault("_dec", {})
+        if unit in cache:
+            return cache[unit]
+        d = None
+        r = self.koios_post("/asset_info", {"_asset_list": [[unit[:56], unit[56:]]]})
+        if r:
+            d = ((r[0].get("token_registry_metadata") or {}) or {}).get("decimals")
+        if d is None:
+            r = self.h.req("tokenregistry", f"{TOKEN_REGISTRY}/{unit}")
+            if r:
+                d = (r.get("decimals") or {}).get("value")
+        cache[unit] = int(d) if d is not None else None
+        return cache[unit]
+
+    def account_txs_after(self, stake, after_height, limit):
+        """[(tx_hash, block_height)] of the stake key after a block height (newest last), capped."""
+        r = self.koios_get(f"/account_txs?_stake_address={stake}&_after_block_height={int(after_height)}&order=block_height.asc&limit={limit}")
+        if r is None:
+            return None
+        return [(t["tx_hash"], t["block_height"]) for t in r]
+
+    def account_tip_height(self, stake):
+        r = self.koios_get(f"/account_txs?_stake_address={stake}&order=block_height.desc&limit=1")
+        return r[0]["block_height"] if r else None
+
     def first_block_stakes(self, unit):
         """Stake addresses receiving the asset in the asset's first block (mint block)."""
         txs = None
@@ -417,6 +447,7 @@ def main():
     state.setdefault("seen_launches", [])
     state.setdefault("fired", {})
     state.setdefault("kill_status", {})
+    state.setdefault("kill_reported", {})  # ticker -> {sig, crossed, at}: last kill line actually reported
 
     http = Http(cfg["pace_seconds"])
     bf_key = os.environ.get("BLOCKFROST_PROJECT_ID", "").strip()
@@ -471,6 +502,8 @@ def main():
         row["mcap_ada"] = pool["mcap_ada"] if pool else None
         row["pool_basis"] = pool["basis"] if pool else None
         row["vol_h24_ada"] = pool.get("vol_h24_ada") if pool else None
+        row["price_ada"] = pool.get("price_ada") if pool else None
+        row["decimals"] = 6 if l.get("curve") else None  # Solada curve launches mint 6-decimal supply
         if row["mcap_ada"] is None and pool and pool.get("price_ada"):
             row["mcap_ada"] = round(pool["price_ada"] * supply_whole(l)) or None
         # only spend holder calls when depth already passes (k and y both need depth)
@@ -527,14 +560,25 @@ def main():
             crossed.append(f"holders {m['holders']} < {k['holders_below']:.0f}")
         if "mcap_ada_below" in k and m["mcap_ada"] is not None and m["mcap_ada"] < k["mcap_ada_below"]:
             crossed.append(f"mcap {m['mcap_ada']} < {k['mcap_ada_below']:.0f}")
-        prev = state["kill_status"].get(tk)
-        state["kill_status"][tk] = bool(crossed)
+        # complete = every metric this kill line checks was actually read (a data gap is not a recovery)
+        complete = all(m[{"ada_side_below": "ada_side", "holders_below": "holders", "mcap_ada_below": "mcap_ada"}[x]] is not None
+                       for x in k if x in ("ada_side_below", "holders_below", "mcap_ada_below"))
+        if crossed or complete:
+            state["kill_status"][tk] = bool(crossed)
+        if complete and not crossed:
+            state["kill_reported"].pop(tk, None)  # recovered: a later re-cross is news again
         results.append({"ticker": tk, "tracked": True, "unit": u, **m, "crossed": crossed, "kill": k})
-        if crossed and not prev:
-            triggers.append({"key": f"kill:{tk}:{now_iso()[:13]}", "kind": "kill_line", "name": tk, "metrics": {**m, "crossed": crossed}})
+        if crossed:
+            sig = V.kill_signature(crossed)
+            # dedupe through state.json: same crossed values as last report = already reported
+            if state["kill_reported"].get(tk, {}).get("sig") != sig:
+                triggers.append({"key": f"kill:{tk}:{sig}", "kind": "kill_line", "name": tk, "kill_sig": sig,
+                                 "metrics": {**m, "crossed": crossed}})
 
     # ---- founder whale
     wcfg = cfg["whale"]
+    lp_pols = V.lp_policies(cfg)
+    unit_decimals = {unit_of(l): 6 for l in launches if l.get("curve") and unit_of(l)}
     whale_summary = None
     addr = chain.handle_address(wcfg["handle_policy"], wcfg["handle"])
     stake = chain.stake_of(addr) if addr else None
@@ -547,16 +591,33 @@ def main():
         snap_path = os.path.join(args.cache_dir, "whale-snapshot.json")
         cached = json.load(open(snap_path)) if os.path.exists(snap_path) else {}
         prev = cached.get("snapshot") if cached.get("tag") == wt else None
+        prev_height = cached.get("height") if cached.get("tag") == wt else None
         whale_summary = {"tag": wt}
+        tip_height = None
         if snap is not None and prev is not None:
-            moves = []
+            # ADA leg of the whale's own txs since the last snapshot (values aggregator buys correctly)
+            legs = {}
+            if prev_height is not None:
+                txs = chain.account_txs_after(stake, prev_height, wcfg.get("max_ada_leg_txs", 50))
+                if txs:
+                    tip_height = max(h for _, h in txs)
+                    ut = flagmod.FlagChain(http, bf_key).tx_utxos([t for t, _ in txs])
+                    legs = V.ada_leg_by_unit(stake, ut, flagmod.addr_info, lp_pols)
+                elif txs is not None:
+                    tip_height = prev_height
+            moves, lp_moves = [], []
             units = set(snap) | set(prev)
             prices_left = wcfg["max_price_lookups"]
-            for u in units:
+            dec_left = wcfg.get("max_decimals_lookups", 15)
+            for u in sorted(units):
                 if u == "lovelace":
                     continue
                 a, b = prev.get(u, 0), snap.get(u, 0)
                 if a == b:
+                    continue
+                dex = V.lp_dex(u, lp_pols)
+                if dex:  # LP mint/burn (liquidity add/remove): label it, never a whale buy
+                    lp_moves.append({"asset": "LP", "lp": True, "dex": dex, "delta": b - a})
                     continue
                 nm = ascii_name(u[56:]).upper()
                 mv = {"asset": nm or u[:12], "delta": b - a}
@@ -564,15 +625,25 @@ def main():
                     mv["pct"] = round(100 * abs(b - a) / a, 1)
                 if a == 0 and b > 0:
                     mv["new_position"] = True
-                if prices_left > 0:
+                price, dec = None, unit_decimals.get(u)
+                if u not in legs and prices_left > 0:
                     prices_left -= 1
                     p = gt_pool(http, u)
-                    if p and p.get("price_ada"):
-                        mv["ada_equiv"] = round(abs(b - a) * p["price_ada"])
+                    price = p.get("price_ada") if p else None
+                    if price and dec is None and dec_left > 0:
+                        dec_left -= 1
+                        dec = chain.decimals(u)
+                val, basis = V.value_ada(b - a, legs.get(u), dec, price)
+                if val is not None:
+                    mv["ada_equiv"], mv["value_basis"] = round(val), basis
+                    if dec is not None:
+                        mv["decimals"] = dec
                 fire = (mv.get("ada_equiv", 0) >= wcfg["min_ada_equiv"] or mv.get("pct", 0) >= wcfg["min_position_pct"]
                         or mv.get("new_position") or any(x in nm for x in wcfg["always_tickers"]))
                 if fire:
                     moves.append(mv)
+            if lp_moves:
+                whale_summary["lp_moves"] = lp_moves[:20]
             dl = (snap.get("lovelace", 0) - prev.get("lovelace", 0)) / 1e6
             whale_summary["ada_delta"] = round(dl)
             if abs(dl) >= wcfg["min_ada_equiv"]:
@@ -584,7 +655,9 @@ def main():
         if snap is not None:
             # full snapshot stays in the private cache only, never in committed state
             if not args.dry_run:
-                json.dump({"tag": wt, "at": now_iso(), "snapshot": snap}, open(snap_path, "w"))
+                if tip_height is None:
+                    tip_height = chain.account_tip_height(stake) if prev_height is None else prev_height
+                json.dump({"tag": wt, "at": now_iso(), "snapshot": snap, "height": tip_height}, open(snap_path, "w"))
             w = {"tag": wt, "at": now_iso(), "had_prev": prev is not None}
             hist = (state.get("whale") or {}).get("moves", [])
             for mv in (whale_summary.get("moves") or []):
@@ -614,7 +687,9 @@ def main():
         try:
             new_flags, flag_calls = flagmod.run_flags(
                 http, bf_key, cfg, launches, new_ids, [r for r in results if r.get("unit")], chain.dist,
-                flagmod.watch_map(cfg["flags"], wkeys), whale_summary, state, args.cache_dir, baseline, args.dry_run, now_iso)
+                flagmod.watch_map(cfg["flags"], wkeys), whale_summary, state, args.cache_dir, baseline, args.dry_run, now_iso,
+                unit_value={r["unit"]: {"price_ada": r.get("price_ada"), "decimals": r.get("decimals")} for r in results if r.get("unit")},
+                lp_pols=lp_pols)
         except SystemExit:
             raise
         except Exception as e:  # flags must never break the rules screen
@@ -636,7 +711,7 @@ def main():
     if baseline:
         print(f"baseline run: {len(fresh)} would-be trigger(s) recorded, not sent")
     payload = {"reason": "threshold", "names": sorted({t["name"] for t in fresh}),
-               "metrics": {"at": now_iso(), "triggers": [{k: v for k, v in t.items() if k != "key"} for t in fresh]}}
+               "metrics": {"at": now_iso(), "triggers": [{k: v for k, v in t.items() if k not in ("key", "kill_sig")} for t in fresh]}}
     if new_flags:  # ride along only; a payload is sent only when a threshold trigger is fresh
         payload["metrics"]["flags"] = new_flags[:40]
     sent = False
@@ -654,6 +729,8 @@ def main():
     if sent or baseline or (fresh and args.dry_run is False and not url):
         for t in fresh:
             state["fired"][t["key"]] = now_iso()
+            if t["kind"] == "kill_line":
+                state["kill_reported"][t["name"]] = {"sig": t["kill_sig"], "crossed": t["metrics"]["crossed"], "at": now_iso()}
     state["seen_launches"] = sorted({l["id"] for l in launches} | seen)
     # keep fired map bounded
     if len(state["fired"]) > 2000:
@@ -664,7 +741,7 @@ def main():
         "launches": len(launches), "new_launches": 0 if baseline else len(new_ids), "candidates": len(cands),
         "passed_k_y": [r["ticker"] for r in passed], "thresholds": {k: v for k, v in th.items() if k != "source"},
         "market_age_min": market_age_min, "ada_usd": ada_usd, "whale": {k: v for k, v in (whale_summary or {}).items()},
-        "first_block_hits": fb_hits, "triggers": [{k: v for k, v in t.items() if k != "key"} for t in fresh],
+        "first_block_hits": fb_hits, "triggers": [{k: v for k, v in t.items() if k not in ("key", "kill_sig")} for t in fresh],
         "webhook_sent": sent, "flags_new": len(new_flags), "data_failures": http.failures, "api_calls": http.calls, "results": results,
     }
     if not args.dry_run:
