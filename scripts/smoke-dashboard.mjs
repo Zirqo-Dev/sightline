@@ -431,6 +431,34 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(fs.readFileSync(path.join(root, "nft/site", f), "utf8").includes("window.sightlineData"), f + " uses sightlineData");
 }
 
+// solada-intel panel: fixtures for the cardano_top10 field Snek adds tonight, flags.json, and empty states.
+{
+  const si = load("scripts/fixtures/solada-intel.json");
+  const def = S.registry["solada-intel"];
+  assert(def, "solada-intel panel registered");
+  const data = j => [{ path: "log.json", json: j.log }, { path: "pulse.json", json: j.pulse }, { path: "paper.json", json: null }, { path: "/solada-prefilter/flags.json", json: j.flags }];
+  const html = def.render({ data: data(si), opt: { now: si.now } });
+  for (const want of ["CLOVE", "ZKOWL", "identical size buys", "sev-high", "Founder whale", "Cluster heat grid", "Pattern scoreboard", "Research only, not advice.", "exited", "held", "▼6", "▲12", "net -4,536 ADA"])
+    assert(html.includes(want), "solada-intel shows " + want);
+  assert(html.indexOf(">1<") < html.indexOf("CLOVE") || html.indexOf("ZKOWL") < html.indexOf("CLOVE"), "top 10 sorted by rank");
+  assert(html.indexOf("ASCEND: no trades") < html.indexOf("NIGHT: sold"), "whale card puts ASCEND/STRIKE first");
+  assert(!html.includes("coordinated buys</span><span class=\"ts\""), "flag strip only shows the last 24h");
+  assert(/<svg class="spark/.test(html), "drill-down sparkline from pulse");
+  assert(html.includes("Outcomes not tracked yet"), "scoreboard empty outcome state");
+  // empty: no cardano_top10, no flags.json, no founder whale
+  const empty = def.render({ data: [{ path: "log.json", json: { asof: "x" } }, { path: "pulse.json", json: null }, { path: "paper.json", json: null }, { path: "/solada-prefilter/flags.json", json: null }], opt: {} });
+  assert(empty.includes("Top 10 not published yet") && empty.includes("flags.json not published yet") && !empty.includes("Founder whale"), "solada-intel empty states");
+  // privacy: full keys in a flag never render, only tags
+  const leak = JSON.parse(JSON.stringify(si));
+  const fakeKey = "stake1u" + "x".repeat(52);
+  leak.flags.new.push({ kind: "coordinated_buys", ticker: "LEAK", wallets: [fakeKey, "addr1q" + "y".repeat(90)], at: si.now });
+  leak.log.cardano_top10[0].whale_tags.push(fakeKey);
+  const lh = def.render({ data: data(leak), opt: { now: si.now } });
+  assert(!lh.includes("xxxxxxxxxx") && !lh.includes("yyyyyyyyyy"), "solada-intel never renders full addresses or stake keys");
+  const sp = load("solada/panels.json").panels.find(p => p.type === "solada-intel");
+  assert(sp && sp.data.includes("/solada-prefilter/flags.json") && S.isDeskData("solada-prefilter/flags.json"), "flags.json is read via the desk-data loader");
+}
+
 console.log("smoke-dashboard: OK");
 console.log("  fixture ADA", sc.byUnit.ADA.pnl, "ADA-equivalent", sc.byUnit["ADA-equivalent"].pnl, "USD", sc.byUnit.USD.pnl);
 console.log("  live books", live.length, "open", live.reduce((n, b) => n + b.json.open.length, 0), "closed", live.reduce((n, b) => n + b.json.closed.length, 0));
