@@ -10,6 +10,6 @@
 
 **Webhook:** `POST $SOLADA_WEBHOOK_URL` with `Authorization: Bearer $SOLADA_WEBHOOK_KEY` and `{"reason":"threshold","names":[...],"metrics":{...}}`. Skipped when the URL is not set.
 
-**Privacy:** the whale is resolved from its ADA Handle at run time; only a short hash tag (`w-xxxxxxxx`) is logged or stored.
+**Privacy:** the whale is resolved from its ADA Handle at run time; only a short hash tag (`w-xxxxxxxx`) is logged or stored. The full holdings snapshot needed for deltas lives only in the Actions cache (`--cache-dir`); committed state keeps just threshold-crossing moves (tag, asset, amount change).
 
 Local test: `python3 solada-prefilter/prefilter.py --data-dir /tmp/pf --dry-run`

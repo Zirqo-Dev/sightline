@@ -364,6 +364,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", default=os.path.join(os.path.dirname(__file__), ".."))
     ap.add_argument("--data-dir", required=True, help="where state.json / last-run.json go (desk-data checkout)")
+    ap.add_argument("--cache-dir", default=os.environ.get("PREFILTER_CACHE_DIR", os.path.expanduser("~/.cache/solada-prefilter")),
+                    help="private, uncommitted dir for the whale snapshot (actions/cache in CI)")
     ap.add_argument("--dry-run", action="store_true", help="never POST the webhook")
     args = ap.parse_args()
 
@@ -504,9 +506,12 @@ def main():
     else:
         wt = tag(stake)
         snap = chain.account_assets(stake)
-        prev = (state.get("whale") or {}).get("snapshot")
-        whale_summary = {"tag": wt, "positions": len(snap or {}) - 1 if snap else None}
-        if snap is not None and prev is not None and (state.get("whale") or {}).get("tag") == wt:
+        os.makedirs(args.cache_dir, exist_ok=True)
+        snap_path = os.path.join(args.cache_dir, "whale-snapshot.json")
+        cached = json.load(open(snap_path)) if os.path.exists(snap_path) else {}
+        prev = cached.get("snapshot") if cached.get("tag") == wt else None
+        whale_summary = {"tag": wt}
+        if snap is not None and prev is not None:
             moves = []
             units = set(snap) | set(prev)
             prices_left = wcfg["max_price_lookups"]
@@ -517,7 +522,7 @@ def main():
                 if a == b:
                     continue
                 nm = ascii_name(u[56:]).upper()
-                mv = {"asset": nm or u[:12], "delta": b - a, "prev": a}
+                mv = {"asset": nm or u[:12], "delta": b - a}
                 if a > 0:
                     mv["pct"] = round(100 * abs(b - a) / a, 1)
                 if a == 0 and b > 0:
@@ -540,7 +545,15 @@ def main():
                 triggers.append({"key": f"whale:{wt}:{hashlib.sha256(json.dumps(moves, sort_keys=True).encode()).hexdigest()[:12]}",
                                  "kind": "whale_move", "name": "$cockwhale", "metrics": {"tag": wt, "moves": moves[:20]}})
         if snap is not None:
-            state["whale"] = {"tag": wt, "at": now_iso(), "snapshot": snap}
+            # full snapshot stays in the private cache only, never in committed state
+            if not args.dry_run:
+                json.dump({"tag": wt, "at": now_iso(), "snapshot": snap}, open(snap_path, "w"))
+            w = {"tag": wt, "at": now_iso(), "had_prev": prev is not None}
+            hist = (state.get("whale") or {}).get("moves", [])
+            for mv in (whale_summary.get("moves") or []):
+                hist.append({"at": now_iso(), "tag": wt, "asset": mv["asset"], "delta": mv["delta"]})
+            w["moves"] = hist[-200:]
+            state["whale"] = w
 
     # ---- watch-list keys in first block of new launches
     fb_hits = []

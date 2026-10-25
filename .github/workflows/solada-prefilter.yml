@@ -41,6 +41,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Restore private whale snapshot (Actions cache, never committed)
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/prefilter-cache
+          key: solada-prefilter-whale-${{ github.run_id }}
+          restore-keys: solada-prefilter-whale-
       - name: Run prefilter
         env:
           BLOCKFROST_PROJECT_ID: ${{ secrets.BLOCKFROST_PROJECT_ID }}
@@ -48,6 +54,7 @@ jobs:
           HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
           SOLADA_WEBHOOK_URL: ${{ secrets.SOLADA_WEBHOOK_URL }}
           SOLADA_WEBHOOK_KEY: ${{ secrets.SOLADA_WEBHOOK_KEY }}
+          PREFILTER_CACHE_DIR: ${{ runner.temp }}/prefilter-cache
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         working-directory: code
         run: |
@@ -55,6 +62,12 @@ jobs:
           [ -z "$SOLADA_WEBHOOK_URL" ] && echo "::warning::SOLADA_WEBHOOK_URL not set; triggers are logged, not sent"
           flag=""; [ "$DRY_RUN" = "true" ] && flag="--dry-run"
           timeout 780 python3 solada-prefilter/prefilter.py --repo . --data-dir "$GITHUB_WORKSPACE/data/solada-prefilter" $flag
+      - name: Save private whale snapshot
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/prefilter-cache
+          key: solada-prefilter-whale-${{ github.run_id }}
       - name: Commit to desk-data
         if: always()
         working-directory: data
