@@ -308,13 +308,18 @@ for (const name of ["run-solada.yml", "run-nft.yml"]) {
   const yml = fs.readFileSync(path.join(root, ".github/workflows", name), "utf8");
   assert(yml.includes("workflow_dispatch"), name + " is manual");
   assert(!yml.includes("pull_request") && !yml.includes("push:"), name + " does not run on its own");
-  assert(yml.includes('Authorization: $AUTH'), name + " sends the auth header");
-  assert(yml.includes("exit 0"), name + " exits cleanly when unset");
-  assert(yml.includes("Authorization:' prefix"), name + " documents the header paste");
+  if (name === "run-solada.yml") {
+    assert(yml.includes('Authorization: Bearer $KEY'), name + " sends the bearer header");
+    assert(yml.includes("exit 1"), name + " fails loudly when unset");
+  } else {
+    assert(yml.includes('Authorization: $AUTH'), name + " sends the auth header");
+    assert(yml.includes("exit 0"), name + " exits cleanly when unset");
+    assert(yml.includes("Authorization:' prefix"), name + " documents the header paste");
+  }
   assert(!yml.includes("X-Webhook-Key"), name + " does not use the old header");
 }
-assert(fs.readFileSync(path.join(root, ".github/workflows/run-solada.yml"), "utf8").includes("SOLADA_RUN_WEBHOOK_URL"));
-assert(fs.readFileSync(path.join(root, ".github/workflows/run-solada.yml"), "utf8").includes("SOLADA_RUN_WEBHOOK_AUTH"));
+assert(fs.readFileSync(path.join(root, ".github/workflows/run-solada.yml"), "utf8").includes("SOLADA_WEBHOOK_URL"));
+assert(fs.readFileSync(path.join(root, ".github/workflows/run-solada.yml"), "utf8").includes("SOLADA_WEBHOOK_KEY"));
 assert(fs.readFileSync(path.join(root, ".github/workflows/run-nft.yml"), "utf8").includes("NFT_RUN_WEBHOOK_URL"));
 assert(fs.readFileSync(path.join(root, ".github/workflows/run-nft.yml"), "utf8").includes("NFT_RUN_WEBHOOK_AUTH"));
 
