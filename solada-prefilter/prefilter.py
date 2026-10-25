@@ -10,6 +10,8 @@ Privacy: whale addresses/stake keys are resolved at runtime only; logs and state
 hold a short tag. Never prints secrets.
 """
 import argparse, json, os, re, sys, time, hashlib, urllib.request, urllib.error
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import flags as flagmod  # noqa: E402  flag-only signals, never triggers
 from datetime import datetime, timezone
 
 UA = "sightline-solada-prefilter/1.0"
@@ -161,6 +163,7 @@ class Chain:
     def __init__(self, http, bf_key):
         self.h, self.bf_key = http, bf_key
         self.basis = "blockfrost" if bf_key else "koios"
+        self.dist = {}  # unit -> [(addr, qty)] from holder pages, reused by flags (no extra calls)
 
     def bf(self, path):
         if not self.bf_key:
@@ -182,6 +185,9 @@ class Chain:
                 if r is None:
                     break
                 n += sum(1 for a in r if int(a.get("quantity", "0")) > 0)
+                if page == 1:
+                    self.dist[unit] = []
+                self.dist.setdefault(unit, []).extend((a["address"], int(a.get("quantity", "0"))) for a in r)
                 if len(r) < 100:
                     return n, False
             else:
@@ -192,6 +198,7 @@ class Chain:
         r = self.koios_get(f"/asset_addresses?_asset_policy={pol}&_asset_name={name}&select=payment_address,quantity&limit=1000")
         if r is None:
             return None, False
+        self.dist[unit] = [(a.get("payment_address", ""), int(a.get("quantity", "0"))) for a in r]
         return sum(1 for a in r if int(a.get("quantity", "0")) > 0), len(r) >= 1000
 
     def handle_address(self, policy, name):
@@ -312,7 +319,9 @@ def gt_pool(http, unit):
             qusd = float(a.get("base_token_price_usd") or 0)
         mcap_usd = float(a.get("market_cap_usd") or a.get("fdv_usd") or 0)
         if qusd > 0:
+            vol = float((a.get("volume_usd") or {}).get("h24") or 0)
             return {"ada_side": round(res / 2 / qusd), "mcap_ada": round(mcap_usd / qusd) if mcap_usd else None,
+                    "vol_h24_ada": round(vol / qusd) if vol else None,
                     "price_ada": price_ada, "dex": best["relationships"]["dex"]["data"]["id"] if best.get("relationships") else None,
                     "basis": "geckoterminal"}
     r = http.req("dexscreener", f"{DS}/tokens/v1/cardano/{unit}")
@@ -461,6 +470,7 @@ def main():
         row["ada_side"] = pool["ada_side"] if pool else None
         row["mcap_ada"] = pool["mcap_ada"] if pool else None
         row["pool_basis"] = pool["basis"] if pool else None
+        row["vol_h24_ada"] = pool.get("vol_h24_ada") if pool else None
         if row["mcap_ada"] is None and pool and pool.get("price_ada"):
             row["mcap_ada"] = round(pool["price_ada"] * supply_whole(l)) or None
         # only spend holder calls when depth already passes (k and y both need depth)
@@ -505,7 +515,8 @@ def main():
             continue
         pool = gt_pool(http, u)
         n, _ = chain.holders(u, cfg["max_holder_pages"])
-        m = {"ada_side": pool["ada_side"] if pool else None, "mcap_ada": pool["mcap_ada"] if pool else None, "holders": n}
+        m = {"ada_side": pool["ada_side"] if pool else None, "mcap_ada": pool["mcap_ada"] if pool else None, "holders": n,
+             "vol_h24_ada": pool.get("vol_h24_ada") if pool else None}
         if m["mcap_ada"] is None and pool and pool.get("price_ada") and l is not None and unit_of(l) == u:
             m["mcap_ada"] = round(pool["price_ada"] * supply_whole(l)) or None
         crossed = []
@@ -518,7 +529,7 @@ def main():
             crossed.append(f"mcap {m['mcap_ada']} < {k['mcap_ada_below']:.0f}")
         prev = state["kill_status"].get(tk)
         state["kill_status"][tk] = bool(crossed)
-        results.append({"ticker": tk, "tracked": True, **m, "crossed": crossed, "kill": k})
+        results.append({"ticker": tk, "tracked": True, "unit": u, **m, "crossed": crossed, "kill": k})
         if crossed and not prev:
             triggers.append({"key": f"kill:{tk}:{now_iso()[:13]}", "kind": "kill_line", "name": tk, "metrics": {**m, "crossed": crossed}})
 
@@ -597,12 +608,37 @@ def main():
                 fb_hits.append({"ticker": l["ticker"], "keys": hit})
                 triggers.append({"key": f"firstblock:{lid}", "kind": "watch_key_first_block", "name": l["ticker"], "metrics": {"keys": hit}})
 
+    # ---- flag-only signals (never added to triggers; see flags.py)
+    new_flags, flag_calls = [], {}
+    if cfg.get("flags", {}).get("enabled", True):
+        try:
+            new_flags, flag_calls = flagmod.run_flags(
+                http, bf_key, cfg, launches, new_ids, [r for r in results if r.get("unit")], chain.dist,
+                flagmod.watch_map(cfg["flags"], wkeys), whale_summary, state, args.cache_dir, baseline, args.dry_run, now_iso)
+        except SystemExit:
+            raise
+        except Exception as e:  # flags must never break the rules screen
+            http._fail("flags", type(e).__name__)
+    fpath = os.path.join(args.data_dir, "flags.json" if not args.dry_run else "flags-dry-run.json")
+    prev_doc = json.load(open(os.path.join(args.data_dir, "flags.json"))) if os.path.exists(os.path.join(args.data_dir, "flags.json")) else {}
+    flags_doc = flagmod.assert_public({
+        "at": now_iso(), "flag_only": True,
+        "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
+        "baseline": baseline, "new": new_flags, "recent": ((prev_doc.get("recent") or []) + new_flags)[-300:],
+        "api_calls": flag_calls,
+        "thresholds": {k: v for k, v in cfg["flags"].items() if not k.startswith("_") and k != "snek_prefix_tags"},
+    })
+    json.dump(flags_doc, open(fpath, "w"), indent=1)
+    print(f"flags: {len(new_flags)} new ({', '.join(sorted({f['kind'] for f in new_flags})) or 'none'}); calls {json.dumps(flag_calls)}")
+
     # ---- dedupe + webhook
     fresh = [t for t in triggers if t["key"] not in state["fired"]]
     if baseline:
         print(f"baseline run: {len(fresh)} would-be trigger(s) recorded, not sent")
     payload = {"reason": "threshold", "names": sorted({t["name"] for t in fresh}),
                "metrics": {"at": now_iso(), "triggers": [{k: v for k, v in t.items() if k != "key"} for t in fresh]}}
+    if new_flags:  # ride along only; a payload is sent only when a threshold trigger is fresh
+        payload["metrics"]["flags"] = new_flags[:40]
     sent = False
     url, key = os.environ.get("SOLADA_WEBHOOK_URL", "").strip(), os.environ.get("SOLADA_WEBHOOK_KEY", "").strip()
     if fresh and not baseline:
@@ -629,7 +665,7 @@ def main():
         "passed_k_y": [r["ticker"] for r in passed], "thresholds": {k: v for k, v in th.items() if k != "source"},
         "market_age_min": market_age_min, "ada_usd": ada_usd, "whale": {k: v for k, v in (whale_summary or {}).items()},
         "first_block_hits": fb_hits, "triggers": [{k: v for k, v in t.items() if k != "key"} for t in fresh],
-        "webhook_sent": sent, "data_failures": http.failures, "api_calls": http.calls, "results": results,
+        "webhook_sent": sent, "flags_new": len(new_flags), "data_failures": http.failures, "api_calls": http.calls, "results": results,
     }
     if not args.dry_run:
         json.dump(state, open(state_path, "w"), indent=1, sort_keys=True)

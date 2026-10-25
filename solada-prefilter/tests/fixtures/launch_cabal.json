@@ -1,0 +1,13 @@
+{
+ "_note": "Synthetic fixture. Wallet labels (W1..) and pool labels are turned into fake bech32 addresses at test time so no address string lives in the repo. Prefix 'SNIPER' wallets are built to start with Snek tag u9w6dd/uytg09zr.",
+ "ticker": "CABAL", "live_at_s": 1000,
+ "txs": [
+  {"tx": "t1", "height": 100, "time": 1010, "buyer": "SNIPER_u9w6dd", "qty": 5000, "ada": 50},
+  {"tx": "t2", "height": 100, "time": 1010, "buyer": "SNIPER_uytg09zr", "qty": 5000, "ada": 50},
+  {"tx": "t3", "height": 101, "time": 1030, "buyer": "W1", "qty": 4000, "ada": 40, "extra_addrs": 1},
+  {"tx": "t4", "height": 101, "time": 1040, "buyer": "W2", "qty": 4000, "ada": 40},
+  {"tx": "t5", "height": 102, "time": 1060, "buyer": "W3", "qty": 4000, "ada": 40},
+  {"tx": "t6", "height": 140, "time": 5000, "buyer": "W4", "qty": 900, "ada": 9}
+ ],
+ "first_heights": {"W1": 90, "W2": 95, "W3": 99, "W4": 1}
+}
