@@ -1,13 +1,13 @@
 {
   "schema_version": 2,
   "desk": "solada",
-  "asof": "2026-10-25T12:15:00-04:00",
-  "source": "Snek Sentinel on-demand run (prefilter threshold webhook, 12:08 PM ET)",
+  "asof": "2026-10-25T13:45:00-04:00",
+  "source": "Snek Sentinel on-demand run (prefilter whale_move webhook, 1:42 PM ET)",
   "rate": {
     "ADA_USD": 0.205219,
     "source": "prefilter (CoinGecko, 12:08 PM ET)"
   },
-  "headline": "Prefilter run. SER stays under its pool-side line (12.4k vs 13k, 96 holders, 71k mcap), unchanged since the 9:50 AM run. The founder whale bought ~1.57M SHARKY for ~71 ADA at 11:07 AM, then sold 5.0M SHARKY for ~193 ADA at 11:28 AM (net -3.43M, about 13% of its position; small in ADA). It also added a second small VAMP buy (~25 ADA) and ~152 ADA + ~25k COCK of Minswap V2 liquidity. Both books empty; 0 candidates pass k and y.",
+  "headline": "Prefilter whale run. The founder whale sold 25,000 NIGHT for ~4.5k ADA at 1:29 PM (about 2.6% of its NIGHT), its second NIGHT sale today after 10k this morning. No ASCEND or STRIKE trades, no new Solada-name trades. Both books empty; Solada levels unchanged since the 12:15 PM run.",
   "levels": {
     "CLOVE": "L2: 330.3k mcap, 306 holders (312 Fri), side 29.1k; third mark above the 160k line",
     "BOLT": "L1 Pass: 304.6k mcap (369k Fri), 274 holders, still under the 400k line",
@@ -48,35 +48,31 @@
     "handle": "$cockwhale",
     "address": "addr1q8wd…7jvk",
     "stake_prefix": "uylu74g0",
-    "line": "ASCEND: no trades since the 9:14 AM sale (a ~5.2 ASCEND dust receipt at 9:11 AM). STRIKE: no trades. SHARKY: bought ~1.57M for ~71 ADA (11:07 AM), sold 5.0M for ~193 ADA (11:28 AM), net -3.43M (~13% of position), small in ADA; SHARKY has 61 holders. VAMP: second small buy, ~816k for ~25 ADA (11:30 AM). Liquidity: three Minswap V2 LP adds since 9:16 AM (~102, ~102 and ~152 ADA, the last paired with ~25k COCK), continuing the COCK LP rebuild."
+    "line": "ASCEND: no trades since the 9:14 AM sale. STRIKE: no trades. NIGHT: sold 25,000 NIGHT for ~4,536 ADA at 1:29 PM in two swaps (~21.6k for ~3,918 ADA and ~3.4k for ~618 ADA, about 0.181 ADA each), roughly 2.6% of its NIGHT, on top of the 10k sold this morning (35k today). CRAWJU: small buy for ~72 ADA at 1:17 PM. No new Solada-name trades since 11:30 AM."
   },
   "paper_actions": [
     "pumpfun: no open tickets (Pump.fun arm off under the lean scope)",
-    "solada: no open tickets; nothing qualifies (0 pass k and y)"
+    "solada: no open tickets; no new candidates checked (whale-only trigger)"
   ],
   "rules_added": [],
   "rules_applied": [
-    "k",
-    "y",
     "aa"
   ],
   "helius_credits_est": 0,
   "notes": [
-    "Lean scope: Solada only, no Discord pass, no Pump.fun arm; no candidate passed k and y, so no X pass.",
-    "Data from the prefilter's 12:08 PM ET run plus a Blockfrost pass on the founder whale's stake key since 9:10 AM."
+    "Lean scope, whale-only trigger: payload covered only the founder whale, so Solada levels carry over from 12:15 PM.",
+    "Verified on-chain with a Blockfrost pass over the whale's addresses for the last two hours."
   ],
   "sources": [
-    "https://www.solada.fun/api/launches",
-    "https://www.solada.fun/api/market",
     "Blockfrost mainnet",
-    "GeckoTerminal",
-    "DexScreener"
+    "Sightline prefilter payload"
   ],
   "followups": [
     "Watch VAMP for graduation and whether the curve holds with holders rising",
     "Identify which Minswap pools the whale's LP adds went into",
     "Track where the 2.21M SOLADA moved Friday went",
-    "Prefilter re-fires an unchanged kill line each new hour; dedupe by name and value, not hour bucket"
+    "Prefilter re-fires an unchanged kill line each new hour; dedupe by name and value, not hour bucket",
+    "Watch whether NIGHT selling continues (35k sold today)"
   ],
   "trigger": "prefilter",
   "history": [
@@ -6706,6 +6702,86 @@
         "Track where the 2.21M SOLADA moved Friday went"
       ],
       "trigger": "on-demand"
+    },
+    {
+      "asof": "2026-10-25T12:15:00-04:00",
+      "source": "Snek Sentinel on-demand run (prefilter threshold webhook, 12:08 PM ET)",
+      "rate": {
+        "ADA_USD": 0.205219,
+        "source": "prefilter (CoinGecko, 12:08 PM ET)"
+      },
+      "headline": "Prefilter run. SER stays under its pool-side line (12.4k vs 13k, 96 holders, 71k mcap), unchanged since the 9:50 AM run. The founder whale bought ~1.57M SHARKY for ~71 ADA at 11:07 AM, then sold 5.0M SHARKY for ~193 ADA at 11:28 AM (net -3.43M, about 13% of its position; small in ADA). It also added a second small VAMP buy (~25 ADA) and ~152 ADA + ~25k COCK of Minswap V2 liquidity. Both books empty; 0 candidates pass k and y.",
+      "levels": {
+        "CLOVE": "L2: 330.3k mcap, 306 holders (312 Fri), side 29.1k; third mark above the 160k line",
+        "BOLT": "L1 Pass: 304.6k mcap (369k Fri), 274 holders, still under the 400k line",
+        "SER": "L1 Pass: 72.0k mcap, 96 holders, side 12.4k under 13k",
+        "VAMP": "L1 watch: new curve name, 73.0% curve, 54 holders, side 7.5k; founder whale bought ~25 ADA",
+        "FEED": "L1 Pass: 33.0k mcap, side 8.4k",
+        "SHARKY": "L1 Pass: 32.1k mcap, side 8.3k",
+        "SBROKERS": "L1 Pass: 16.0k mcap, 32 holders",
+        "DEXY": "L1 Pass: 12.7k mcap, 56 holders",
+        "HIVE": "L1 Pass: side 5.9k, 68 holders"
+      },
+      "kill_lines": {
+        "DEXY": "pool ADA side under 13k, on-chain holders under 80, or the swarm keys exiting in one hour",
+        "SER": "pool ADA side under 13k, holders under 80, or the founder whale selling SER into the pool",
+        "BOLT": "pool mcap under 400k ADA or holders under 265 (net-sell driven; LP pulls confirm next pulse, rule u)",
+        "SHARKY": "curve under 70% before graduation, holders under 50, or u8a2m6 and the launcher selling into the curve",
+        "CLOVE": "mcap under 160k ADA or holders under 125",
+        "HIVE": "pool ADA side under 7k or on-chain holders under 60",
+        "FEED": "pool ADA side under 7k or holders under 50",
+        "BEAST": "pool ADA side under 6k or holders under 50",
+        "GOLFY": "curve under 40% or holders under 40",
+        "JUICE": "pool ADA side under 4k or holders under 40",
+        "HERO": "hit: pool ADA side under ~4k with 29 holders",
+        "SOLADA": "on-chain holders under 430 or a 1M+ SOLADA dump into the pool from the founder whale or its side wallets",
+        "KNOPPIES": "curve under 5%",
+        "LIXI": "curve under 12%",
+        "GUINEA": "curve under 20% or swarm keys holding more than 15% before graduation",
+        "MISS": "hit: 16 Solana-native holders (line 25); re-watch only on 30+ natives across two pulses (rule t)",
+        "CORE": "curve under 60% or Solana-native holders under 25",
+        "JUSTQ": "hit: under 230 Solana-native holders and under $16k mcap",
+        "COCK": "founder whale selling COCK into the pool or pulling its LP, or the pool ADA side under ~150k ADA"
+      },
+      "kill_hits": [
+        "SER: pool side 12.4k under 13k (unchanged since 9:50 AM; 96 holders)",
+        "BOLT: mcap 305.6k under 400k (273 holders, above 265)"
+      ],
+      "founder_whale": {
+        "handle": "$cockwhale",
+        "address": "addr1q8wd…7jvk",
+        "stake_prefix": "uylu74g0",
+        "line": "ASCEND: no trades since the 9:14 AM sale (a ~5.2 ASCEND dust receipt at 9:11 AM). STRIKE: no trades. SHARKY: bought ~1.57M for ~71 ADA (11:07 AM), sold 5.0M for ~193 ADA (11:28 AM), net -3.43M (~13% of position), small in ADA; SHARKY has 61 holders. VAMP: second small buy, ~816k for ~25 ADA (11:30 AM). Liquidity: three Minswap V2 LP adds since 9:16 AM (~102, ~102 and ~152 ADA, the last paired with ~25k COCK), continuing the COCK LP rebuild."
+      },
+      "paper_actions": [
+        "pumpfun: no open tickets (Pump.fun arm off under the lean scope)",
+        "solada: no open tickets; nothing qualifies (0 pass k and y)"
+      ],
+      "rules_added": [],
+      "rules_applied": [
+        "k",
+        "y",
+        "aa"
+      ],
+      "helius_credits_est": 0,
+      "notes": [
+        "Lean scope: Solada only, no Discord pass, no Pump.fun arm; no candidate passed k and y, so no X pass.",
+        "Data from the prefilter's 12:08 PM ET run plus a Blockfrost pass on the founder whale's stake key since 9:10 AM."
+      ],
+      "sources": [
+        "https://www.solada.fun/api/launches",
+        "https://www.solada.fun/api/market",
+        "Blockfrost mainnet",
+        "GeckoTerminal",
+        "DexScreener"
+      ],
+      "followups": [
+        "Watch VAMP for graduation and whether the curve holds with holders rising",
+        "Identify which Minswap pools the whale's LP adds went into",
+        "Track where the 2.21M SOLADA moved Friday went",
+        "Prefilter re-fires an unchanged kill line each new hour; dedupe by name and value, not hour bucket"
+      ],
+      "trigger": "prefilter"
     }
   ]
 }
