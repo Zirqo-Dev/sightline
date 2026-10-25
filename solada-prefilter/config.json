@@ -33,5 +33,89 @@
     "_note": "Tracked tickers that are not Solada launches (or have copycats): unit = policy id + asset name hex.",
     "SOLADA": "e7c77b2784e52949b3f95f8f9f2d1668dd47d7ed56491eab588bb730534f4c414441",
     "COCK": "49e423161ef818adc475c783571cb479d5f15ad52a01a240eacc0d3b434f434b"
+  },
+  "flags": {
+    "_note": "FLAG-ONLY signals (flags.py). Never count toward rules k/y/aa or kill lines; never fire the webhook alone. Loose defaults; Snek reviews flags.json daily.",
+    "enabled": true,
+    "max_launch_scans": 8,
+    "scan_txs": 40,
+    "first_x_buyers": 20,
+    "max_wallet_age_lookups": 15,
+    "first_block_watch_tags_min": 2,
+    "stake_cluster_min_addrs": 2,
+    "coordinated_window_s": 120,
+    "coordinated_min_wallets": 4,
+    "coordinated_after_launch_s": 900,
+    "same_size_window_s": 600,
+    "same_size_min_wallets": 3,
+    "same_size_tolerance_pct": 1.0,
+    "fresh_wallet_max_age_blocks": 4320,
+    "fresh_swarm_min_wallets": 4,
+    "repeat_min_launches": 2,
+    "koth_progress_bps": 8000,
+    "max_koth_scans": 3,
+    "koth_txs": 25,
+    "max_tracked_snipers": 50,
+    "ada_side_drop_pct": 20,
+    "holder_doubling_ratio": 2.0,
+    "wash_vol_to_ada_side": 3.0,
+    "top_cluster_pct": 25,
+    "concentration_jump_pts": 10,
+    "whale_noise_tickers": [
+      "COCK",
+      "SOLADA"
+    ],
+    "launcher_roles": [
+      "repeat_launcher",
+      "swarm_launcher",
+      "pool_preseeder",
+      "founder_whale"
+    ],
+    "snek_prefix_tags": {
+      "_note": "Snek Sentinel's stake-prefix tags (partial stake keys after 'stake1', already public in desk data). Seed watchlist only; newly found wallets are published as w-xxxxxxxx hashes.",
+      "flip_pair": [
+        "u8a2m6",
+        "u978t4"
+      ],
+      "first_block_sniper": [
+        "u9w6dd",
+        "uytg09zr",
+        "uyyyjqps",
+        "u8x8h2hc",
+        "u9kp4sxa",
+        "uxz6fvju",
+        "u9534d4g",
+        "u944xqrv",
+        "uxfernv7",
+        "ux9da0mc",
+        "u9q3xusf",
+        "ux3cvv58"
+      ],
+      "repeat_launcher": [
+        "ux739ulujk",
+        "uyetfdape9",
+        "u8laqm3frx"
+      ],
+      "swarm_launcher": [
+        "uyt8xs9q",
+        "u9rwdkfjtr",
+        "uxz5cts5ww"
+      ],
+      "pool_preseeder": [
+        "uynnk0mezk"
+      ],
+      "wojaks_whale": [
+        "uxdn3dre"
+      ],
+      "wojaks_dumper": [
+        "uylvsrhd"
+      ],
+      "founder_whale": [
+        "uylu74g0"
+      ],
+      "watch": [
+        "uy3gz02eqt"
+      ]
+    }
   }
 }

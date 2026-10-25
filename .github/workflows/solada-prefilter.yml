@@ -5,6 +5,9 @@ name: Solada prefilter
 # fired reliably for this repo). The schedule below is only a backup.
 # Reads rules from main; writes state/results ONLY to desk-data:solada-prefilter/
 # with pull --rebase retries and no force-push. Never touches main data files.
+# Flag-only cabal/whale signals go to desk-data:solada-prefilter/flags.json; their
+# private working data (full stake keys, sniper positions) rides in the same Actions
+# cache as the whale snapshot (flags-cache.json) and is never committed.
 
 on:
   workflow_dispatch:
@@ -54,6 +57,10 @@ jobs:
         if: github.event.inputs.ping != 'true'
         with:
           python-version: "3.12"
+      - name: Offline flag tests (no network, no secrets)
+        if: github.event.inputs.ping != 'true'
+        working-directory: code
+        run: python3 -m unittest discover -s solada-prefilter/tests
       - name: Restore private whale snapshot (Actions cache, never committed)
         if: github.event.inputs.ping != 'true'
         uses: actions/cache/restore@v4
