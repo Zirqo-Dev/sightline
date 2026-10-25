@@ -4,7 +4,7 @@ Mode "scan" (default) only checks leads and logs tasks; it never fills.
 Mode "fill" is refused until config.FROZEN is True (config freeze, end of day 3).
 Free public APIs only: DexScreener, RugCheck, Jupiter quote (optional free key in JUPITER_API_KEY).
 """
-import argparse, json, os, sys, time, urllib.request
+import argparse, json, os, sys, time, urllib.request, urllib.error
 from . import config as C, skips, ledger
 
 SOL = "So11111111111111111111111111111111111111112"
@@ -39,10 +39,26 @@ def best_pair(get, mint):
     ps = [p for p in d.get("pairs") or [] if p.get("chainId") == "solana" and (p.get("quoteToken") or {}).get("address") == SOL]
     return max(ps, key=lambda p: (p.get("liquidity") or {}).get("quote", 0), default=None)
 
-def quote(get, mint, key):
+QUOTE_GAP_S = 1.2   # keyed free tier 429s after ~11 back-to-back calls (measured 2026-10-25)
+RETRY_WAIT_S = 2.0
+
+def quote(get, mint, key, sleep=time.sleep):
+    """Returns quote dict; {} if Jupiter says there is no route; raises on other errors.
+    One retry on HTTP 429/5xx."""
     q = f"?inputMint={SOL}&outputMint={mint}&amount={int(C.TICKET_SOL * 1e9)}&slippageBps=300"
-    if key: return get(JUP_KEYED + q, {"x-api-key": key})
-    return get(JUP_LITE + q)
+    url, hdr = (JUP_KEYED + q, {"x-api-key": key}) if key else (JUP_LITE + q, None)
+    for attempt in (0, 1):
+        try:
+            return get(url, hdr) if hdr else get(url)
+        except urllib.error.HTTPError as e:
+            body = ""
+            try: body = e.read().decode(errors="ignore")
+            except Exception: pass
+            if e.code == 400 and ("NO_ROUTE" in body.upper() or "COULD_NOT_FIND" in body.upper()):
+                return {}  # real "no route" -> execution skip, not a data failure
+            if attempt == 0 and (e.code == 429 or e.code >= 500):
+                sleep(RETRY_WAIT_S); continue
+            raise
 
 def mode_allowed(mode):
     return mode == "scan" or (mode == "fill" and C.FROZEN)
@@ -54,7 +70,7 @@ def load_state(d, day):
     if s.get("day") != day: s = dict(day=day, runs=0, checks=0, errors=0, data_failures=0)
     return s
 
-def scan(data_dir, get=http_json, key=None, now=None, mode="scan"):
+def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None):
     now = now or time.time(); day = time.strftime("%Y-%m-%d", time.gmtime(now))
     os.makedirs(data_dir, exist_ok=True)
     slot = int(now) // SLOT_S * SLOT_S  # idempotency: one scan per 30-min slot
@@ -69,16 +85,22 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan"):
     if not key: notes.append("JUPITER_API_KEY missing: using keyless lite-api")
     ls = leads(get, C.LEADS_PER_RUN)
     if not ls: notes.append("no leads (DexScreener empty or unreachable)")
-    for mint, src in ls:
-        t0 = time.time(); err = False
+    if sleep is None: sleep = time.sleep if get is http_json else (lambda s: None)
+    st.setdefault("eligibility_skips", 0)
+    for i, mint in enumerate(m for m, _ in ls):
+        src = ls[i][1]
+        if i: sleep(QUOTE_GAP_S)  # pace Jupiter (and RugCheck) instead of bursting 12 calls
+        t0 = time.time(); errs = set()
         try: pair = best_pair(get, mint)
-        except Exception: pair, err = None, True
+        except Exception: pair = None; errs.add("dex")
         try: rc = get(RUG.format(mint))
-        except Exception: rc, err = None, True
-        try: q = quote(get, mint, key)
-        except Exception: q, err = None, True
-        stype, reason = skips.classify(pair, rc, q, now)
+        except Exception: rc = None; errs.add("rug")
+        try: q = quote(get, mint, key, sleep)
+        except Exception: q = None; errs.add("jup")
+        stype, reason = skips.classify(pair, rc, q, now, errs)
+        err = bool(errs)
         st["checks"] += 1; st["errors"] += int(err); st["data_failures"] += int(stype == "data")
+        st["eligibility_skips"] += int(stype == "eligibility")
         ledger.task(data_dir, dict(time=int(now), run_id=run_id, agent="scanner", task="scan", mint=mint, book="",
                     result="pass" if stype is None else "skip", skip_type=stype or "", reason=reason or "",
                     source=src, check_delay_s=round(time.time() - t0, 2), cfg_version=C.CFG_VERSION, seed=seed))
@@ -86,7 +108,7 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan"):
     st["run_times"].append(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)))
     with open(os.path.join(data_dir, "state.json"), "w") as f: json.dump(st, f, indent=1)
     h = ledger.health(data_dir, st["runs"], RUNS_PER_DAY, st["checks"], st["errors"], st["data_failures"], day)
-    h.update(mode=mode, cfg_version=C.CFG_VERSION, frozen=C.FROZEN, last_run_utc=run_id, leads_this_run=len(ls),
+    h.update(eligibility_skips=st["eligibility_skips"], mode=mode, cfg_version=C.CFG_VERSION, frozen=C.FROZEN, last_run_utc=run_id, leads_this_run=len(ls),
              runner="github-actions" if os.environ.get("GITHUB_ACTIONS") else "local", notes=notes,
              run_times_utc=st["run_times"], max_gap_min=max_gap_min(st["run_times"]),
              trigger=os.environ.get("GITHUB_EVENT_NAME", "local"))

@@ -44,7 +44,20 @@ class Skips(unittest.TestCase):
         q = L("jup_lite_quote.json"); p = PAIRS["DUxnHr"]
         self.assertEqual(skips.execution_check(p, q), "impact")
     def test_missing_is_skip(self):
-        self.assertEqual(skips.classify(None, {}, {}), ("data", "missing_data"))
+        self.assertEqual(skips.classify(None, None, {}), ("data", "missing_data"))
+        self.assertEqual(skips.classify(None, {}, {}, errors={"dex"}), ("data", "missing_data"))
+    def test_no_sol_pair_is_eligibility(self):  # e.g. pumpswap/BTC only
+        rc = {"markets": [{"marketType": "meteora_damm_v2", "pubkey": "x"}]}
+        self.assertEqual(skips.classify(None, rc, {"routePlan": [1]}), ("eligibility", "no_sol_pair"))
+    def test_bonding_curve_is_not_graduated(self):
+        rc = {"markets": [{"marketType": "pump_fun", "pubkey": "p"}]}
+        self.assertEqual(skips.classify(None, rc, {}), ("safety", "not_graduated"))
+        pair = {"dexId": "pumpfun", "pairAddress": "p", "pairCreatedAt": 1, "liquidity": None}
+        self.assertEqual(skips.classify(pair, rc, {"routePlan": [1]}), ("safety", "not_graduated"))
+    def test_quote_failure_vs_no_route(self):
+        p = PAIRS["DUxnHr"]; rc = L("rugcheck_full_DUxnHr.json")
+        self.assertEqual(skips.classify(p, rc, None, errors={"jup"}), ("data", "quote_error"))
+        self.assertEqual(skips.classify(p, rc, {})[1], "no_route")
 
 class Books(unittest.TestCase):
     def mk(self): return {k: books.Book(k) for k in "FRS"}
@@ -128,6 +141,20 @@ class Runner(unittest.TestCase):
             self.assertEqual((len(h["run_times_utc"]), h["max_gap_min"]), (2, 30.0))
             h = run.scan(d, self.fake(), key="k", now=NOW + 1801)  # same slot -> no-op
             self.assertTrue(h["duplicate"]); self.assertEqual(sum(1 for _ in open(os.path.join(d, "tasks.csv"))), 3)
+    def test_quote_retries_429_and_maps_no_route(self):
+        import io, urllib.error
+        from desk import run
+        def err(code, body=b""): return urllib.error.HTTPError("u", code, "x", {}, io.BytesIO(body))
+        calls = []
+        def get(url, headers=None):
+            calls.append(url)
+            if len(calls) == 1: raise err(429)
+            return {"routePlan": [1]}
+        self.assertEqual(run.quote(get, "M", "k", sleep=lambda s: None), {"routePlan": [1]}); self.assertEqual(len(calls), 2)
+        def nr(url, headers=None): raise err(400, b'{"errorCode":"COULD_NOT_FIND_ANY_ROUTE"}')
+        self.assertEqual(run.quote(nr, "M", "k", sleep=lambda s: None), {})
+        def always(url, headers=None): raise err(429)
+        with self.assertRaises(urllib.error.HTTPError): run.quote(always, "M", "k", sleep=lambda s: None)
     def test_fill_refused_until_frozen(self):
         from desk import run
         self.assertFalse(C.FROZEN); self.assertFalse(run.mode_allowed("fill")); self.assertTrue(run.mode_allowed("scan"))
