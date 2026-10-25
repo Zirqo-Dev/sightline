@@ -1,0 +1,37 @@
+{
+  "_note": "Prefilter knobs that are not in solada/paper.json. Rule thresholds (k, y, aa, kill lines) are read from solada/paper.json and solada/log.json at runtime.",
+  "candidate_max_age_hours": 48,
+  "max_new_first_block_checks": 25,
+  "max_holder_lookups": 40,
+  "max_holder_pages": 10,
+  "whale": {
+    "handle": "cockwhale",
+    "handle_policy": "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a",
+    "min_ada_equiv": 2000,
+    "min_position_pct": 10,
+    "always_tickers": [
+      "ASCEND",
+      "STRIKE"
+    ],
+    "max_price_lookups": 15
+  },
+  "solana": {
+    "ignore_owners": [
+      "A1qaJWQDfC9T7AcSRNwfxgiJrHUzhpJ3f8qTDUMVVcXQ"
+    ],
+    "max_lookups": 10
+  },
+  "pace_seconds": {
+    "geckoterminal": 2.2,
+    "dexscreener": 0.5,
+    "blockfrost": 0.12,
+    "koios": 0.6,
+    "solana": 0.25,
+    "solada": 0.3
+  },
+  "units": {
+    "_note": "Tracked tickers that are not Solada launches (or have copycats): unit = policy id + asset name hex.",
+    "SOLADA": "e7c77b2784e52949b3f95f8f9f2d1668dd47d7ed56491eab588bb730534f4c414441",
+    "COCK": "49e423161ef818adc475c783571cb479d5f15ad52a01a240eacc0d3b434f434b"
+  }
+}

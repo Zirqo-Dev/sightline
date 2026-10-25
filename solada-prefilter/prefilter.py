@@ -1,0 +1,619 @@
+#!/usr/bin/env python3
+"""Solada pre-filter: zero-AI numeric screen for the Solada desk.
+
+Reads launches/market from solada.fun, pool depth from GeckoTerminal (DexScreener
+fallback), holders/flows from Blockfrost (Koios fallback), optional Solana holder
+concentration via RPC. Applies thresholds parsed from solada/paper.json rules[]
+and ticket/log kill lines. POSTs a webhook on new triggers (deduped via state).
+
+Privacy: whale addresses/stake keys are resolved at runtime only; logs and state
+hold a short tag. Never prints secrets.
+"""
+import argparse, json, os, re, sys, time, hashlib, urllib.request, urllib.error
+from datetime import datetime, timezone
+
+UA = "sightline-solada-prefilter/1.0"
+BF = "https://cardano-mainnet.blockfrost.io/api/v0"
+KOIOS = "https://api.koios.rest/api/v1"
+GT = "https://api.geckoterminal.com/api/v2"
+DS = "https://api.dexscreener.com"
+SOLADA = "https://www.solada.fun/api"
+
+
+def now_iso():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+class Http:
+    def __init__(self, pace):
+        self.pace, self.last, self.failures, self.calls = pace, {}, {}, {}
+
+    def _wait(self, src):
+        gap = self.pace.get(src, 0.3)
+        dt = time.time() - self.last.get(src, 0)
+        if dt < gap:
+            time.sleep(gap - dt)
+        self.last[src] = time.time()
+
+    def req(self, src, url, method="GET", body=None, headers=None, quiet404=True):
+        """Return parsed JSON or None. Retries once on 429/5xx/network error."""
+        h = {"User-Agent": UA, "Accept": "application/json"}
+        h.update(headers or {})
+        data = None
+        if body is not None:
+            data = json.dumps(body).encode()
+            h["Content-Type"] = "application/json"
+        for attempt in (0, 1):
+            self._wait(src)
+            self.calls[src] = self.calls.get(src, 0) + 1
+            try:
+                r = urllib.request.Request(url, data=data, method=method, headers=h)
+                with urllib.request.urlopen(r, timeout=30) as resp:
+                    raw = resp.read()
+                    return json.loads(raw) if raw else {}
+            except urllib.error.HTTPError as e:
+                if e.code == 404 and quiet404:
+                    return None
+                if (e.code == 429 or e.code >= 500) and attempt == 0:
+                    time.sleep(3 if e.code == 429 else 1.5)
+                    continue
+                self._fail(src, f"http {e.code}")
+                return None
+            except Exception as e:  # network / json
+                if attempt == 0:
+                    time.sleep(1.5)
+                    continue
+                self._fail(src, type(e).__name__)
+                return None
+
+    def _fail(self, src, why):
+        self.failures[src] = self.failures.get(src, 0) + 1
+        print(f"  data failure [{src}]: {why}", file=sys.stderr)
+
+
+# ---------------------------------------------------------------- thresholds
+def num_k(s):
+    s = s.replace(",", "").lower()
+    m = re.match(r"([\d.]+)\s*([km]?)", s)
+    v = float(m.group(1))
+    return v * {"k": 1e3, "m": 1e6, "": 1}[m.group(2)]
+
+
+def parse_rules(paper):
+    rules = {r.get("id"): r.get("rule", "") for r in paper.get("rules", [])}
+    t = {"source": {}}
+    k = rules.get("k", "")
+    m = re.search(r"(\d[\d,]*)\+\s*holders", k)
+    if m:
+        t["min_holders"] = int(m.group(1).replace(",", ""))
+    m = re.search(r"ADA[- ]side\s*(?:≥|>=|of at least)\s*~?([\d.,]+\s*[km]?)", k, re.I)
+    if m:
+        t["min_ada_side_k"] = num_k(m.group(1))
+    m = re.search(r"6h buys\s*>\s*sells", k)
+    t["k_requires_6h_buys_gt_sells"] = bool(m)
+    y = rules.get("y", "")
+    m = re.search(r"ADA side under\s*~?([\d.,]+\s*[km]?)", y, re.I)
+    if m:
+        t["min_ada_side_y"] = num_k(m.group(1))
+    t["aa_zero_holder_noise"] = "aa" in rules and "zero-holder" in rules["aa"].lower()
+    t["source"] = {"k": k[:120], "y": y[:120], "aa": rules.get("aa", "")[:120]}
+    missing = [x for x in ("min_holders", "min_ada_side_k", "min_ada_side_y") if x not in t]
+    if missing:
+        raise SystemExit(f"could not parse thresholds from paper.json rules: {missing}")
+    t["min_ada_side"] = max(t["min_ada_side_k"], t["min_ada_side_y"])
+    return t
+
+
+KL_PATTERNS = [
+    ("ada_side_below", r"ADA side (?:under|<)\s*~?([\d.,]+\s*[km]?)"),
+    ("holders_below", r"holders (?:under|<)\s*~?(\d[\d,]*)"),
+    ("mcap_ada_below", r"mcap (?:under|<)\s*~?([\d.,]+\s*[km]?)\s*ADA"),
+]
+
+
+def parse_kill_text(text):
+    out = {}
+    for key, pat in KL_PATTERNS:
+        m = re.search(pat, text, re.I)
+        if m:
+            out[key] = num_k(m.group(1))
+    return out
+
+
+def tracked_names(paper, log):
+    """ticker -> {kill: {...numbers}, text, asset_id?}. Open tickets win over log text."""
+    out = {}
+    for tk, text in (log.get("kill_lines") or {}).items():
+        if isinstance(text, str):
+            kl = parse_kill_text(text)
+            if kl:
+                out[tk.upper()] = {"kill": kl, "text": text, "source": "log.kill_lines"}
+    for t in paper.get("open", []):
+        kl = t.get("kill_line") or {}
+        nums = {k: v for k, v in kl.items() if isinstance(v, (int, float)) and k.endswith("_below")}
+        if "post_grad_ada_side_below" in nums and "ada_side_below" not in nums:
+            nums["ada_side_below"] = nums["post_grad_ada_side_below"]
+        if not nums and isinstance(kl.get("text"), str):
+            nums = parse_kill_text(kl["text"])
+        if nums:
+            out[t["ticker"].upper()] = {"kill": nums, "text": kl.get("text", ""), "asset_id": t.get("asset_id"), "source": "paper.open"}
+    return out
+
+
+STAKE_KEY_RE = re.compile(r"\bu[02-9ac-hj-np-z]{5,11}\b")
+
+
+def watch_keys(log):
+    """Stake-key prefixes (after 'stake1') from whale_watch / whale_watch_added in the log + history."""
+    keys = set()
+    for h in [log] + list(log.get("history") or []):
+        ww = h.get("whale_watch")
+        if isinstance(ww, dict):
+            for w in ww.get("wallets", []):
+                keys.update(STAKE_KEY_RE.findall(str(w.get("prefix", ""))))
+        for line in h.get("whale_watch_added") or []:
+            keys.update(STAKE_KEY_RE.findall(str(line)))
+    return sorted(k for k in keys if any(c.isdigit() for c in k))
+
+
+# ---------------------------------------------------------------- chain data
+class Chain:
+    def __init__(self, http, bf_key):
+        self.h, self.bf_key = http, bf_key
+        self.basis = "blockfrost" if bf_key else "koios"
+
+    def bf(self, path):
+        if not self.bf_key:
+            return None
+        return self.h.req("blockfrost", BF + path, headers={"project_id": self.bf_key})
+
+    def koios_get(self, path):
+        return self.h.req("koios", KOIOS + path)
+
+    def koios_post(self, path, body):
+        return self.h.req("koios", KOIOS + path, method="POST", body=body)
+
+    def holders(self, unit, max_pages):
+        """On-chain holder count (addresses with qty>0). Returns (count, capped) or (None, False)."""
+        if self.bf_key:
+            n = 0
+            for page in range(1, max_pages + 1):
+                r = self.bf(f"/assets/{unit}/addresses?count=100&page={page}")
+                if r is None:
+                    break
+                n += sum(1 for a in r if int(a.get("quantity", "0")) > 0)
+                if len(r) < 100:
+                    return n, False
+            else:
+                return n, True
+            if n:
+                return n, False
+        pol, name = unit[:56], unit[56:]
+        r = self.koios_get(f"/asset_addresses?_asset_policy={pol}&_asset_name={name}&select=payment_address,quantity&limit=1000")
+        if r is None:
+            return None, False
+        return sum(1 for a in r if int(a.get("quantity", "0")) > 0), len(r) >= 1000
+
+    def handle_address(self, policy, name):
+        unit = policy + name.encode().hex()
+        r = self.bf(f"/assets/{unit}/addresses")
+        if r:
+            return r[0]["address"]
+        # CIP-68 handles carry the 000de140 label
+        r = self.bf(f"/assets/{policy}000de140{name.encode().hex()}/addresses")
+        if r:
+            return r[0]["address"]
+        for nm in (name.encode().hex(), "000de140" + name.encode().hex()):
+            r = self.koios_get(f"/asset_addresses?_asset_policy={policy}&_asset_name={nm}")
+            if r:
+                return r[0]["payment_address"]
+        return None
+
+    def stake_of(self, addr):
+        r = self.bf(f"/addresses/{addr}")
+        if r and r.get("stake_address"):
+            return r["stake_address"]
+        r = self.koios_post("/address_info", {"_addresses": [addr]})
+        if r:
+            return r[0].get("stake_address")
+        return None
+
+    def account_assets(self, stake):
+        """{unit: qty, 'lovelace': qty} across the stake key's addresses."""
+        out = {}
+        if self.bf_key:
+            acct = self.bf(f"/accounts/{stake}")
+            if acct is not None:
+                out["lovelace"] = int(acct.get("controlled_amount", 0)) - int(acct.get("withdrawable_amount", 0) or 0)
+                for page in range(1, 40):
+                    r = self.bf(f"/accounts/{stake}/addresses/assets?count=100&page={page}")
+                    if r is None:
+                        return None
+                    for a in r:
+                        out[a["unit"]] = int(a["quantity"])
+                    if len(r) < 100:
+                        return out
+                return out
+        info = self.koios_post("/account_info", {"_stake_addresses": [stake]})
+        if not info:
+            return None
+        out["lovelace"] = int(info[0].get("total_balance", 0)) - int(info[0].get("rewards_available", 0) or 0)
+        off = 0
+        while True:
+            r = self.koios_post(f"/account_assets?offset={off}&limit=1000", {"_stake_addresses": [stake]})
+            if r is None:
+                return None
+            for a in r:
+                out[a["policy_id"] + a["asset_name"]] = out.get(a["policy_id"] + a["asset_name"], 0) + int(a["quantity"])
+            if len(r) < 1000:
+                return out
+            off += 1000
+
+    def first_block_stakes(self, unit):
+        """Stake addresses receiving the asset in the asset's first block (mint block)."""
+        txs = None
+        if self.bf_key:
+            r = self.bf(f"/assets/{unit}/transactions?order=asc&count=25")
+            if r is not None:
+                txs = [(t["tx_hash"], t["block_height"]) for t in r]
+        if txs is None:
+            r = self.koios_get(f"/asset_txs?_asset_policy={unit[:56]}&_asset_name={unit[56:]}&_history=true")
+            if r is None:
+                return None
+            txs = sorted(((t["tx_hash"], t["block_height"]) for t in r), key=lambda x: x[1])[:25]
+        if not txs:
+            return set()
+        first = min(b for _, b in txs)
+        hashes = [h for h, b in txs if b == first]
+        stakes = set()
+        for h in hashes:
+            outs = None
+            if self.bf_key:
+                r = self.bf(f"/txs/{h}/utxos")
+                if r is not None:
+                    outs = [(o["address"], o.get("amount", [])) for o in r.get("outputs", [])]
+                    stakes.update(self._bf_stakes(o for o in r.get("inputs", [])))
+            if outs is None:
+                r = self.koios_post("/tx_utxos", {"_tx_hashes": [h]})
+                if not r:
+                    continue
+                for o in r[0].get("outputs", []) + r[0].get("inputs", []):
+                    if o.get("stake_addr"):
+                        stakes.add(o["stake_addr"])
+                continue
+            stakes.update(self._bf_stakes({"address": a} for a, _ in outs))
+        return stakes
+
+    def _bf_stakes(self, items):
+        s = set()
+        for o in items:
+            a = o["address"]
+            if a.startswith("addr1q") or a.startswith("addr1x") or a.startswith("addr1z") or a.startswith("addr1y"):
+                r = self.bf(f"/addresses/{a}")
+                if r and r.get("stake_address"):
+                    s.add(r["stake_address"])
+        return s
+
+
+def gt_pool(http, unit):
+    """(ada_side, mcap_ada, price_ada, basis) from GeckoTerminal, else DexScreener."""
+    r = http.req("geckoterminal", f"{GT}/networks/cardano/tokens/{unit}/pools?page=1")
+    pools = (r or {}).get("data") or []
+    if pools:
+        best = max(pools, key=lambda p: float(p["attributes"].get("reserve_in_usd") or 0))
+        a = best["attributes"]
+        qusd = float(a.get("quote_token_price_usd") or 0)
+        res = float(a.get("reserve_in_usd") or 0)
+        base_id = (((best.get("relationships") or {}).get("base_token") or {}).get("data") or {}).get("id", "")
+        if base_id.endswith(unit):
+            price_ada = float(a.get("base_token_price_quote_token") or 0)
+        else:  # pool lists ADA as base: token price = 1 / quote-per-base
+            price_ada = float(a.get("quote_token_price_base_token") or 0)
+            qusd = float(a.get("base_token_price_usd") or 0)
+        mcap_usd = float(a.get("market_cap_usd") or a.get("fdv_usd") or 0)
+        if qusd > 0:
+            return {"ada_side": round(res / 2 / qusd), "mcap_ada": round(mcap_usd / qusd) if mcap_usd else None,
+                    "price_ada": price_ada, "dex": best["relationships"]["dex"]["data"]["id"] if best.get("relationships") else None,
+                    "basis": "geckoterminal"}
+    r = http.req("dexscreener", f"{DS}/tokens/v1/cardano/{unit}")
+    if r:
+        best = max(r, key=lambda p: float((p.get("liquidity") or {}).get("quote") or 0))
+        q = float((best.get("liquidity") or {}).get("quote") or 0)
+        pn = float(best.get("priceNative") or 0)
+        return {"ada_side": round(q), "mcap_ada": None, "price_ada": pn, "dex": best.get("dexId"), "basis": "dexscreener"}
+    return None
+
+
+def solana_concentration(http, rpc, mint, ignore):
+    if not rpc or not mint:
+        return None
+    r = http.req("solana", rpc, method="POST", body={"jsonrpc": "2.0", "id": 1, "method": "getTokenLargestAccounts", "params": [mint]})
+    accts = ((r or {}).get("result") or {}).get("value") or []
+    if not accts:
+        return None
+    r2 = http.req("solana", rpc, method="POST", body={"jsonrpc": "2.0", "id": 2, "method": "getMultipleAccounts",
+                                                       "params": [[a["address"] for a in accts], {"encoding": "jsonParsed"}]})
+    owners = []
+    for v in ((r2 or {}).get("result") or {}).get("value") or [None] * len(accts):
+        try:
+            owners.append(v["data"]["parsed"]["info"]["owner"])
+        except Exception:
+            owners.append(None)
+    sup = http.req("solana", rpc, method="POST", body={"jsonrpc": "2.0", "id": 3, "method": "getTokenSupply", "params": [mint]})
+    total = float((((sup or {}).get("result") or {}).get("value") or {}).get("uiAmount") or 0)
+    kept = [float(a.get("uiAmount") or 0) for a, o in zip(accts, owners) if o not in ignore]
+    if not total or not kept:
+        return None
+    return {"sol_top1_pct": round(100 * kept[0] / total, 2), "sol_top10_pct": round(100 * sum(kept[:10]) / total, 2)}
+
+
+def ascii_name(hexname):
+    h = hexname[8:] if hexname[:8] in ("0014df10", "000de140", "000643b0") else hexname
+    try:
+        return bytes.fromhex(h).decode("utf-8", "ignore")
+    except ValueError:
+        return h
+
+
+def tag(s):
+    return "w-" + hashlib.sha256(s.encode()).hexdigest()[:8]
+
+
+# ---------------------------------------------------------------- main
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--repo", default=os.path.join(os.path.dirname(__file__), ".."))
+    ap.add_argument("--data-dir", required=True, help="where state.json / last-run.json go (desk-data checkout)")
+    ap.add_argument("--cache-dir", default=os.environ.get("PREFILTER_CACHE_DIR", os.path.expanduser("~/.cache/solada-prefilter")),
+                    help="private, uncommitted dir for the whale snapshot (actions/cache in CI)")
+    ap.add_argument("--dry-run", action="store_true", help="never POST the webhook")
+    args = ap.parse_args()
+
+    cfg = json.load(open(os.path.join(os.path.dirname(__file__), "config.json")))
+    paper = json.load(open(os.path.join(args.repo, "solada/paper.json")))
+    log = json.load(open(os.path.join(args.repo, "solada/log.json")))
+    th = parse_rules(paper)
+    tracked = tracked_names(paper, log)
+    wkeys = watch_keys(log)
+    os.makedirs(args.data_dir, exist_ok=True)
+    state_path = os.path.join(args.data_dir, "state.json")
+    state = json.load(open(state_path)) if os.path.exists(state_path) else {}
+    baseline = not state.get("seen_launches")
+    state.setdefault("seen_launches", [])
+    state.setdefault("fired", {})
+    state.setdefault("kill_status", {})
+
+    http = Http(cfg["pace_seconds"])
+    bf_key = os.environ.get("BLOCKFROST_PROJECT_ID", "").strip()
+    rpc = os.environ.get("SOLANA_RPC_URL", "").strip()
+    if not rpc and os.environ.get("HELIUS_API_KEY", "").strip():
+        rpc = "https://mainnet.helius-rpc.com/?api-key=" + os.environ["HELIUS_API_KEY"].strip()
+    chain = Chain(http, bf_key)
+    print(f"solada-prefilter {now_iso()} basis={chain.basis} solana={'on' if rpc else 'off'} dry_run={args.dry_run} baseline={baseline}")
+    print(f"thresholds: holders>={th['min_holders']} ada_side>={th['min_ada_side']:.0f} (k {th['min_ada_side_k']:.0f}, y {th['min_ada_side_y']:.0f}); tracked={sorted(tracked)}; watch_keys={len(wkeys)}")
+
+    launches = http.req("solada", SOLADA + "/launches") or []
+    market = http.req("solada", SOLADA + "/market") or {}
+    quotes = market.get("quotes") or {}
+    ada_usd = float(market.get("adaUsdMicro") or 0) / 1e6
+    market_age_min = round((time.time() * 1000 - float(market["at"])) / 60000, 1) if market.get("at") else None
+    if not launches:
+        http._fail("solada", "no launches")
+
+    now_ms = time.time() * 1000
+    seen = set(state["seen_launches"])
+    new_ids = [l["id"] for l in launches if l["id"] not in seen]
+    triggers, results = [], []
+
+    def graduated(l):
+        return bool(l.get("pool")) or bool((l.get("curve") or {}).get("graduated"))
+
+    def supply_whole(l):
+        raw = float(l.get("totalSupply") or 0)
+        return raw / 1e6 if l.get("curve") else raw  # curve launches mint 6-decimal supply
+
+    def unit_of(l):
+        return (l.get("policyId") or "") + (l.get("assetName") or "")
+
+    # ---- candidates: new launches (or recent ones on baseline) with a pool or curve
+    max_age = cfg["candidate_max_age_hours"] * 3600e3
+    cands = [l for l in launches if (l["id"] in new_ids and not baseline) or
+             (baseline and now_ms - (l.get("liveAtMs") or 0) < max_age) or
+             (graduated(l) and now_ms - (l.get("liveAtMs") or 0) < max_age)]
+    holder_budget = cfg["max_holder_lookups"]
+    passed = []
+    for l in cands:
+        u = unit_of(l)
+        q = quotes.get(l["id"]) or {}
+        row = {"id": l["id"], "ticker": l["ticker"], "unit": u, "graduated": graduated(l), "native_holders": q.get("holders")}
+        pool = gt_pool(http, u) if graduated(l) and u else None
+        cv = l.get("curve") or {}
+        if pool is None and cv and not cv.get("graduated") and cv.get("realLovelace"):
+            pool = {"ada_side": round(int(cv["realLovelace"]) / 1e6), "mcap_ada": round(int(cv.get("marketCapLovelace") or 0) / 1e6) or None,
+                    "price_ada": float(cv.get("priceAda") or 0), "basis": "solada-curve"}
+            row["curve_pct"] = round(int(cv.get("progressBps") or 0) / 100, 1)
+        row["ada_side"] = pool["ada_side"] if pool else None
+        row["mcap_ada"] = pool["mcap_ada"] if pool else None
+        row["pool_basis"] = pool["basis"] if pool else None
+        if row["mcap_ada"] is None and pool and pool.get("price_ada"):
+            row["mcap_ada"] = round(pool["price_ada"] * supply_whole(l)) or None
+        # only spend holder calls when depth already passes (k and y both need depth)
+        if row["ada_side"] is not None and row["ada_side"] >= th["min_ada_side"] and holder_budget > 0:
+            holder_budget -= 1
+            n, capped = chain.holders(u, cfg["max_holder_pages"])
+            row["holders"], row["holders_capped"] = n, capped
+        if th["aa_zero_holder_noise"] and (row.get("holders") == 0 or (row.get("holders") is None and q.get("holders") == 0)):
+            row["verdict"] = "noise (rule aa: zero holders)"
+        elif row.get("holders") is not None and row["holders"] >= th["min_holders"] and row["ada_side"] is not None and row["ada_side"] >= th["min_ada_side"]:
+            row["verdict"] = "pass k+y"
+            passed.append(row)
+        else:
+            row["verdict"] = "fail"
+        results.append(row)
+        if row["verdict"] == "pass k+y":
+            key = f"launch:{l['id']}"
+            if key not in state["fired"]:
+                if rpc and l.get("pumpMint"):
+                    c = solana_concentration(http, rpc, l["pumpMint"], set(cfg["solana"]["ignore_owners"]))
+                    if c:
+                        row.update(c)
+                triggers.append({"key": key, "kind": "new_launch_pass", "name": l["ticker"],
+                                 "metrics": {k: row.get(k) for k in ("ada_side", "mcap_ada", "holders", "pool_basis", "sol_top1_pct", "sol_top10_pct")}})
+
+    # ---- tracked names vs kill lines
+    by_ticker = {}
+    for l in launches:
+        by_ticker.setdefault(l["ticker"].upper(), []).append(l)
+    for tk, t in sorted(tracked.items()):
+        opts = by_ticker.get(tk, [])
+        l = None
+        if not t.get("asset_id") and tk in cfg.get("units", {}):
+            t["asset_id"] = cfg["units"][tk]
+        if t.get("asset_id"):
+            l = next((x for x in opts if unit_of(x) == t["asset_id"]), None)
+        if l is None and opts:
+            l = max(opts, key=lambda x: (graduated(x), (quotes.get(x["id"]) or {}).get("holders") or 0))
+        u = t.get("asset_id") or (unit_of(l) if l else None)
+        if not u:
+            http._fail("match", f"no unit for tracked {tk}")
+            continue
+        pool = gt_pool(http, u)
+        n, _ = chain.holders(u, cfg["max_holder_pages"])
+        m = {"ada_side": pool["ada_side"] if pool else None, "mcap_ada": pool["mcap_ada"] if pool else None, "holders": n}
+        if m["mcap_ada"] is None and pool and pool.get("price_ada") and l is not None and unit_of(l) == u:
+            m["mcap_ada"] = round(pool["price_ada"] * supply_whole(l)) or None
+        crossed = []
+        k = t["kill"]
+        if "ada_side_below" in k and m["ada_side"] is not None and m["ada_side"] < k["ada_side_below"]:
+            crossed.append(f"ada_side {m['ada_side']} < {k['ada_side_below']:.0f}")
+        if "holders_below" in k and m["holders"] is not None and m["holders"] < k["holders_below"]:
+            crossed.append(f"holders {m['holders']} < {k['holders_below']:.0f}")
+        if "mcap_ada_below" in k and m["mcap_ada"] is not None and m["mcap_ada"] < k["mcap_ada_below"]:
+            crossed.append(f"mcap {m['mcap_ada']} < {k['mcap_ada_below']:.0f}")
+        prev = state["kill_status"].get(tk)
+        state["kill_status"][tk] = bool(crossed)
+        results.append({"ticker": tk, "tracked": True, **m, "crossed": crossed, "kill": k})
+        if crossed and not prev:
+            triggers.append({"key": f"kill:{tk}:{now_iso()[:13]}", "kind": "kill_line", "name": tk, "metrics": {**m, "crossed": crossed}})
+
+    # ---- founder whale
+    wcfg = cfg["whale"]
+    whale_summary = None
+    addr = chain.handle_address(wcfg["handle_policy"], wcfg["handle"])
+    stake = chain.stake_of(addr) if addr else None
+    if not stake:
+        http._fail("whale", "handle not resolved")
+    else:
+        wt = tag(stake)
+        snap = chain.account_assets(stake)
+        os.makedirs(args.cache_dir, exist_ok=True)
+        snap_path = os.path.join(args.cache_dir, "whale-snapshot.json")
+        cached = json.load(open(snap_path)) if os.path.exists(snap_path) else {}
+        prev = cached.get("snapshot") if cached.get("tag") == wt else None
+        whale_summary = {"tag": wt}
+        if snap is not None and prev is not None:
+            moves = []
+            units = set(snap) | set(prev)
+            prices_left = wcfg["max_price_lookups"]
+            for u in units:
+                if u == "lovelace":
+                    continue
+                a, b = prev.get(u, 0), snap.get(u, 0)
+                if a == b:
+                    continue
+                nm = ascii_name(u[56:]).upper()
+                mv = {"asset": nm or u[:12], "delta": b - a}
+                if a > 0:
+                    mv["pct"] = round(100 * abs(b - a) / a, 1)
+                if a == 0 and b > 0:
+                    mv["new_position"] = True
+                if prices_left > 0:
+                    prices_left -= 1
+                    p = gt_pool(http, u)
+                    if p and p.get("price_ada"):
+                        mv["ada_equiv"] = round(abs(b - a) * p["price_ada"])
+                fire = (mv.get("ada_equiv", 0) >= wcfg["min_ada_equiv"] or mv.get("pct", 0) >= wcfg["min_position_pct"]
+                        or mv.get("new_position") or any(x in nm for x in wcfg["always_tickers"]))
+                if fire:
+                    moves.append(mv)
+            dl = (snap.get("lovelace", 0) - prev.get("lovelace", 0)) / 1e6
+            whale_summary["ada_delta"] = round(dl)
+            if abs(dl) >= wcfg["min_ada_equiv"]:
+                moves.append({"asset": "ADA", "delta": round(dl)})
+            whale_summary["moves"] = moves
+            if moves:
+                triggers.append({"key": f"whale:{wt}:{hashlib.sha256(json.dumps(moves, sort_keys=True).encode()).hexdigest()[:12]}",
+                                 "kind": "whale_move", "name": "$cockwhale", "metrics": {"tag": wt, "moves": moves[:20]}})
+        if snap is not None:
+            # full snapshot stays in the private cache only, never in committed state
+            if not args.dry_run:
+                json.dump({"tag": wt, "at": now_iso(), "snapshot": snap}, open(snap_path, "w"))
+            w = {"tag": wt, "at": now_iso(), "had_prev": prev is not None}
+            hist = (state.get("whale") or {}).get("moves", [])
+            for mv in (whale_summary.get("moves") or []):
+                hist.append({"at": now_iso(), "tag": wt, "asset": mv["asset"], "delta": mv["delta"]})
+            w["moves"] = hist[-200:]
+            state["whale"] = w
+
+    # ---- watch-list keys in first block of new launches
+    fb_hits = []
+    if not baseline and wkeys:
+        for lid in new_ids[: cfg["max_new_first_block_checks"]]:
+            l = next(x for x in launches if x["id"] == lid)
+            u = unit_of(l)
+            if not u:
+                continue
+            stakes = chain.first_block_stakes(u)
+            if stakes is None:
+                continue
+            hit = sorted({k for k in wkeys for s in stakes if s.startswith("stake1" + k)})
+            if hit:
+                fb_hits.append({"ticker": l["ticker"], "keys": hit})
+                triggers.append({"key": f"firstblock:{lid}", "kind": "watch_key_first_block", "name": l["ticker"], "metrics": {"keys": hit}})
+
+    # ---- dedupe + webhook
+    fresh = [t for t in triggers if t["key"] not in state["fired"]]
+    if baseline:
+        print(f"baseline run: {len(fresh)} would-be trigger(s) recorded, not sent")
+    payload = {"reason": "threshold", "names": sorted({t["name"] for t in fresh}),
+               "metrics": {"at": now_iso(), "triggers": [{k: v for k, v in t.items() if k != "key"} for t in fresh]}}
+    sent = False
+    url, key = os.environ.get("SOLADA_WEBHOOK_URL", "").strip(), os.environ.get("SOLADA_WEBHOOK_KEY", "").strip()
+    if fresh and not baseline:
+        if args.dry_run:
+            print("dry-run: webhook not sent")
+        elif not url:
+            print("SOLADA_WEBHOOK_URL not set: skipping webhook")
+        else:
+            hdr = {"Authorization": f"Bearer {key}"} if key else {}
+            r = http.req("webhook", url, method="POST", body=payload, headers=hdr, quiet404=False)
+            sent = r is not None
+            print(f"webhook {'sent' if sent else 'FAILED'}")
+    if sent or baseline or (fresh and args.dry_run is False and not url):
+        for t in fresh:
+            state["fired"][t["key"]] = now_iso()
+    state["seen_launches"] = sorted({l["id"] for l in launches} | seen)
+    # keep fired map bounded
+    if len(state["fired"]) > 2000:
+        state["fired"] = dict(sorted(state["fired"].items(), key=lambda x: x[1])[-2000:])
+
+    summary = {
+        "at": now_iso(), "basis": chain.basis, "dry_run": args.dry_run, "baseline": baseline,
+        "launches": len(launches), "new_launches": 0 if baseline else len(new_ids), "candidates": len(cands),
+        "passed_k_y": [r["ticker"] for r in passed], "thresholds": {k: v for k, v in th.items() if k != "source"},
+        "market_age_min": market_age_min, "ada_usd": ada_usd, "whale": {k: v for k, v in (whale_summary or {}).items()},
+        "first_block_hits": fb_hits, "triggers": [{k: v for k, v in t.items() if k != "key"} for t in fresh],
+        "webhook_sent": sent, "data_failures": http.failures, "api_calls": http.calls, "results": results,
+    }
+    if not args.dry_run:
+        json.dump(state, open(state_path, "w"), indent=1, sort_keys=True)
+    json.dump(summary, open(os.path.join(args.data_dir, "last-run.json" if not args.dry_run else "dry-run.json"), "w"), indent=1)
+    print(f"whale: {json.dumps(summary['whale'])[:300]}")
+    print(json.dumps({k: summary[k] for k in ("launches", "new_launches", "candidates", "passed_k_y", "first_block_hits", "data_failures", "api_calls")}))
+    for t in fresh:
+        print(f"TRIGGER {t['kind']}: {t['name']} {json.dumps(t['metrics'])[:300]}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
