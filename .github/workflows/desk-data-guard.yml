@@ -1,0 +1,50 @@
+name: desk-data-guard
+
+# Backstop: run main's privacy guard and schema validation against the
+# desk-data branch. Read-only; never writes to desk-data.
+# Pushes made with the built-in GITHUB_TOKEN (desk scan, solada-prefilter)
+# do not trigger workflows, so the hourly schedule covers those.
+
+on:
+  push:
+    branches: [desk-data]
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desk-data-guard
+  cancel-in-progress: true
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main (scripts and schemas)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+          persist-credentials: false
+      - name: Check out desk-data
+        uses: actions/checkout@v4
+        with:
+          ref: desk-data
+          path: desk-data
+          persist-credentials: false
+      - name: Privacy guard on desk-data
+        env:
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+        run: bash main/scripts/privacy-guard.sh --root desk-data
+      - uses: actions/setup-python@v5
+        if: ${{ !cancelled() }}
+        with:
+          python-version: "3.12"
+      - name: Schema validation on desk-data
+        if: ${{ !cancelled() }}
+        run: |
+          pip install --quiet "jsonschema>=4.18"
+          python3 main/scripts/validate-desks.py "$GITHUB_WORKSPACE/desk-data"
