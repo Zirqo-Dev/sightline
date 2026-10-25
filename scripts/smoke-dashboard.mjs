@@ -401,7 +401,7 @@ for (const p of ["desks.json", "solada/panels.json", "nft/panels.json", "solada/
   assert(!S.isDeskData(p), p + " must stay on main");
 }
 for (const d of load("desks.json").desks) {
-  assert(S.isDeskData(d.log) && S.isDeskData(d.pulse), d.id + " log and pulse come from desk-data");
+  assert((d.log == null || S.isDeskData(d.log)) && S.isDeskData(d.pulse), d.id + " log and pulse come from desk-data");
   for (const b of d.books || []) assert(S.isDeskData(b.paper), d.id + " paper comes from desk-data");
 }
 assert(S.pickNewer({ asof: "2026-10-25T14:00:00Z" }, { asof: "2026-10-23T09:00:00Z" }).asof.startsWith("2026-10-25"), "desk-data newer wins");
@@ -457,6 +457,30 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(!lh.includes("xxxxxxxxxx") && !lh.includes("yyyyyyyyyy"), "solada-intel never renders full addresses or stake keys");
   const sp = load("solada/panels.json").panels.find(p => p.type === "solada-intel");
   assert(sp && sp.data.includes("/solada-prefilter/flags.json") && S.isDeskData("solada-prefilter/flags.json"), "flags.json is read via the desk-data loader");
+}
+
+// solana-desk panel: health, leads, paper book and runs from fixtures; empty states before fills.
+{
+  const def = S.registry["solana-desk"];
+  assert(def, "solana-desk panel registered");
+  const fx = n => fs.readFileSync(path.join(root, "scripts/fixtures/solana-desk", n), "utf8");
+  const wrap = h => [{ path: "/solana-desk/health.json", json: h }, { path: "/solana-desk/state.json", json: null }, { path: "/solana-desk/paper.json", json: null }];
+  const h = JSON.parse(fx("health.json"));
+  const full = await def.render({ data: wrap(h), opt: { now: "2026-10-25T20:10:00Z", csv: { tasks: fx("tasks.csv"), trades: fx("trades.csv") } } });
+  for (const want of ["20 / 48", "3.3%", "void ≥ 10%", "57.1 min", "v1-draft-v6.5", "draft", "run 20261025T2000", "dexscreener.com/solana/FakeMintCCCC", "geckoterminal.com/solana/tokens/", "no sol pair", "eligibility 1", "pass 2", "Open positions", "Closed trades", "50%", "+0.046", "FAKEC", "2 runs", "Research only, not advice."])
+    assert(full.includes(want), "solana-desk shows " + want);
+  assert(S.solanaCsv(fx("tasks.csv")).length === 6, "repeated CSV header rows are dropped");
+  const voidH = await def.render({ data: wrap(JSON.parse(fx("health-void.json"))), opt: { csv: { tasks: "", trades: "" } } });
+  assert(voidH.includes("void day") && voidH.includes("frozen") && voidH.includes("12.5%"), "void day and frozen state");
+  assert(voidH.includes("No paper fills yet") && voidH.includes("tasks.csv not published yet"), "solana-desk empty states before fills");
+  const none = await def.render({ data: wrap(null), opt: { csv: { tasks: null, trades: null } } });
+  assert(none.includes("health.json not published yet"), "solana-desk with no data");
+  const sd = load("desks.json").desks.find(d => d.id === "solana");
+  assert(sd && sd.run.url.endsWith("solana-desk-scan.yml") && sd.bot === "Grok Bot", "solana desk listed with its run button");
+  const sp = load("solana/panels.json").panels[0];
+  assert(sp.type === "solana-desk" && sp.data.every(p => S.isDeskData(p.slice(1))), "solana desk reads desk-data");
+  const css = fs.readFileSync(path.join(root, "dashboard/app.css"), "utf8");
+  assert(css.includes("#9945FF") && css.includes("#14F195") && css.includes("#0033AD"), "per-desk themes present");
 }
 
 console.log("smoke-dashboard: OK");
