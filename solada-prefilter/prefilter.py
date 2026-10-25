@@ -360,14 +360,40 @@ def tag(s):
 
 
 # ---------------------------------------------------------------- main
+def ping():
+    """Webhook test: no scan, no state. Logs only the HTTP status."""
+    url = os.environ.get("SOLADA_WEBHOOK_URL", "").strip()
+    key = os.environ.get("SOLADA_WEBHOOK_KEY", "").strip()
+    missing = [n for n, v in (("SOLADA_WEBHOOK_URL", url), ("SOLADA_WEBHOOK_KEY", key)) if not v]
+    if missing:
+        print(f"ping: missing secret(s): {', '.join(missing)}")
+        return 1
+    body = {"reason": "ping", "names": [], "metrics": {}, "note": "Sightline pre-filter webhook test, no action needed"}
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), method="POST", headers={
+        "Content-Type": "application/json", "User-Agent": UA, "Authorization": f"Bearer {key}"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            status = r.status
+    except urllib.error.HTTPError as e:
+        status = e.code
+    except Exception as e:
+        print(f"ping: request failed ({type(e).__name__})")
+        return 1
+    print(f"ping: HTTP {status}")
+    return 0 if 200 <= status < 300 else 1
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", default=os.path.join(os.path.dirname(__file__), ".."))
     ap.add_argument("--data-dir", required=True, help="where state.json / last-run.json go (desk-data checkout)")
     ap.add_argument("--cache-dir", default=os.environ.get("PREFILTER_CACHE_DIR", os.path.expanduser("~/.cache/solada-prefilter")),
                     help="private, uncommitted dir for the whale snapshot (actions/cache in CI)")
+    ap.add_argument("--ping", action="store_true", help="skip the scan; POST one test payload to the webhook and exit")
     ap.add_argument("--dry-run", action="store_true", help="never POST the webhook")
     args = ap.parse_args()
+    if args.ping:
+        return ping()
 
     cfg = json.load(open(os.path.join(os.path.dirname(__file__), "config.json")))
     paper = json.load(open(os.path.join(args.repo, "solada/paper.json")))
