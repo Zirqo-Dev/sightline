@@ -323,3 +323,39 @@ iframe{width:100%;border:1px solid var(--line);border-radius:4px;background:#060
 .si-heat td.h1{background:rgba(var(--accent-rgb),.35)}.si-heat td.h2{background:rgba(var(--accent-rgb),.65)}.si-heat td.h3{background:var(--accent)}
 .si-foot{font:10.5px var(--mono);color:var(--mute);border-top:1px solid var(--line);padding-top:5px}
 @media (max-width:760px){.si-row{grid-template-columns:1fr}.si-dgrid{grid-template-columns:1fr}.si-flag{flex-basis:150px}}
+
+/* solana-desk panel */
+.sd{display:flex;flex-direction:column;gap:10px}.sd-sec{min-width:0}
+.sd-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.sd-h{font:600 9.5px var(--mono);color:var(--mute);text-transform:uppercase;letter-spacing:.08em;margin:0 0 4px}
+.sd-sub,.sd-dim{font:10.5px var(--mono);color:var(--mute)}
+.sd-health{display:grid !important;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.sd-health .card{position:relative;min-width:0}.sd-health .v{font-size:14px;white-space:normal;overflow-wrap:anywhere}.sd-health .v .sd-dim{display:block}
+.sd-void{position:relative;display:block;height:3px;margin-top:4px;background:#16212c;border-radius:2px}
+.sd-void i{display:block;height:100%;background:var(--up);border-radius:2px}.sd-void i.bad{background:var(--down)}
+.sd-void b{position:absolute;top:-2px;width:1px;height:7px;background:var(--warn)}
+.sd-filters{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px}.sd-filters button{cursor:pointer;font-family:var(--mono)}
+.sd-filters button.on{background:rgba(var(--accent-rgb),.15);color:var(--accent);border-color:rgba(var(--accent-rgb),.5)}
+.sd-legend{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font:10.5px var(--mono);color:var(--dim)}
+.sd-dot{display:inline-block;width:7px;height:7px;border-radius:2px}.sd-dot.lead{background:var(--up)}.sd-dot.fail{background:var(--down)}
+.sd-strip{display:flex;align-items:flex-end;gap:2px;height:48px;margin-top:6px;overflow-x:auto}
+.sd-run{position:relative;flex:0 0 7px;height:100%}.sd-run i{position:absolute;bottom:0;left:0;right:0;border-radius:1px}
+.sd-run i.n{background:#1a2633}.sd-run i.l{background:var(--up);right:3px}.sd-run i.f{background:var(--down);left:4px}
+.sd-empty{font:11.5px var(--sans)}
+@media (max-width:760px){.sd-row{grid-template-columns:1fr}.sd-leads td:nth-child(4),.sd-leads th:nth-child(4){display:none}}
+@media (max-width:420px){.sd-health{grid-template-columns:1fr 1fr}}
+
+/* per-desk themes: CSS variables scoped by body[data-desk]. --accent2/--grad default to the accent. */
+:root{--accent2:var(--accent);--grad:linear-gradient(90deg,var(--accent),var(--accent2))}
+body[data-desk="solana"],[data-desk="solana"]{--accent:#14F195;--accent-rgb:20,241,149;--accent2:#9945FF;--accent2-rgb:153,69,255;--grad:linear-gradient(90deg,#9945FF,#14F195);--bg:#07060d;--panel:#0d0b17;--panel2:#13101f;--line:#1f1a33;--line2:#2b2446}
+body[data-desk="solada"],[data-desk="solada"]{--accent:#3d8bff;--accent-rgb:61,139,255;--accent2:#0033AD;--accent2-rgb:0,51,173;--grad:linear-gradient(90deg,#0033AD,#3468D1 55%,#1E90FF);--bg:#050913;--panel:#0a1120;--panel2:#0f182b;--line:#18243d;--line2:#22335a}
+nav a[data-d="solana"]{--accent:#14F195;--accent-rgb:20,241,149;--grad:linear-gradient(90deg,#9945FF,#14F195)}
+nav a[data-d="solada"]{--accent:#3d8bff;--accent-rgb:61,139,255;--grad:linear-gradient(90deg,#0033AD,#1E90FF)}
+body[data-desk="solana"] .panel::before,body[data-desk="solada"] .panel::before{background:var(--grad)}
+body[data-desk="solana"] .top,body[data-desk="solada"] .top{border-image:var(--grad) 1;border-bottom:1px solid}
+nav a.on[data-d="solana"],nav a.on[data-d="solada"]{background:var(--grad);color:#fff}
+body[data-desk="solana"] h1::before{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+body[data-desk="solada"] h1::before{color:#1E90FF}
+body[data-desk="solana"] .panel h3 .ttl,body[data-desk="solada"] .panel h3 .ttl{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+body[data-desk="solana"] .si-heat td.h3,body[data-desk="solana"] .run-now{background:var(--grad)}
+body[data-desk="solada"] .run-now{background:var(--grad);color:#fff}

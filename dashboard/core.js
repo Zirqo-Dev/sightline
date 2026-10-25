@@ -52,6 +52,17 @@ window.S = (function () {
     }
     return cache[u];
   }
+  /* Text desk files (CSV ledgers): desk-data first, main's Pages copy as fallback. */
+  const textCache = {};
+  function getText(path) {
+    const clean = String(path).replace(/^\/|^\.\//, "");
+    if (!(clean in textCache)) {
+      const getT = u => fetch(u, { cache: "no-cache" }).then(r => (r.ok ? r.text() : null)).catch(() => null);
+      const d = DESK_DATA && /\.(csv|txt)$/.test(clean) && clean.includes("/") ? DESK_DATA.replace(/\/?$/, "/") + clean + "?ts=" + Date.now() : null;
+      textCache[clean] = (d ? getT(d) : Promise.resolve(null)).then(t => t != null ? t : getT(url(clean)));
+    }
+    return textCache[clean];
+  }
   function pick(obj, path) {
     if (!path) return obj;
     return String(path).split(".").reduce((o, k) => (o == null ? o : o[k]), obj);
@@ -560,7 +571,7 @@ window.S = (function () {
   function pill(text, cls) { return `<span class="pill ${esc(cls || String(text).toLowerCase().replace(/[^a-z0-9]+/g, "-"))}">${esc(text)}</span>`; }
 
   return {
-    get, isDeskData, deskDataUrl, pickNewer, pick, esc, rich, walletTag, walletLabel, walletHue, fmt, pct, pnlNum, pnlClass, when, join, register, registry,
+    get, getText, isDeskData, deskDataUrl, pickNewer, pick, esc, rich, walletTag, walletLabel, walletHue, fmt, pct, pnlNum, pnlClass, when, join, register, registry,
     renderPanel, desks, panelsFor, bookFiles, briefsOf, score, avgRet, pnlCards,
     metricCards, unitNote, killDistance, allOpen, pointsFor, pulsePath, panelAsRadar,
     ageInfo, freshestAt, ageTag, ago, runButton,
