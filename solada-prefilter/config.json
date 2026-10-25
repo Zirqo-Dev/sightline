@@ -13,7 +13,9 @@
       "ASCEND",
       "STRIKE"
     ],
-    "max_price_lookups": 15
+    "max_price_lookups": 15,
+    "max_ada_leg_txs": 50,
+    "max_decimals_lookups": 15
   },
   "solana": {
     "ignore_owners": [
@@ -27,12 +29,18 @@
     "blockfrost": 0.12,
     "koios": 0.6,
     "solana": 0.25,
-    "solada": 0.3
+    "solada": 0.3,
+    "tokenregistry": 0.5
   },
   "units": {
     "_note": "Tracked tickers that are not Solada launches (or have copycats): unit = policy id + asset name hex.",
     "SOLADA": "e7c77b2784e52949b3f95f8f9f2d1668dd47d7ed56491eab588bb730534f4c414441",
     "COCK": "49e423161ef818adc475c783571cb479d5f15ad52a01a240eacc0d3b434f434b"
+  },
+  "lp_policies": {
+    "_note": "DEX LP-token policy IDs (extends valuation.DEFAULT_LP_POLICIES). LP mints/burns are labelled LP and never count as whale buys or buy flags.",
+    "e4214b7cce62ac6fbba385d164df48e157eae5863521b4b67ca71d86": "minswap_v1",
+    "f5808c2c990d86da54bfc97d89cee6efa20cd8461616359478d96b4c": "minswap_v2"
   },
   "flags": {
     "_note": "FLAG-ONLY signals (flags.py). Never count toward rules k/y/aa or kill lines; never fire the webhook alone. Loose defaults; Snek reviews flags.json daily.",

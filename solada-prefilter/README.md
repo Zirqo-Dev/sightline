@@ -8,6 +8,8 @@
 
 **Triggers:** a new launch passing k and y; a tracked name newly crossing its kill line; a founder-whale move (2000+ ADA equivalent, 10%+ of a position, any ASCEND/STRIKE change, or a new position) between runs; a watch-list key in a new launch's first block. Each fires once (state in `desk-data:solada-prefilter/state.json`). The first run is a baseline: it records everything as seen and sends nothing.
 
+**Sizing (valuation.py):** on-chain quantities are raw units. A whale move is valued by the ADA (lovelace) leg of the whale's own txs since the last snapshot (handles aggregator buys); only without an ADA leg does it fall back to `raw / 10**decimals x pool price` (decimals from Koios `asset_info` token-registry metadata, else `tokens.cardano.org`; Solada curve launches are 6). Unknown decimals = not sized (never `raw x price`). Buy flags size buyers the same way. DEX LP tokens (Minswap V1/V2, SundaeSwap, WingRiders policies; extend via `config.json` `lp_policies`) are labelled `LP` in `whale.lp_moves` and never count as whale moves, buys, or size flags. Kill lines are deduped through `state.json` `kill_reported`: a kill line re-fires only when its crossed values change (a data gap is not a recovery).
+
 **Webhook:** `POST $SOLADA_WEBHOOK_URL` with `Authorization: Bearer $SOLADA_WEBHOOK_KEY` and `{"reason":"threshold","names":[...],"metrics":{...}}`. Skipped when the URL is not set.
 
 **Privacy:** the whale is resolved from its ADA Handle at run time; only a short hash tag (`w-xxxxxxxx`) is logged or stored. The full holdings snapshot needed for deltas lives only in the Actions cache (`--cache-dir`); committed state keeps just threshold-crossing moves (tag, asset, amount change).
