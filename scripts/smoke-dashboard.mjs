@@ -483,6 +483,28 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(css.includes("#9945FF") && css.includes("#14F195") && css.includes("#0033AD"), "per-desk themes present");
 }
 
+// live-site fixes: binary asset names, pre-fix raw-unit whale moves, health-based home card, cache-busting.
+{
+  const def = S.registry["solada-intel"];
+  const garbled = "KR4UT^:WIS\nB<VR[J(\u0003";
+  const fj = { new: [
+    { kind: "founder_whale_move", ticker: "FLOW", tag: "w-f3186187", delta: 224026586, ada_equiv: 68736323, at: "2026-10-25T20:08:43Z" },
+    { kind: "founder_whale_move", ticker: garbled, tag: "w-f3186187", delta: 11042717, at: "2026-10-25T20:08:43Z" },
+    { kind: "founder_whale_move", ticker: "NIGHT", tag: "w-f3186187", delta: -25000, ada_equiv: 4536, value_basis: "ada_leg", at: "2026-10-25T20:08:43Z" }] };
+  const html = def.render({ data: [{ path: "log.json", json: {} }, { path: "pulse.json", json: null }, { path: "paper.json", json: null }, { path: "/solada-prefilter/flags.json", json: fj }], opt: { now: "2026-10-25T20:30:00Z" } });
+  assert(!html.includes("KR4UT") && html.includes("LP·4b52…"), "binary asset name shown as LP·hex");
+  assert(!html.includes("68,736,323") && html.includes("raw units · unvalued"), "pre-fix raw-unit valuation hidden");
+  assert(html.includes("≈4,536₳"), "valued moves keep their ADA equivalent");
+  const h = JSON.parse(fs.readFileSync(path.join(root, "scripts/fixtures/solana-desk/health.json"), "utf8"));
+  assert(S.healthAt(h) === "2026-10-25T20:00:00Z" && S.freshestAt(null, null, h) === "2026-10-25T20:00:00.000Z", "health.json drives freshness");
+  const sd = load("desks.json").desks.find(d => d.id === "solana");
+  assert(sd.health && S.isDeskData(sd.health), "solana desk health.json comes from desk-data");
+  const pages = fs.readFileSync(path.join(root, "dashboard/pages.js"), "utf8");
+  assert(pages.includes("healthLine(health)") && pages.includes("scan only"), "home card uses health.json");
+  const build = fs.readFileSync(path.join(root, "scripts/build-site.py"), "utf8");
+  assert(build.includes("def bust(") && build.includes("?v="), "build adds cache-busting asset versions");
+}
+
 console.log("smoke-dashboard: OK");
 console.log("  fixture ADA", sc.byUnit.ADA.pnl, "ADA-equivalent", sc.byUnit["ADA-equivalent"].pnl, "USD", sc.byUnit.USD.pnl);
 console.log("  live books", live.length, "open", live.reduce((n, b) => n + b.json.open.length, 0), "closed", live.reduce((n, b) => n + b.json.closed.length, 0));

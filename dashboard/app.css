@@ -359,3 +359,10 @@ body[data-desk="solada"] h1::before{color:#1E90FF}
 body[data-desk="solana"] .panel h3 .ttl,body[data-desk="solada"] .panel h3 .ttl{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 body[data-desk="solana"] .si-heat td.h3,body[data-desk="solana"] .run-now{background:var(--grad)}
 body[data-desk="solada"] .run-now{background:var(--grad);color:#fff}
+.si-move.dim{opacity:.55}
+/* desk themes on Home cards too */
+.desk-card[data-desk="solana"]::before,.desk-card[data-desk="solada"]::before{background:var(--grad)}
+.desk-card[data-desk="solana"] .run-now,.desk-card[data-desk="solada"] .run-now{background:var(--grad);color:#fff;border-color:transparent}
+.desk-card[data-desk="solana"] .name,.desk-card[data-desk="solada"] .name{color:var(--accent)}
+@media (max-width:420px){nav a{padding:5px 7px;letter-spacing:.03em}.top{gap:8px;padding:7px 10px}}
+@media (max-width:600px){.top{flex-wrap:wrap;row-gap:4px}nav{order:3;flex:1 0 100%;justify-content:space-between}#stamp{margin-left:auto}}

@@ -66,7 +66,8 @@
     for (const d of desks) {
       const log = d.log ? await S.get(d.log) : null;
       const pulse = await S.get(S.pulsePath(d));
-      const at = S.freshestAt(log, pulse);
+      const health = d.health ? await S.get(d.health) : null;
+      const at = S.freshestAt(log, pulse, health);
       const ms = at ? new Date(at).getTime() : NaN;
       if (isFinite(ms) && (best == null || ms > new Date(best).getTime())) best = at;
     }
@@ -74,15 +75,22 @@
     if (el) el.innerHTML = `<span class="live"></span>${S.ageTag(best)}`;
   }
 
-  function deskCard(d, books, log, pulse) {
+  function healthLine(h) {
+    const at = S.healthAt(h);
+    const dfr = typeof h.data_failure_rate === "number" ? ` · data failures ${S.fmt(h.data_failure_rate * 100)}%${h.void_day ? " (void day)" : ""}` : "";
+    return `Last scan ${S.when(at)} · ${S.fmt(h.runs, 0)}/${S.fmt(h.expected_runs, 0)} runs today · ${S.fmt(h.leads_this_run, 0)} leads${dfr} · ${h.cfg_version || ""}${h.frozen ? " frozen" : " draft"}`;
+  }
+  function deskCard(d, books, log, pulse, health) {
     const s = S.score(books);
-    const at = S.freshestAt(log, pulse);
+    const at = S.freshestAt(log, pulse, health);
+    const headline = log?.headline ? S.rich(log.headline) : health ? S.esc(healthLine(health)) : "No run yet.";
+    const bookNote = books.length ? `${books.length} book${books.length === 1 ? "" : "s"}` : health ? "scan only · paper fills pending" : "0 books";
     return `<section class="panel span-6 desk-card" data-desk="${S.esc(d.id)}">
       <div class="row">${deskIcon(d)}<a class="name" href="#/desk/${d.id}"><span class="dot ${d.status !== "active" ? "pending" : ""}"></span>${S.esc(d.name)}</a><span class="bot">${S.esc(d.bot || "")} ▸</span></div>
       ${S.runButton(d, { pending: runPending(d.id) })}
-      <a class="hl clamp2" href="#/desk/${d.id}">${S.rich(log?.headline || "No run yet.")}</a>
+      <a class="hl clamp2" href="#/desk/${d.id}">${headline}</a>
       <div class="cards">${S.metricCards(s)}</div>
-      <div class="foot-row"><span>${books.length} book${books.length === 1 ? "" : "s"}</span>${S.ageTag(at)}</div>
+      <div class="foot-row"><span>${bookNote}</span>${S.ageTag(at)}</div>
     </section>`;
   }
   const sec = (span, title, tag, body, desk) => `<section class="panel span-${span}"${desk ? ` data-desk="${desk}"` : ""}><h3><span class="ttl">${title}</span><span class="tag">${tag}</span></h3>${body}</section>`;
@@ -99,10 +107,11 @@
       allBooks = allBooks.concat(books);
       const log = d.log ? await S.get(d.log) : null;
       const pulse = await S.get(S.pulsePath(d));
+      const health = d.health ? await S.get(d.health) : null;
       const b = (await S.briefsOf(d))[0];
       if (b) briefs.push({ b, d });
       books.forEach(bk => (bk.json.rules || []).forEach(r => rules.push({ ...r, desk: d.id, book: bk.json.book })));
-      cards.push(deskCard(d, books, log, pulse));
+      cards.push(deskCard(d, books, log, pulse, health));
     }
     const open = await S.allOpen(desks);
     rules.sort((a, b) => String(b.added_at || "").localeCompare(String(a.added_at || "")));
@@ -143,13 +152,14 @@
     document.title = "Sightline · " + d.name;
     const log = d.log ? await S.get(d.log) : null;
     const pulse = await S.get(S.pulsePath(d));
+    const health = d.health ? await S.get(d.health) : null;
     const got = await S.panelsFor(d);
     const { out: panels, dropped } = dedupe(got.panels);
     const html = await Promise.all(panels.map(p => S.renderPanel(d, p)));
     const layout = got.custom
       ? `<code>${S.esc(d.dir)}panels.json</code> · ${panels.length} panels${dropped ? ` · ${dropped} duplicate hidden` : ""}`
       : "default layout";
-    view.innerHTML = `<div class="pagehead">${deskIcon(d)}<div class="titles"><h1>${S.esc(d.name)}</h1><span class="sub">run by ${S.esc(d.bot || "—")} · ${layout}</span></div>${S.ageTag(S.freshestAt(log, pulse))}${S.runButton(d, { pending: runPending(d.id) })}</div>
+    view.innerHTML = `<div class="pagehead">${deskIcon(d)}<div class="titles"><h1>${S.esc(d.name)}</h1><span class="sub">run by ${S.esc(d.bot || "—")} · ${layout}</span></div>${S.ageTag(S.freshestAt(log, pulse, health))}${S.runButton(d, { pending: runPending(d.id) })}</div>
       <div class="grid">${html.join("")}</div>`;
   }
 

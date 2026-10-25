@@ -23,6 +23,23 @@ def panel_tags():
     return names, "<!-- panels:begin -->\n" + "\n".join(lines) + "\n<!-- panels:end -->"
 
 
+def asset_version():
+    """Short content hash of dashboard/ code so each deploy gets new asset URLs (phones keep old CSS/JS otherwise)."""
+    import hashlib
+    h = hashlib.sha256()
+    for p in sorted((ROOT / "dashboard").rglob("*")):
+        if p.is_file() and p.suffix in (".css", ".js"):
+            h.update(p.relative_to(ROOT).as_posix().encode())
+            h.update(p.read_bytes())
+    return h.hexdigest()[:10]
+
+
+def bust(html):
+    """Append ?v=<hash> to local dashboard/*.css|js references in the published index.html only."""
+    v = asset_version()
+    return re.sub(r'((?:href|src)="dashboard/[^"?]+\.(?:css|js))"', lambda m: f'{m.group(1)}?v={v}"', html)
+
+
 def copy_desk(desk_id):
     src = ROOT / desk_id
     dest = DIST / desk_id
@@ -58,7 +75,7 @@ def main():
     html2, n = MARKER.subn(block, html, count=1)
     if n != 1:
         sys.exit("build-site: index.html is missing <!-- panels:begin --> ... <!-- panels:end -->")
-    (DIST / "index.html").write_text(html2, encoding="utf-8")
+    (DIST / "index.html").write_text(bust(html2), encoding="utf-8")
     if html2 != html:
         (ROOT / "index.html").write_text(html2, encoding="utf-8")
         print("  refreshed index.html panel list")
