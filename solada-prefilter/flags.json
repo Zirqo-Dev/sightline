@@ -1,67 +1,25 @@
 {
- "at": "2026-10-25T20:57:52Z",
+ "at": "2026-10-25T22:08:22Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "coordinated_buys",
-   "ticker": "BET",
-   "wallets": [
-    "w-23d4671d",
-    "w-32877ab4",
-    "w-36774446",
-    "w-4bb7d165",
-    "w-6f2dbebd",
-    "w-7753c563",
-    "w-8315deec",
-    "w-8b94a0a0",
-    "w-93852377",
-    "w-956de622",
-    "w-a877b792",
-    "w-af3fd9f3",
-    "w-bb850be2",
-    "w-c5af9630",
-    "w-ca8a5d10",
-    "w-eec7c992",
-    "w-fcc25079"
-   ],
-   "window_s": 120,
-   "at": "2026-10-25T20:57:52Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "BET",
-   "wallets": [
-    "w-36774446",
-    "w-6f2dbebd",
-    "w-8315deec",
-    "w-93852377",
-    "w-956de622",
-    "w-a877b792",
-    "w-af3fd9f3",
-    "w-bb850be2",
-    "w-c5af9630",
-    "w-ca8a5d10",
-    "w-eec7c992"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-10-25T20:57:52Z"
-  },
-  {
    "kind": "sniper_full_exit",
    "ticker": "BET",
-   "wallet": "w-c5af9630",
-   "tags": [],
-   "at": "2026-10-25T20:57:52Z"
+   "wallet": "w-32877ab4",
+   "tags": [
+    "u8a2m6"
+   ],
+   "at": "2026-10-25T22:08:22Z"
   },
   {
    "kind": "holder_concentration",
-   "ticker": "CORE",
-   "top_addr_pct": 69.0,
-   "top_cluster_pct": 69.0,
-   "top_cluster": "w-13d53c47",
-   "at": "2026-10-25T20:57:52Z"
+   "ticker": "BET",
+   "top_addr_pct": 46.1,
+   "top_cluster_pct": 46.1,
+   "top_cluster": "w-f46e5a31",
+   "at": "2026-10-25T22:08:22Z"
   }
  ],
  "recent": [
@@ -147,11 +105,27 @@
    "top_cluster_pct": 69.0,
    "top_cluster": "w-13d53c47",
    "at": "2026-10-25T20:57:52Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "BET",
+   "wallet": "w-32877ab4",
+   "tags": [
+    "u8a2m6"
+   ],
+   "at": "2026-10-25T22:08:22Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "BET",
+   "top_addr_pct": 46.1,
+   "top_cluster_pct": 46.1,
+   "top_cluster": "w-f46e5a31",
+   "at": "2026-10-25T22:08:22Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 2,
-  "koios": 18
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,
