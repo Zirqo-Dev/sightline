@@ -22,6 +22,19 @@ script (no AI): `python -m desk.run --mode scan --data-dir PATH`. Runs never ove
   logs `tasks.csv`, updates `state.json` and `health.json`. Never fills.
 - `--mode fill`: refused until `config.FROZEN = True` (config freeze at end of day 3).
 
+Runs are idempotent: one scan per 30-min UTC slot, so a duplicate trigger is a no-op.
+`health.json` records each run's actual UTC time (`run_times_utc`), `max_gap_min` and the
+trigger, so schedule gaps can be measured.
+
+Fallback trigger (if GitHub cron is flaky): cron-job.org can start a run every 30 min with
+`POST https://api.github.com/repos/Zirqo-Dev/sightline/dispatches`, headers
+`Authorization: Bearer <token>`, `Accept: application/vnd.github+json`, body
+`{"event_type":"solana-desk-scan"}`. Bousky creates that token himself: a separate
+fine-grained token for Zirqo-Dev/sightline only (GitHub's docs require Contents read/write
+for this endpoint; alternatively call the workflow_dispatch endpoint
+`.../actions/workflows/solana-desk-scan.yml/dispatches` with body `{"ref":"main"}`, which
+needs Actions read/write). It is stored only in cron-job.org, never in the repo.
+
 Setup: add the repo secret `JUPITER_API_KEY` (free Jupiter key). If it is missing the
 scanner falls back to keyless Jupiter and says so in `health.json`.
 

@@ -7,6 +7,8 @@ name: Solana desk scan
 on:
   schedule:
     - cron: "*/30 * * * *"
+  repository_dispatch:
+    types: [solana-desk-scan]   # external fallback trigger (cron-job.org)
   workflow_dispatch:
     inputs:
       mode:

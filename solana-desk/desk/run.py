@@ -12,6 +12,11 @@ DEX = "https://api.dexscreener.com"
 RUG = "https://api.rugcheck.xyz/v1/tokens/{}/report"
 JUP_KEYED, JUP_LITE = "https://api.jup.ag/swap/v1/quote", "https://lite-api.jup.ag/swap/v1/quote"
 RUNS_PER_DAY = 48  # every 30 min on GitHub Actions
+SLOT_S = 1800
+
+def max_gap_min(times):
+    ts = [time.mktime(time.strptime(t, "%Y-%m-%dT%H:%M:%SZ")) for t in times]
+    return round(max((b - a for a, b in zip(ts, ts[1:])), default=0) / 60, 1)
 
 def http_json(url, headers=None, timeout=15):
     req = urllib.request.Request(url, headers={"User-Agent": "solana-paper-desk/1", **(headers or {})})
@@ -52,8 +57,15 @@ def load_state(d, day):
 def scan(data_dir, get=http_json, key=None, now=None, mode="scan"):
     now = now or time.time(); day = time.strftime("%Y-%m-%d", time.gmtime(now))
     os.makedirs(data_dir, exist_ok=True)
-    run_id = time.strftime("%Y%m%dT%H%M", time.gmtime(now)); seed = int(now) // 60
+    slot = int(now) // SLOT_S * SLOT_S  # idempotency: one scan per 30-min slot
+    run_id = time.strftime("%Y%m%dT%H%M", time.gmtime(slot)); seed = slot // 60
     st = load_state(data_dir, day); notes = []
+    st.setdefault("run_times", [])
+    if run_id in st.setdefault("slots", []):
+        h = json.load(open(os.path.join(data_dir, "health.json")))
+        h["last_skipped_duplicate_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now))
+        with open(os.path.join(data_dir, "health.json"), "w") as f: json.dump(h, f, indent=1)
+        h["duplicate"] = True; return h
     if not key: notes.append("JUPITER_API_KEY missing: using keyless lite-api")
     ls = leads(get, C.LEADS_PER_RUN)
     if not ls: notes.append("no leads (DexScreener empty or unreachable)")
@@ -70,11 +82,14 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan"):
         ledger.task(data_dir, dict(time=int(now), run_id=run_id, agent="scanner", task="scan", mint=mint, book="",
                     result="pass" if stype is None else "skip", skip_type=stype or "", reason=reason or "",
                     source=src, check_delay_s=round(time.time() - t0, 2), cfg_version=C.CFG_VERSION, seed=seed))
-    st["runs"] += 1
+    st["runs"] += 1; st["slots"].append(run_id)
+    st["run_times"].append(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)))
     with open(os.path.join(data_dir, "state.json"), "w") as f: json.dump(st, f, indent=1)
     h = ledger.health(data_dir, st["runs"], RUNS_PER_DAY, st["checks"], st["errors"], st["data_failures"], day)
     h.update(mode=mode, cfg_version=C.CFG_VERSION, frozen=C.FROZEN, last_run_utc=run_id, leads_this_run=len(ls),
-             runner="github-actions" if os.environ.get("GITHUB_ACTIONS") else "local", notes=notes)
+             runner="github-actions" if os.environ.get("GITHUB_ACTIONS") else "local", notes=notes,
+             run_times_utc=st["run_times"], max_gap_min=max_gap_min(st["run_times"]),
+             trigger=os.environ.get("GITHUB_EVENT_NAME", "local"))
     with open(os.path.join(data_dir, "health.json"), "w") as f: json.dump(h, f, indent=1)
     return h
 
@@ -86,7 +101,8 @@ def main(argv=None):
     if o.mode == "fill":
         print("fill mode not implemented in this runner yet; scanning only")
     h = scan(o.data_dir, key=os.environ.get("JUPITER_API_KEY") or None, mode="scan")
-    print(json.dumps({k: h[k] for k in ("day", "runs", "checks", "error_rate", "leads_this_run", "notes")}))
+    if h.get("duplicate"): print("slot already scanned; nothing to do"); return 0
+    print(json.dumps({k: h.get(k) for k in ("day", "runs", "checks", "error_rate", "leads_this_run", "max_gap_min", "notes")}))
     return 0
 
 if __name__ == "__main__":
