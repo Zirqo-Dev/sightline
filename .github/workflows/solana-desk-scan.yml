@@ -51,12 +51,21 @@ jobs:
           timeout 420 python3 -m desk.run --mode "$MODE" --data-dir "$GITHUB_WORKSPACE/data/solana-desk"
       - name: Commit to desk-data
         if: always()
+        env:
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
         working-directory: data
         run: |
           git config user.name "solana-desk-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A solana-desk
           git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
+          # Privacy guard on the staged desk-data files before commit/push (run-forensics.yml pattern).
+          # A failure aborts the push; nothing is committed or pushed.
+          if ! bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"; then
+            echo "::error::privacy guard failed on desk-data changes; not committing or pushing"
+            git reset -q
+            exit 1
+          fi
           git commit -q -m "desk scan $(date -u +%Y-%m-%dT%H:%MZ)"
           for i in 1 2 3 4 5; do
             git push origin HEAD:desk-data && exit 0

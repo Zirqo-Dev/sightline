@@ -14,14 +14,22 @@ fi
 patterns=(
   '"wallet_snapshot"'
   '"held"[[:space:]]*:[[:space:]]*true'
-  'stake1u8srdh'
-  'addr1vyrgesr'
+  # Generic full-length Cardano wallet ids (no owner-specific values live in this file).
+  # Full stake keys and full base (addr1q) addresses are never published; short tags only.
+  # Enterprise/script addresses (addr1v/addr1w) are not matched generically: public platform
+  # addresses (e.g. the Solada curve address in solada/log.json) use them.
+  'stake1[02-9ac-hj-np-z]{50,}'
+  'addr1q[02-9ac-hj-np-z]{90,}'
   "Bousky's"
   'Bousky holds'
   'Bousky wallet'
 )
+# Owner-specific wallet patterns come ONLY from the PRIVACY_GUARD_PATTERNS secret (one ERE per line)
+# or a gitignored .privacy-patterns file. They are never printed: matches report a pattern number only.
 if [ -n "${PRIVACY_GUARD_PATTERNS:-}" ]; then
-  while IFS= read -r p; do [ -n "$p" ] && patterns+=("$p"); done <<< "$PRIVACY_GUARD_PATTERNS"
+  while IFS= read -r p; do p="${p%$'\r'}"; case "$p" in ''|'#'*) ;; *) patterns+=("$p");; esac; done <<< "$PRIVACY_GUARD_PATTERNS"
+else
+  echo "::warning::privacy-guard: PRIVACY_GUARD_PATTERNS is not set; owner-specific wallet patterns are NOT checked (generic checks still run)" >&2
 fi
 if [ -f .privacy-patterns ]; then
   while IFS= read -r p; do case "$p" in ''|'#'*) ;; *) patterns+=("$p");; esac; done < .privacy-patterns

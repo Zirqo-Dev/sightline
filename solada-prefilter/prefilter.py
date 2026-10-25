@@ -70,6 +70,35 @@ class Http:
                 self._fail(src, type(e).__name__)
                 return None
 
+    def post_webhook(self, url, body, headers=None):
+        """POST the webhook once. True on ANY 2xx (body ignored), False otherwise.
+
+        Never retried after the request may have landed (timeouts/network errors after send, 5xx):
+        the trigger stays in state.json pending_triggers and is resent next run with an
+        Idempotency-Key. Only a 429 (explicitly not processed) is retried once."""
+        h = {"User-Agent": UA, "Accept": "application/json", "Content-Type": "application/json"}
+        h.update(headers or {})
+        data = json.dumps(body).encode()
+        for attempt in (0, 1):
+            self._wait("webhook")
+            self.calls["webhook"] = self.calls.get("webhook", 0) + 1
+            try:
+                r = urllib.request.Request(url, data=data, method="POST", headers=h)
+                with urllib.request.urlopen(r, timeout=30) as resp:
+                    return 200 <= resp.status < 300
+            except urllib.error.HTTPError as e:
+                if 200 <= e.code < 300:
+                    return True
+                if e.code == 429 and attempt == 0:
+                    time.sleep(3)
+                    continue
+                self._fail("webhook", f"http {e.code}")
+                return False
+            except Exception as e:  # timeout / network: may have landed, do not retry now
+                self._fail("webhook", f"{type(e).__name__} (not retried; queued for next run)")
+                return False
+        return False
+
     def _fail(self, src, why):
         self.failures[src] = self.failures.get(src, 0) + 1
         print(f"  data failure [{src}]: {why}", file=sys.stderr)
@@ -83,7 +112,7 @@ def num_k(s):
     return v * {"k": 1e3, "m": 1e6, "": 1}[m.group(2)]
 
 
-def parse_rules(paper):
+def parse_rules(paper, defaults=None):
     rules = {r.get("id"): r.get("rule", "") for r in paper.get("rules", [])}
     t = {"source": {}}
     k = rules.get("k", "")
@@ -103,7 +132,14 @@ def parse_rules(paper):
     t["source"] = {"k": k[:120], "y": y[:120], "aa": rules.get("aa", "")[:120]}
     missing = [x for x in ("min_holders", "min_ada_side_k", "min_ada_side_y") if x not in t]
     if missing:
-        raise SystemExit(f"could not parse thresholds from paper.json rules: {missing}")
+        d = {k: v for k, v in (defaults or {}).items() if not k.startswith("_")}
+        still = [x for x in missing if x not in d]
+        if still:
+            raise SystemExit(f"could not parse thresholds from paper.json rules and no config.json rule_defaults: {still}")
+        print(f"::warning::could not parse {missing} from paper.json rules; using config.json rule_defaults", file=sys.stderr)
+        for x in missing:
+            t[x] = float(d[x]) if x != "min_holders" else int(d[x])
+            t["source"].setdefault("defaulted", []).append(x)
     t["min_ada_side"] = max(t["min_ada_side_k"], t["min_ada_side_y"])
     return t
 
@@ -181,18 +217,23 @@ class Chain:
     def holders(self, unit, max_pages):
         """On-chain holder count (addresses with qty>0). Returns (count, capped) or (None, False)."""
         if self.bf_key:
-            n = 0
+            n, rows = 0, []
             for page in range(1, max_pages + 1):
                 r = self.bf(f"/assets/{unit}/addresses?count=100&page={page}")
                 if r is None:
+                    if page > 1:
+                        # a page failed mid-pagination: the count is unknown, never a partial count
+                        self.dist.pop(unit, None)
+                        self.h._fail("blockfrost", f"holder page {page} failed; holders unknown")
+                        return None, False
                     break
                 n += sum(1 for a in r if int(a.get("quantity", "0")) > 0)
-                if page == 1:
-                    self.dist[unit] = []
-                self.dist.setdefault(unit, []).extend((a["address"], int(a.get("quantity", "0"))) for a in r)
+                rows.extend((a["address"], int(a.get("quantity", "0"))) for a in r)
                 if len(r) < 100:
+                    self.dist[unit] = rows
                     return n, False
             else:
+                self.dist[unit] = rows
                 return n, True
             if n:
                 return n, False
@@ -394,6 +435,22 @@ def ascii_name(hexname):
         return h
 
 
+def load_desk_json(rel, desk, repo):
+    """(doc, source) from the desk-data checkout first, falling back to main (--repo) only if missing."""
+    for base, label in ((desk, "desk-data"), (repo, "main")):
+        p = os.path.join(base, rel) if base else None
+        if p and os.path.exists(p):
+            return json.load(open(p)), label
+    raise SystemExit(f"{rel} not found in desk-data or main")
+
+
+def idempotency_key(cfg, keys, now=None):
+    """Hash of the run slot (cron window) plus the trigger keys; stable across retries within a slot."""
+    slot_min = int((cfg.get("webhook") or {}).get("idempotency_slot_minutes", 120))
+    slot = int((now if now is not None else time.time()) // (slot_min * 60))
+    return hashlib.sha256(json.dumps([slot, sorted(keys)]).encode()).hexdigest()[:32]
+
+
 def tag(s):
     return "w-" + hashlib.sha256(s.encode()).hexdigest()[:8]
 
@@ -428,6 +485,9 @@ def main():
     ap.add_argument("--data-dir", required=True, help="where state.json / last-run.json go (desk-data checkout)")
     ap.add_argument("--cache-dir", default=os.environ.get("PREFILTER_CACHE_DIR", os.path.expanduser("~/.cache/solada-prefilter")),
                     help="private, uncommitted dir for the whale snapshot (actions/cache in CI)")
+    ap.add_argument("--desk-data", default=None,
+                    help="desk-data checkout root; solada/paper.json + log.json are read from here first "
+                         "(default: parent of --data-dir), falling back to --repo (main)")
     ap.add_argument("--ping", action="store_true", help="skip the scan; POST one test payload to the webhook and exit")
     ap.add_argument("--dry-run", action="store_true", help="never POST the webhook")
     args = ap.parse_args()
@@ -435,9 +495,11 @@ def main():
         return ping()
 
     cfg = json.load(open(os.path.join(os.path.dirname(__file__), "config.json")))
-    paper = json.load(open(os.path.join(args.repo, "solada/paper.json")))
-    log = json.load(open(os.path.join(args.repo, "solada/log.json")))
-    th = parse_rules(paper)
+    desk = args.desk_data or os.path.dirname(os.path.abspath(args.data_dir))
+    paper, paper_src = load_desk_json("solada/paper.json", desk, args.repo)
+    log, log_src = load_desk_json("solada/log.json", desk, args.repo)
+    print(f"desk files: paper.json from {paper_src}, log.json from {log_src}")
+    th = parse_rules(paper, cfg.get("rule_defaults"))
     tracked = tracked_names(paper, log)
     wkeys = watch_keys(log)
     os.makedirs(args.data_dir, exist_ok=True)
@@ -447,7 +509,15 @@ def main():
     state.setdefault("seen_launches", [])
     state.setdefault("fired", {})
     state.setdefault("kill_status", {})
-    state.setdefault("kill_reported", {})  # ticker -> {sig, crossed, at}: last kill line actually reported
+    state.setdefault("kill_reported", {})  # ticker -> {metrics: {name: {value, line}}, at, recover_streak}
+    state.setdefault("pending_triggers", [])  # triggers whose webhook send failed; retried next run
+    for _tk in list(state["kill_reported"]):  # one-time migration from value-hash signatures
+        _e = V.migrate_kill_entry(state["kill_reported"][_tk])
+        if _e is None:
+            state["kill_reported"].pop(_tk)
+        else:
+            state["kill_reported"][_tk] = _e
+    kc = V.kill_cfg(cfg)
 
     http = Http(cfg["pace_seconds"])
     bf_key = os.environ.get("BLOCKFROST_PROJECT_ID", "").strip()
@@ -552,28 +622,29 @@ def main():
              "vol_h24_ada": pool.get("vol_h24_ada") if pool else None}
         if m["mcap_ada"] is None and pool and pool.get("price_ada") and l is not None and unit_of(l) == u:
             m["mcap_ada"] = round(pool["price_ada"] * supply_whole(l)) or None
-        crossed = []
         k = t["kill"]
-        if "ada_side_below" in k and m["ada_side"] is not None and m["ada_side"] < k["ada_side_below"]:
-            crossed.append(f"ada_side {m['ada_side']} < {k['ada_side_below']:.0f}")
-        if "holders_below" in k and m["holders"] is not None and m["holders"] < k["holders_below"]:
-            crossed.append(f"holders {m['holders']} < {k['holders_below']:.0f}")
-        if "mcap_ada_below" in k and m["mcap_ada"] is not None and m["mcap_ada"] < k["mcap_ada_below"]:
-            crossed.append(f"mcap {m['mcap_ada']} < {k['mcap_ada_below']:.0f}")
+        # label -> (metric field, kill key); an unknown (None) value never crosses a line
+        km = {"ada_side": ("ada_side", "ada_side_below"), "holders": ("holders", "holders_below"), "mcap": ("mcap_ada", "mcap_ada_below")}
+        lines = {lb: float(k[kk]) for lb, (f, kk) in km.items() if kk in k}
+        values = {lb: m[km[lb][0]] for lb in lines}
+        crossed_m = {lb: (values[lb], lines[lb]) for lb in lines if values[lb] is not None and values[lb] < lines[lb]}
+        crossed = [f"{lb} {values[lb]} < {lines[lb]:.0f}" for lb in ("ada_side", "holders", "mcap") if lb in crossed_m]
         # complete = every metric this kill line checks was actually read (a data gap is not a recovery)
-        complete = all(m[{"ada_side_below": "ada_side", "holders_below": "holders", "mcap_ada_below": "mcap_ada"}[x]] is not None
-                       for x in k if x in ("ada_side_below", "holders_below", "mcap_ada_below"))
+        complete = all(v is not None for v in values.values())
         if crossed or complete:
             state["kill_status"][tk] = bool(crossed)
-        if complete and not crossed:
-            state["kill_reported"].pop(tk, None)  # recovered: a later re-cross is news again
         results.append({"ticker": tk, "tracked": True, "unit": u, **m, "crossed": crossed, "kill": k})
-        if crossed:
-            sig = V.kill_signature(crossed)
-            # dedupe through state.json: same crossed values as last report = already reported
-            if state["kill_reported"].get(tk, {}).get("sig") != sig:
-                triggers.append({"key": f"kill:{tk}:{sig}", "kind": "kill_line", "name": tk, "kill_sig": sig,
-                                 "metrics": {**m, "crossed": crossed}})
+        fire, entry, reasons = V.kill_decide(state["kill_reported"].get(tk), crossed_m, values, lines, complete, kc)
+        if fire:
+            sig = V.kill_signature(crossed_m)  # ticker + crossed metric names
+            vh = hashlib.sha256(json.dumps(sorted(crossed_m.items())).encode()).hexdigest()[:8]
+            triggers.append({"key": f"kill:{tk}:{sig}:{vh}", "kind": "kill_line", "name": tk, "kill_sig": sig,
+                             "kill_entry": entry, "metrics": {**m, "crossed": crossed, "why": reasons}})
+        elif entry is None:
+            if state["kill_reported"].pop(tk, None) is not None:
+                print(f"kill line {tk}: recovered (hysteresis met)")
+        else:
+            state["kill_reported"][tk] = entry
 
     # ---- founder whale
     wcfg = cfg["whale"]
@@ -707,11 +778,18 @@ def main():
     print(f"flags: {len(new_flags)} new ({', '.join(sorted({f['kind'] for f in new_flags})) or 'none'}); calls {json.dumps(flag_calls)}")
 
     # ---- dedupe + webhook
-    fresh = [t for t in triggers if t["key"] not in state["fired"]]
+    # pending triggers (webhook failed on an earlier run) are retried first; a newer trigger with the same
+    # key, or a newer kill trigger for the same ticker, supersedes the queued one
+    new_keys = {t["key"] for t in triggers}
+    new_kill = {t["name"] for t in triggers if t["kind"] == "kill_line"}
+    pending = [t for t in state["pending_triggers"] if t.get("key") and t["key"] not in state["fired"] and t["key"] not in new_keys
+               and not (t.get("kind") == "kill_line" and t.get("name") in new_kill)]
+    fresh = pending + [t for t in triggers if t["key"] not in state["fired"]]
+    NOPUB = ("key", "kill_sig", "kill_entry")
     if baseline:
         print(f"baseline run: {len(fresh)} would-be trigger(s) recorded, not sent")
     payload = {"reason": "threshold", "names": sorted({t["name"] for t in fresh}),
-               "metrics": {"at": now_iso(), "triggers": [{k: v for k, v in t.items() if k not in ("key", "kill_sig")} for t in fresh]}}
+               "metrics": {"at": now_iso(), "triggers": [{k: v for k, v in t.items() if k not in NOPUB} for t in fresh]}}
     if new_flags:  # ride along only; a payload is sent only when a threshold trigger is fresh
         payload["metrics"]["flags"] = new_flags[:40]
     sent = False
@@ -723,14 +801,17 @@ def main():
             print("SOLADA_WEBHOOK_URL not set: skipping webhook")
         else:
             hdr = {"Authorization": f"Bearer {key}"} if key else {}
-            r = http.req("webhook", url, method="POST", body=payload, headers=hdr, quiet404=False)
-            sent = r is not None
-            print(f"webhook {'sent' if sent else 'FAILED'}")
+            hdr["Idempotency-Key"] = idempotency_key(cfg, [t["key"] for t in fresh])
+            sent = http.post_webhook(url, payload, hdr)
+            print(f"webhook {'sent' if sent else 'FAILED (queued for retry next run)'}")
     if sent or baseline or (fresh and args.dry_run is False and not url):
         for t in fresh:
             state["fired"][t["key"]] = now_iso()
             if t["kind"] == "kill_line":
-                state["kill_reported"][t["name"]] = {"sig": t["kill_sig"], "crossed": t["metrics"]["crossed"], "at": now_iso()}
+                state["kill_reported"][t["name"]] = {**(t.get("kill_entry") or {}), "at": now_iso()}
+        state["pending_triggers"] = []
+    elif fresh and not args.dry_run:
+        state["pending_triggers"] = fresh[-200:]  # retried next run; whale snapshot / seen_launches may advance safely
     state["seen_launches"] = sorted({l["id"] for l in launches} | seen)
     # keep fired map bounded
     if len(state["fired"]) > 2000:
@@ -741,7 +822,7 @@ def main():
         "launches": len(launches), "new_launches": 0 if baseline else len(new_ids), "candidates": len(cands),
         "passed_k_y": [r["ticker"] for r in passed], "thresholds": {k: v for k, v in th.items() if k != "source"},
         "market_age_min": market_age_min, "ada_usd": ada_usd, "whale": {k: v for k, v in (whale_summary or {}).items()},
-        "first_block_hits": fb_hits, "triggers": [{k: v for k, v in t.items() if k not in ("key", "kill_sig")} for t in fresh],
+        "first_block_hits": fb_hits, "triggers": [{k: v for k, v in t.items() if k not in NOPUB} for t in fresh],
         "webhook_sent": sent, "flags_new": len(new_flags), "data_failures": http.failures, "api_calls": http.calls, "results": results,
     }
     if not args.dry_run:
