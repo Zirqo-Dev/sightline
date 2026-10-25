@@ -1,0 +1,99 @@
+{
+ "at": "2026-10-25T20:08:43Z",
+ "flag_only": true,
+ "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
+ "baseline": false,
+ "new": [
+  {
+   "kind": "founder_whale_move",
+   "ticker": "FLOW",
+   "tag": "w-f3186187",
+   "delta": 224026586,
+   "pct": 0.1,
+   "ada_equiv": 68736323,
+   "at": "2026-10-25T20:08:43Z"
+  },
+  {
+   "kind": "founder_whale_move",
+   "ticker": "KR4UT^:WIS\nB<VR[J(\u0003",
+   "tag": "w-f3186187",
+   "delta": 11042717,
+   "pct": 10.8,
+   "at": "2026-10-25T20:08:43Z"
+  },
+  {
+   "kind": "founder_whale_move",
+   "ticker": "ADA",
+   "tag": "w-f3186187",
+   "delta": -4498,
+   "at": "2026-10-25T20:08:43Z"
+  }
+ ],
+ "recent": [
+  {
+   "kind": "founder_whale_move",
+   "ticker": "FLOW",
+   "tag": "w-f3186187",
+   "delta": 224026586,
+   "pct": 0.1,
+   "ada_equiv": 68736323,
+   "at": "2026-10-25T20:08:43Z"
+  },
+  {
+   "kind": "founder_whale_move",
+   "ticker": "KR4UT^:WIS\nB<VR[J(\u0003",
+   "tag": "w-f3186187",
+   "delta": 11042717,
+   "pct": 10.8,
+   "at": "2026-10-25T20:08:43Z"
+  },
+  {
+   "kind": "founder_whale_move",
+   "ticker": "ADA",
+   "tag": "w-f3186187",
+   "delta": -4498,
+   "at": "2026-10-25T20:08:43Z"
+  }
+ ],
+ "api_calls": {
+  "blockfrost": 3,
+  "koios": 4
+ },
+ "thresholds": {
+  "enabled": true,
+  "max_launch_scans": 8,
+  "scan_txs": 40,
+  "first_x_buyers": 20,
+  "max_wallet_age_lookups": 15,
+  "first_block_watch_tags_min": 2,
+  "stake_cluster_min_addrs": 2,
+  "coordinated_window_s": 120,
+  "coordinated_min_wallets": 4,
+  "coordinated_after_launch_s": 900,
+  "same_size_window_s": 600,
+  "same_size_min_wallets": 3,
+  "same_size_tolerance_pct": 1.0,
+  "fresh_wallet_max_age_blocks": 4320,
+  "fresh_swarm_min_wallets": 4,
+  "repeat_min_launches": 2,
+  "koth_progress_bps": 8000,
+  "max_koth_scans": 3,
+  "koth_txs": 25,
+  "max_tracked_snipers": 50,
+  "ada_side_drop_pct": 20,
+  "holder_doubling_ratio": 2.0,
+  "wash_vol_to_ada_side": 3.0,
+  "top_cluster_pct": 25,
+  "concentration_jump_pts": 10,
+  "whale_noise_tickers": [
+   "COCK",
+   "SOLADA"
+  ],
+  "launcher_roles": [
+   "repeat_launcher",
+   "swarm_launcher",
+   "pool_preseeder",
+   "founder_whale"
+  ]
+ }
+}
