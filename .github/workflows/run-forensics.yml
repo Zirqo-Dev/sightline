@@ -1,7 +1,7 @@
 name: Solana forensics
 
 # Research scan. Reads the SOLANA_RPC_URL secret and never prints it.
-# Commits reports only from main, with pull --rebase and no force-push.
+# Runs only from main; commits reports to the desk-data branch with pull --rebase and no force-push.
 
 on:
   workflow_dispatch:
@@ -138,6 +138,18 @@ jobs:
       - name: Unit tests
         run: python3 -m unittest discover -s sol_forensics/tests -v
 
+      - name: Check out desk-data (generated reports)
+        uses: actions/checkout@v4
+        with:
+          ref: desk-data
+          path: data
+
+      - name: Seed forensics state from desk-data
+        run: |
+          # main only takes PRs since Oct 25 (protect-main), so new reports live on desk-data.
+          # Overlay desk-data's copy so index/panel/cache stay cumulative. Old reports on main stay as-is.
+          if [ -d data/solada/forensics ]; then cp -r data/solada/forensics/. solada/forensics/; fi
+
       - name: Scan
         env:
           SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}
@@ -166,31 +178,37 @@ jobs:
           bash scripts/privacy-guard.sh $(find solada/forensics -type f | sort)
           python3 scripts/validate-desks.py
 
-      - name: Commit reports
+      - name: Commit reports to desk-data
+        env:
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
         run: |
           set -euo pipefail
           if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
             echo "Refusing to push reports from ${GITHUB_REF}. Run this workflow on main."
             exit 1
           fi
+          # Nothing is pushed to main (protect-main ruleset rejects direct pushes).
+          mkdir -p data/solada/forensics
+          cp -r solada/forensics/. data/solada/forensics/
+          cd data
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add solada/forensics
+          git add -A solada/forensics
           if git diff --cached --quiet; then
             echo "No report changes."
             exit 0
           fi
-          git commit -m "Update sol_forensics reports"
-          ok=0
-          for i in 1 2 3; do
-            if git pull --rebase origin main && git push origin HEAD:main; then
-              ok=1
-              break
-            fi
-            echo "Rebase or push failed (attempt ${i}). Not force-pushing."
-            sleep $((i * 5))
-          done
-          if [ "$ok" -ne 1 ]; then
-            echo "Push failed after rebase retries. No force-push was used."
+          # Privacy guard on the staged desk-data files before commit/push (same as solana-desk-scan.yml).
+          if ! bash "$GITHUB_WORKSPACE/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"; then
+            echo "::error::privacy guard failed on desk-data changes; not committing or pushing"
+            git reset -q
             exit 1
           fi
+          git commit -q -m "Update sol_forensics reports $(date -u +%Y-%m-%dT%H:%MZ)"
+          for i in 1 2 3 4 5; do
+            git push origin HEAD:desk-data && exit 0
+            echo "push conflict, retry $i. Not force-pushing."; sleep $((i * 5))
+            git pull --rebase origin desk-data || { git rebase --abort; exit 1; }
+          done
+          echo "Push failed after rebase retries. No force-push was used."
+          exit 1
