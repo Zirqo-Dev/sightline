@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import flags as flagmod  # noqa: E402  flag-only signals, never triggers
 import valuation as V  # noqa: E402  LP detection, raw-unit valuation, kill dedupe
 import big_moves as BM  # noqa: E402  SPD-43 big-move detector (research rows, never triggers)
+import whale_ledger as WL  # noqa: E402  SPD-44 founder whale ledger (research rows, never triggers)
 from datetime import datetime, timezone
 
 UA = "sightline-solada-prefilter/1.0"
@@ -860,6 +861,17 @@ def main():
         except Exception as e:  # big moves must never break the rules screen
             http._fail("big_moves", type(e).__name__)
 
+    # ---- SPD-44 founder whale ledger (research rows for Snek; never triggers, never the webhook)
+    whale_ledger = None
+    if WL.wl_cfg(cfg)["enabled"]:
+        try:
+            whale_ledger = WL.run(http, cfg, args.data_dir, args.dry_run, time.time(), lp_pols)
+            print(f"whale ledger: {json.dumps(whale_ledger)}")
+        except SystemExit:
+            raise
+        except Exception as e:  # the ledger must never break the rules screen
+            http._fail("whale_ledger", type(e).__name__)
+
     # ---- dedupe + webhook
     # pending triggers (webhook failed on an earlier run) are retried first; a newer trigger with the same
     # key, or a newer kill trigger for the same ticker, supersedes the queued one
@@ -906,7 +918,7 @@ def main():
         "passed_k_y": [r["ticker"] for r in passed], "thresholds": {k: v for k, v in th.items() if k != "source"},
         "market_age_min": market_age_min, "ada_usd": ada_usd, "whale": {k: v for k, v in (whale_summary or {}).items()},
         "first_block_hits": fb_hits, "triggers": [{k: v for k, v in t.items() if k not in NOPUB} for t in fresh],
-        "webhook_sent": sent, "flags_new": len(new_flags), "big_moves": big_moves, "data_failures": http.failures, "api_calls": http.calls, "results": results,
+        "webhook_sent": sent, "flags_new": len(new_flags), "big_moves": big_moves, "whale_ledger": whale_ledger, "data_failures": http.failures, "api_calls": http.calls, "results": results,
     }
     if not args.dry_run:
         json.dump(state, open(state_path, "w"), indent=1, sort_keys=True)

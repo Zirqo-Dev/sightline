@@ -23,6 +23,9 @@
   "whale": {
     "handle": "cockwhale",
     "handle_policy": "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a",
+    "stake": "stake1uylu74g0f466kj7s7ptmy40sn7cwdt3zvnswccmhxkujmtq0zqllm",
+    "stake_prefix": "uylu74g0",
+    "_stake_note": "Public third-party key of $cockwhale (founder whale), not the owner's. Listed in scripts/privacy-public-keys.txt so the privacy guard allows this exact value; output carries only its tag.",
     "min_ada_equiv": 2000,
     "min_position_pct": 10,
     "always_tickers": [
@@ -166,5 +169,17 @@
     "max_txs_per_unit": 100,
     "utxo_batch": 10,
     "max_calls": 80
+  },
+  "whale_ledger": {
+    "_note": "SPD-44 founder whale ledger (whale_ledger.py). Research only, never triggers or the webhook. Free Koios public tier: max_calls per run, utxo_batch hashes per POST, max_txs per run (backlog resumes next run).",
+    "enabled": true,
+    "max_txs": 100,
+    "utxo_batch": 10,
+    "max_calls": 60,
+    "max_bf_calls": 120,
+    "keep_rows": 3000,
+    "keep_seen": 20000,
+    "order_min_ada": 10,
+    "min_ada_row": 1.0
   }
 }
