@@ -1,0 +1,169 @@
+{
+ "schema_version": 2,
+ "desk": "solana-desk",
+ "book": "F,R,S",
+ "chain": "solana",
+ "unit": "SOL",
+ "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
+ "ticket_size": 0.5,
+ "default_window_hours": 2.0,
+ "generated_at": "2026-11-01T03:26:40Z",
+ "cfg_version": "v1-v6.5",
+ "open": [
+  {
+   "id": "F-R1793500000-Mint01pp",
+   "ticker": "T1",
+   "mint": "Mint01xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx01pp",
+   "book": "F",
+   "status": "open",
+   "size": 0.5,
+   "opened_at": "2026-11-01T02:26:40Z",
+   "window_ends_at": "2026-11-01T04:26:40Z",
+   "entry": {
+    "px": 0.5
+   },
+   "frac": 0.666667,
+   "last_mark": 0.724999998725,
+   "thesis": "pass",
+   "result": {
+    "pnl": 0.072945,
+    "pct": 45.0,
+    "unit": "SOL"
+   }
+  },
+  {
+   "id": "F-R1793501800-Mint03pp",
+   "ticker": "T3",
+   "mint": "Mint03xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx03pp",
+   "book": "F",
+   "status": "open",
+   "size": 0.5,
+   "opened_at": "2026-11-01T02:56:40Z",
+   "window_ends_at": "2026-11-01T04:56:40Z",
+   "entry": {
+    "px": 0.5
+   },
+   "frac": 1.0,
+   "last_mark": 0.5,
+   "thesis": "pass",
+   "result": {
+    "pnl": 0.0,
+    "pct": 0.0,
+    "unit": "SOL"
+   }
+  },
+  {
+   "id": "R-R1793501800-Mint03pp",
+   "ticker": "T3",
+   "mint": "Mint03xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx03pp",
+   "book": "R",
+   "status": "open",
+   "size": 0.5,
+   "opened_at": "2026-11-01T02:56:40Z",
+   "window_ends_at": "2026-11-01T04:56:40Z",
+   "entry": {
+    "px": 0.5
+   },
+   "frac": 1.0,
+   "last_mark": 0.5,
+   "thesis": "random_match",
+   "result": {
+    "pnl": 0.0,
+    "pct": 0.0,
+    "unit": "SOL"
+   }
+  }
+ ],
+ "closed": [
+  {
+   "id": "R-R1793500000-Mint02pp",
+   "ticker": "T2",
+   "mint": "Mint02xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx02pp",
+   "book": "R",
+   "status": "closed",
+   "size": 0.5,
+   "opened_at": "2026-11-01T02:26:40Z",
+   "closed_at": "2026-11-01T03:26:40Z",
+   "entry": {
+    "px": 0.5
+   },
+   "exit": {
+    "px": 0.3
+   },
+   "exit_reason": "hard_stop",
+   "result": {
+    "pnl": -0.20402,
+    "pct": -40.6,
+    "unit": "SOL"
+   },
+   "thesis": "random_match"
+  },
+  {
+   "id": "S-R1793500000-Mint02pp",
+   "ticker": "T2",
+   "mint": "Mint02xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx02pp",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "opened_at": "2026-11-01T02:26:40Z",
+   "closed_at": "2026-11-01T03:26:40Z",
+   "entry": {
+    "px": 0.5
+   },
+   "exit": {
+    "px": 0.3
+   },
+   "exit_reason": "hard_stop",
+   "result": {
+    "pnl": -0.20402,
+    "pct": -40.6,
+    "unit": "SOL"
+   },
+   "thesis": "safety:dev_holds"
+  }
+ ],
+ "books": {
+  "F": {
+   "cash": 9.235428333,
+   "equity": 10.213824999,
+   "realized_pnl": 0.072945,
+   "open": 2,
+   "closed": 0,
+   "fills_today": 2,
+   "would_halt": []
+  },
+  "R": {
+   "cash": 9.29347,
+   "equity": 9.79096,
+   "realized_pnl": -0.20402,
+   "open": 1,
+   "closed": 1,
+   "fills_today": 2,
+   "would_halt": []
+  },
+  "S": {
+   "cash": 9.79598,
+   "equity": 9.79598,
+   "realized_pnl": -0.20402,
+   "open": 0,
+   "closed": 1,
+   "fills_today": 1,
+   "would_halt": []
+  }
+ },
+ "rules": [
+  {
+   "id": "entry",
+   "rule": "Fixed 0.5 SOL paper entry from a Jupiter quote; F max 4 open, 8 new/day; R and S capped at 2x F fills"
+  },
+  {
+   "id": "exit",
+   "rule": "Stop -25%, take +40%/+100% (1/3 each), trail 25% after first take, time stop 120 min unless up 10%, liquidity pull 40%, -100% after 3 no-route checks"
+  },
+  {
+   "id": "void",
+   "rule": "No new entries when data failures > 10% today or after a loop outage > 2h"
+  }
+ ],
+ "summaries": []
+}

@@ -158,8 +158,10 @@ class Runner(unittest.TestCase):
     def test_fill_refused_until_frozen(self):
         from desk import run
         self.assertTrue(C.FROZEN); self.assertEqual(C.CFG_VERSION, "v1-v6.5")
-        self.assertFalse(run.FILL_READY); self.assertFalse(run.mode_allowed("fill")); self.assertTrue(run.mode_allowed("scan"))
-        self.assertEqual(run.main(["--mode", "fill", "--data-dir", tempfile.mkdtemp()]), 2)
+        self.assertTrue(run.FILL_READY); self.assertTrue(run.mode_allowed("fill")); self.assertTrue(run.mode_allowed("scan"))
+        old = run.FILL_READY; run.FILL_READY = False
+        try: self.assertEqual(run.main(["--mode", "fill", "--data-dir", tempfile.mkdtemp()]), 2)
+        finally: run.FILL_READY = old
 
 class ErrorSource(unittest.TestCase):
     def test_header_upgrade_and_error_src(self):

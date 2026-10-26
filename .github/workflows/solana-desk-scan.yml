@@ -1,7 +1,7 @@
 name: Solana desk scan
 
-# Paper-only Solana desk scanner (plan v6.4). No AI, no keys, no wallets.
-# Runs every 30 min in scan-only mode; commits generated files ONLY to the
+# Paper-only Solana desk scanner + paper fill step (plan v6.5). No AI, no wallets, no real orders.
+# Runs every 30 min in auto mode (paper fills once config is frozen and FILL_READY); commits generated files ONLY to the
 # desk-data branch with pull --rebase retries and no force-push.
 
 on:
@@ -12,9 +12,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "scan (default) or fill (refused until config is frozen)"
+        description: "auto (default: fill once frozen and the fill step is on main), scan, or fill"
         required: false
-        default: scan
+        default: auto
 
 permissions:
   contents: write
@@ -44,7 +44,8 @@ jobs:
       - name: Run scanner
         env:
           JUPITER_API_KEY: ${{ secrets.JUPITER_API_KEY }}
-          MODE: ${{ github.event.inputs.mode || 'scan' }}
+          # Mode: manual input > repo variable SOLANA_DESK_MODE (set to 'scan' to pause fills without a PR) > auto
+          MODE: ${{ github.event.inputs.mode || vars.SOLANA_DESK_MODE || 'auto' }}
         working-directory: code/solana-desk
         run: |
           if [ -z "$JUPITER_API_KEY" ]; then echo "::warning::JUPITER_API_KEY secret not set; using keyless Jupiter (noted in health.json)"; fi

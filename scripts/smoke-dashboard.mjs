@@ -470,6 +470,10 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   for (const want of ["20 / 48", "3.3%", "void ≥ 10%", "57.1 min", "v1-draft-v6.5", "draft", "run 20261025T2000", "dexscreener.com/solana/FakeMintCCCC", "geckoterminal.com/solana/tokens/", "no sol pair", "eligibility 1", "pass 2", "Open positions", "Closed trades", "50%", "+0.046", "FAKEC", "2 runs", "Research only, not advice."])
     assert(full.includes(want), "solana-desk shows " + want);
   assert(S.solanaCsv(fx("tasks.csv")).length === 6, "repeated CSV header rows are dropped");
+  const fillsH = await def.render({ data: wrap(h).concat([{ path: "/solana-desk/paper.json", json: JSON.parse(fx("paper-fills.json")) }]), opt: { now: "2026-11-01T03:30:00Z", csv: { tasks: fx("tasks.csv"), trades: fx("trades-fills.csv") } } });
+  for (const want of ["Open positions", "Closed trades", "T1", "T3", "take_profit_40", "hard_stop"])
+    assert(fillsH.includes(want), `solana-desk fill-step fixture renders: ${want}`);
+  assert(!fillsH.includes("No paper fills yet"), "fill-step fixture is not the empty state");
   const voidH = await def.render({ data: wrap(JSON.parse(fx("health-void.json"))), opt: { csv: { tasks: "", trades: "" } } });
   assert(voidH.includes("void day") && voidH.includes("frozen") && voidH.includes("12.5%"), "void day and frozen state");
   assert(voidH.includes("No paper fills yet") && voidH.includes("tasks.csv not published yet"), "solana-desk empty states before fills");
