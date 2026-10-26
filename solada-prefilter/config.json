@@ -31,7 +31,12 @@
     ],
     "max_price_lookups": 15,
     "max_ada_leg_txs": 50,
-    "max_decimals_lookups": 15
+    "max_decimals_lookups": 15,
+    "dust": {
+      "_note": "A whale move's % of position is reported (and can trigger) only when the move is worth >= pct_min_ada ADA and >= pct_min_qty whole tokens; smaller moves are marked dust (e.g. 0.75 STRIKE = 6.4% of a 12-token leftover).",
+      "pct_min_ada": 25,
+      "pct_min_qty": 1
+    }
   },
   "solana": {
     "ignore_owners": [
@@ -40,7 +45,7 @@
     "max_lookups": 10
   },
   "pace_seconds": {
-    "geckoterminal": 2.2,
+    "geckoterminal": 3.0,
     "dexscreener": 0.5,
     "blockfrost": 0.12,
     "koios": 0.6,
@@ -141,5 +146,13 @@
         "uy3gz02eqt"
       ]
     }
+  },
+  "geckoterminal": {
+    "_note": "Free API is ~30 calls/min per IP, shared with other jobs on the runner. 429s retry with backoff (Retry-After honoured, capped); after max_429_failures failed lookups GT is skipped for the rest of the run (DexScreener fallback). Lookups are cached per unit within a run.",
+    "retry_backoff_seconds": [
+      6,
+      15
+    ],
+    "max_429_failures": 3
   }
 }

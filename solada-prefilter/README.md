@@ -12,6 +12,12 @@
 
 **Webhook:** `POST $SOLADA_WEBHOOK_URL` with `Authorization: Bearer $SOLADA_WEBHOOK_KEY` and `{"reason":"threshold","names":[...],"metrics":{...}}`. Skipped when the URL is not set.
 
+**Schedule:** cron-job.org only (job "Solada pre-filter": `workflow_dispatch` every 2h at :07). The workflow has no GitHub `schedule:`. Kill lines Snek has already marked `hit: ...` in `log.kill_lines` are recorded in state and never sent.
+
+**Whale sizing (Oct 26 fixes):** a move's ADA leg is used as-is only when the legs' token qty matches the snapshot delta within 5%. Otherwise the delta is valued at the legs' ADA-per-token rate (`value_basis: ada_leg_rate`). Decimals are always resolved, so payloads carry `qty` (whole tokens) next to the raw `delta`. Dust moves (under 25 ADA or under 1 whole token, `config.json` `whale.dust`) get `"dust": true` and no `pct`, so they never trip the 10% position trigger. Curve launches carry `curve_pct`.
+
+**GeckoTerminal:** the free API rate-limits shared runner IPs. Lookups are paced at 3 s, retried on 429 after 6 s and 15 s (Retry-After honoured, capped at 60 s), and cached per unit within a run. After 3 failed lookups the rest of the run uses DexScreener (`config.json` `geckoterminal`).
+
 **Privacy:** the whale is resolved from its ADA Handle at run time; only a short hash tag (`w-xxxxxxxx`) is logged or stored. The full holdings snapshot needed for deltas lives only in the Actions cache (`--cache-dir`); committed state keeps just threshold-crossing moves (tag, asset, amount change).
 
 **Flags (flag-only, `flags.py`):** heuristic whale/cabal signals written to `desk-data:solada-prefilter/flags.json` (`new` = this run, `recent` = last 300) for Snek's daily run. They never count toward rules k/y/aa or kill lines and never fire the webhook alone; when a threshold trigger is already firing, the run's new flags ride along as `metrics.flags`. Each flag fires once (hash in `state.json` `flags_seen`). Thresholds live in `config.json` `flags` (loose defaults); Snek's stake-prefix tags are the seed watchlist in `flags.snek_prefix_tags`, plus `whale_watch` keys from the log.

@@ -3,7 +3,10 @@ name: desk-data-guard
 # Backstop: run main's privacy guard and schema validation against the
 # desk-data branch. Read-only; never writes to desk-data.
 # Pushes made with the built-in GITHUB_TOKEN (desk scan, solada-prefilter)
-# do not trigger workflows, so the hourly schedule covers those.
+# do not trigger workflows, so a timed run covers those. Primary: cron-job.org ->
+# workflow_dispatch hourly. The GitHub schedule stays as a backup only: this job is
+# read-only and idempotent (an extra run just re-checks), and GitHub's schedule has been
+# firing hours apart for this repo.
 
 on:
   push:

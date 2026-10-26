@@ -36,12 +36,13 @@ def lp_dex(unit, pols):
     return pols.get((unit or "")[:56].lower())
 
 
-def ada_leg_by_unit(stake, utxos, addr_info, pols=None):
-    """{unit: ada} from the wallet's own net lovelace in txs that moved exactly one (non-LP) token.
+def ada_leg_detail(stake, utxos, addr_info, pols=None):
+    """{unit: {"ada": ada, "qty": raw}} from the wallet's own net lovelace in txs that moved exactly one (non-LP) token.
 
     utxos = {tx: {'inputs': [(addr, lovelace, {unit: qty})], 'outputs': [...]}}.
     A tx counts only when token and ADA move in opposite directions (a swap leg).
-    Txs that touch LP tokens (liquidity add/remove) are skipped."""
+    Txs that touch LP tokens (liquidity add/remove) are skipped. qty is the raw token amount those
+    legs paid for, so callers can tell when the tx window does not match the snapshot delta."""
     pols = pols or {}
     out = {}
     for tx in utxos.values():
@@ -58,22 +59,62 @@ def ada_leg_by_unit(stake, utxos, addr_info, pols=None):
             continue
         (u, q), = moved.items()
         if lov and (q > 0) != (lov > 0):
-            out[u] = round(out.get(u, 0) + abs(lov) / 1e6, 6)
+            e = out.setdefault(u, {"ada": 0.0, "qty": 0})
+            e["ada"] = round(e["ada"] + abs(lov) / 1e6, 6)
+            e["qty"] += abs(q)
     return out
+
+
+def ada_leg_by_unit(stake, utxos, addr_info, pols=None):
+    """{unit: ada} (see ada_leg_detail)."""
+    return {u: e["ada"] for u, e in ada_leg_detail(stake, utxos, addr_info, pols).items()}
 
 
 def whole_units(raw, decimals):
     return abs(raw) / (10 ** decimals) if decimals is not None else None
 
 
-def value_ada(raw_delta, ada_leg=None, decimals=None, price_ada=None):
-    """(ada_value, basis) for a raw-unit move, or (None, None) when it cannot be sized safely."""
+LEG_MATCH_PCT = 5.0  # the ADA leg is used as-is only when its token qty matches the delta this closely
+
+
+def value_ada(raw_delta, ada_leg=None, decimals=None, price_ada=None, leg_qty=None):
+    """(ada_value, basis) for a raw-unit move, or (None, None) when it cannot be sized safely.
+
+    With leg_qty (raw tokens the ADA legs paid for): when it matches |raw_delta| within LEG_MATCH_PCT the
+    leg is the value ("ada_leg"); otherwise the tx window and the snapshot delta disagree (older txs in the
+    window, token-for-token swaps, transfers), so the delta is valued at the legs' ADA-per-token rate
+    ("ada_leg_rate"). Never more ADA than the legs' own price implies for the tokens that actually moved."""
+    if ada_leg and leg_qty:
+        d = abs(raw_delta)
+        if abs(leg_qty - d) <= d * LEG_MATCH_PCT / 100.0:
+            return round(ada_leg, 2), "ada_leg"
+        return round(ada_leg * d / leg_qty, 2), "ada_leg_rate"
     if ada_leg:
         return round(ada_leg, 2), "ada_leg"
     w = whole_units(raw_delta, decimals)
     if w is not None and price_ada:
         return round(w * price_ada, 2), "decimals_x_price"
     return None, None
+
+
+DUST_DEFAULTS = {"pct_min_ada": 25.0, "pct_min_qty": 1.0}
+
+
+def dust_cfg(wcfg=None):
+    out = dict(DUST_DEFAULTS)
+    out.update({k: v for k, v in ((wcfg or {}).get("dust") or {}).items() if not k.startswith("_")})
+    return out
+
+
+def is_dust(raw_delta, decimals=None, ada_value=None, dc=None):
+    """True when a move is too small for its position % to mean anything (e.g. 0.75 STRIKE = 6.4% of a
+    12-token leftover). Dust = known ADA value under pct_min_ada, or whole-token size under pct_min_qty.
+    With neither value nor decimals known the move is not called dust."""
+    dc = dc or DUST_DEFAULTS
+    if ada_value is not None and ada_value < dc["pct_min_ada"]:
+        return True
+    w = whole_units(raw_delta, decimals)
+    return w is not None and w < dc["pct_min_qty"]
 
 
 def kill_signature(crossed):

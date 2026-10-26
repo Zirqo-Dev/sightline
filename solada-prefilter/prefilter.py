@@ -29,8 +29,10 @@ def now_iso():
 
 
 class Http:
-    def __init__(self, pace):
+    def __init__(self, pace, backoff=None):
         self.pace, self.last, self.failures, self.calls = pace, {}, {}, {}
+        self.backoff = backoff or {}  # src -> [seconds, ...]: extra 429 retries (Retry-After honoured, capped)
+        self.sleep = time.sleep
 
     def _wait(self, src):
         gap = self.pace.get(src, 0.3)
@@ -47,7 +49,8 @@ class Http:
         if body is not None:
             data = json.dumps(body).encode()
             h["Content-Type"] = "application/json"
-        for attempt in (0, 1):
+        waits = self.backoff.get(src) or [3]
+        for attempt in range(len(waits) + 1):
             self._wait(src)
             self.calls[src] = self.calls.get(src, 0) + 1
             try:
@@ -58,8 +61,15 @@ class Http:
             except urllib.error.HTTPError as e:
                 if e.code == 404 and quiet404:
                     return None
-                if (e.code == 429 or e.code >= 500) and attempt == 0:
-                    time.sleep(3 if e.code == 429 else 1.5)
+                if e.code == 429 and attempt < len(waits):
+                    ra = (e.headers.get("Retry-After") if getattr(e, "headers", None) else None) or ""
+                    w = waits[attempt]
+                    if ra.strip().isdigit():
+                        w = min(max(w, int(ra.strip())), 60)
+                    self.sleep(w)
+                    continue
+                if e.code >= 500 and attempt == 0:
+                    self.sleep(1.5)
                     continue
                 self._fail(src, f"http {e.code}")
                 return None
@@ -167,7 +177,9 @@ def tracked_names(paper, log):
         if isinstance(text, str):
             kl = parse_kill_text(text)
             if kl:
-                out[tk.upper()] = {"kill": kl, "text": text, "source": "log.kill_lines"}
+                # "hit: ..." = Snek already recorded this kill line as hit; the webhook must not report it again
+                out[tk.upper()] = {"kill": kl, "text": text, "source": "log.kill_lines",
+                                   "desk_hit": text.strip().lower().startswith("hit")}
     for t in paper.get("open", []):
         kl = t.get("kill_line") or {}
         nums = {k: v for k, v in kl.items() if isinstance(v, (int, float)) and k.endswith("_below")}
@@ -373,9 +385,26 @@ class Chain:
         return s
 
 
+GT_MAX_429 = 3
+
+
 def gt_pool(http, unit):
-    """(ada_side, mcap_ada, price_ada, basis) from GeckoTerminal, else DexScreener."""
-    r = http.req("geckoterminal", f"{GT}/networks/cardano/tokens/{unit}/pools?page=1")
+    """(ada_side, mcap_ada, price_ada, basis) from GeckoTerminal, else DexScreener. Cached per unit per run;
+    after GT_MAX_429 rate-limited lookups GeckoTerminal is skipped for the rest of the run."""
+    cache = http.__dict__.setdefault("_gt_cache", {})
+    if unit in cache:
+        return cache[unit]
+    cache[unit] = _gt_pool(http, unit)
+    return cache[unit]
+
+
+def _gt_pool(http, unit):
+    r = None
+    if (http.failures.get("geckoterminal") or 0) < GT_MAX_429:
+        r = http.req("geckoterminal", f"{GT}/networks/cardano/tokens/{unit}/pools?page=1")
+    elif not http.__dict__.get("_gt_skip_logged"):
+        http._gt_skip_logged = True
+        print(f"geckoterminal: {GT_MAX_429}+ failed lookups this run; using DexScreener for the rest")
     pools = (r or {}).get("data") or []
     if pools:
         best = max(pools, key=lambda p: float(p["attributes"].get("reserve_in_usd") or 0))
@@ -519,7 +548,10 @@ def main():
             state["kill_reported"][_tk] = _e
     kc = V.kill_cfg(cfg)
 
-    http = Http(cfg["pace_seconds"])
+    gtc = cfg.get("geckoterminal") or {}
+    http = Http(cfg["pace_seconds"], {"geckoterminal": gtc.get("retry_backoff_seconds") or [6, 15]})
+    global GT_MAX_429
+    GT_MAX_429 = int(gtc.get("max_429_failures", GT_MAX_429))
     bf_key = os.environ.get("BLOCKFROST_PROJECT_ID", "").strip()
     rpc = os.environ.get("SOLANA_RPC_URL", "").strip()
     if not rpc and os.environ.get("HELIUS_API_KEY", "").strip():
@@ -635,7 +667,11 @@ def main():
             state["kill_status"][tk] = bool(crossed)
         results.append({"ticker": tk, "tracked": True, "unit": u, **m, "crossed": crossed, "kill": k})
         fire, entry, reasons = V.kill_decide(state["kill_reported"].get(tk), crossed_m, values, lines, complete, kc)
-        if fire:
+        if fire and t.get("desk_hit"):
+            # already hit on the desk (log.kill_lines "hit: ..."): record as reported, never send
+            state["kill_reported"][tk] = {**entry, "at": now_iso(), "desk_hit": True}
+            print(f"kill line {tk}: already hit on the desk; recorded, not sent")
+        elif fire:
             sig = V.kill_signature(crossed_m)  # ticker + crossed metric names
             vh = hashlib.sha256(json.dumps(sorted(crossed_m.items())).encode()).hexdigest()[:8]
             triggers.append({"key": f"kill:{tk}:{sig}:{vh}", "kind": "kill_line", "name": tk, "kill_sig": sig,
@@ -650,6 +686,9 @@ def main():
     wcfg = cfg["whale"]
     lp_pols = V.lp_policies(cfg)
     unit_decimals = {unit_of(l): 6 for l in launches if l.get("curve") and unit_of(l)}
+    unit_curve = {unit_of(l): round(int((l.get("curve") or {}).get("progressBps") or 0) / 100, 1)
+                  for l in launches if unit_of(l) and l.get("curve") and not graduated(l)}
+    dust = V.dust_cfg(wcfg)
     whale_summary = None
     addr = chain.handle_address(wcfg["handle_policy"], wcfg["handle"])
     stake = chain.stake_of(addr) if addr else None
@@ -672,8 +711,12 @@ def main():
                 txs = chain.account_txs_after(stake, prev_height, wcfg.get("max_ada_leg_txs", 50))
                 if txs:
                     tip_height = max(h for _, h in txs)
+                    if len(txs) >= wcfg.get("max_ada_leg_txs", 50):
+                        # window was capped: start the next window at the account tip so it never re-counts
+                        # these txs (value_ada's qty check keeps this run's partial legs from overstating)
+                        tip_height = chain.account_tip_height(stake) or tip_height
                     ut = flagmod.FlagChain(http, bf_key).tx_utxos([t for t, _ in txs])
-                    legs = V.ada_leg_by_unit(stake, ut, flagmod.addr_info, lp_pols)
+                    legs = V.ada_leg_detail(stake, ut, flagmod.addr_info, lp_pols)
                 elif txs is not None:
                     tip_height = prev_height
             moves, lp_moves = [], []
@@ -692,23 +735,30 @@ def main():
                     continue
                 nm = ascii_name(u[56:]).upper()
                 mv = {"asset": nm or u[:12], "delta": b - a}
-                if a > 0:
-                    mv["pct"] = round(100 * abs(b - a) / a, 1)
                 if a == 0 and b > 0:
                     mv["new_position"] = True
+                if u in unit_curve:
+                    mv["curve_pct"] = unit_curve[u]
                 price, dec = None, unit_decimals.get(u)
-                if u not in legs and prices_left > 0:
+                if dec is None and dec_left > 0:  # always: the payload shows whole tokens, never raw units
+                    dec_left -= 1
+                    dec = chain.decimals(u)
+                leg = legs.get(u) or {}
+                if not leg and prices_left > 0:
                     prices_left -= 1
                     p = gt_pool(http, u)
                     price = p.get("price_ada") if p else None
-                    if price and dec is None and dec_left > 0:
-                        dec_left -= 1
-                        dec = chain.decimals(u)
-                val, basis = V.value_ada(b - a, legs.get(u), dec, price)
+                val, basis = V.value_ada(b - a, leg.get("ada"), dec, price, leg.get("qty"))
+                if dec is not None:
+                    mv["decimals"] = dec
+                    mv["qty"] = round((b - a) / 10 ** dec, 4)
                 if val is not None:
                     mv["ada_equiv"], mv["value_basis"] = round(val), basis
-                    if dec is not None:
-                        mv["decimals"] = dec
+                if a > 0:
+                    if V.is_dust(b - a, dec, val, dust):
+                        mv["dust"] = True  # % of position is meaningless for dust (config whale.dust)
+                    else:
+                        mv["pct"] = round(100 * abs(b - a) / a, 1)
                 fire = (mv.get("ada_equiv", 0) >= wcfg["min_ada_equiv"] or mv.get("pct", 0) >= wcfg["min_position_pct"]
                         or mv.get("new_position") or any(x in nm for x in wcfg["always_tickers"]))
                 if fire:
