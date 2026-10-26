@@ -77,6 +77,8 @@ jobs:
           SOLADA_WEBHOOK_KEY: ${{ secrets.SOLADA_WEBHOOK_KEY }}
           PREFILTER_CACHE_DIR: ${{ runner.temp }}/prefilter-cache
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          # existing secret (no new one): big_moves.py drops owner wallets matching these patterns in memory, never printed
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
         working-directory: code
         run: |
           [ -z "$BLOCKFROST_PROJECT_ID" ] && echo "::warning::BLOCKFROST_PROJECT_ID not set; using Koios"
