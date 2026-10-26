@@ -1,0 +1,19 @@
+{
+  "_note": "SPD-44 fixture, modelled on the Oct 26 $cockwhale txs (11:59 AM ET 1M COCK order opened, filled 12:00 PM ET for 930.3 ADA). Labels become fake addresses at test time; values are test values.",
+  "cock_name": "COCK",
+  "ascend_name": "ASCEND",
+  "txs": [
+    {"hash": "c8c1", "time": 1793030383, "in": [["whale", 34692166, {}], ["whale", 5342540, {"COCK": 1000000}]],
+     "out": [["whale", 26202693, {}], ["fee1", 2784900, {}], ["fee2", 6498100, {}], ["order", 4300000, {"COCK": 1000000}]]},
+    {"hash": "6c16", "time": 1793030449, "in": [["batcher", 8898196, {}], ["@c8c1#3", 4300000, {"COCK": 1000000}], ["pool", 4755401677, {}]],
+     "out": [["batcher", 8224957, {}], ["whale", 930300000, {}], ["vault", 2262750, {"COCK": 1000000}], ["pool", 3827101677, {}]]},
+    {"hash": "56a7", "time": 1793038453, "in": [["batcher", 230521514, {}], ["pool", 172612465123, {"COCK": 28688427}], ["pool", 1066333125436, {"ASCEND": 904965591722}], ["whale", 4000000, {"COCK": 50000}]],
+     "out": [["whale", 2000000, {"ASCEND": 247218407}], ["batcher", 231748908, {}], ["pool", 172318150749, {"COCK": 28738427}], ["pool", 1066627439810, {"ASCEND": 904718373315}]]},
+    {"hash": "e001", "time": 1793040000, "in": [["whale", 50000000, {"COCK": 200000}]], "out": [["whale", 40000000, {}], ["order", 9800000, {"COCK": 200000}]]},
+    {"hash": "e002", "time": 1793040100, "in": [["whale", 3000000, {}], ["@e001#1", 9800000, {"COCK": 200000}]], "out": [["whale", 12500000, {"COCK": 200000}]]},
+    {"hash": "e003", "time": 1793040200, "in": [["whale", 300000000, {}]], "out": [["whale", 47000000, {}], ["order", 252690000, {}]]},
+    {"hash": "e004", "time": 1793040300, "in": [["@e003#1", 252690000, {}], ["pool", 9000000000, {"ASCEND": 5000000000}]], "out": [["whale", 2000000, {"ASCEND": 861130600}], ["pool", 9250000000, {"ASCEND": 4138869400}]]},
+    {"hash": "e005", "time": 1793040400, "in": [["friend", 500000000, {}]], "out": [["whale", 499000000, {}]]},
+    {"hash": "e006", "time": 1793040500, "in": [["whale", 5000000, {"COCK": 10000}]], "out": [["friend", 2000000, {"COCK": 10000}], ["whale", 2800000, {}]]}
+  ]
+}

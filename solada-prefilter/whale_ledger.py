@@ -1,0 +1,340 @@
+"""SPD-44 founder whale ledger ($cockwhale), zero AI, free Koios public tier (no key).
+
+Writes desk-data:solada-prefilter/whale_ledger.json. Rows:
+  {time, tx_short, kind, token, qty, ada_leg, counterparty_tag, order_ref_short?, order_status?}
+  kind: swap | lp_add | lp_remove | order_open | order_fill | order_cancel | transfer_in | transfer_out
+plus running positions {token: raw qty}, ada_balance, and DEX orders {ref_short: {...status}}.
+
+Idempotent: every tx is applied at most once (dedupe by full tx hash, kept in the ledger file), so a
+re-run, an overlapping block window or a retried run never double-counts a buy (the Oct 26 ASCEND ~2x
+overstatement came from re-counting a tx window). Positions change only from the net per-tx deltas of
+the whale's own UTxOs; each run's balances are checked against Koios account_info / account_assets
+and any drift is reported (never silently "fixed").
+
+DEX orders (batcher-style: Splash/Spectrum/Minswap/Genius etc.): a whale tx that sends a token (or 10+ ADA)
+to a script address without getting value back opens an order (ref = tx#index). A later tx that spends
+that ref is a fill (whale gets the other side) or a cancel (whale gets the same token back). If the ref is
+spent by a tx the whale does not appear in, status = closed_elsewhere (checked with utxo_info).
+
+The whale stake key is public third-party research data in config.json (whale.stake). Output carries only
+its tag; counterparties are tags (<= 12 chars). Never touches the owner's wallet.
+"""
+import hashlib, json, os
+from datetime import datetime, timezone
+
+import flags as F
+import valuation as V
+
+KOIOS = "https://api.koios.rest/api/v1"
+DEFAULTS = {"enabled": True, "max_txs": 100, "utxo_batch": 10, "max_calls": 60, "keep_rows": 3000,
+            "keep_seen": 20000, "order_min_ada": 10, "min_ada_row": 1.0}
+
+
+def wl_cfg(cfg=None):
+    out = dict(DEFAULTS)
+    out.update({k: v for k, v in ((cfg or {}).get("whale_ledger") or {}).items() if not k.startswith("_")})
+    return out
+
+
+def tag(s):
+    return "w-" + hashlib.sha256(s.encode()).hexdigest()[:8]
+
+
+def iso(ts):
+    return datetime.fromtimestamp(int(ts), timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def token_name(unit):
+    h = unit[56:]
+    h = h[8:] if h[:8] in ("0014df10", "000de140", "000643b0") else h
+    try:
+        s = bytes.fromhex(h).decode("utf-8")
+    except (ValueError, UnicodeDecodeError):
+        s = ""
+    return s if s and s.isprintable() and len(s) <= 24 else unit[:12]
+
+
+def token_key(unit, names):
+    """Stable display key per unit; a second unit with the same name gets ~policy6 appended."""
+    if unit in names:
+        return names[unit]
+    k = token_name(unit)
+    if k in names.values():
+        k = f"{k}~{unit[:6]}"
+    names[unit] = k
+    return k
+
+
+def _is_mine(u, stake):
+    return u.get("stake") == stake or (not u.get("stake") and F.addr_info(u["addr"])[0] == stake)
+
+
+def _script(addr):
+    return F.addr_info(addr)[1]
+
+
+def classify(tx, stake, ledger, lp_pols, wc):
+    """Rows + net deltas for one tx. tx = {hash, time, inputs/outputs: [{ref, addr, stake, lovelace, assets}]}.
+    Mutates ledger['orders'] (open/fill/cancel). Pure otherwise (no network)."""
+    names = ledger.setdefault("token_names", {})
+    orders = ledger.setdefault("orders", {})
+    lov, toks = 0, {}
+    for side, sign in (("inputs", -1), ("outputs", 1)):
+        for u in tx[side]:
+            if _is_mine(u, stake):
+                lov += sign * u["lovelace"]
+                for unit, q in u["assets"].items():
+                    toks[unit] = toks.get(unit, 0) + sign * q
+    toks = {k: v for k, v in toks.items() if v}
+    t, ts = iso(tx["time"]), tx["hash"][:10]
+    rows = []
+
+    def row(kind, token, qty, ada, cp=None, **kw):
+        rows.append({"time": t, "tx_short": ts, "kind": kind, "token": token, "qty": qty,
+                     "ada_leg": None if ada is None else round(ada, 6), "counterparty_tag": cp, **kw})
+
+    others_in = [u for u in tx["inputs"] if not _is_mine(u, stake)]
+    others_out = [u for u in tx["outputs"] if not _is_mine(u, stake)]
+    script_io = any(_script(u["addr"]) for u in others_in + others_out)
+
+    def cp_tag(us):
+        keys = [u for u in us if not _script(u["addr"])]
+        if not keys:
+            return None
+        big = max(keys, key=lambda u: u["lovelace"])
+        return tag(big.get("stake") or F.addr_info(big["addr"])[0] or big["addr"])
+
+    # 1) spends of tracked open orders -> fill / cancel
+    consumed = [u for u in tx["inputs"] if u.get("ref") in orders and orders[u["ref"]]["status"] == "open"]
+    handled = set()
+    for u in consumed:
+        o = orders[u["ref"]]
+        back = toks.get(o["unit"], 0) if o["unit"] != "lovelace" else None
+        if o["unit"] != "lovelace" and back >= o["qty_raw"] * 0.99:
+            o.update(status="cancelled", closed_tx=ts, closed_at=t)
+            row("order_cancel", o["token"], o["qty_raw"], lov / 1e6, order_ref_short=o["ref_short"], order_status="cancelled")
+            handled.add(o["unit"])
+        else:
+            got = {k: v for k, v in toks.items() if v > 0 and k != o["unit"]}
+            if o["unit"] == "lovelace" and got:  # buy order filled with tokens
+                (gu, gq), = sorted(got.items(), key=lambda x: -x[1])[:1]
+                o.update(status="filled", closed_tx=ts, closed_at=t, filled_token=token_key(gu, names), filled_qty=gq)
+                row("order_fill", token_key(gu, names), gq, o["ada"], order_ref_short=o["ref_short"], order_status="filled")
+                handled.update(got)
+            else:  # sell order filled with ADA
+                o.update(status="filled", closed_tx=ts, closed_at=t, filled_ada=round(lov / 1e6, 6))
+                row("order_fill", o["token"], o["qty_raw"], lov / 1e6, order_ref_short=o["ref_short"], order_status="filled")
+            handled.add(o["unit"])
+        handled.add("lovelace")
+    # 2) LP tokens
+    for unit, q in toks.items():
+        if unit not in handled and V.lp_dex(unit, lp_pols):
+            row("lp_add" if q > 0 else "lp_remove", "LP:" + V.lp_dex(unit, lp_pols), abs(q), abs(lov) / 1e6)
+            handled.add(unit)
+            handled.add("lovelace")
+    lp_tx = any(V.lp_dex(u, lp_pols) for u in toks)
+    rest = {k: v for k, v in toks.items() if k not in handled and not lp_tx}
+    # 3) new orders: value parked at a script output while the whale gets nothing back
+    if "lovelace" not in handled and not lp_tx:
+        for i, u in enumerate(tx["outputs"]):
+            if _is_mine(u, stake) or not _script(u["addr"]):
+                continue
+            # an order output holds only what the whale sent (a pool output holds far more), and an order-open
+            # tx spends no other script UTxO (a direct or batched swap spends pool UTxOs)
+            sent = {k: q for k, q in u["assets"].items() if rest.get(k, 0) < 0 and q <= -rest[k] * 1.01}
+            if sent and lov <= 0 and not any(_script(x["addr"]) for x in others_in):
+                (unit, q), = sorted(sent.items(), key=lambda x: -x[1])[:1]
+                ref = u.get("ref") or f"{tx['hash']}#{i}"
+                orders[ref] = {"ref_short": ref[:10] + ref[ref.index("#"):], "unit": unit, "token": token_key(unit, names),
+                               "qty_raw": q, "ada": round(u["lovelace"] / 1e6, 6), "status": "open", "opened_tx": ts, "opened_at": t}
+                row("order_open", orders[ref]["token"], q, u["lovelace"] / 1e6, order_ref_short=orders[ref]["ref_short"], order_status="open")
+                rest.pop(unit, None)
+                handled.add("lovelace")
+            elif not u["assets"] and not rest and lov < 0 and u["lovelace"] / 1e6 >= wc["order_min_ada"] \
+                    and u["lovelace"] <= -lov and not any(_script(x["addr"]) for x in others_in):
+                ref = u.get("ref") or f"{tx['hash']}#{i}"
+                orders[ref] = {"ref_short": ref[:10] + ref[ref.index("#"):], "unit": "lovelace", "token": "ADA",
+                               "qty_raw": u["lovelace"], "ada": round(u["lovelace"] / 1e6, 6), "status": "open", "opened_tx": ts, "opened_at": t}
+                row("order_open", "ADA", u["lovelace"], u["lovelace"] / 1e6, order_ref_short=orders[ref]["ref_short"], order_status="open")
+                handled.add("lovelace")
+    # 4) remaining token moves: swap through a script, else transfer
+    for unit, q in rest.items():
+        key = token_key(unit, names)
+        pool_in = any(_script(x["addr"]) for x in others_in)
+        if (script_io and lov and (q > 0) != (lov > 0)) or (pool_in and len(rest) > 1):
+            one = len(rest) == 1 and lov and (q > 0) != (lov > 0)
+            row("swap", key, abs(q), abs(lov) / 1e6 if one else None, direction="buy" if q > 0 else "sell")
+        else:
+            row("transfer_in" if q > 0 else "transfer_out", key, abs(q), None, cp_tag(others_in if q > 0 else others_out))
+        handled.add("lovelace") if script_io else None
+    # 5) ADA-only movement
+    if "lovelace" not in handled and not toks and abs(lov) / 1e6 >= wc["min_ada_row"]:
+        if lov > 0 and any(_script(u["addr"]) for u in others_in):
+            row("order_fill", "ADA", None, lov / 1e6, order_status="filled_untracked")  # order opened before the ledger started
+        else:
+            row("transfer_in" if lov > 0 else "transfer_out", "ADA", None, abs(lov) / 1e6, cp_tag(others_in if lov > 0 else others_out))
+    return rows, lov, toks
+
+
+def apply(ledger, tx, stake, lp_pols, wc):
+    """Apply one tx once. Returns rows (empty when the tx was already applied)."""
+    seen = ledger.setdefault("seen", [])
+    if tx["hash"] in ledger.setdefault("_seen_set", set(seen)):
+        return []
+    rows, lov, toks = classify(tx, stake, ledger, lp_pols, wc)
+    names = ledger.setdefault("token_names", {})
+    pos = ledger.setdefault("positions_raw", {})
+    for unit, q in toks.items():
+        pos[unit] = pos.get(unit, 0) + q
+        if not pos[unit]:
+            pos.pop(unit)
+        token_key(unit, names)
+    ledger["lovelace"] = ledger.get("lovelace", 0) + lov
+    seen.append(tx["hash"])
+    ledger["_seen_set"].add(tx["hash"])
+    ledger.setdefault("rows", []).extend(rows)
+    return rows
+
+
+def public_doc(ledger, whale_tag, now_s, wc, extra):
+    names = ledger.get("token_names", {})
+    doc = {"at": iso(now_s), "whale_tag": whale_tag, "basis": "koios",
+           "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash).",
+           "height": ledger.get("height"), "baseline_at": ledger.get("baseline_at"),
+           "ada_balance": round(ledger.get("lovelace", 0) / 1e6, 6),
+           "positions": {names.get(u, u[:12]): q for u, q in sorted(ledger.get("positions_raw", {}).items()) if q},
+           "orders": {o["ref_short"]: {k: v for k, v in o.items() if k not in ("unit",)} for o in ledger.get("orders", {}).values()},
+           "rows": ledger.get("rows", [])[-wc["keep_rows"]:], **extra}
+    return F.assert_public(doc)
+
+
+def load(path):
+    if not os.path.exists(path):
+        return None
+    d = json.load(open(path))
+    return d.get("_state")
+
+
+class KoiosLedger:
+    def __init__(self, http, wc):
+        self.h, self.wc = http, wc
+        self.start = http.calls.get("koios", 0)
+
+    def left(self):
+        return self.wc["max_calls"] - (self.h.calls.get("koios", 0) - self.start)
+
+    def get(self, path):
+        return self.h.req("koios", KOIOS + path)
+
+    def post(self, path, body):
+        return self.h.req("koios", KOIOS + path, method="POST", body=body)
+
+    def txs_after(self, stake, height):
+        r = self.get(f"/account_txs?_stake_address={stake}&_after_block_height={int(height)}&order=block_height.asc&limit={self.wc['max_txs']}")
+        return None if r is None else [(t["tx_hash"], t["block_height"], t["block_time"]) for t in r]
+
+    def tip_height(self, stake):
+        r = self.get(f"/account_txs?_stake_address={stake}&order=block_height.desc&limit=1")
+        return r[0]["block_height"] if r else None
+
+    def utxos(self, hashes):
+        out, n = {}, max(1, int(self.wc["utxo_batch"]))
+        for i in range(0, len(hashes), n):
+            if self.left() <= 2:
+                break
+            r = self.post("/tx_utxos", {"_tx_hashes": hashes[i:i + n]})
+            for tx in r or []:
+                out[tx["tx_hash"]] = {s: [{"ref": f"{u['tx_hash']}#{u['tx_index']}", "addr": (u.get("payment_addr") or {}).get("bech32") or "",
+                                           "stake": u.get("stake_addr"), "lovelace": int(u.get("value") or 0),
+                                           "assets": {a["policy_id"] + a["asset_name"]: int(a["quantity"]) for a in (u.get("asset_list") or [])}}
+                                          for u in tx.get(s, [])] for s in ("inputs", "outputs")}
+        return out
+
+    def balances(self, stake):
+        info = self.post("/account_info", {"_stake_addresses": [stake]})
+        if not info:
+            return None
+        lov = int(info[0].get("total_balance", 0)) - int(info[0].get("rewards_available", 0) or 0)
+        assets, off = {}, 0
+        while self.left() > 0:
+            r = self.post(f"/account_assets?offset={off}&limit=1000", {"_stake_addresses": [stake]})
+            if r is None:
+                return None
+            for a in r:
+                u = a["policy_id"] + a["asset_name"]
+                assets[u] = assets.get(u, 0) + int(a["quantity"])
+            if len(r) < 1000:
+                return lov, assets
+            off += 1000
+        return None
+
+    def spent(self, refs):
+        out = {}
+        for i in range(0, len(refs), 10):
+            if self.left() <= 0:
+                break
+            r = self.post("/utxo_info", {"_utxo_refs": refs[i:i + 10]})
+            for u in r or []:
+                out[f"{u['tx_hash']}#{u['tx_index']}"] = bool(u.get("is_spent"))
+        return out
+
+
+def run(http, cfg, data_dir, dry_run, now_s, lp_pols):
+    wc = wl_cfg(cfg)
+    stake = ((cfg.get("whale") or {}).get("stake") or "").strip()
+    prefix = ((cfg.get("whale") or {}).get("stake_prefix") or "").strip()
+    if not wc["enabled"] or not stake:
+        return {"enabled": False}
+    if prefix and not stake.startswith("stake1" + prefix):
+        raise SystemExit("whale_ledger: config whale.stake does not match whale.stake_prefix")
+    kl = KoiosLedger(http, wc)
+    path = os.path.join(data_dir, "whale_ledger.json")
+    ledger = load(path)
+    extra = {"capped": False}
+    if ledger is None:  # baseline: seed balances, start applying txs after the current account tip
+        tip = kl.tip_height(stake)
+        bal = kl.balances(stake)
+        if tip is None or bal is None:
+            return {"error": "baseline failed"}
+        ledger = {"height": tip, "baseline_at": iso(now_s), "lovelace": bal[0], "positions_raw": dict(bal[1]),
+                  "seen": [], "rows": [], "orders": {}, "token_names": {}}
+        for u in bal[1]:
+            token_key(u, ledger["token_names"])
+        extra["baseline"] = True
+    else:
+        txs = kl.txs_after(stake, ledger["height"] - 1)  # overlap one block; dedupe by tx hash
+        if txs is not None:
+            todo = [t for t in txs if t[0] not in set(ledger.get("seen", []))]
+            ut = kl.utxos([t[0] for t in todo])
+            for h, hgt, bt in todo:
+                if h not in ut:
+                    extra["capped"] = True
+                    break
+                apply(ledger, {"hash": h, "time": bt, **ut[h]}, stake, lp_pols, wc)
+                ledger["height"] = hgt
+            if len(txs) >= wc["max_txs"]:
+                extra["capped"] = True
+        open_refs = [r for r, o in ledger.get("orders", {}).items() if o["status"] == "open"]
+        if open_refs and kl.left() > 2:
+            for r, sp in kl.spent(open_refs).items():
+                if sp and ledger["orders"][r]["status"] == "open" and not extra["capped"]:
+                    ledger["orders"][r].update(status="closed_elsewhere", closed_at=iso(now_s))
+        if not extra["capped"] and kl.left() > 2:
+            bal = kl.balances(stake)
+            if bal is not None:
+                names = ledger["token_names"]
+                drift = {names.get(u, u[:12]) if u in names else token_name(u): bal[1].get(u, 0) - ledger["positions_raw"].get(u, 0)
+                         for u in set(bal[1]) | set(ledger["positions_raw"]) if bal[1].get(u, 0) != ledger["positions_raw"].get(u, 0)}
+                extra["reconcile"] = {"ada_drift": round((bal[0] - ledger["lovelace"]) / 1e6, 6), "token_drift": drift,
+                                      "ok": not drift and abs(bal[0] - ledger["lovelace"]) < 1_000_000}
+    ledger["seen"] = ledger.get("seen", [])[-wc["keep_seen"]:]
+    ledger["rows"] = ledger.get("rows", [])[-wc["keep_rows"]:]
+    ledger.pop("_seen_set", None)
+    extra["koios_calls"] = http.calls.get("koios", 0) - kl.start
+    doc = public_doc(ledger, tag(stake), now_s, wc, extra)
+    doc["_state"] = {k: v for k, v in ledger.items()}  # tx hashes, raw positions, order refs (no addresses)
+    F.assert_public(doc)
+    if not dry_run:
+        json.dump(doc, open(path, "w"), indent=1)
+    return {k: doc.get(k) for k in ("capped", "koios_calls", "ada_balance")} | {"rows": len(doc["rows"]), "open_orders": sum(
+        1 for o in doc["orders"].values() if o["status"] == "open"), "reconcile_ok": (extra.get("reconcile") or {}).get("ok")}

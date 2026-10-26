@@ -24,6 +24,7 @@ patterns=(
   'Bousky holds'
   'Bousky wallet'
 )
+n_generic=${#patterns[@]}  # patterns above are generic; any added below are owner-specific
 # Owner-specific wallet patterns come ONLY from the PRIVACY_GUARD_PATTERNS secret (one ERE per line)
 # or a gitignored .privacy-patterns file. They are never printed: matches report a pattern number only.
 if [ -n "${PRIVACY_GUARD_PATTERNS:-}" ]; then
@@ -34,6 +35,29 @@ fi
 if [ -f .privacy-patterns ]; then
   while IFS= read -r p; do case "$p" in ''|'#'*) ;; *) patterns+=("$p");; esac; done < .privacy-patterns
 fi
+
+# Exact public third-party keys (scripts/privacy-public-keys.txt next to this script) are masked before the
+# generic checks, so e.g. a founder whale's key in config can be published. Owner patterns still apply to them.
+allow_file="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/privacy-public-keys.txt"
+allow=()
+if [ -f "$allow_file" ]; then
+  while IFS= read -r a; do a="${a%$'\r'}"; case "$a" in ''|'#'*) ;; *) allow+=("$a");; esac; done < "$allow_file"
+fi
+for a in "${allow[@]}"; do
+  for p in "${patterns[@]:$n_generic}"; do
+    if printf '%s\n' "$a" | grep -qE -- "$p"; then
+      echo "PRIVACY GUARD FAILED: an entry in privacy-public-keys.txt matches an owner pattern" >&2; exit 1
+    fi
+  done
+done
+mask() {  # stdin -> stdout with allowlisted exact values replaced
+  if [ ${#allow[@]} -eq 0 ]; then cat; return; fi
+  python3 -c 'import sys
+al=sys.argv[1:]
+for line in sys.stdin:
+    for a in al: line=line.replace(a,"<public-key>")
+    sys.stdout.write(line)' "${allow[@]}"
+}
 
 if [ $# -gt 0 ]; then
   files=("$@")
@@ -49,9 +73,12 @@ self="scripts/privacy-guard.sh"
 fail=0
 for f in "${files[@]}"; do
   [ -f "$f" ] || continue
-  case "$f" in "$self"|PRIVACY.md|.privacy-patterns|.github/workflows/privacy-guard.yml|.github/workflows/desk-data-guard.yml) continue;; esac
-  for p in "${patterns[@]}"; do
-    if hits=$(grep -nEI -- "$p" "$f" 2>/dev/null); then
+  case "$f" in "$self"|PRIVACY.md|.privacy-patterns|.github/workflows/privacy-guard.yml|.github/workflows/desk-data-guard.yml|scripts/privacy-public-keys.txt) continue;; esac
+  grep -qI . "$f" 2>/dev/null || continue  # binary / empty
+  for i in "${!patterns[@]}"; do
+    p="${patterns[$i]}"
+    if [ "$i" -lt "$n_generic" ]; then hits=$(mask < "$f" | grep -nEI -- "$p"); else hits=$(grep -nEI -- "$p" "$f" 2>/dev/null); fi
+    if [ -n "$hits" ]; then
       n=$(printf '%s\n' "$hits" | wc -l)
       echo "PRIVACY GUARD: $f: $n line(s) match a private pattern (#$(( $(printf '%s\n' "${patterns[@]}" | grep -nFx -- "$p" | head -1 | cut -d: -f1) )) ): lines $(printf '%s\n' "$hits" | cut -d: -f1 | head -10 | paste -sd, -)" >&2
       fail=1
