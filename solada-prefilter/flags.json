@@ -1,114 +1,47 @@
 {
- "at": "2026-10-26T12:09:10Z",
+ "at": "2026-10-26T14:08:45Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "watch_tags_early_buyers",
+   "kind": "sniper_full_exit",
    "ticker": "MCFA",
-   "tags": [
-    "u8a2m6",
-    "uxz6fvju"
-   ],
-   "roles": [
-    "first_block_sniper",
-    "flip_pair"
-   ],
-   "at": "2026-10-26T12:09:10Z"
-  },
-  {
-   "kind": "coordinated_buys",
-   "ticker": "MCFA",
-   "wallets": [
-    "w-32877ab4",
-    "w-5c27935d",
-    "w-c78561d1",
-    "w-d91422be",
-    "w-daf1871c",
-    "w-e87d53fa",
-    "w-f7844f67"
-   ],
-   "window_s": 120,
-   "at": "2026-10-26T12:09:10Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "MCFA",
-   "wallets": [
-    "w-6f2dbebd",
-    "w-8cf161f3",
-    "w-c78561d1",
-    "w-daf1871c"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-10-26T12:09:10Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-32877ab4",
-   "launches": [
-    "BET",
-    "EVIL",
-    "MCFA"
-   ],
-   "at": "2026-10-26T12:09:10Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-6f2dbebd",
-   "launches": [
-    "BET",
-    "EVIL",
-    "MCFA"
-   ],
-   "at": "2026-10-26T12:09:10Z"
+   "wallet": "w-c78561d1",
+   "tags": [],
+   "at": "2026-10-26T14:08:45Z"
   },
   {
    "kind": "holder_concentration",
    "ticker": "BET",
-   "top_addr_pct": 33.0,
-   "top_cluster_pct": 33.0,
+   "top_addr_pct": 34.4,
+   "top_cluster_pct": 34.4,
    "top_cluster": "w-f46e5a31",
-   "at": "2026-10-26T12:09:10Z"
+   "at": "2026-10-26T14:08:45Z"
   },
   {
    "kind": "holder_concentration",
    "ticker": "CORE",
-   "top_addr_pct": 70.0,
-   "top_cluster_pct": 70.0,
+   "top_addr_pct": 70.4,
+   "top_cluster_pct": 70.4,
    "top_cluster": "w-13d53c47",
-   "at": "2026-10-26T12:09:10Z"
+   "at": "2026-10-26T14:08:45Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "EVIL",
+   "top_addr_pct": 83.8,
+   "top_cluster_pct": 83.8,
+   "top_cluster": "w-f46e5a31",
+   "at": "2026-10-26T14:08:45Z"
   },
   {
    "kind": "holder_concentration",
    "ticker": "VAMP",
-   "top_addr_pct": 36.9,
-   "top_cluster_pct": 36.9,
+   "top_addr_pct": 36.6,
+   "top_cluster_pct": 36.6,
    "top_cluster": "w-f46e5a31",
-   "at": "2026-10-26T12:09:10Z"
-  },
-  {
-   "kind": "founder_whale_move",
-   "ticker": "KNOPPIES",
-   "tag": "w-f3186187",
-   "delta": 10472573108572,
-   "new_position": true,
-   "ada_equiv": 200,
-   "value_basis": "ada_leg",
-   "decimals": 6,
-   "at": "2026-10-26T12:09:10Z"
-  },
-  {
-   "kind": "founder_whale_move",
-   "ticker": "STRIKE",
-   "tag": "w-f3186187",
-   "delta": 748952,
-   "pct": 6.4,
-   "ada_equiv": 2,
-   "value_basis": "decimals_x_price",
-   "decimals": 6,
-   "at": "2026-10-26T12:09:10Z"
+   "at": "2026-10-26T14:08:45Z"
   }
  ],
  "recent": [
@@ -597,11 +530,50 @@
    "value_basis": "decimals_x_price",
    "decimals": 6,
    "at": "2026-10-26T12:09:10Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "MCFA",
+   "wallet": "w-c78561d1",
+   "tags": [],
+   "at": "2026-10-26T14:08:45Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "BET",
+   "top_addr_pct": 34.4,
+   "top_cluster_pct": 34.4,
+   "top_cluster": "w-f46e5a31",
+   "at": "2026-10-26T14:08:45Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 70.4,
+   "top_cluster_pct": 70.4,
+   "top_cluster": "w-13d53c47",
+   "at": "2026-10-26T14:08:45Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "EVIL",
+   "top_addr_pct": 83.8,
+   "top_cluster_pct": 83.8,
+   "top_cluster": "w-f46e5a31",
+   "at": "2026-10-26T14:08:45Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "VAMP",
+   "top_addr_pct": 36.6,
+   "top_cluster_pct": 36.6,
+   "top_cluster": "w-f46e5a31",
+   "at": "2026-10-26T14:08:45Z"
   }
  ],
  "api_calls": {
   "blockfrost": 1,
-  "koios": 11
+  "koios": 2
  },
  "thresholds": {
   "enabled": true,
