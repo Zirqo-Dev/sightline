@@ -547,6 +547,12 @@ def main():
         else:
             state["kill_reported"][_tk] = _e
     kc = V.kill_cfg(cfg)
+    ks_path = os.path.join(args.data_dir, "kill_status.json")
+    try:
+        prev_ks = {k: v for k, v in (json.load(open(ks_path)) or {}).items() if isinstance(v, dict)}
+    except (OSError, ValueError):
+        prev_ks = {}
+    kill_status = {}
 
     gtc = cfg.get("geckoterminal") or {}
     http = Http(cfg["pace_seconds"], {"geckoterminal": gtc.get("retry_backoff_seconds") or [6, 15]})
@@ -663,10 +669,20 @@ def main():
         crossed = [f"{lb} {values[lb]} < {lines[lb]:.0f}" for lb in ("ada_side", "holders", "mcap") if lb in crossed_m]
         # complete = every metric this kill line checks was actually read (a data gap is not a recovery)
         complete = all(v is not None for v in values.values())
+        prev_hit = state["kill_status"].get(tk)
         if crossed or complete:
             state["kill_status"][tk] = bool(crossed)
         results.append({"ticker": tk, "tracked": True, "unit": u, **m, "crossed": crossed, "kill": k})
         fire, entry, reasons = V.kill_decide(state["kill_reported"].get(tk), crossed_m, values, lines, complete, kc)
+        ks = V.kill_status_entry(prev_ks.get(tk), t.get("text", ""), values, lines, crossed_m, complete, now_iso(),
+                                 desk_hit=bool(t.get("desk_hit")), prev_hit=prev_hit,
+                                 deeper=fire and any("deeper" in r for r in reasons))
+        kill_status[tk] = ks
+        if fire and not ks["changed_since_last"] and not t.get("desk_hit"):
+            # SPD-47: nothing moved since the last run (same hit state, metric and line) -> never re-fire
+            print(f"kill line {tk}: unchanged since last run; not sent")
+            fire = False
+            entry = {**entry, "at": now_iso()}
         if fire and t.get("desk_hit"):
             # already hit on the desk (log.kill_lines "hit: ..."): record as reported, never send
             state["kill_reported"][tk] = {**entry, "at": now_iso(), "desk_hit": True}
@@ -877,6 +893,9 @@ def main():
     }
     if not args.dry_run:
         json.dump(state, open(state_path, "w"), indent=1, sort_keys=True)
+        # SPD-47: per-ticker kill-line status for Snek (desk-data only; lines from paper.json + log.json kill_lines)
+        json.dump(kill_status,
+                  open(ks_path, "w"), indent=1, sort_keys=True)
     json.dump(summary, open(os.path.join(args.data_dir, "last-run.json" if not args.dry_run else "dry-run.json"), "w"), indent=1)
     print(f"whale: {json.dumps(summary['whale'])[:300]}")
     print(json.dumps({k: summary[k] for k in ("launches", "new_launches", "candidates", "passed_k_y", "first_block_hits", "data_failures", "api_calls")}))
