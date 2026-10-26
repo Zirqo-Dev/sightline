@@ -1,28 +1,28 @@
 {
   "schema_version": 2,
   "desk": "solada",
-  "asof": "2026-10-26T00:10:00-04:00",
-  "source": "Snek Sentinel on-demand prefilter run",
+  "asof": "2026-10-26T03:55:00-04:00",
+  "source": "Snek Sentinel on-demand prefilter run (threshold 3:54 AM ET)",
   "rate": {
-    "ADA_USD": 0.201732,
-    "source": "prefilter market snapshot 12:08 AM ET"
+    "ADA_USD": 0.202099,
+    "source": "prefilter market snapshot 3:54 AM ET"
   },
-  "headline": "Founder whale added to HOWDY: +5.88M for 252 ADA in one swap at 10:13 PM, now ~25.2M (~2.5% of supply, ~1,171 ADA in four buys). HOWDY slipped to ~37.7k ADA mcap, 9.0k side, 51 holders; still fails k. New curve launch EVIL (15% curve, 7.0k mcap, 14 holders) drew a 12-wallet coordinated buy within 2 minutes, 5 fresh wallets, 3 repeat BET early buyers and watch tags u8a2m6/u944xqrv; fails k/y. Both books empty.",
+  "headline": "DEXY hit its pool kill line: ADA side 4,430 (line 13k), 9.1k ADA mcap, 51 holders (down from 53), only ~1.1k ADA 24h volume. EVIL's holder line is technically hit at 14 holders (line 15), but that's the same 14 as at midnight, so it's a first-fire on an unchanged reading, not a new exit. Founder whale had no trades after the 10:13 PM HOWDY buy. Both books empty.",
   "levels": {
     "CLOVE": "L2: 276.6k mcap, 306 holders, side 26.9k; above the 160k line",
     "BOLT": "L1 Pass: 293.2k mcap, 271 holders, side 27.7k; under the 400k line",
     "SER": "L1 Pass: 54.8k mcap, 90 holders, side 10.8k under 13k",
-    "VAMP": "L1 watch: top cluster w-f46e5a31 holds ~38%",
+    "VAMP": "L1 watch: 53 holders; top cluster w-f46e5a31 ~38.5%",
     "FEED": "L1 Pass: 33.0k mcap, side 8.4k",
     "SHARKY": "L1 Pass: 32.1k mcap, side 8.3k",
     "SBROKERS": "L1 Pass: 16.0k mcap, 32 holders",
-    "DEXY": "L1 Pass: 53 holders, under the 80 line",
+    "DEXY": "L1 Pass: kill hit, side 4.43k under 13k, 51 holders under 80, 9.1k mcap (prefilter 3:54 AM)",
     "HIVE": "L1 Pass: side 5.97k under 7k, 68 holders",
-    "BET": "L1 Pass: kill hit, 25 holders under 40; top cluster w-f46e5a31 ~45%",
+    "BET": "L1 Pass: kill hit, 23 holders under 40; top cluster w-f46e5a31 ~47%",
     "GOLFY": "L1 Pass: kill hit, 37 holders under 40, 7.7k mcap, side 4.4k (prefilter 4:57 PM)",
     "JUICE": "L1 Pass: kill hit, side 2,976 under 4k, 35 holders, 4.1k mcap (prefilter 6:08 PM)",
     "HOWDY": "L1 Pass: founder whale holds ~25.2M (~2.5%); 37.7k mcap, side 9.0k, 51 holders; fails k",
-    "EVIL": "L1 watch: new swarm curve launch, 15.4% curve, 7.0k mcap, 14 holders; 12 coordinated buyers, 3 repeat from BET"
+    "EVIL": "L1 watch: kill line touched, 14 holders (unchanged since midnight); one key-less address holds ~69% of supply, a script ~8.7%"
   },
   "kill_lines": {
     "DEXY": "pool ADA side under 13k, on-chain holders under 80, or the swarm keys exiting in one hour",
@@ -53,9 +53,10 @@
     "EVIL": "curve under 5%, holders under 15 after peak, or the repeat BET swarm keys exiting within an hour"
   },
   "kill_hits": [
-    "BET: holders 28 under 40",
+    "DEXY: side 4.43k under 13k, holders 51 under 80",
+    "EVIL: holders 14 under 15 (unchanged reading)",
+    "BET: holders 23 under 40",
     "BOLT: mcap 293.2k under 400k",
-    "DEXY: holders 53 under 80",
     "GOLFY: holders 37 under 40",
     "JUICE: holders 35 under 40",
     "HIVE: side 5.97k under 7k",
@@ -66,9 +67,9 @@
     "handle": "$cockwhale",
     "address": "addr1q8wd…7jvk",
     "stake_prefix": "uylu74g0",
-    "net_flow_ada": -252,
-    "summary": "10:13 PM: bought ~5.88M HOWDY for 252 ADA (one swap), lifting the position ~30% to ~25.2M (~2.5% of supply, ~1,171 ADA cost over four buys). No other trades 10:10 PM to midnight across the 17 stake-grouped addresses. No ASCEND, STRIKE or NIGHT moves.",
-    "line": "Added ~5.88M HOWDY for 252 ADA at 10:13 PM, now ~25.2M (~2.5% of supply); HOWDY 37.7k mcap, 9.0k ADA side. No ASCEND, STRIKE or NIGHT trades."
+    "net_flow_ada": 0,
+    "summary": "No trades from 12:10 AM to 3:54 AM per the prefilter whale check (ada_delta 0, no moves). Last move was the 10:13 PM HOWDY buy (~25.2M HOWDY held). No ASCEND, STRIKE or NIGHT moves.",
+    "line": "Quiet since the 10:13 PM HOWDY add (~25.2M held); no ASCEND, STRIKE or NIGHT trades overnight."
   },
   "paper_actions": [
     "solada: no open tickets; nothing passes k/y",
@@ -81,13 +82,15 @@
   ],
   "helius_credits_est": 0,
   "notes": [
-    "On-demand prefilter run. Whale verified on Blockfrost across 17 stake-grouped addresses: one HOWDY buy at 10:13 PM (252 ADA actual; payload ada_equiv 465 is a price-based estimate). EVIL facts from the prefilter payload and last-run results; no X/Discord dives (no k/y candidates)."
+    "On-demand prefilter run. DEXY/EVIL metrics from the prefilter payload; EVIL and DEXY holder lists re-checked on Blockfrost (14 and 51 holders). w-f46e5a31 tops BET (47%), VAMP (38.5%) and EVIL (75.8%); in EVIL the top holder is an enterprise (no stake key) address, so the cluster may be the Solada curve reserve rather than a trader; unverified. No X/Discord dives (no k/y candidates)."
   ],
   "sources": [
     "Blockfrost mainnet",
     "Sightline prefilter payload"
   ],
   "followups": [
+    "Verify whether cluster w-f46e5a31 (top holder on BET, VAMP, EVIL; enterprise address in EVIL) is the Solada curve reserve; if so, exclude it from holder_concentration flags",
+    "Prefilter fires a newly-added kill line on its first reading even when the value has not moved (EVIL 14 holders); suppress first-fire when the line was set at that reading",
     "Watch VAMP for graduation and whether the curve holds with holders rising",
     "Track where the 2.21M SOLADA moved Friday went",
     "Prefilter re-fires an unchanged kill line each new hour; dedupe by name and value, not hour bucket",
@@ -201,7 +204,8 @@
       "evidence": [
         "JUICE (80 ADA 24h)",
         "HERO",
-        "GOLFY"
+        "GOLFY",
+        "DEXY (4.4k side, ~1.1k ADA 24h)"
       ]
     }
   ],
@@ -365,7 +369,7 @@
     }
   },
   "learned_or_changed": [
-    "Three BET early buyers reappeared in EVIL's first-two-minute swarm with the u8a2m6 sniper, so this launcher swarm is recycling keys across Solada Casino-era launches."
+    "DEXY drained to a 4.4k ADA side with 1.1k ADA daily volume, matching the pattern that kill-hit names lose volume within hours."
   ],
   "history": [
     {
@@ -7960,6 +7964,120 @@
       ],
       "trigger": "prefilter",
       "learned_or_changed": "Founder whale rotated into a fresh small Solada graduate (HOWDY) in three staggered buys; one holder cluster leads two separate curve launches (BET, VAMP)."
+    },
+    {
+      "schema_version": 2,
+      "desk": "solada",
+      "asof": "2026-10-26T00:10:00-04:00",
+      "source": "Snek Sentinel on-demand prefilter run",
+      "rate": {
+        "ADA_USD": 0.201732,
+        "source": "prefilter market snapshot 12:08 AM ET"
+      },
+      "headline": "Founder whale added to HOWDY: +5.88M for 252 ADA in one swap at 10:13 PM, now ~25.2M (~2.5% of supply, ~1,171 ADA in four buys). HOWDY slipped to ~37.7k ADA mcap, 9.0k side, 51 holders; still fails k. New curve launch EVIL (15% curve, 7.0k mcap, 14 holders) drew a 12-wallet coordinated buy within 2 minutes, 5 fresh wallets, 3 repeat BET early buyers and watch tags u8a2m6/u944xqrv; fails k/y. Both books empty.",
+      "levels": {
+        "CLOVE": "L2: 276.6k mcap, 306 holders, side 26.9k; above the 160k line",
+        "BOLT": "L1 Pass: 293.2k mcap, 271 holders, side 27.7k; under the 400k line",
+        "SER": "L1 Pass: 54.8k mcap, 90 holders, side 10.8k under 13k",
+        "VAMP": "L1 watch: 53 holders; top cluster w-f46e5a31 ~38.5%",
+        "FEED": "L1 Pass: 33.0k mcap, side 8.4k",
+        "SHARKY": "L1 Pass: 32.1k mcap, side 8.3k",
+        "SBROKERS": "L1 Pass: 16.0k mcap, 32 holders",
+        "DEXY": "L1 Pass: kill hit, side 4.43k under 13k, 51 holders under 80, 9.1k mcap (prefilter 3:54 AM)",
+        "HIVE": "L1 Pass: side 5.97k under 7k, 68 holders",
+        "BET": "L1 Pass: kill hit, 23 holders under 40; top cluster w-f46e5a31 ~47%",
+        "GOLFY": "L1 Pass: kill hit, 37 holders under 40, 7.7k mcap, side 4.4k (prefilter 4:57 PM)",
+        "JUICE": "L1 Pass: kill hit, side 2,976 under 4k, 35 holders, 4.1k mcap (prefilter 6:08 PM)",
+        "HOWDY": "L1 Pass: founder whale holds ~25.2M (~2.5%); 37.7k mcap, side 9.0k, 51 holders; fails k",
+        "EVIL": "L1 watch: kill line touched, 14 holders (unchanged since midnight); one key-less address holds ~69% of supply, a script ~8.7%"
+      },
+      "kill_lines": {
+        "DEXY": "pool ADA side under 13k, on-chain holders under 80, or the swarm keys exiting in one hour",
+        "SER": "pool ADA side under 13k, holders under 80, or the founder whale selling SER into the pool",
+        "BOLT": "pool mcap under 400k ADA or holders under 265 (net-sell driven; LP pulls confirm next pulse, rule u)",
+        "SHARKY": "curve under 70% before graduation, holders under 50, or u8a2m6 and the launcher selling into the curve",
+        "CLOVE": "mcap under 160k ADA or holders under 125",
+        "HIVE": "pool ADA side under 7k or on-chain holders under 60",
+        "FEED": "pool ADA side under 7k or holders under 50",
+        "BEAST": "pool ADA side under 6k or holders under 50",
+        "GOLFY": "curve under 40% or holders under 40",
+        "JUICE": "pool ADA side under 4k or holders under 40",
+        "HERO": "hit: pool ADA side under ~4k with 29 holders",
+        "SOLADA": "on-chain holders under 430 or a 1M+ SOLADA dump into the pool from the founder whale or its side wallets",
+        "KNOPPIES": "curve under 5%",
+        "LIXI": "curve under 12%",
+        "GUINEA": "curve under 20% or swarm keys holding more than 15% before graduation",
+        "MISS": "hit: 16 Solana-native holders (line 25); re-watch only on 30+ natives across two pulses (rule t)",
+        "CORE": "curve under 60% or Solana-native holders under 25",
+        "JUSTQ": "hit: under 230 Solana-native holders and under $16k mcap",
+        "COCK": "founder whale selling COCK into the pool or pulling its LP, or the pool ADA side under ~150k ADA",
+        "BET": "curve under 40% before graduation, holders under 40, or the swarm keys exiting within one hour",
+        "VAMP": "curve under 50% or holders under 40",
+        "STRIKE": "ADA side under 900k",
+        "ASCEND": "ADA side under 750k",
+        "NIGHT": "founder whale selling 10k+ NIGHT clips again",
+        "HOWDY": "pool ADA side under 7k, holders under 40, or the founder whale selling HOWDY into the pool",
+        "EVIL": "curve under 5%, holders under 15 after peak, or the repeat BET swarm keys exiting within an hour"
+      },
+      "kill_hits": [
+        "BET: holders 28 under 40",
+        "BOLT: mcap 293.2k under 400k",
+        "DEXY: holders 53 under 80",
+        "GOLFY: holders 37 under 40",
+        "JUICE: holders 35 under 40",
+        "HIVE: side 5.97k under 7k",
+        "SER: side 10.8k under 13k",
+        "NIGHT: whale-selling line hit earlier today (60k sold); no new NIGHT sale since 7:59 PM"
+      ],
+      "founder_whale": {
+        "handle": "$cockwhale",
+        "address": "addr1q8wd…7jvk",
+        "stake_prefix": "uylu74g0",
+        "net_flow_ada": -252,
+        "summary": "10:13 PM: bought ~5.88M HOWDY for 252 ADA (one swap), lifting the position ~30% to ~25.2M (~2.5% of supply, ~1,171 ADA cost over four buys). No other trades 10:10 PM to midnight across the 17 stake-grouped addresses. No ASCEND, STRIKE or NIGHT moves.",
+        "line": "Added ~5.88M HOWDY for 252 ADA at 10:13 PM, now ~25.2M (~2.5% of supply); HOWDY 37.7k mcap, 9.0k ADA side. No ASCEND, STRIKE or NIGHT trades."
+      },
+      "paper_actions": [
+        "solada: no open tickets; nothing passes k/y",
+        "pumpfun: untouched (lean scope)"
+      ],
+      "rules_added": [],
+      "rules_applied": [
+        "k",
+        "y"
+      ],
+      "helius_credits_est": 0,
+      "notes": [
+        "On-demand prefilter run. Whale verified on Blockfrost across 17 stake-grouped addresses: one HOWDY buy at 10:13 PM (252 ADA actual; payload ada_equiv 465 is a price-based estimate). EVIL facts from the prefilter payload and last-run results; no X/Discord dives (no k/y candidates)."
+      ],
+      "sources": [
+        "Blockfrost mainnet",
+        "Sightline prefilter payload"
+      ],
+      "followups": [
+        "Verify whether cluster w-f46e5a31 (top holder on BET, VAMP, EVIL; enterprise address in EVIL) is the Solada curve reserve; if so, exclude it from holder_concentration flags",
+        "Prefilter fires a newly-added kill line on its first reading even when the value has not moved (EVIL 14 holders); suppress first-fire when the line was set at that reading",
+        "Watch VAMP for graduation and whether the curve holds with holders rising",
+        "Track where the 2.21M SOLADA moved Friday went",
+        "Prefilter re-fires an unchanged kill line each new hour; dedupe by name and value, not hour bucket",
+        "Fix prefilter: decode Minswap V2 LP tokens (policy f5808c2c...) as LP, and correct FLOW ada_equiv (raw units/decimals)",
+        "Confirm which pool the whale's ~5.4k ADA LP adds went into (likely COCK)",
+        "CORE: one cluster holds 69%; confirm which CORE listing the prefilter means",
+        "BET swarm study: log exit times of the 17 coordinated buyers (two sniper exits so far, holders 30 to 25 within ~80 min)",
+        "BET: judge flag outcomes at 48h (Oct 27 ~4:46 PM); holders bounced 25 to ~30 after the sniper exits",
+        "Prefilter: SER kill_line re-fired at 8:08 PM with unchanged 4:08 PM values; dedupe 'newly crossed'",
+        "Prefilter: whale_move omitted the ~67.7k COCK buy at 7:59 PM",
+        "Watch whether NIGHT selling continues (60k sold Oct 25)",
+        "HOWDY: watch whether the founder whale adds or sells and whether holders climb toward 120",
+        "Cluster w-f46e5a31 tops both BET (~39%) and VAMP (~37%); check whether it is the same launcher/swarm",
+        "Fix prefilter: whale ada_equiv reuses a stale ADA leg for dust deltas (NIGHT 4,530 at 10:08 PM)",
+        "EVIL swarm study: log exit times of the 12 coordinated buyers and the 3 repeat BET wallets (w-32877ab4, w-6f2dbebd, w-c5af9630); judge at 48h (Oct 27 ~midnight)",
+        "Prefilter: whale ada_equiv for HOWDY was 465 vs 252 ADA actually spent; prefer the tx ADA leg"
+      ],
+      "trigger": "prefilter",
+      "learned_or_changed": [
+        "Three BET early buyers reappeared in EVIL's first-two-minute swarm with the u8a2m6 sniper, so this launcher swarm is recycling keys across Solada Casino-era launches."
+      ]
     }
   ]
 }
