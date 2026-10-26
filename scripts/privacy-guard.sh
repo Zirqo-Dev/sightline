@@ -38,26 +38,39 @@ fi
 
 # Exact public third-party keys (scripts/privacy-public-keys.txt next to this script) are masked before the
 # generic checks, so e.g. a founder whale's key in config can be published. Owner patterns still apply to them.
+# Hardened (review M4): every entry must be one full stake key (^stake1 + 53 bech32 chars, nothing else); masking
+# is OFF when no owner patterns are loaded (an allowlist must never be checked against an empty owner list); only
+# whole tokens are masked (a longer id containing the key is not hidden); and only in the files listed in
+# mask_files (the key lives in solada-prefilter/config.json; anywhere else it is still a failure).
 allow_file="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/privacy-public-keys.txt"
+mask_files=("solada-prefilter/config.json")
 allow=()
 if [ -f "$allow_file" ]; then
   while IFS= read -r a; do a="${a%$'\r'}"; case "$a" in ''|'#'*) ;; *) allow+=("$a");; esac; done < "$allow_file"
 fi
 for a in "${allow[@]}"; do
+  if ! printf '%s\n' "$a" | grep -qxE -- 'stake1[02-9ac-hj-np-z]{53}'; then
+    echo "PRIVACY GUARD FAILED: an entry in privacy-public-keys.txt is not exactly one full stake key" >&2; exit 1
+  fi
   for p in "${patterns[@]:$n_generic}"; do
     if printf '%s\n' "$a" | grep -qE -- "$p"; then
       echo "PRIVACY GUARD FAILED: an entry in privacy-public-keys.txt matches an owner pattern" >&2; exit 1
     fi
   done
 done
-mask() {  # stdin -> stdout with allowlisted exact values replaced
+if [ ${#allow[@]} -gt 0 ] && [ ${#patterns[@]} -le "$n_generic" ]; then
+  echo "::warning::privacy-guard: no owner patterns loaded; the public-key allowlist is NOT applied (fail closed)" >&2
+  allow=()
+fi
+mask() {  # stdin -> stdout with allowlisted exact values (whole tokens only) replaced
   if [ ${#allow[@]} -eq 0 ]; then cat; return; fi
-  python3 -c 'import sys
-al=sys.argv[1:]
+  python3 -c 'import re, sys
+al=[re.compile(r"(?<![0-9a-z_])" + re.escape(a) + r"(?![0-9a-z_])") for a in sys.argv[1:]]
 for line in sys.stdin:
-    for a in al: line=line.replace(a,"<public-key>")
+    for r in al: line=r.sub("<public-key>", line)
     sys.stdout.write(line)' "${allow[@]}"
 }
+maskable() { local m; for m in "${mask_files[@]}"; do [ "$1" = "$m" ] && return 0; done; return 1; }
 
 if [ $# -gt 0 ]; then
   files=("$@")
@@ -77,7 +90,7 @@ for f in "${files[@]}"; do
   grep -qI . "$f" 2>/dev/null || continue  # binary / empty
   for i in "${!patterns[@]}"; do
     p="${patterns[$i]}"
-    if [ "$i" -lt "$n_generic" ]; then hits=$(mask < "$f" | grep -nEI -- "$p"); else hits=$(grep -nEI -- "$p" "$f" 2>/dev/null); fi
+    if [ "$i" -lt "$n_generic" ] && maskable "$f"; then hits=$(mask < "$f" | grep -nEI -- "$p"); else hits=$(grep -nEI -- "$p" "$f" 2>/dev/null); fi
     if [ -n "$hits" ]; then
       n=$(printf '%s\n' "$hits" | wc -l)
       echo "PRIVACY GUARD: $f: $n line(s) match a private pattern (#$(( $(printf '%s\n' "${patterns[@]}" | grep -nFx -- "$p" | head -1 | cut -d: -f1) )) ): lines $(printf '%s\n' "$hits" | cut -d: -f1 | head -10 | paste -sd, -)" >&2

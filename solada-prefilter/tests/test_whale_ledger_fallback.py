@@ -40,7 +40,7 @@ def fake(koios_up, seen):
             if "/account_txs" in url:
                 after = int(url.split("_after_block_height=")[1].split("&")[0])
                 return [{"tx_hash": h, "block_height": hg, "block_time": t["time"]} for h, (t, hg) in TXS.items() if hg > after]
-            if url.endswith("/tx_utxos"):
+            if url.endswith("/tx_info"):
                 return [koios_shape(TXS[h][0]) for h in body["_tx_hashes"]]
             if url.endswith("/account_info"):
                 return [{"total_balance": "0", "rewards_available": "0"}]
