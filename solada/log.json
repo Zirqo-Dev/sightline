@@ -1,13 +1,13 @@
 {
   "schema_version": 2,
   "desk": "solada",
-  "asof": "2026-10-26T16:16:00-04:00",
+  "asof": "2026-10-26T18:12:00-04:00",
   "source": "Snek Sentinel on-demand prefilter run (whale_move 4:11 PM ET)",
   "rate": {
     "ADA_USD": 0.206551,
     "source": "prefilter market snapshot 2:09 PM ET"
   },
-  "headline": "Founder whale kept stacking ASCEND: eight buys 2:11 PM-4:11 PM ET added ~3,153 ASCEND for ~3.31k ADA (~1.05 ADA each, plus 69k SOLADA and 50k COCK swapped in), now ~284.6k. Funded by selling 1.0M more SNEK at 3:14 PM for ~3.12k ADA (now ~56M), 1.23M CRAWJU for ~697 ADA at 3:04 PM (~12% of the bag), and a second 2M-unit Minswap V2 COCK LP pull at 2:16 PM (~972 ADA + ~162k COCK). Smaller: ~4.8k NIGHT and some FLOW via ~0.96k ADA of swaps/orders, three 71-ADA SOLADA clips. Net ADA about -233 since 2:05 PM. BOLT holders 269 to 267 while mcap rose 280.6k to 282.1k; VAMP top cluster w-f46e5a31 up to 40.3% (from 38.7%). Nothing passes k/y; both books empty.",
+  "headline": "Founder whale made one more small ASCEND add at 4:23 PM ET (~216 ASCEND for 252 ADA) plus ~2.55k NIGHT for 502 ADA; on-chain ASCEND balance now ~285.7k. Prefilter's +1,302 ASCEND / -2,260 ADA overstates the window (on-chain net ADA about -754 since 4:12 PM). Whale's ADA is down to ~856 ADA across the stake key, so the ASCEND buying has nearly used up its ADA. STRIKE untouched. Nothing passes k/y; both books empty.",
   "levels": {
     "CLOVE": "L2: 358.8k mcap, 304 holders, side 30.4k; above the 160k line",
     "BOLT": "L1 Pass: holders 269 to 267 while mcap 280.6k to 282.1k (holders_down_mcap_up); under the 400k line",
@@ -61,9 +61,9 @@
     "handle": "$cockwhale",
     "address": "addr1q8wd…7jvk",
     "stake_prefix": "uylu74g0",
-    "net_flow_ada": -233,
-    "summary": "Prefilter 4:11 PM: checked on Blockfrost across all stake-key addresses since 2:05 PM. ASCEND +3,153.45 in eight buys (2:11-2:14 PM five buys 2,634.4 for ~2,708 ADA plus 69k SOLADA and 50k COCK; 3:03 PM 86.7 for 102; 3:11 PM 215.1 for 252; 4:11 PM 217.3 for 252), now ~284.6k; prefilter qty 2,936 undercounts. SNEK -1.0M at 3:14 PM (601.8k swapped for 1,873.9 ADA; 398.2k via order script, 1,250.7 ADA back), ~3.12k ADA total, ~56M left. CRAWJU -1.23M at 3:04 PM (1.18M for 697.3 ADA, 49.3k to an order script). Minswap V2 COCK LP: 2M units pulled at 2:16 PM for 972 ADA + 162.4k COCK, same size as the 12:20 PM pull. NIGHT +~4.81k (decimals assumed 6) and FLOW (raw 1.89B, decimals unverified) for ~0.96k ADA across swaps and order-script fills 3:03-4:10 PM. SOLADA +~101k in three 71.6-ADA clips. STRIKE untouched. Net ADA ~-233 since 2:05 PM.",
-    "line": "Added ~3.15k ASCEND for ~3.3k ADA (now ~285k), sold 1M more SNEK (~3.1k ADA, ~56M left) and 12% of CRAWJU (~700 ADA), and pulled another 2M COCK LP units (~972 ADA + 162k COCK). STRIKE untouched."
+    "net_flow_ada": -754,
+    "summary": "Prefilter 6:09 PM: checked on Blockfrost across all stake-key addresses since 4:12 PM. Only two trades: 4:23 PM ASCEND +216.35 for 252 ADA and NIGHT +2,551.1 (decimals 6 assumed) for 502 ADA, both through the same order-script route. Account now holds ~285,652 ASCEND, ~56M SNEK, ~907k NIGHT, ~856 ADA controlled. Prefilter qty 1,301.7 / ADA -2,260 don't match on-chain (-754 ADA). STRIKE untouched.",
+    "line": "One more ~216 ASCEND add (252 ADA) and ~2.55k NIGHT (502 ADA) at 4:23 PM; ASCEND ~285.7k. ADA left is only ~856, so the buy loop is close to its cash limit. STRIKE untouched."
   },
   "paper_actions": [
     "solada: no open tickets; nothing passes k/y",
@@ -76,13 +76,14 @@
   ],
   "helius_credits_est": 0,
   "notes": [
-    "On-demand prefilter run at 4:11 PM ET. Whale txs since 2:05 PM checked on Blockfrost across all stake-key addresses; BOLT/VAMP figures from the prefilter payload. No X/Discord dives (no k/y candidates). Lessons: the whale is running the same funding loop twice a day (2M COCK LP pull, SNEK trim, ASCEND buys in ~1k ADA clips), so a repeat LP pull of identical size is routine for it, not a new exit signal."
+    "On-demand prefilter run at 6:09 PM ET. Whale txs since 4:12 PM checked on Blockfrost across all stake-key addresses. No X/Discord dives (no k/y candidates). Lessons: after a day of ASCEND clips the whale's spendable ADA is down to ~856, so further ASCEND buys likely need another SNEK trim, COCK LP pull, or outside inflow first; watch for that funding step as the lead signal."
   ],
   "sources": [
     "Blockfrost mainnet",
     "Sightline prefilter payload"
   ],
   "followups": [
+    "Prefilter 6:09 PM: ASCEND qty 1,301.7 / ADA -2,260 vs on-chain 216 ASCEND / -754 ADA since 4:12 PM; whale window seems to re-count earlier buys",
     "Prefilter: ASCEND qty 2,936 vs 3,153 on-chain since 2:05 PM; whale window misses early-window buys",
     "Confirm FLOW decimals so the whale's FLOW buys can be valued",
     "Prefilter: ASCEND ada_equiv 8,171 vs ~3.88k real ADA leg; fix whale value math",
