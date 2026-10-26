@@ -205,3 +205,47 @@ def kill_decide(entry, crossed, values, lines, complete, kc):
     if entry["recover_streak"] >= kc["recover_runs"]:
         return False, None, ["recovered"]
     return False, entry, []
+
+
+KILL_METRIC_ORDER = ("ada_side", "holders", "mcap")
+
+
+def kill_status_entry(prev, text, values, lines, crossed, complete, now, desk_hit=False, prev_hit=None, deeper=False):
+    """One ticker's kill_status.json row (SPD-47): {line, metric, value, hit, first_hit_at, changed_since_last}.
+
+    prev: last run's row for this ticker (or None). values/lines/crossed as in kill_decide.
+    metric/value/line: the first crossed metric when hit, else the first metric the kill line checks.
+    A data gap (not complete and nothing crossed) keeps the previous hit state and is not a change.
+    changed_since_last: hit flipped, the crossed metric changed, or the line itself changed.
+    deeper=True (kill_decide re-fire: a crossed value moved refire_deeper_pct%+ past the last REPORTED value)
+    also counts as a change. Small value drift (same metric, same line, still hit) is NOT a change.
+    prev_hit seeds hit when there is no previous row (state.json kill_status from older runs)."""
+    prev = prev if isinstance(prev, dict) else None
+    order = [m for m in KILL_METRIC_ORDER if m in lines] + sorted(m for m in lines if m not in KILL_METRIC_ORDER)
+    if crossed:
+        hit = True
+    elif complete:
+        hit = False
+    else:
+        hit = bool(prev["hit"]) if prev else bool(prev_hit)
+    metric = next((m for m in order if m in crossed), None) if hit and crossed else None
+    if metric is None:
+        metric = (prev or {}).get("metric") if hit and (prev or {}).get("metric") in lines else (order[0] if order else None)
+    value = values.get(metric) if metric else None
+    line = lines.get(metric) if metric else None
+    if prev is not None:
+        was_hit = bool(prev.get("hit"))
+        changed = (hit != was_hit) or (hit and (deeper or prev.get("metric") != metric or prev.get("line") != line))
+    else:
+        was_hit = bool(prev_hit)
+        changed = (hit != was_hit) or (hit and deeper)
+    if hit:
+        first = (prev or {}).get("first_hit_at") if was_hit and prev else None
+        first = first or (now if (changed or not prev) else None)
+    else:
+        first = None
+    row = {"line": line, "metric": metric, "value": value, "hit": hit, "first_hit_at": first,
+           "changed_since_last": bool(changed), "text": text}
+    if desk_hit:
+        row["desk_hit"] = True
+    return row
