@@ -1,18 +1,18 @@
 {
   "schema_version": 2,
   "desk": "solada",
-  "asof": "2026-10-26T14:15:00-04:00",
-  "source": "Snek Sentinel on-demand prefilter run (whale_move 2:09 PM ET)",
+  "asof": "2026-10-26T16:16:00-04:00",
+  "source": "Snek Sentinel on-demand prefilter run (whale_move 4:11 PM ET)",
   "rate": {
     "ADA_USD": 0.206551,
     "source": "prefilter market snapshot 2:09 PM ET"
   },
-  "headline": "Founder whale sold 1.0M SNEK for ~3.13k ADA at 2:01 PM ET (now ~57M SNEK), added ~1,177 ASCEND for ~1.35k ADA in two buys at 1:42 and 2:00 PM (~1.15 ADA each; now ~281.4k), and opened a new HEN position: ~31.3M HEN (~3.1% of the 1B supply) for ~352 ADA at 2:04-2:06 PM, not the 100 ADA the prefilter counted. A 725 ADA inflow came from the same outside wallet that sent 410 at 12:05. New curve launch PINU (2.5% curve, 3.9k mcap, 255 ADA side, 4 holders) got a 9-wallet coordinated buy with repeat BET/EVIL/MCFA early buyers incl. w-32877ab4 (4th launch); fails k/y. EVIL top cluster w-f46e5a31 85.3%, BET 35.8%, VAMP 38.7%, CORE 71.3% (w-13d53c47). Both books empty.",
+  "headline": "Founder whale kept stacking ASCEND: eight buys 2:11 PM-4:11 PM ET added ~3,153 ASCEND for ~3.31k ADA (~1.05 ADA each, plus 69k SOLADA and 50k COCK swapped in), now ~284.6k. Funded by selling 1.0M more SNEK at 3:14 PM for ~3.12k ADA (now ~56M), 1.23M CRAWJU for ~697 ADA at 3:04 PM (~12% of the bag), and a second 2M-unit Minswap V2 COCK LP pull at 2:16 PM (~972 ADA + ~162k COCK). Smaller: ~4.8k NIGHT and some FLOW via ~0.96k ADA of swaps/orders, three 71-ADA SOLADA clips. Net ADA about -233 since 2:05 PM. BOLT holders 269 to 267 while mcap rose 280.6k to 282.1k; VAMP top cluster w-f46e5a31 up to 40.3% (from 38.7%). Nothing passes k/y; both books empty.",
   "levels": {
     "CLOVE": "L2: 358.8k mcap, 304 holders, side 30.4k; above the 160k line",
-    "BOLT": "L1 Pass: 332.2k mcap, 270 holders, side 29.4k; under the 400k line",
+    "BOLT": "L1 Pass: holders 269 to 267 while mcap 280.6k to 282.1k (holders_down_mcap_up); under the 400k line",
     "SER": "L1 Pass: 54.8k mcap, 90 holders, side 10.8k under 13k",
-    "VAMP": "L1 watch: top cluster w-f46e5a31 34.7% (flat vs ~36.6%); likely curve reserve, unverified",
+    "VAMP": "L1 watch: top cluster w-f46e5a31 40.3% (up from 38.7%); likely curve reserve, unverified",
     "FEED": "L1 Pass: 33.0k mcap, side 8.4k",
     "SHARKY": "L1 Pass: 33.9k mcap, side 8.5k, 59 holders",
     "SBROKERS": "L1 Pass: 16.0k mcap, 32 holders",
@@ -61,9 +61,9 @@
     "handle": "$cockwhale",
     "address": "addr1q8wd…7jvk",
     "stake_prefix": "uylu74g0",
-    "net_flow_ada": null,
-    "summary": "Prefilter 2:09 PM: checked on Blockfrost across all 17 stake-key addresses since 12:05 PM. ASCEND +1,176.9 in two buys: 1:42 PM 222.8 for 252 ADA, 2:00 PM 954.1 for 1,102 ADA (prefilter ada_equiv 3,233 overstates; ADA leg ~1.35k). SNEK -1.0M at 2:01 PM in two swaps (782.3k for 2,450 ADA, 217.7k for 682 ADA; ~3.13k ADA total), ~57M left. HEN new position ~31.3M (3.1% of supply; token minted Oct 23) for 251.6 + 100.2 ADA sent to the same enterprise address at 2:04-2:06 PM; no DEX pair found, pool depth and mcap unverified (implied ~11k ADA mcap from the fill). Inflows: 410 ADA at 12:05 PM and 725 ADA at 2:00 PM from the same outside wallet. Net ADA ~+2.15k since 12:05.",
-    "line": "Sold 1M SNEK (~3.1k ADA, ~57M left), added ~1.2k ASCEND (~1.35k ADA, now ~281k), and opened a new HEN bag (~31.3M, ~3.1% of supply) for ~350 ADA."
+    "net_flow_ada": -233,
+    "summary": "Prefilter 4:11 PM: checked on Blockfrost across all stake-key addresses since 2:05 PM. ASCEND +3,153.45 in eight buys (2:11-2:14 PM five buys 2,634.4 for ~2,708 ADA plus 69k SOLADA and 50k COCK; 3:03 PM 86.7 for 102; 3:11 PM 215.1 for 252; 4:11 PM 217.3 for 252), now ~284.6k; prefilter qty 2,936 undercounts. SNEK -1.0M at 3:14 PM (601.8k swapped for 1,873.9 ADA; 398.2k via order script, 1,250.7 ADA back), ~3.12k ADA total, ~56M left. CRAWJU -1.23M at 3:04 PM (1.18M for 697.3 ADA, 49.3k to an order script). Minswap V2 COCK LP: 2M units pulled at 2:16 PM for 972 ADA + 162.4k COCK, same size as the 12:20 PM pull. NIGHT +~4.81k (decimals assumed 6) and FLOW (raw 1.89B, decimals unverified) for ~0.96k ADA across swaps and order-script fills 3:03-4:10 PM. SOLADA +~101k in three 71.6-ADA clips. STRIKE untouched. Net ADA ~-233 since 2:05 PM.",
+    "line": "Added ~3.15k ASCEND for ~3.3k ADA (now ~285k), sold 1M more SNEK (~3.1k ADA, ~56M left) and 12% of CRAWJU (~700 ADA), and pulled another 2M COCK LP units (~972 ADA + 162k COCK). STRIKE untouched."
   },
   "paper_actions": [
     "solada: no open tickets; nothing passes k/y",
@@ -76,13 +76,15 @@
   ],
   "helius_credits_est": 0,
   "notes": [
-    "On-demand prefilter run at 2:09 PM ET. Whale txs since 12:05 PM checked on Blockfrost across all 17 addresses on the stake key; market values from the prefilter payload/state. No X/Discord dives (no k/y candidates). Lessons: the prefilter's new_position ada_equiv can miss a leg when the buy is paid in two transfers (HEN showed 100, real cost ~352 ADA); sum all ADA sent to the counterparty in the window."
+    "On-demand prefilter run at 4:11 PM ET. Whale txs since 2:05 PM checked on Blockfrost across all stake-key addresses; BOLT/VAMP figures from the prefilter payload. No X/Discord dives (no k/y candidates). Lessons: the whale is running the same funding loop twice a day (2M COCK LP pull, SNEK trim, ASCEND buys in ~1k ADA clips), so a repeat LP pull of identical size is routine for it, not a new exit signal."
   ],
   "sources": [
     "Blockfrost mainnet",
     "Sightline prefilter payload"
   ],
   "followups": [
+    "Prefilter: ASCEND qty 2,936 vs 3,153 on-chain since 2:05 PM; whale window misses early-window buys",
+    "Confirm FLOW decimals so the whale's FLOW buys can be valued",
     "Prefilter: ASCEND ada_equiv 8,171 vs ~3.88k real ADA leg; fix whale value math",
     "Check whether the founder whale's 1M COCK order (11:59 AM) filled and at what price; COCK sells by the likely founder are a major flag",
     "MCFA swarm study: log the remaining 6 coordinated buyers' exit times; first exit w-c78561d1 at ~2h; judge at 48h (Oct 28 ~8 AM)",
@@ -371,10 +373,11 @@
     }
   },
   "learned_or_changed": [
-    "Founder whale trimmed SNEK 1.7% (1M for ~3.13k ADA)",
-    "ASCEND now ~281.4k after ~10.6k added today",
-    "New HEN position ~3.1% of supply for ~352 ADA",
-    "PINU: 9-wallet coordinated buy; w-32877ab4 now an early buyer in 4 launches (BET, EVIL, MCFA, PINU)"
+    "ASCEND now ~284.6k after ~13.8k added today",
+    "SNEK trimmed another 1M (~56M left; 2M sold today)",
+    "CRAWJU cut ~12%",
+    "Second identical 2M-unit COCK LP pull today",
+    "VAMP top cluster 40.3%, BOLT holders slipping while mcap rises"
   ],
   "history": [
     {
@@ -9720,6 +9723,385 @@
         "Founder whale ASCEND now ~280k after ~9.4k added today",
         "HOWDY trimmed 25% (5M) for ~182 ADA",
         "Founder whale pulled some COCK LP and queued 1M COCK in a sell order"
+      ]
+    },
+    {
+      "schema_version": 2,
+      "desk": "solada",
+      "asof": "2026-10-26T14:15:00-04:00",
+      "source": "Snek Sentinel on-demand prefilter run (whale_move 2:09 PM ET)",
+      "rate": {
+        "ADA_USD": 0.206551,
+        "source": "prefilter market snapshot 2:09 PM ET"
+      },
+      "headline": "Founder whale sold 1.0M SNEK for ~3.13k ADA at 2:01 PM ET (now ~57M SNEK), added ~1,177 ASCEND for ~1.35k ADA in two buys at 1:42 and 2:00 PM (~1.15 ADA each; now ~281.4k), and opened a new HEN position: ~31.3M HEN (~3.1% of the 1B supply) for ~352 ADA at 2:04-2:06 PM, not the 100 ADA the prefilter counted. A 725 ADA inflow came from the same outside wallet that sent 410 at 12:05. New curve launch PINU (2.5% curve, 3.9k mcap, 255 ADA side, 4 holders) got a 9-wallet coordinated buy with repeat BET/EVIL/MCFA early buyers incl. w-32877ab4 (4th launch); fails k/y. EVIL top cluster w-f46e5a31 85.3%, BET 35.8%, VAMP 38.7%, CORE 71.3% (w-13d53c47). Both books empty.",
+      "levels": {
+        "CLOVE": "L2: 358.8k mcap, 304 holders, side 30.4k; above the 160k line",
+        "BOLT": "L1 Pass: 332.2k mcap, 270 holders, side 29.4k; under the 400k line",
+        "SER": "L1 Pass: 54.8k mcap, 90 holders, side 10.8k under 13k",
+        "VAMP": "L1 watch: top cluster w-f46e5a31 34.7% (flat vs ~36.6%); likely curve reserve, unverified",
+        "FEED": "L1 Pass: 33.0k mcap, side 8.4k",
+        "SHARKY": "L1 Pass: 33.9k mcap, side 8.5k, 59 holders",
+        "SBROKERS": "L1 Pass: 16.0k mcap, 32 holders",
+        "DEXY": "L1 Pass: kill hit, 50 holders under 80",
+        "HIVE": "L1 Pass: side 5.97k under 7k, 68 holders",
+        "BET": "L1 Pass: kill hit, 29 holders under 40; top cluster w-f46e5a31 ~34.4%",
+        "GOLFY": "L1 Pass: kill hit, 37 holders under 40, 7.7k mcap, side 4.4k (prefilter 4:57 PM)",
+        "JUICE": "L1 Pass: kill hit, side 2,976 under 4k, 35 holders, 4.1k mcap (prefilter 6:08 PM)",
+        "HOWDY": "L1 Pass: founder whale sold 5M, holds ~15M; 48.4k mcap, side 10.2k, 58 holders, 24h vol 38.6k; fails k",
+        "EVIL": "L1 watch: kill hit, 10 holders under 15 (down from 12); top cluster w-f46e5a31 ~83.8%",
+        "MCFA": "L1 watch: swarm launch; first coordinated buyer w-c78561d1 fully exited ~2h in; fails k/y",
+        "KNOPPIES": "L1 watch: new founder-whale position ~10.47M for ~200 ADA",
+        "GAEY": "L1 watch: new launch, 14 holders, not graduated; fails k/y"
+      },
+      "kill_lines": {
+        "DEXY": "pool ADA side under 13k, on-chain holders under 80, or the swarm keys exiting in one hour",
+        "SER": "pool ADA side under 13k, holders under 80, or the founder whale selling SER into the pool",
+        "BOLT": "pool mcap under 400k ADA or holders under 265 (net-sell driven; LP pulls confirm next pulse, rule u)",
+        "SHARKY": "curve under 70% before graduation, holders under 50, or u8a2m6 and the launcher selling into the curve",
+        "CLOVE": "mcap under 160k ADA or holders under 125",
+        "HIVE": "pool ADA side under 7k or on-chain holders under 60",
+        "FEED": "pool ADA side under 7k or holders under 50",
+        "BEAST": "pool ADA side under 6k or holders under 50",
+        "GOLFY": "curve under 40% or holders under 40",
+        "JUICE": "pool ADA side under 4k or holders under 40",
+        "HERO": "hit: pool ADA side under ~4k with 29 holders",
+        "SOLADA": "on-chain holders under 430 or a 1M+ SOLADA dump into the pool from the founder whale or its side wallets",
+        "KNOPPIES": "curve under 5%",
+        "LIXI": "curve under 12%",
+        "GUINEA": "curve under 20% or swarm keys holding more than 15% before graduation",
+        "MISS": "hit: 16 Solana-native holders (line 25); re-watch only on 30+ natives across two pulses (rule t)",
+        "CORE": "curve under 60% or Solana-native holders under 25",
+        "JUSTQ": "hit: under 230 Solana-native holders and under $16k mcap",
+        "COCK": "founder whale selling COCK into the pool or pulling its LP, or the pool ADA side under ~150k ADA",
+        "BET": "curve under 40% before graduation, holders under 40, or the swarm keys exiting within one hour",
+        "VAMP": "curve under 50% or holders under 40",
+        "STRIKE": "ADA side under 900k",
+        "ASCEND": "ADA side under 750k",
+        "NIGHT": "founder whale selling 10k+ NIGHT clips again",
+        "HOWDY": "pool ADA side under 7k, holders under 40, or the founder whale selling HOWDY into the pool",
+        "EVIL": "curve under 5%, holders under 15 after peak, or the repeat BET swarm keys exiting within an hour",
+        "MCFA": "curve under 2% or the repeat BET/EVIL swarm keys exiting within an hour"
+      },
+      "kill_hits": [],
+      "founder_whale": {
+        "handle": "$cockwhale",
+        "address": "addr1q8wd…7jvk",
+        "stake_prefix": "uylu74g0",
+        "net_flow_ada": null,
+        "summary": "Prefilter 2:09 PM: checked on Blockfrost across all 17 stake-key addresses since 12:05 PM. ASCEND +1,176.9 in two buys: 1:42 PM 222.8 for 252 ADA, 2:00 PM 954.1 for 1,102 ADA (prefilter ada_equiv 3,233 overstates; ADA leg ~1.35k). SNEK -1.0M at 2:01 PM in two swaps (782.3k for 2,450 ADA, 217.7k for 682 ADA; ~3.13k ADA total), ~57M left. HEN new position ~31.3M (3.1% of supply; token minted Oct 23) for 251.6 + 100.2 ADA sent to the same enterprise address at 2:04-2:06 PM; no DEX pair found, pool depth and mcap unverified (implied ~11k ADA mcap from the fill). Inflows: 410 ADA at 12:05 PM and 725 ADA at 2:00 PM from the same outside wallet. Net ADA ~+2.15k since 12:05.",
+        "line": "Sold 1M SNEK (~3.1k ADA, ~57M left), added ~1.2k ASCEND (~1.35k ADA, now ~281k), and opened a new HEN bag (~31.3M, ~3.1% of supply) for ~350 ADA."
+      },
+      "paper_actions": [
+        "solada: no open tickets; nothing passes k/y",
+        "pumpfun: untouched (lean scope)"
+      ],
+      "rules_added": [],
+      "rules_applied": [
+        "k",
+        "y"
+      ],
+      "helius_credits_est": 0,
+      "notes": [
+        "On-demand prefilter run at 2:09 PM ET. Whale txs since 12:05 PM checked on Blockfrost across all 17 addresses on the stake key; market values from the prefilter payload/state. No X/Discord dives (no k/y candidates). Lessons: the prefilter's new_position ada_equiv can miss a leg when the buy is paid in two transfers (HEN showed 100, real cost ~352 ADA); sum all ADA sent to the counterparty in the window."
+      ],
+      "sources": [
+        "Blockfrost mainnet",
+        "Sightline prefilter payload"
+      ],
+      "followups": [
+        "Prefilter: ASCEND ada_equiv 8,171 vs ~3.88k real ADA leg; fix whale value math",
+        "Check whether the founder whale's 1M COCK order (11:59 AM) filled and at what price; COCK sells by the likely founder are a major flag",
+        "MCFA swarm study: log the remaining 6 coordinated buyers' exit times; first exit w-c78561d1 at ~2h; judge at 48h (Oct 28 ~8 AM)",
+        "Prefilter: whale ASCEND delta 130,904,443 with ada_equiv 426 doesn't match ~0.43 ADA/ASCEND; check ASCEND decimals in the payload",
+        "Confirm which pool got the whale's ~3.78M Minswap V2 LP units (~2.5k ADA) this morning",
+        "Prefilter: STRIKE pct 6.4% on a 0.75-token dust move; ignore dust in pct",
+        "Prefilter: give KNOPPIES curve % in the whale payload so the 5% kill line can be checked",
+        "Verify whether cluster w-f46e5a31 (top holder on BET, VAMP, EVIL; enterprise address in EVIL) is the Solada curve reserve; if so, exclude it from holder_concentration flags",
+        "Prefilter fires a newly-added kill line on its first reading even when the value has not moved (EVIL 14 holders); suppress first-fire when the line was set at that reading",
+        "Watch VAMP for graduation and whether the curve holds with holders rising",
+        "Track where the 2.21M SOLADA moved Friday went",
+        "Prefilter re-fires an unchanged kill line each new hour; dedupe by name and value, not hour bucket",
+        "Fix prefilter: decode Minswap V2 LP tokens (policy f5808c2c...) as LP, and correct FLOW ada_equiv (raw units/decimals)",
+        "Confirm which pool the whale's ~5.4k ADA LP adds went into (likely COCK)",
+        "CORE: one cluster holds 69%; confirm which CORE listing the prefilter means",
+        "BET swarm study: log exit times of the 17 coordinated buyers (two sniper exits so far, holders 30 to 25 within ~80 min)",
+        "BET: judge flag outcomes at 48h (Oct 27 ~4:46 PM); holders bounced 25 to ~30 after the sniper exits",
+        "Prefilter: SER kill_line re-fired at 8:08 PM with unchanged 4:08 PM values; dedupe 'newly crossed'",
+        "Prefilter: whale_move omitted the ~67.7k COCK buy at 7:59 PM",
+        "Watch whether NIGHT selling continues (60k sold Oct 25)",
+        "HOWDY: watch whether the founder whale adds or sells and whether holders climb toward 120",
+        "Cluster w-f46e5a31 tops both BET (~39%) and VAMP (~37%); check whether it is the same launcher/swarm",
+        "Fix prefilter: whale ada_equiv reuses a stale ADA leg for dust deltas (NIGHT 4,530 at 10:08 PM)",
+        "EVIL swarm study: log exit times of the 12 coordinated buyers and the 3 repeat BET wallets (w-32877ab4, w-6f2dbebd, w-c5af9630); judge at 48h (Oct 27 ~midnight)",
+        "Prefilter: whale ada_equiv for HOWDY was 465 vs 252 ADA actually spent; prefer the tx ADA leg"
+      ],
+      "trigger": "prefilter",
+      "whale_watch": {
+        "note": "Third-party wallets only (stake prefixes / shortened addresses), tracked because stake keys group a person's wallets. Updated each desk run.",
+        "updated_at": "2026-10-26T14:15:00-04:00",
+        "wallets": [
+          {
+            "label": "Founder whale ($cockwhale / $cock-whale)",
+            "prefix": "uylu74g0 (addr1q8wd…7jvk)",
+            "role": "Likely $COCK founder (X @COCKWHALE6969, possibly @Jared59836926, unconfirmed); holds ~5.5% COCK, ~4.5% SOLADA, ~5.5% SER, 270.9k ASCEND",
+            "latest": "Oct 26 2 PM: sold 1M SNEK (~3.13k ADA), added ~1.18k ASCEND (now ~281.4k), new HEN position ~31.3M (~3.1% supply) for ~352 ADA. Oct 25: new HOWDY position ~19.35M for ~919 ADA (9:23-9:28 PM); sold 60k NIGHT (~10.9k ADA) incl. 25k at 7:59 PM, trimmed 500 ASCEND, bought ~67.7k COCK, added ~5.4k ADA COCK LP, bought ~1.14M SOLADA AM."
+          },
+          {
+            "label": "COCK supply wallet",
+            "prefix": "uyz4uxqe (addr1qx5u83ep6…)",
+            "role": "Holds ~43.5% of COCK supply; dormant since Jun 27 2026",
+            "latest": "NEW tonight. No movement; any transfer out = major COCK flag.",
+            "added_at": "2026-10-18T21:15:00-04:00"
+          },
+          {
+            "label": "MISS #2 / swarm wallet",
+            "prefix": "ux3cvv58",
+            "role": "Early buyer on BUY and other swarm launches; MISS Cardano-leg #2 holder; also ~1.16% of COCK",
+            "latest": "Not exiting MISS: +3.0M MISS (now ~39.5M, ~3.95%) at 8:51-8:55 PM. Sold ~508k SOLADA (~1.12k ADA), SNEK (~411 ADA) and 4.32M STABLE; added 602 ADA of COCK/ADA LP at 8:05 PM (50 min after the founder whale's LP add)."
+          },
+          {
+            "label": "WJB whale",
+            "prefix": "uxdn3dre",
+            "role": "Wojaks S2 / WJB long-time holder; sold 7 S2 NFTs into a bid bot Oct 17",
+            "latest": "Sold 50M WJB at 8:44 PM (~750 ADA in fills, 0.16% of 32B supply), 2.5x his earlier 20M dump."
+          },
+          {
+            "label": "WJB dumper",
+            "prefix": "uylvsrhd",
+            "role": "Dumped ~487M WJB and rotated in/out of MISS",
+            "latest": "No txs since 7:15 PM."
+          },
+          {
+            "label": "Flip pair",
+            "prefix": "u8a2m6 + u978t4",
+            "role": "Linked flip pair in early buys",
+            "latest": "u8a2m6 still holds INTERN, MAC and ZILLA first-buy bags."
+          },
+          {
+            "label": "Sweep cluster",
+            "prefix": "addr1qyng…ur35h7 (u8a2m6) + addr1q8gk…7s2t7y (u9kp4sxa) + addr1q988…2x0cf8 (u9w6dd)",
+            "role": "Multi-ticker first buys on new Cardano launches",
+            "latest": "First buys on INTERN (7:16 PM), MAC, ZILLA; no new launches since."
+          },
+          {
+            "label": "First-block snipers",
+            "prefix": "u9w6dd, uytg09zr, uyyyjqps, u8x8h2hc, u9kp4sxa, uxz6fvju, u9534d4g, u944xqrv, uxfernv7, ux9da0mc, u9q3xusf, ux3cvv58",
+            "role": "Recurring first-block buyers; full exit = kill trigger (rule j)",
+            "latest": "Still holding BOLT (uytg09zr, u9q3xusf) and CLOVE (u9q3xusf, uytg09zr, uyyyjqps); SER keys u944xqrv/u9q3xusf/uxfernv7 still in a draining pool."
+          },
+          {
+            "label": "Repeat / swarm launchers",
+            "prefix": "ux739ulujk, uyetfdape9, uyt8xs9q, u9rwdkfjtr, uxz5cts5ww",
+            "role": "Launch coins themselves (rule p)",
+            "latest": "Launcher keys u9rwdkfjtr and uyetfdape9 hold BOLT and CLOVE; no new launches since 7:16 PM."
+          },
+          {
+            "label": "Repeat big buyers",
+            "prefix": "addr1q9ac…u9wwut (CLOVE/BOLT), addr1q8aw…t4yf3p (MISS), addr1q9yt…ct2n4q (CORE)",
+            "role": "Repeat size buyers",
+            "latest": "Not re-checked this run."
+          },
+          {
+            "label": "Pool pre-seeder",
+            "prefix": "uynnk0mezk",
+            "role": "TCAT creator; pre-seeded a pool that distorts SER's GeckoTerminal % changes",
+            "latest": "Ignore GeckoTerminal 6h/24h % on SER."
+          }
+        ]
+      },
+      "patterns": [
+        {
+          "pattern": "Coordinated fresh-wallet swarm buying the first 2 minutes",
+          "outcome": "rug-leaning",
+          "evidence": [
+            "BET (17 coordinated, 11 fresh; holders 30 to 25 in 80 min, two sniper exits)"
+          ]
+        },
+        {
+          "pattern": "Founder whale LP adds and SOLADA buys",
+          "outcome": "team support, not a signal",
+          "evidence": [
+            "COCK",
+            "SOLADA"
+          ]
+        },
+        {
+          "pattern": "Kill-hit names lose volume within hours",
+          "outcome": "dead volume",
+          "evidence": [
+            "JUICE (80 ADA 24h)",
+            "HERO",
+            "GOLFY",
+            "DEXY (4.4k side, ~1.1k ADA 24h)"
+          ]
+        },
+        "2026-10-26: repeat early buyers w-32877ab4 and w-6f2dbebd entered BET, EVIL and MCFA; same swarm farms each new Solada curve launch"
+      ],
+      "cardano_top10": [
+        {
+          "rank": 1,
+          "ticker": "STRIKE",
+          "policy_short": "f13ac4d66b",
+          "mcap_ada": 56400000,
+          "ada_side_depth": 1222000,
+          "holders": null,
+          "holders_delta": null,
+          "whale_tags": [
+            "w-uylu74g0"
+          ],
+          "level": "L1",
+          "note": "Deepest Cardano pool tracked (~$502k reserve); 24h vol ~$2.2k, -0.8%. Whale dust only. Kill: ADA side under 900k."
+        },
+        {
+          "rank": 2,
+          "ticker": "ASCEND",
+          "policy_short": "eb7a93ebc3",
+          "mcap_ada": null,
+          "ada_side_depth": 992000,
+          "holders": null,
+          "holders_delta": null,
+          "whale_tags": [
+            "w-uylu74g0"
+          ],
+          "level": "L1",
+          "note": "~$407k reserve, 24h vol ~$7.2k, 17 buys vs 10 sells, -1.1%. Whale round trip flat today. Kill: ADA side under 750k."
+        },
+        {
+          "rank": 3,
+          "ticker": "NIGHT",
+          "policy_short": "0691b2fecc",
+          "mcap_ada": null,
+          "ada_side_depth": 3500000,
+          "holders": null,
+          "holders_delta": null,
+          "whale_tags": [
+            "w-uylu74g0"
+          ],
+          "level": "L1",
+          "note": "Biggest pool (~$1.44M reserve) but the founder whale sold 60k today (25k more at 7:59 PM). Kill hit: whale keeps selling 10k+ clips."
+        },
+        {
+          "rank": 4,
+          "ticker": "SNEK",
+          "policy_short": "279c909f34",
+          "mcap_ada": 242700000,
+          "ada_side_depth": 2160000,
+          "holders": null,
+          "holders_delta": null,
+          "whale_tags": [],
+          "level": "L1",
+          "note": "Blue chip liquidity (~$888k reserve), +2.3% 24h. Context, not a Solada name."
+        },
+        {
+          "rank": 5,
+          "ticker": "COCK",
+          "policy_short": "49e423161e",
+          "mcap_ada": null,
+          "ada_side_depth": 169523,
+          "holders": 1000,
+          "holders_delta": null,
+          "whale_tags": [
+            "w-uylu74g0",
+            "w-uyz4uxqe"
+          ],
+          "level": "L1",
+          "note": "Founder whale added ~5.4k ADA LP today (team support). Kill: ADA side under ~150k or whale LP pull."
+        },
+        {
+          "rank": 6,
+          "ticker": "CLOVE",
+          "policy_short": "c1b89ed48d",
+          "mcap_ada": 339113,
+          "ada_side_depth": 29284,
+          "holders": 304,
+          "holders_delta": -2,
+          "whale_tags": [],
+          "level": "L2",
+          "note": "Best Solada name: side 29.3k, 24h vol 19.7k, holders flat. Fails k (needs 6h buys>sells proof). Kill: mcap under 160k or holders under 125."
+        },
+        {
+          "rank": 7,
+          "ticker": "BOLT",
+          "policy_short": "14628c260a",
+          "mcap_ada": 330616,
+          "ada_side_depth": 29039,
+          "holders": 274,
+          "holders_delta": 0,
+          "whale_tags": [],
+          "level": "L1",
+          "note": "Kill hit (mcap under 400k), side holding 29k, volume fading (4.6k). Kill: holders under 265."
+        },
+        {
+          "rank": 8,
+          "ticker": "SOLADA",
+          "policy_short": "e7c77b2784",
+          "mcap_ada": null,
+          "ada_side_depth": null,
+          "holders": 492,
+          "holders_delta": null,
+          "whale_tags": [
+            "w-uylu74g0"
+          ],
+          "level": "L1",
+          "note": "Platform token; whale bought ~1.14M AM (team support). Kill: holders under 430 or a 1M+ whale dump."
+        },
+        {
+          "rank": 9,
+          "ticker": "SHARKY",
+          "policy_short": "",
+          "mcap_ada": 34682,
+          "ada_side_depth": 8547,
+          "holders": 59,
+          "holders_delta": null,
+          "whale_tags": [
+            "w-u8laqm3f"
+          ],
+          "level": "L1",
+          "note": "Side 8.5k, 24h vol 10.8k. Kill: holders under 50."
+        },
+        {
+          "rank": 10,
+          "ticker": "VAMP",
+          "policy_short": "3f5a1f7a3b",
+          "mcap_ada": 33873,
+          "ada_side_depth": null,
+          "holders": 56,
+          "holders_delta": 2,
+          "whale_tags": [
+            "w-uylu74g0"
+          ],
+          "level": "L1",
+          "note": "Curve 76% (King), 56 holders, 145 trades 24h. Kill: curve under 50% or holders under 40."
+        }
+      ],
+      "flag_outcomes": {
+        "coordinated_buys": {
+          "pump": 0,
+          "rug": 0
+        },
+        "fresh_wallet_swarm": {
+          "pump": 0,
+          "rug": 0
+        },
+        "sniper_full_exit": {
+          "pump": 0,
+          "rug": 0
+        },
+        "holder_concentration": {
+          "pump": 0,
+          "rug": 0
+        },
+        "founder_whale_move": {
+          "pump": 0,
+          "rug": 0
+        }
+      },
+      "learned_or_changed": [
+        "Founder whale trimmed SNEK 1.7% (1M for ~3.13k ADA)",
+        "ASCEND now ~281.4k after ~10.6k added today",
+        "New HEN position ~3.1% of supply for ~352 ADA",
+        "PINU: 9-wallet coordinated buy; w-32877ab4 now an early buyer in 4 launches (BET, EVIL, MCFA, PINU)"
       ]
     }
   ]
