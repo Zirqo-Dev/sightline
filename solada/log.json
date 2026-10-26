@@ -1,30 +1,31 @@
 {
   "schema_version": 2,
   "desk": "solada",
-  "asof": "2026-10-26T08:10:00-04:00",
-  "source": "Snek Sentinel on-demand prefilter run (threshold 8:09 AM ET)",
+  "asof": "2026-10-26T10:10:00-04:00",
+  "source": "Snek Sentinel on-demand prefilter run (threshold 10:08 AM ET)",
   "rate": {
-    "ADA_USD": 0.204742,
-    "source": "prefilter market snapshot 8:09 AM ET"
+    "ADA_USD": 0.203121,
+    "source": "prefilter market snapshot 10:08 AM ET"
   },
-  "headline": "Founder whale woke up: opened a new KNOPPIES position (~10.47M KNOPPIES for ~200 ADA), added ~328 ASCEND for ~142 ADA (~0.1% add), and took ~3.78M Minswap V2 LP units; net ADA out ~2,869, so roughly 2.5k ADA likely went into LP (pool unconfirmed). The STRIKE line is dust (~0.75 STRIKE, ~2 ADA). New curve launch MCFA (4.1% curve, 4.2k ADA mcap, 6 holders) got a 7-wallet coordinated buy with 4 fresh wallets, two repeat BET/EVIL early buyers and tags u8a2m6/uxz6fvju; fails k/y. EVIL holders fell 14 to 12 (real exits now). Both books empty.",
+  "headline": "EVIL holders fell again, 12 to 10 (kill line 15), and its top cluster w-f46e5a31 now holds ~83.8% (up from ~75.8% overnight), so it is draining into one holder or the curve reserve. Founder whale added ASCEND again (~426 ADA by the ADA leg) plus a small Minswap V2 LP add; net ADA out ~699. MCFA: one of its 7 coordinated, fresh swarm buyers (w-c78561d1) fully exited about 2 hours after launch. New launch GAEY (14 holders) fails k/y. Both books empty.",
   "levels": {
-    "CLOVE": "L2: 374.9k mcap, 306 holders, side 31.0k; above the 160k line",
-    "BOLT": "L1 Pass: 275.8k mcap, 266 holders, side 26.8k; under the 400k line, one holder above 265",
+    "CLOVE": "L2: 358.8k mcap, 304 holders, side 30.4k; above the 160k line",
+    "BOLT": "L1 Pass: 332.2k mcap, 270 holders, side 29.4k; under the 400k line",
     "SER": "L1 Pass: 54.8k mcap, 90 holders, side 10.8k under 13k",
-    "VAMP": "L1 watch: 54 holders; top cluster w-f46e5a31 ~36.9%",
+    "VAMP": "L1 watch: 51 holders; top cluster w-f46e5a31 ~36.6%",
     "FEED": "L1 Pass: 33.0k mcap, side 8.4k",
     "SHARKY": "L1 Pass: 33.9k mcap, side 8.5k, 59 holders",
     "SBROKERS": "L1 Pass: 16.0k mcap, 32 holders",
     "DEXY": "L1 Pass: kill hit, 50 holders under 80",
     "HIVE": "L1 Pass: side 5.97k under 7k, 68 holders",
-    "BET": "L1 Pass: kill hit, 29 holders under 40; top cluster w-f46e5a31 ~33%",
+    "BET": "L1 Pass: kill hit, 29 holders under 40; top cluster w-f46e5a31 ~34.4%",
     "GOLFY": "L1 Pass: kill hit, 37 holders under 40, 7.7k mcap, side 4.4k (prefilter 4:57 PM)",
     "JUICE": "L1 Pass: kill hit, side 2,976 under 4k, 35 holders, 4.1k mcap (prefilter 6:08 PM)",
     "HOWDY": "L1 Pass: founder whale holds ~25.2M; 52.1k mcap, side 10.6k, 53-55 holders, 24h vol 33.8k; fails k",
-    "EVIL": "L1 watch: kill hit, 12 holders under 15 (down from 14); repeat BET swarm keys now also early in MCFA",
-    "MCFA": "L1 watch: new curve launch, 4.1% curve, 4.2k mcap, 6 holders, swarm-bought; fails k/y",
-    "KNOPPIES": "L1 watch: new founder-whale position ~10.47M for ~200 ADA"
+    "EVIL": "L1 watch: kill hit, 10 holders under 15 (down from 12); top cluster w-f46e5a31 ~83.8%",
+    "MCFA": "L1 watch: swarm launch; first coordinated buyer w-c78561d1 fully exited ~2h in; fails k/y",
+    "KNOPPIES": "L1 watch: new founder-whale position ~10.47M for ~200 ADA",
+    "GAEY": "L1 watch: new launch, 14 holders, not graduated; fails k/y"
   },
   "kill_lines": {
     "DEXY": "pool ADA side under 13k, on-chain holders under 80, or the swarm keys exiting in one hour",
@@ -56,23 +57,23 @@
     "MCFA": "curve under 2% or the repeat BET/EVIL swarm keys exiting within an hour"
   },
   "kill_hits": [
-    "EVIL holders 12 < 15 (new exits, 14 to 12)",
+    "EVIL holders 10 < 15 (new exits, 12 to 10)",
     "DEXY holders 50 < 80 (repeat)",
     "BET holders 29 < 40 (repeat)",
     "GOLFY 36 < 40 (repeat)",
     "JUICE 35 < 40 (repeat)",
-    "BOLT mcap 275.8k < 400k (repeat)"
+    "BOLT mcap 332.2k < 400k (repeat)"
   ],
   "founder_whale": {
     "handle": "$cockwhale",
     "address": "addr1q8wd…7jvk",
     "stake_prefix": "uylu74g0",
-    "net_flow_ada": -2869,
-    "summary": "Prefilter 8:09 AM: new KNOPPIES position (~10.47M, ~200 ADA ada leg), +~328 ASCEND (~142 ADA, ~0.1% of its ASCEND), STRIKE dust (~0.75, ~2 ADA; the 6.4% pct is a prefilter artifact), +3.78M Minswap V2 LP units, net ADA -2,869. Inferred ~2.5k ADA into LP, pool unconfirmed (likely COCK given recent pattern). No NIGHT or Solada-name sells.",
-    "line": "Small ASCEND add (~142 ADA), new KNOPPIES bag (~200 ADA), and ~2.5k ADA apparently into Minswap LP; STRIKE move is dust."
+    "net_flow_ada": -699,
+    "summary": "Prefilter 10:08 AM: +ASCEND (raw delta 130,904,443; ~426 ADA by ADA leg; pct reads 0.0), +376,149 Minswap V2 LP units, net ADA -699. Token count not confirmed (raw units vs earlier ~0.43 ADA/ASCEND don't reconcile). No STRIKE, NIGHT or Solada-name sells.",
+    "line": "Second ASCEND add this morning (~426 ADA) plus a small Minswap LP add; no sells."
   },
   "paper_actions": [
-    "solada: no open tickets; nothing passes k/y (HOWDY, MCFA fail)",
+    "solada: no open tickets; nothing passes k/y (GAEY, HOWDY fail)",
     "pumpfun: untouched (lean scope)"
   ],
   "rules_added": [],
@@ -82,14 +83,15 @@
   ],
   "helius_credits_est": 0,
   "notes": [
-    "On-demand prefilter run at 8:09 AM ET. Values from the prefilter payload and last-run.json; not re-checked on-chain this run. No X/Discord dives (no k/y candidates). Lessons: the same two repeat early buyers (w-32877ab4, w-6f2dbebd) are now in BET, EVIL and MCFA, so this swarm hits every new curve launch within minutes."
+    "On-demand prefilter run at 10:08 AM ET. Values from the prefilter payload, last-run.json and flags.json; not re-checked on-chain. No X/Discord dives (no k/y candidates). Lessons: the swarm's fresh wallets flip fast; MCFA's first full exit came ~2h after the coordinated buy, matching BET's sniper exits within hours."
   ],
   "sources": [
     "Blockfrost mainnet",
     "Sightline prefilter payload"
   ],
   "followups": [
-    "MCFA swarm study: log exit times of the 7 coordinated buyers and the two repeat BET/EVIL wallets; judge at 48h (Oct 28 ~8 AM)",
+    "MCFA swarm study: log the remaining 6 coordinated buyers' exit times; first exit w-c78561d1 at ~2h; judge at 48h (Oct 28 ~8 AM)",
+    "Prefilter: whale ASCEND delta 130,904,443 with ada_equiv 426 doesn't match ~0.43 ADA/ASCEND; check ASCEND decimals in the payload",
     "Confirm which pool got the whale's ~3.78M Minswap V2 LP units (~2.5k ADA) this morning",
     "Prefilter: STRIKE pct 6.4% on a 0.75-token dust move; ignore dust in pct",
     "Prefilter: give KNOPPIES curve % in the whale payload so the 5% kill line can be checked",
@@ -374,9 +376,9 @@
     }
   },
   "learned_or_changed": [
-    "MCFA added to watch with a kill line",
-    "EVIL holder exits confirmed (14 to 12)",
-    "KNOPPIES now a founder-whale position"
+    "EVIL holders 12 to 10; top cluster to ~83.8%",
+    "First MCFA swarm exit (w-c78561d1, ~2h)",
+    "GAEY added to levels (fails k/y)"
   ],
   "history": [
     {
@@ -8458,6 +8460,127 @@
       },
       "learned_or_changed": [
         "DEXY drained to a 4.4k ADA side with 1.1k ADA daily volume, matching the pattern that kill-hit names lose volume within hours."
+      ]
+    },
+    {
+      "schema_version": 2,
+      "desk": "solada",
+      "asof": "2026-10-26T08:10:00-04:00",
+      "source": "Snek Sentinel on-demand prefilter run (threshold 8:09 AM ET)",
+      "rate": {
+        "ADA_USD": 0.204742,
+        "source": "prefilter market snapshot 8:09 AM ET"
+      },
+      "headline": "Founder whale woke up: opened a new KNOPPIES position (~10.47M KNOPPIES for ~200 ADA), added ~328 ASCEND for ~142 ADA (~0.1% add), and took ~3.78M Minswap V2 LP units; net ADA out ~2,869, so roughly 2.5k ADA likely went into LP (pool unconfirmed). The STRIKE line is dust (~0.75 STRIKE, ~2 ADA). New curve launch MCFA (4.1% curve, 4.2k ADA mcap, 6 holders) got a 7-wallet coordinated buy with 4 fresh wallets, two repeat BET/EVIL early buyers and tags u8a2m6/uxz6fvju; fails k/y. EVIL holders fell 14 to 12 (real exits now). Both books empty.",
+      "levels": {
+        "CLOVE": "L2: 374.9k mcap, 306 holders, side 31.0k; above the 160k line",
+        "BOLT": "L1 Pass: 275.8k mcap, 266 holders, side 26.8k; under the 400k line, one holder above 265",
+        "SER": "L1 Pass: 54.8k mcap, 90 holders, side 10.8k under 13k",
+        "VAMP": "L1 watch: 54 holders; top cluster w-f46e5a31 ~36.9%",
+        "FEED": "L1 Pass: 33.0k mcap, side 8.4k",
+        "SHARKY": "L1 Pass: 33.9k mcap, side 8.5k, 59 holders",
+        "SBROKERS": "L1 Pass: 16.0k mcap, 32 holders",
+        "DEXY": "L1 Pass: kill hit, 50 holders under 80",
+        "HIVE": "L1 Pass: side 5.97k under 7k, 68 holders",
+        "BET": "L1 Pass: kill hit, 29 holders under 40; top cluster w-f46e5a31 ~33%",
+        "GOLFY": "L1 Pass: kill hit, 37 holders under 40, 7.7k mcap, side 4.4k (prefilter 4:57 PM)",
+        "JUICE": "L1 Pass: kill hit, side 2,976 under 4k, 35 holders, 4.1k mcap (prefilter 6:08 PM)",
+        "HOWDY": "L1 Pass: founder whale holds ~25.2M; 52.1k mcap, side 10.6k, 53-55 holders, 24h vol 33.8k; fails k",
+        "EVIL": "L1 watch: kill hit, 12 holders under 15 (down from 14); repeat BET swarm keys now also early in MCFA",
+        "MCFA": "L1 watch: new curve launch, 4.1% curve, 4.2k mcap, 6 holders, swarm-bought; fails k/y",
+        "KNOPPIES": "L1 watch: new founder-whale position ~10.47M for ~200 ADA"
+      },
+      "kill_lines": {
+        "DEXY": "pool ADA side under 13k, on-chain holders under 80, or the swarm keys exiting in one hour",
+        "SER": "pool ADA side under 13k, holders under 80, or the founder whale selling SER into the pool",
+        "BOLT": "pool mcap under 400k ADA or holders under 265 (net-sell driven; LP pulls confirm next pulse, rule u)",
+        "SHARKY": "curve under 70% before graduation, holders under 50, or u8a2m6 and the launcher selling into the curve",
+        "CLOVE": "mcap under 160k ADA or holders under 125",
+        "HIVE": "pool ADA side under 7k or on-chain holders under 60",
+        "FEED": "pool ADA side under 7k or holders under 50",
+        "BEAST": "pool ADA side under 6k or holders under 50",
+        "GOLFY": "curve under 40% or holders under 40",
+        "JUICE": "pool ADA side under 4k or holders under 40",
+        "HERO": "hit: pool ADA side under ~4k with 29 holders",
+        "SOLADA": "on-chain holders under 430 or a 1M+ SOLADA dump into the pool from the founder whale or its side wallets",
+        "KNOPPIES": "curve under 5%",
+        "LIXI": "curve under 12%",
+        "GUINEA": "curve under 20% or swarm keys holding more than 15% before graduation",
+        "MISS": "hit: 16 Solana-native holders (line 25); re-watch only on 30+ natives across two pulses (rule t)",
+        "CORE": "curve under 60% or Solana-native holders under 25",
+        "JUSTQ": "hit: under 230 Solana-native holders and under $16k mcap",
+        "COCK": "founder whale selling COCK into the pool or pulling its LP, or the pool ADA side under ~150k ADA",
+        "BET": "curve under 40% before graduation, holders under 40, or the swarm keys exiting within one hour",
+        "VAMP": "curve under 50% or holders under 40",
+        "STRIKE": "ADA side under 900k",
+        "ASCEND": "ADA side under 750k",
+        "NIGHT": "founder whale selling 10k+ NIGHT clips again",
+        "HOWDY": "pool ADA side under 7k, holders under 40, or the founder whale selling HOWDY into the pool",
+        "EVIL": "curve under 5%, holders under 15 after peak, or the repeat BET swarm keys exiting within an hour",
+        "MCFA": "curve under 2% or the repeat BET/EVIL swarm keys exiting within an hour"
+      },
+      "kill_hits": [
+        "EVIL holders 12 < 15 (new exits, 14 to 12)",
+        "DEXY holders 50 < 80 (repeat)",
+        "BET holders 29 < 40 (repeat)",
+        "GOLFY 36 < 40 (repeat)",
+        "JUICE 35 < 40 (repeat)",
+        "BOLT mcap 275.8k < 400k (repeat)"
+      ],
+      "founder_whale": {
+        "handle": "$cockwhale",
+        "address": "addr1q8wd…7jvk",
+        "stake_prefix": "uylu74g0",
+        "net_flow_ada": -2869,
+        "summary": "Prefilter 8:09 AM: new KNOPPIES position (~10.47M, ~200 ADA ada leg), +~328 ASCEND (~142 ADA, ~0.1% of its ASCEND), STRIKE dust (~0.75, ~2 ADA; the 6.4% pct is a prefilter artifact), +3.78M Minswap V2 LP units, net ADA -2,869. Inferred ~2.5k ADA into LP, pool unconfirmed (likely COCK given recent pattern). No NIGHT or Solada-name sells.",
+        "line": "Small ASCEND add (~142 ADA), new KNOPPIES bag (~200 ADA), and ~2.5k ADA apparently into Minswap LP; STRIKE move is dust."
+      },
+      "paper_actions": [
+        "solada: no open tickets; nothing passes k/y (HOWDY, MCFA fail)",
+        "pumpfun: untouched (lean scope)"
+      ],
+      "rules_added": [],
+      "rules_applied": [
+        "k",
+        "y"
+      ],
+      "helius_credits_est": 0,
+      "notes": [
+        "On-demand prefilter run at 8:09 AM ET. Values from the prefilter payload and last-run.json; not re-checked on-chain this run. No X/Discord dives (no k/y candidates). Lessons: the same two repeat early buyers (w-32877ab4, w-6f2dbebd) are now in BET, EVIL and MCFA, so this swarm hits every new curve launch within minutes."
+      ],
+      "sources": [
+        "Blockfrost mainnet",
+        "Sightline prefilter payload"
+      ],
+      "followups": [
+        "MCFA swarm study: log exit times of the 7 coordinated buyers and the two repeat BET/EVIL wallets; judge at 48h (Oct 28 ~8 AM)",
+        "Confirm which pool got the whale's ~3.78M Minswap V2 LP units (~2.5k ADA) this morning",
+        "Prefilter: STRIKE pct 6.4% on a 0.75-token dust move; ignore dust in pct",
+        "Prefilter: give KNOPPIES curve % in the whale payload so the 5% kill line can be checked",
+        "Verify whether cluster w-f46e5a31 (top holder on BET, VAMP, EVIL; enterprise address in EVIL) is the Solada curve reserve; if so, exclude it from holder_concentration flags",
+        "Prefilter fires a newly-added kill line on its first reading even when the value has not moved (EVIL 14 holders); suppress first-fire when the line was set at that reading",
+        "Watch VAMP for graduation and whether the curve holds with holders rising",
+        "Track where the 2.21M SOLADA moved Friday went",
+        "Prefilter re-fires an unchanged kill line each new hour; dedupe by name and value, not hour bucket",
+        "Fix prefilter: decode Minswap V2 LP tokens (policy f5808c2c...) as LP, and correct FLOW ada_equiv (raw units/decimals)",
+        "Confirm which pool the whale's ~5.4k ADA LP adds went into (likely COCK)",
+        "CORE: one cluster holds 69%; confirm which CORE listing the prefilter means",
+        "BET swarm study: log exit times of the 17 coordinated buyers (two sniper exits so far, holders 30 to 25 within ~80 min)",
+        "BET: judge flag outcomes at 48h (Oct 27 ~4:46 PM); holders bounced 25 to ~30 after the sniper exits",
+        "Prefilter: SER kill_line re-fired at 8:08 PM with unchanged 4:08 PM values; dedupe 'newly crossed'",
+        "Prefilter: whale_move omitted the ~67.7k COCK buy at 7:59 PM",
+        "Watch whether NIGHT selling continues (60k sold Oct 25)",
+        "HOWDY: watch whether the founder whale adds or sells and whether holders climb toward 120",
+        "Cluster w-f46e5a31 tops both BET (~39%) and VAMP (~37%); check whether it is the same launcher/swarm",
+        "Fix prefilter: whale ada_equiv reuses a stale ADA leg for dust deltas (NIGHT 4,530 at 10:08 PM)",
+        "EVIL swarm study: log exit times of the 12 coordinated buyers and the 3 repeat BET wallets (w-32877ab4, w-6f2dbebd, w-c5af9630); judge at 48h (Oct 27 ~midnight)",
+        "Prefilter: whale ada_equiv for HOWDY was 465 vs 252 ADA actually spent; prefer the tx ADA leg"
+      ],
+      "trigger": "prefilter",
+      "learned_or_changed": [
+        "MCFA added to watch with a kill line",
+        "EVIL holder exits confirmed (14 to 12)",
+        "KNOPPIES now a founder-whale position"
       ]
     }
   ]
