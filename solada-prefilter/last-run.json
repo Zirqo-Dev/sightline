@@ -1,5 +1,5 @@
 {
- "at": "2026-10-26T07:54:15Z",
+ "at": "2026-10-26T08:08:41Z",
  "basis": "blockfrost",
  "dry_run": false,
  "baseline": false,
@@ -15,62 +15,27 @@
   "aa_zero_holder_noise": true,
   "min_ada_side": 25000.0
  },
- "market_age_min": 0.0,
- "ada_usd": 0.202099,
+ "market_age_min": 0.1,
+ "ada_usd": 0.201593,
  "whale": {
   "tag": "w-f3186187",
   "ada_delta": 0,
   "moves": []
  },
  "first_block_hits": [],
- "triggers": [
-  {
-   "kind": "kill_line",
-   "name": "DEXY",
-   "metrics": {
-    "ada_side": 4430,
-    "mcap_ada": 9074,
-    "holders": 51,
-    "vol_h24_ada": 1135,
-    "crossed": [
-     "ada_side 4430 < 13000",
-     "holders 51 < 80"
-    ],
-    "why": [
-     "ada_side newly crossed"
-    ]
-   }
-  },
-  {
-   "kind": "kill_line",
-   "name": "EVIL",
-   "metrics": {
-    "ada_side": null,
-    "mcap_ada": null,
-    "holders": 14,
-    "vol_h24_ada": null,
-    "crossed": [
-     "holders 14 < 15"
-    ],
-    "why": [
-     "holders newly crossed"
-    ]
-   }
-  }
- ],
- "webhook_sent": true,
- "flags_new": 3,
+ "triggers": [],
+ "webhook_sent": false,
+ "flags_new": 0,
  "data_failures": {
   "match": 2,
-  "geckoterminal": 9
+  "geckoterminal": 10
  },
  "api_calls": {
   "solada": 2,
   "geckoterminal": 31,
   "blockfrost": 41,
-  "dexscreener": 10,
-  "koios": 3,
-  "webhook": 1
+  "dexscreener": 12,
+  "koios": 3
  },
  "results": [
   {
@@ -79,7 +44,7 @@
    "unit": "3d6cbf58d23200a9371a8ba6c365f6a96663da53709328c3446e93a30014df10484f574459",
    "graduated": true,
    "native_holders": 53,
-   "ada_side": 10091,
+   "ada_side": 10076,
    "mcap_ada": 47541,
    "pool_basis": "geckoterminal",
    "vol_h24_ada": 32010,
@@ -120,12 +85,12 @@
    "ticker": "BOLT",
    "tracked": true,
    "unit": "14628c260a749e78e69e58acca32d0baa09808d50388c84fa7e1ae470014df10424f4c54",
-   "ada_side": 26584,
-   "mcap_ada": 271612,
+   "ada_side": 27041,
+   "mcap_ada": 282950,
    "holders": 268,
-   "vol_h24_ada": 11219,
+   "vol_h24_ada": 11250,
    "crossed": [
-    "mcap 271612 < 400000"
+    "mcap 282950 < 400000"
    ],
    "kill": {
     "holders_below": 265.0,
@@ -136,7 +101,7 @@
    "ticker": "CLOVE",
    "tracked": true,
    "unit": "c1b89ed48dfc2b82167c1548b88942d367af1e517947c3dd8bdead0b0014df10434c4f56452d33",
-   "ada_side": 25632,
+   "ada_side": 25593,
    "mcap_ada": 254472,
    "holders": 305,
    "vol_h24_ada": 15477,
@@ -150,10 +115,10 @@
    "ticker": "COCK",
    "tracked": true,
    "unit": "49e423161ef818adc475c783571cb479d5f15ad52a01a240eacc0d3b434f434b",
-   "ada_side": 171099,
+   "ada_side": null,
    "mcap_ada": null,
    "holders": 1000,
-   "vol_h24_ada": 4681,
+   "vol_h24_ada": null,
    "crossed": [],
    "kill": {
     "ada_side_below": 150000.0
@@ -176,12 +141,11 @@
    "ticker": "DEXY",
    "tracked": true,
    "unit": "00d6347365cb78d197369eed8b11c9a30e417e6d2f63931376a399070014df1044455859",
-   "ada_side": 4430,
-   "mcap_ada": 9074,
+   "ada_side": null,
+   "mcap_ada": null,
    "holders": 51,
-   "vol_h24_ada": 1135,
+   "vol_h24_ada": null,
    "crossed": [
-    "ada_side 4430 < 13000",
     "holders 51 < 80"
    ],
    "kill": {
@@ -264,7 +228,7 @@
    "ticker": "HOWDY",
    "tracked": true,
    "unit": "3d6cbf58d23200a9371a8ba6c365f6a96663da53709328c3446e93a30014df10484f574459",
-   "ada_side": 10091,
+   "ada_side": 10076,
    "mcap_ada": 47541,
    "holders": 55,
    "vol_h24_ada": 32010,
