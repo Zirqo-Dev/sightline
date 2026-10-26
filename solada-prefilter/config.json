@@ -154,5 +154,17 @@
       15
     ],
     "max_429_failures": 3
+  },
+  "big_moves": {
+    "_note": "SPD-43 big-move detector (big_moves.py). Research rows only: never triggers, never the webhook. Free Koios public tier (5k req/day, 100 req/10s): max_calls per run, utxo_batch hashes per POST (1 KB body limit).",
+    "enabled": true,
+    "min_ada": 5000,
+    "min_pool_pct": 10,
+    "window_h": 24,
+    "keep_h": 72,
+    "max_units": 12,
+    "max_txs_per_unit": 100,
+    "utxo_batch": 10,
+    "max_calls": 80
   }
 }

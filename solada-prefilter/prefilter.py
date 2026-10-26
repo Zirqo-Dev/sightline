@@ -13,6 +13,7 @@ import argparse, json, os, re, sys, time, hashlib, urllib.request, urllib.error
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import flags as flagmod  # noqa: E402  flag-only signals, never triggers
 import valuation as V  # noqa: E402  LP detection, raw-unit valuation, kill dedupe
+import big_moves as BM  # noqa: E402  SPD-43 big-move detector (research rows, never triggers)
 from datetime import datetime, timezone
 
 UA = "sightline-solada-prefilter/1.0"
@@ -827,6 +828,22 @@ def main():
     json.dump(flags_doc, open(fpath, "w"), indent=1)
     print(f"flags: {len(new_flags)} new ({', '.join(sorted({f['kind'] for f in new_flags})) or 'none'}); calls {json.dumps(flag_calls)}")
 
+    # ---- SPD-43 big moves (research rows for Snek; never triggers, never the webhook)
+    big_moves = None
+    if BM.bm_cfg(cfg)["enabled"]:
+        meta = {}
+        for r in results:
+            if r.get("unit") and r["unit"] not in meta:
+                meta[r["unit"]] = {"ticker": r.get("ticker"), "ada_side": r.get("ada_side"), "decimals": r.get("decimals")}
+        try:
+            big_moves, _ = BM.run(http, cfg, meta, args.cache_dir, args.data_dir, args.dry_run, time.time(), lp_pols,
+                                  BM.owner_patterns(os.environ.get("PRIVACY_GUARD_PATTERNS", "")))
+            print(f"big moves: {json.dumps(big_moves)}")
+        except SystemExit:
+            raise
+        except Exception as e:  # big moves must never break the rules screen
+            http._fail("big_moves", type(e).__name__)
+
     # ---- dedupe + webhook
     # pending triggers (webhook failed on an earlier run) are retried first; a newer trigger with the same
     # key, or a newer kill trigger for the same ticker, supersedes the queued one
@@ -873,7 +890,7 @@ def main():
         "passed_k_y": [r["ticker"] for r in passed], "thresholds": {k: v for k, v in th.items() if k != "source"},
         "market_age_min": market_age_min, "ada_usd": ada_usd, "whale": {k: v for k, v in (whale_summary or {}).items()},
         "first_block_hits": fb_hits, "triggers": [{k: v for k, v in t.items() if k not in NOPUB} for t in fresh],
-        "webhook_sent": sent, "flags_new": len(new_flags), "data_failures": http.failures, "api_calls": http.calls, "results": results,
+        "webhook_sent": sent, "flags_new": len(new_flags), "big_moves": big_moves, "data_failures": http.failures, "api_calls": http.calls, "results": results,
     }
     if not args.dry_run:
         json.dump(state, open(state_path, "w"), indent=1, sort_keys=True)

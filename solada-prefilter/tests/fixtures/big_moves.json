@@ -1,0 +1,18 @@
+{
+  "_note": "SPD-43 fixture. whale = 4400 ADA (11% of a 40k pool, pool rule); mid = 3000 + 2500 ADA within 24h (summed); small = 500 ADA (no); old = 30h ago (outside 24h); seller = 6000 ADA out; owner = dropped by owner patterns; enterprise = no-stake key address. Owners are labels; fake addresses are generated at test time. lovelace/qty are test values.",
+  "unit_ticker": "BIGMV",
+  "ada_side": 40000,
+  "decimals": 6,
+  "now": 1793053900,
+  "txs": [
+    {"hash": "aa01", "age_h": 2, "in":  [["whale", 4300000000, 0], ["whale", 100000000, 0]], "out": [["pool", 4398000000, 0], ["whale", 0, 2000000000]]},
+    {"hash": "aa02", "age_h": 5, "in":  [["mid", 3000000000, 0]], "out": [["pool", 2999000000, 0], ["mid", 0, 900000000]]},
+    {"hash": "aa03", "age_h": 6, "in":  [["mid", 2500000000, 0]], "out": [["pool", 2499000000, 0], ["mid", 0, 700000000]]},
+    {"hash": "aa04", "age_h": 3, "in":  [["small", 500000000, 0]], "out": [["pool", 499000000, 0], ["small", 0, 100000000]]},
+    {"hash": "aa05", "age_h": 30, "in": [["old", 9000000000, 0]], "out": [["pool", 8999000000, 0], ["old", 0, 5000000000]]},
+    {"hash": "aa06", "age_h": 1, "in":  [["seller", 0, 3000000000]], "out": [["pool", 0, 0], ["seller", 6000000000, 0]]},
+    {"hash": "aa07", "age_h": 4, "in":  [["owner", 8000000000, 0]], "out": [["pool", 7999000000, 0], ["owner", 0, 4000000000]]},
+    {"hash": "aa08", "age_h": 1, "in":  [["enterprise", 5200000000, 0]], "out": [["pool", 5199000000, 0], ["enterprise", 0, 1000000000]]}
+  ],
+  "expect_tags_for": ["whale", "mid", "seller", "enterprise"]
+}
