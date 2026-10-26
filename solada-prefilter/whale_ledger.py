@@ -26,7 +26,8 @@ import flags as F
 import valuation as V
 
 KOIOS = "https://api.koios.rest/api/v1"
-DEFAULTS = {"enabled": True, "max_txs": 100, "utxo_batch": 10, "max_calls": 60, "keep_rows": 3000,
+BF = "https://cardano-mainnet.blockfrost.io/api/v0"
+DEFAULTS = {"enabled": True, "max_txs": 100, "utxo_batch": 10, "max_calls": 60, "max_bf_calls": 120, "keep_rows": 3000,
             "keep_seen": 20000, "order_min_ada": 10, "min_ada_row": 1.0}
 
 
@@ -216,9 +217,44 @@ def load(path):
 
 
 class KoiosLedger:
-    def __init__(self, http, wc):
-        self.h, self.wc = http, wc
+    """Koios first (free, no key). When a Koios call fails or times out (Http.req -> None) and the
+    BLOCKFROST_PROJECT_ID secret is set, the same data is read from Blockfrost instead (own call budget).
+    No key = no fallback (skipped quietly). The key is only sent as a request header, never printed or stored."""
+
+    def __init__(self, http, wc, bf_key=""):
+        self.h, self.wc, self.bf_key = http, wc, (bf_key or "").strip()
         self.start = http.calls.get("koios", 0)
+        self.bf_start = http.calls.get("blockfrost", 0)
+        self.fallbacks = 0
+
+    def bf_left(self):
+        return self.wc["max_bf_calls"] - (self.h.calls.get("blockfrost", 0) - self.bf_start)
+
+    def bf(self, path):
+        if not self.bf_key or self.bf_left() <= 0:
+            return None
+        return self.h.req("blockfrost", BF + path, headers={"project_id": self.bf_key})
+
+    def _fallback(self):
+        if self.bf_key:
+            self.fallbacks += 1
+            return True
+        return False
+
+    def _bf_utxo(self, x):
+        def amt(a):
+            lov = int(next((v["quantity"] for v in a if v["unit"] == "lovelace"), 0))
+            return lov, {v["unit"]: int(v["quantity"]) for v in a if v["unit"] != "lovelace"}
+        out = {}
+        for s in ("inputs", "outputs"):
+            rows = []
+            for u in x.get(s, []):
+                lov, assets = amt(u.get("amount") or [])
+                ref = f"{u['tx_hash']}#{u['output_index']}" if s == "inputs" else f"{x['hash']}#{u['output_index']}"
+                rows.append({"ref": ref, "addr": u.get("address", ""), "stake": F.addr_info(u.get("address", ""))[0],
+                             "lovelace": lov, "assets": assets})
+            out[s] = rows
+        return out
 
     def left(self):
         return self.wc["max_calls"] - (self.h.calls.get("koios", 0) - self.start)
@@ -231,10 +267,14 @@ class KoiosLedger:
 
     def txs_after(self, stake, height):
         r = self.get(f"/account_txs?_stake_address={stake}&_after_block_height={int(height)}&order=block_height.asc&limit={self.wc['max_txs']}")
+        if r is None and self._fallback():
+            r = self.bf(f"/accounts/{stake}/transactions?order=asc&count={min(100, self.wc['max_txs'])}&from={int(height) + 1}")
         return None if r is None else [(t["tx_hash"], t["block_height"], t["block_time"]) for t in r]
 
     def tip_height(self, stake):
         r = self.get(f"/account_txs?_stake_address={stake}&order=block_height.desc&limit=1")
+        if r is None and self._fallback():
+            r = self.bf(f"/accounts/{stake}/transactions?order=desc&count=1")
         return r[0]["block_height"] if r else None
 
     def utxos(self, hashes):
@@ -243,6 +283,12 @@ class KoiosLedger:
             if self.left() <= 2:
                 break
             r = self.post("/tx_utxos", {"_tx_hashes": hashes[i:i + n]})
+            if r is None and self._fallback():
+                for h in hashes[i:i + n]:
+                    x = self.bf(f"/txs/{h}/utxos")
+                    if x:
+                        out[h] = self._bf_utxo(x)
+                continue
             for tx in r or []:
                 out[tx["tx_hash"]] = {s: [{"ref": f"{u['tx_hash']}#{u['tx_index']}", "addr": (u.get("payment_addr") or {}).get("bech32") or "",
                                            "stake": u.get("stake_addr"), "lovelace": int(u.get("value") or 0),
@@ -252,6 +298,8 @@ class KoiosLedger:
 
     def balances(self, stake):
         info = self.post("/account_info", {"_stake_addresses": [stake]})
+        if info is None and self._fallback():
+            return self._bf_balances(stake)
         if not info:
             return None
         lov = int(info[0].get("total_balance", 0)) - int(info[0].get("rewards_available", 0) or 0)
@@ -259,7 +307,7 @@ class KoiosLedger:
         while self.left() > 0:
             r = self.post(f"/account_assets?offset={off}&limit=1000", {"_stake_addresses": [stake]})
             if r is None:
-                return None
+                return self._bf_balances(stake) if self._fallback() else None
             for a in r:
                 u = a["policy_id"] + a["asset_name"]
                 assets[u] = assets.get(u, 0) + int(a["quantity"])
@@ -268,18 +316,42 @@ class KoiosLedger:
             off += 1000
         return None
 
+    def _bf_balances(self, stake):
+        acct = self.bf(f"/accounts/{stake}")
+        if not acct:
+            return None
+        lov = int(acct.get("controlled_amount", 0)) - int(acct.get("withdrawable_amount", 0) or 0)
+        assets = {}
+        for page in range(1, 40):
+            r = self.bf(f"/accounts/{stake}/addresses/assets?count=100&page={page}")
+            if r is None:
+                return None
+            for a in r:
+                assets[a["unit"]] = assets.get(a["unit"], 0) + int(a["quantity"])
+            if len(r) < 100:
+                return lov, assets
+        return None
+
     def spent(self, refs):
         out = {}
         for i in range(0, len(refs), 10):
             if self.left() <= 0:
                 break
             r = self.post("/utxo_info", {"_utxo_refs": refs[i:i + 10]})
+            if r is None and self._fallback():
+                for ref in refs[i:i + 10]:
+                    h, idx = ref.split("#")
+                    x = self.bf(f"/txs/{h}/utxos")
+                    o = next((u for u in (x or {}).get("outputs", []) if str(u.get("output_index")) == idx), None)
+                    if o is not None:
+                        out[ref] = bool(o.get("consumed_by_tx"))
+                continue
             for u in r or []:
                 out[f"{u['tx_hash']}#{u['tx_index']}"] = bool(u.get("is_spent"))
         return out
 
 
-def run(http, cfg, data_dir, dry_run, now_s, lp_pols):
+def run(http, cfg, data_dir, dry_run, now_s, lp_pols, bf_key=None):
     wc = wl_cfg(cfg)
     stake = ((cfg.get("whale") or {}).get("stake") or "").strip()
     prefix = ((cfg.get("whale") or {}).get("stake_prefix") or "").strip()
@@ -287,7 +359,9 @@ def run(http, cfg, data_dir, dry_run, now_s, lp_pols):
         return {"enabled": False}
     if prefix and not stake.startswith("stake1" + prefix):
         raise SystemExit("whale_ledger: config whale.stake does not match whale.stake_prefix")
-    kl = KoiosLedger(http, wc)
+    if bf_key is None:
+        bf_key = os.environ.get("BLOCKFROST_PROJECT_ID", "")
+    kl = KoiosLedger(http, wc, bf_key)
     path = os.path.join(data_dir, "whale_ledger.json")
     ledger = load(path)
     extra = {"capped": False}
@@ -331,10 +405,13 @@ def run(http, cfg, data_dir, dry_run, now_s, lp_pols):
     ledger["rows"] = ledger.get("rows", [])[-wc["keep_rows"]:]
     ledger.pop("_seen_set", None)
     extra["koios_calls"] = http.calls.get("koios", 0) - kl.start
+    extra["blockfrost_fallbacks"] = kl.fallbacks
+    extra["blockfrost_calls"] = http.calls.get("blockfrost", 0) - kl.bf_start
+    extra["blockfrost_available"] = bool(kl.bf_key)
     doc = public_doc(ledger, tag(stake), now_s, wc, extra)
     doc["_state"] = {k: v for k, v in ledger.items()}  # tx hashes, raw positions, order refs (no addresses)
     F.assert_public(doc)
     if not dry_run:
         json.dump(doc, open(path, "w"), indent=1)
-    return {k: doc.get(k) for k in ("capped", "koios_calls", "ada_balance")} | {"rows": len(doc["rows"]), "open_orders": sum(
+    return {k: doc.get(k) for k in ("capped", "koios_calls", "blockfrost_fallbacks", "blockfrost_calls", "ada_balance")} | {"rows": len(doc["rows"]), "open_orders": sum(
         1 for o in doc["orders"].values() if o["status"] == "open"), "reconcile_ok": (extra.get("reconcile") or {}).get("ok")}
