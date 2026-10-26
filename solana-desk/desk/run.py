@@ -1,7 +1,7 @@
 """Scanner entry point (no AI, paper only). Usage:
     python -m desk.run --mode scan --data-dir PATH
 Mode "scan" (default) only checks leads and logs tasks; it never fills.
-Mode "fill" is refused until config.FROZEN is True (config freeze, end of day 3).
+Mode "fill" is refused until config.FROZEN is True (frozen Oct 26, 2026) AND the fill step exists (FILL_READY).
 Free public APIs only: DexScreener, RugCheck, Jupiter quote (optional free key in JUPITER_API_KEY).
 """
 import argparse, json, os, sys, time, urllib.request, urllib.error
@@ -60,8 +60,12 @@ def quote(get, mint, key, sleep=time.sleep):
                 sleep(RETRY_WAIT_S); continue
             raise
 
+ERR_NAMES = {"dex": "dexscreener", "rug": "rugcheck", "jup": "jupiter"}
+
+FILL_READY = False  # fill step not built yet; flips in the fill-step PR
+
 def mode_allowed(mode):
-    return mode == "scan" or (mode == "fill" and C.FROZEN)
+    return mode == "scan" or (mode == "fill" and C.FROZEN and FILL_READY)
 
 def load_state(d, day):
     p = os.path.join(d, "state.json")
@@ -103,7 +107,8 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None):
         st["eligibility_skips"] += int(stype == "eligibility")
         ledger.task(data_dir, dict(time=int(now), run_id=run_id, agent="scanner", task="scan", mint=mint, book="",
                     result="pass" if stype is None else "skip", skip_type=stype or "", reason=reason or "",
-                    source=src, check_delay_s=round(time.time() - t0, 2), cfg_version=C.CFG_VERSION, seed=seed))
+                    source=src, check_delay_s=round(time.time() - t0, 2), cfg_version=C.CFG_VERSION, seed=seed,
+                    error_src=";".join(sorted(ERR_NAMES[e] for e in errs))))
     st["runs"] += 1; st["slots"].append(run_id)
     st["run_times"].append(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)))
     with open(os.path.join(data_dir, "state.json"), "w") as f: json.dump(st, f, indent=1)
@@ -119,7 +124,7 @@ def main(argv=None):
     a = argparse.ArgumentParser(); a.add_argument("--mode", choices=["scan", "fill"], default="scan")
     a.add_argument("--data-dir", default="desk-data-out"); o = a.parse_args(argv)
     if not mode_allowed(o.mode):
-        print("fill mode refused: config not frozen yet (scan-only days)"); return 2
+        print("fill mode refused: config not frozen or fill step not built yet"); return 2
     if o.mode == "fill":
         print("fill mode not implemented in this runner yet; scanning only")
     h = scan(o.data_dir, key=os.environ.get("JUPITER_API_KEY") or None, mode="scan")

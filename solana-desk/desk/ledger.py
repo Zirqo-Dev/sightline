@@ -1,10 +1,16 @@
 """tasks.csv, trades.csv, health.json, lock file."""
 import csv, json, os, time, fcntl
-TASK_COLS = ["time","run_id","agent","task","mint","book","result","skip_type","reason","source","check_delay_s","cfg_version","seed"]
+TASK_COLS = ["time","run_id","agent","task","mint","book","result","skip_type","reason","source","check_delay_s","cfg_version","seed","error_src"]  # error_src: APIs that failed (dexscreener/rugcheck/jupiter), ";"-joined
 TRADE_COLS = ["time","book","agent","mint","symbol","action","frac","sol","quote_px","impact_pct","fee_sol","haircut_pct","why","pnl","check_delay_s","stale"]
 
 def _append(path, cols, row):
     new = not os.path.exists(path)
+    if not new:  # schema upgrade: older file without the new trailing columns gets its header rewritten
+        with open(path, newline="") as f: rows = list(csv.reader(f))
+        if rows and rows[0] != cols and rows[0] == cols[:len(rows[0])]:
+            with open(path, "w", newline="") as f:
+                w = csv.writer(f); w.writerow(cols)
+                for r in rows[1:]: w.writerow(r + [""] * (len(cols) - len(r)) if r != rows[0] else cols)
     with open(path, "a", newline="") as f:
         w = csv.DictWriter(f, fieldnames=cols)
         if new: w.writeheader()

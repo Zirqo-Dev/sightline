@@ -1,6 +1,6 @@
-"""Desk config (v6.2). Bousky edits; bots never do. Frozen at end of day 3: set FROZEN=True and bump CFG_VERSION."""
-CFG_VERSION = "v1-draft-v6.5"
-FROZEN = False
+"""Desk config (plan v6.5, config v1). Bousky edits; bots never do. Frozen Oct 26, 2026 (end of day 3): any change starts a new book."""
+CFG_VERSION = "v1-v6.5"
+FROZEN = True
 PAPER = True  # always
 
 START_BALANCE_SOL = 10.0      # per book (F, R, S)

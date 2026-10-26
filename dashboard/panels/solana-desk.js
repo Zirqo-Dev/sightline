@@ -44,7 +44,7 @@
     const chips = `<div class="sd-filters" data-sd-filter><button class="pill on" data-f="all">all ${rows.length}</button>${Object.entries(reasons).map(([k, n]) => `<button class="pill" data-f="${S.esc(k)}">${S.esc(k)} ${n}</button>`).join("")}</div>`;
     return `${chips}<div class="sd-sub">run ${S.esc(last)} · ${S.esc(S.when(runAt(last)))}</div><table class="tbl sd-leads"><thead><tr><th>Mint</th><th>Result</th><th>Reason</th><th class="num">Delay s</th><th>Links</th></tr></thead><tbody>${rows.map(r => {
       const k = r.result === "pass" ? "pass" : (r.skip_type || "skip");
-      return `<tr data-k="${S.esc(k)}"><td class="mono" title="${S.esc(r.mint)}">${S.esc(short(r.mint))}</td><td>${S.pill(r.result === "pass" ? "pass" : k, r.result === "pass" ? "call" : (k === "data" ? "kill" : "pass"))}</td><td class="c-meta">${S.esc((r.reason || "").replace(/_/g, " "))}</td><td class="num">${S.esc(r.check_delay_s)}</td><td>${links(r.mint)}</td></tr>`;
+      return `<tr data-k="${S.esc(k)}"><td class="mono" title="${S.esc(r.mint)}">${S.esc(short(r.mint))}</td><td>${S.pill(r.result === "pass" ? "pass" : k, r.result === "pass" ? "call" : (k === "data" ? "kill" : "pass"))}</td><td class="c-meta">${S.esc((r.reason || "").replace(/_/g, " "))}${r.error_src ? ` <span class="muted">(${S.esc(r.error_src.replace(/;/g, ", "))} error)</span>` : ""}</td><td class="num">${S.esc(r.check_delay_s)}</td><td>${links(r.mint)}</td></tr>`;
     }).join("")}</tbody></table>`;
   }
 
@@ -62,7 +62,7 @@
     const pnls = sells.map(t => num(t.pnl)).filter(x => x != null);
     const total = pnls.reduce((a, b) => a + b, 0), wins = pnls.filter(x => x > 0).length;
     if (!trades.length && !(paper && ((paper.open || []).length || (paper.closed || []).length)))
-      return `<p class="muted sd-empty">No paper fills yet. Config freezes Monday; paper fills start Tuesday (plan v6.5). Open positions, closed trades, P&amp;L and win rate show here once <code>trades.csv</code> has rows.</p>`;
+      return `<p class="muted sd-empty">No paper fills yet. Config v1-v6.5 frozen Oct 26; paper fills start once the fill step ships (plan v6.5). Open positions, closed trades, P&amp;L and win rate show here once <code>trades.csv</code> has rows.</p>`;
     return `<div class="cards"><div class="card"><div class="k">Open</div><div class="v">${open.length}</div></div><div class="card"><div class="k">Closed</div><div class="v">${pnls.length}</div></div>
       <div class="card"><div class="k">P&amp;L (SOL)</div><div class="v ${S.pnlClass(total)}">${sol(total)}</div></div><div class="card"><div class="k">Win rate</div><div class="v">${pnls.length ? Math.round(wins / pnls.length * 100) + "%" : "–"}</div></div></div>
       ${open.length ? `<div class="sd-h">Open positions</div><table class="tbl"><thead><tr><th>Token</th><th>Book</th><th class="num">Size SOL</th><th class="num">Entry px</th><th>Links</th></tr></thead><tbody>${open.map(p => `<tr><td><b>${S.esc(p.symbol || short(p.mint))}</b></td><td class="c-meta">${S.esc(p.book)}</td><td class="num">${S.fmt(p.sol, 3)}</td><td class="num">${p.px == null ? "–" : S.esc(p.px)}</td><td>${links(p.mint)}</td></tr>`).join("")}</tbody></table>` : ""}
