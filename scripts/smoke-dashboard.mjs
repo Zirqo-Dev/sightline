@@ -392,7 +392,7 @@ assert(!changed.some(b => (b.json.open || []).some(t => t.ticker === "CATE" || t
 
 /* Desk data is read from the desk-data branch (raw.githubusercontent), main's copy is the fallback. */
 for (const p of ["solada/log.json", "nft/log.json", "solada/pulse.json", "nft/pulse.json", "solada/paper.json",
-  "solada/pumpfun/paper.json", "nft/paper.json", "solada/briefs/2026-10-19.json", "nft/site/intel.json"]) {
+  "solada/pumpfun/paper.json", "nft/paper.json", "solada/briefs/2026-10-19.json", "nft/site/intel.json", "solada/forensics/panel.json"]) {
   assert(S.isDeskData(p), p + " should be read from desk-data");
   assert(S.deskDataUrl(p).startsWith("https://raw.githubusercontent.com/Zirqo-Dev/sightline/desk-data/" + p + "?ts="), p + " desk-data url");
 }
