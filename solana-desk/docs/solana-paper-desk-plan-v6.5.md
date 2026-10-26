@@ -1,4 +1,8 @@
-**SCAN > VERIFY > EXECUTE > EXIT: v6.3, day-1 field fixes applied (looser start)**
+**SCAN > VERIFY > EXECUTE > EXIT: v6.5 (config v1-v6.5, frozen Oct 26, 2026)**
+
+> v6.5 = v6.3 thresholds unchanged, plus the v6.4 (GitHub Actions scanner) and v6.5 (data-failure classification fix) changes in CHANGELOG.md. Renamed from solana-paper-desk-plan-v6.3.md; v6.3 history kept below.
+
+_Original title: SCAN > VERIFY > EXECUTE > EXIT: v6.3, day-1 field fixes applied (looser start)_
 
 > **Reviews closed:** the external reviews are done. From now on, changes come only from Bousky and Grok Bot.
 
@@ -208,7 +212,7 @@ Either way:
 
 Done on Oct 24, 2026 from the box (findings.md, raw responses in raw/). Jupiter lite-api still answers; DexScreener and RugCheck need no key. Results are applied as the v6.3 field fixes above. Thresholds may still be adjusted on days 2-3 on scan pass rates only (never prices), as logged changes; config v1 is frozen at the end of day 3, before any paper fill.
 
-## config.py starting values (v6.3, frozen end of day 3)
+## config.py starting values (v6.5, frozen Oct 26, 2026; values unchanged since v6.3)
 
 | Setting | Value |
 |---|---|

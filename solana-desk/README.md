@@ -6,7 +6,7 @@ recorded in a ledger with a fixed 0.5 SOL paper ticket.
 
 - `desk/` — config, skip rules (`skips.py`), books F/R/S (`books.py`), exits, ledger, report.
 - `tests/` — unittest suite run against redacted fixtures (third-party holder wallets replaced with placeholders).
-- `docs/` — design plan v6.3 (v6.4 changes in CHANGELOG.md).
+- `docs/` — design plan v6.5 (`solana-paper-desk-plan-v6.5.md`; v6.4/v6.5 changes and the Oct 26 config freeze in CHANGELOG.md).
 - `CHANGELOG.md`, `findings.md` — build notes and API findings.
 
 ## How it runs
@@ -18,7 +18,7 @@ script (no AI): `python -m desk.run --mode scan --data-dir PATH`. Runs never ove
 
 - `--mode scan` (default): checks leads with DexScreener, RugCheck and a Jupiter quote,
   logs `tasks.csv`, updates `state.json` and `health.json`. Never fills.
-- `--mode fill`: refused until `config.FROZEN = True` (config freeze at end of day 3).
+- `--mode fill`: allowed since `config.FROZEN = True` (config v1-v6.5 frozen Oct 26, 2026); the fill step itself is still being built.
 
 Runs are idempotent: one scan per 30-min UTC slot, so a duplicate trigger is a no-op.
 `health.json` records each run's actual UTC time (`run_times_utc`), `max_gap_min` and the

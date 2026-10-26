@@ -157,5 +157,19 @@ class Runner(unittest.TestCase):
         with self.assertRaises(urllib.error.HTTPError): run.quote(always, "M", "k", sleep=lambda s: None)
     def test_fill_refused_until_frozen(self):
         from desk import run
-        self.assertFalse(C.FROZEN); self.assertFalse(run.mode_allowed("fill")); self.assertTrue(run.mode_allowed("scan"))
+        self.assertTrue(C.FROZEN); self.assertEqual(C.CFG_VERSION, "v1-v6.5")
+        self.assertFalse(run.FILL_READY); self.assertFalse(run.mode_allowed("fill")); self.assertTrue(run.mode_allowed("scan"))
         self.assertEqual(run.main(["--mode", "fill", "--data-dir", tempfile.mkdtemp()]), 2)
+
+class ErrorSource(unittest.TestCase):
+    def test_header_upgrade_and_error_src(self):
+        import csv, os
+        from desk import ledger
+        d = tempfile.mkdtemp(); p = os.path.join(d, "tasks.csv")
+        old = ledger.TASK_COLS[:-1]
+        with open(p, "w", newline="") as f:
+            w = csv.writer(f); w.writerow(old); w.writerow(["1"] * len(old))
+        ledger.task(d, dict(time=2, result="skip", error_src="rugcheck"))
+        rows = list(csv.DictReader(open(p)))
+        self.assertEqual(list(rows[0].keys()), ledger.TASK_COLS)
+        self.assertEqual(rows[0]["error_src"], ""); self.assertEqual(rows[1]["error_src"], "rugcheck")
