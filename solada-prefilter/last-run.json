@@ -1,11 +1,11 @@
 {
- "at": "2026-10-26T04:08:49Z",
+ "at": "2026-10-26T06:08:41Z",
  "basis": "blockfrost",
  "dry_run": false,
  "baseline": false,
  "launches": 581,
- "new_launches": 1,
- "candidates": 2,
+ "new_launches": 0,
+ "candidates": 1,
  "passed_k_y": [],
  "thresholds": {
   "min_holders": 120,
@@ -15,55 +15,27 @@
   "aa_zero_holder_noise": true,
   "min_ada_side": 25000.0
  },
- "market_age_min": 0.0,
- "ada_usd": 0.201732,
+ "market_age_min": 0.1,
+ "ada_usd": 0.203975,
  "whale": {
   "tag": "w-f3186187",
-  "ada_delta": -252,
-  "moves": [
-   {
-    "asset": "HOWDY",
-    "delta": 5881615908682,
-    "pct": 30.4,
-    "ada_equiv": 465,
-    "value_basis": "ada_leg",
-    "decimals": 6
-   }
-  ]
+  "ada_delta": 2,
+  "moves": []
  },
  "first_block_hits": [],
- "triggers": [
-  {
-   "kind": "whale_move",
-   "name": "$cockwhale",
-   "metrics": {
-    "tag": "w-f3186187",
-    "moves": [
-     {
-      "asset": "HOWDY",
-      "delta": 5881615908682,
-      "pct": 30.4,
-      "ada_equiv": 465,
-      "value_basis": "ada_leg",
-      "decimals": 6
-     }
-    ]
-   }
-  }
- ],
- "webhook_sent": true,
- "flags_new": 10,
+ "triggers": [],
+ "webhook_sent": false,
+ "flags_new": 3,
  "data_failures": {
   "match": 2,
-  "geckoterminal": 10
+  "geckoterminal": 11
  },
  "api_calls": {
   "solada": 2,
-  "geckoterminal": 30,
-  "blockfrost": 43,
-  "dexscreener": 11,
-  "koios": 20,
-  "webhook": 1
+  "geckoterminal": 33,
+  "blockfrost": 41,
+  "dexscreener": 12,
+  "koios": 4
  },
  "results": [
   {
@@ -72,26 +44,11 @@
    "unit": "3d6cbf58d23200a9371a8ba6c365f6a96663da53709328c3446e93a30014df10484f574459",
    "graduated": true,
    "native_holders": 51,
-   "ada_side": 9022,
-   "mcap_ada": 37673,
+   "ada_side": 9369,
+   "mcap_ada": 41155,
    "pool_basis": "geckoterminal",
-   "vol_h24_ada": 31093,
-   "price_ada": 3.767272607e-05,
-   "decimals": 6,
-   "verdict": "fail"
-  },
-  {
-   "id": "draft-evil",
-   "ticker": "EVIL",
-   "unit": "33f805e65f656f2f7e050cdd1eb2a31db6df0e6b4da3af2e1370c3f80014df104556494c",
-   "graduated": false,
-   "native_holders": 14,
-   "curve_pct": 15.4,
-   "ada_side": 1598,
-   "mcap_ada": 7033,
-   "pool_basis": "solada-curve",
-   "vol_h24_ada": null,
-   "price_ada": 7.033035732372e-06,
+   "vol_h24_ada": 31006,
+   "price_ada": 4.115473301e-05,
    "decimals": 6,
    "verdict": "fail"
   },
@@ -99,10 +56,10 @@
    "ticker": "BEAST",
    "tracked": true,
    "unit": "506e67a61005e19b4bee1b9f5ec33bbb0a8fba14e30edad856c67a500014df104245415354",
-   "ada_side": 7131,
-   "mcap_ada": 24891,
-   "holders": 62,
-   "vol_h24_ada": 1310,
+   "ada_side": 7116,
+   "mcap_ada": 23668,
+   "holders": 61,
+   "vol_h24_ada": 1152,
    "crossed": [],
    "kill": {
     "ada_side_below": 6000.0,
@@ -115,10 +72,10 @@
    "unit": "8d249692cefbe5d47c5196598b9780d26a2a60a20c2499e9e27e77000014df10424554",
    "ada_side": null,
    "mcap_ada": null,
-   "holders": 25,
+   "holders": 24,
    "vol_h24_ada": null,
    "crossed": [
-    "holders 25 < 40"
+    "holders 24 < 40"
    ],
    "kill": {
     "holders_below": 40.0
@@ -128,12 +85,12 @@
    "ticker": "BOLT",
    "tracked": true,
    "unit": "14628c260a749e78e69e58acca32d0baa09808d50388c84fa7e1ae470014df10424f4c54",
-   "ada_side": 27443,
-   "mcap_ada": 293199,
-   "holders": 270,
-   "vol_h24_ada": 7753,
+   "ada_side": 27176,
+   "mcap_ada": 286009,
+   "holders": 269,
+   "vol_h24_ada": 11471,
    "crossed": [
-    "mcap 293199 < 400000"
+    "mcap 286009 < 400000"
    ],
    "kill": {
     "holders_below": 265.0,
@@ -144,10 +101,10 @@
    "ticker": "CLOVE",
    "tracked": true,
    "unit": "c1b89ed48dfc2b82167c1548b88942d367af1e517947c3dd8bdead0b0014df10434c4f56452d33",
-   "ada_side": 25973,
+   "ada_side": 26357,
    "mcap_ada": 263409,
    "holders": 305,
-   "vol_h24_ada": 16841,
+   "vol_h24_ada": 15892,
    "crossed": [],
    "kill": {
     "holders_below": 125.0,
@@ -197,6 +154,19 @@
    }
   },
   {
+   "ticker": "EVIL",
+   "tracked": true,
+   "unit": "33f805e65f656f2f7e050cdd1eb2a31db6df0e6b4da3af2e1370c3f80014df104556494c",
+   "ada_side": null,
+   "mcap_ada": null,
+   "holders": 15,
+   "vol_h24_ada": null,
+   "crossed": [],
+   "kill": {
+    "holders_below": 15.0
+   }
+  },
+  {
    "ticker": "FEED",
    "tracked": true,
    "unit": "00e049b5a595740efcf34e90c4a209705f75c41d349c7e1a5a9cd5af0014df1046454544",
@@ -229,12 +199,12 @@
    "ticker": "HERO",
    "tracked": true,
    "unit": "47478467b3af325266cb4da6e92bdf522217e97d85b8d8d864b573cf0014df104845524f",
-   "ada_side": 3143,
+   "ada_side": 3195,
    "mcap_ada": 4794,
    "holders": 28,
    "vol_h24_ada": 321,
    "crossed": [
-    "ada_side 3143 < 4000"
+    "ada_side 3195 < 4000"
    ],
    "kill": {
     "ada_side_below": 4000.0
@@ -258,10 +228,10 @@
    "ticker": "HOWDY",
    "tracked": true,
    "unit": "3d6cbf58d23200a9371a8ba6c365f6a96663da53709328c3446e93a30014df10484f574459",
-   "ada_side": 9022,
-   "mcap_ada": 37673,
+   "ada_side": 9369,
+   "mcap_ada": 41155,
    "holders": 53,
-   "vol_h24_ada": 31093,
+   "vol_h24_ada": 31006,
    "crossed": [],
    "kill": {
     "ada_side_below": 7000.0,
@@ -290,7 +260,7 @@
    "unit": "971236b54a245b8850cd8a7ff01a4fa1ac017ab8e53096531b37c1980014df10534552",
    "ada_side": null,
    "mcap_ada": null,
-   "holders": 89,
+   "holders": 88,
    "vol_h24_ada": null,
    "crossed": [],
    "kill": {
@@ -302,7 +272,7 @@
    "ticker": "SHARKY",
    "tracked": true,
    "unit": "a9c3b13c7bde8b2ca30699df632cc3cee103bf8d60b5aa3d575d910d0014df10534841524b59",
-   "ada_side": 8239,
+   "ada_side": 8377,
    "mcap_ada": 31705,
    "holders": 56,
    "vol_h24_ada": 9276,
@@ -317,7 +287,7 @@
    "unit": "e7c77b2784e52949b3f95f8f9f2d1668dd47d7ed56491eab588bb730534f4c414441",
    "ada_side": null,
    "mcap_ada": null,
-   "holders": 489,
+   "holders": 490,
    "vol_h24_ada": null,
    "crossed": [],
    "kill": {
@@ -330,7 +300,7 @@
    "unit": "3f5a1f7a3ba788d40971ad05ecabb536c8bc8d766bcc98acd2583b0b0014df1056414d50",
    "ada_side": null,
    "mcap_ada": null,
-   "holders": 56,
+   "holders": 55,
    "vol_h24_ada": null,
    "crossed": [],
    "kill": {
