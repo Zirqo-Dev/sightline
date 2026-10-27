@@ -9,6 +9,9 @@ name: Solada prefilter
 # Flag-only cabal/whale signals go to desk-data:solada-prefilter/flags.json; their
 # private working data (full stake keys, sniper positions) rides in the same Actions
 # cache as the whale snapshot (flags-cache.json) and is never committed.
+# dev_checks.json is phase 1 (sells, serial counts, drawdown). It has its own short
+# budget before the webhook. whale_ledger then takes the first slice of the research
+# budget so big_moves cannot use the whole 240s.
 
 on:
   workflow_dispatch:

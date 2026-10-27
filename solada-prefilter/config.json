@@ -175,8 +175,9 @@
     "max_calls": 80
   },
   "whale_ledger": {
-    "_note": "SPD-44 founder whale ledger (whale_ledger.py). Research only, never triggers or the webhook. Free Koios public tier: max_calls per run, utxo_batch hashes per POST, max_txs per run (backlog resumes next run).",
+    "_note": "SPD-44 founder whale ledger (whale_ledger.py). Research only, never triggers or the webhook. Free Koios public tier: max_calls per run, utxo_batch hashes per POST, max_txs per run (backlog resumes next run). budget_s is the slice it runs first inside the shared research deadline, so big_moves cannot exhaust that deadline before the ledger (PR #31).",
     "enabled": true,
+    "budget_s": 90,
     "max_txs": 100,
     "utxo_batch": 13,
     "max_calls": 60,
@@ -185,6 +186,28 @@
     "keep_seen": 20000,
     "order_min_ada": 10,
     "min_ada_row": 1.0
+  },
+  "dev_checks": {
+    "_note": "Phase 1 dev checks (dev_checks.py). Own budget_s and max_calls, capped at run start + 600s, run before the webhook, separate from research_budget_s. Koios primary, Blockfrost fallback via the existing BLOCKFROST_PROJECT_ID. A Koios 429 stops Koios here and pauses it for ~60s, then Koios resumes; the breaker is not tripped. A new dev sell (unseen sell tx, changed_since_last) on a tracked token may add one dev_sell trigger; unchanged state does not re-fire. Rows are keyed by policy + asset name. min_sell_ada is a dust floor. Curve reserve stays in flags.exclude_tags and is left out of holder and seller logic. dev_buy_ada, dev_locked_pct, unlock_date and LP pulls are phase 2 (the three fields are always null).",
+    "enabled": true,
+    "budget_s": 45,
+    "max_calls": 36,
+    "max_bf_calls": 50,
+    "max_txs_per_unit": 25,
+    "max_pages_per_unit": 2,
+    "utxo_batch": 13,
+    "max_launches": 8,
+    "max_prior": 3,
+    "rug_bag_pct": 80,
+    "late_min_minutes": 30,
+    "rug_min_other_holders": 1,
+    "min_sell_ada": 25.0,
+    "inactive_h": 24,
+    "serial_3h_h": 3,
+    "serial_7d_h": 168,
+    "serial_caution_3h": 2,
+    "serial_caution_7d": 3,
+    "drawdown_caution_pct": 80
   },
   "research_budget_s": 240
 }

@@ -29,7 +29,7 @@ import valuation as V
 KOIOS = "https://api.koios.rest/api/v1"
 BF = "https://cardano-mainnet.blockfrost.io/api/v0"
 DEFAULTS = {"enabled": True, "max_txs": 100, "utxo_batch": 10, "max_calls": 60, "max_bf_calls": 120, "keep_rows": 3000,
-            "keep_seen": 20000, "order_min_ada": 10, "min_ada_row": 1.0}
+            "keep_seen": 20000, "order_min_ada": 10, "min_ada_row": 1.0, "budget_s": 90}
 
 
 def wl_cfg(cfg=None):
