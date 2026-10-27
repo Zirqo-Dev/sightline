@@ -387,6 +387,8 @@ class KoiosLedger:
         self.start = http.calls.get("koios", 0)
         self.bf_start = http.calls.get("blockfrost", 0)
         self.fallbacks = 0
+        self.baseline_mode = False  # tip/balance seed: Blockfrost fallback ignores the shared deadline and a tripped Koios
+        self.last_read = None  # (provider, status) of the read that just failed; never a URL, address, or key
 
     def bf_left(self):
         return self.wc["max_bf_calls"] - (self.h.calls.get("blockfrost", 0) - self.bf_start)
@@ -394,7 +396,27 @@ class KoiosLedger:
     def bf(self, path):
         if not self.bf_key or self.bf_left() <= 0:
             return None
-        return self.h.req("blockfrost", BF + path, headers={"project_id": self.bf_key})
+        prev = self.h.allow_blocked
+        # The research deadline closes koios and blockfrost together, so a fallback call is skipped
+        # with no HTTP status. Baseline seed reads still try Blockfrost; Koios keeps its own breaker.
+        self.h.allow_blocked = prev or self.baseline_mode
+        try:
+            return self.h.req("blockfrost", BF + path, headers={"project_id": self.bf_key})
+        finally:
+            self.h.allow_blocked = prev
+
+    def _note(self, provider):
+        info = (getattr(self.h, "last_fail", {}) or {}).get(provider) or {}
+        status = info.get("status")
+        if status is None and provider in self.h.tripped:
+            status = "skipped"
+        elif status is None and self.h.blocked(provider):
+            status = "deadline"
+        self.last_read = (provider, status)
+
+    def baseline_failure(self, read):
+        provider, status = self.last_read or ("koios", None)
+        return {"error": "baseline failed", "failed_read": read, "provider": provider, "status": status}
 
     def _fallback(self):
         if self.bf_key:
@@ -440,8 +462,14 @@ class KoiosLedger:
 
     def tip_height(self, stake):
         r = self.get(f"/account_txs?_stake_address={stake}&order=block_height.desc&limit=1")
-        if r is None and self._fallback():
-            r = self.bf(f"/accounts/{stake}/transactions?order=desc&count=1")
+        if r is None:
+            self._note("koios")
+            if self._fallback():
+                r = self.bf(f"/accounts/{stake}/transactions?order=desc&count=1")
+                if r is None:
+                    self._note("blockfrost")
+        if r:
+            self.last_read = None
         return r[0]["block_height"] if r else None
 
     def utxos(self, hashes):
@@ -461,24 +489,36 @@ class KoiosLedger:
             out.update(got)
         return out
 
+    def _bf_balance_result(self, stake):
+        """Full Blockfrost balance, or None. Never merged with a partial Koios page (that would double quantities)."""
+        bal = self._bf_balances(stake)
+        if bal is None:
+            self._note("blockfrost")
+        return bal
+
     def balances(self, stake):
         info = self.post("/account_info", {"_stake_addresses": [stake]})
         if info is None and self._fallback():
-            return self._bf_balances(stake)
+            return self._bf_balance_result(stake)
         if not info:
+            self._note("koios")
             return None
         lov = int(info[0].get("total_balance", 0)) - int(info[0].get("rewards_available", 0) or 0)
-        assets, off = {}, 0
+        assets, off = {}, 0  # local to this call: a retried baseline must not add a second snapshot on top
         while self.left() > 0:
             r = self.post(f"/account_assets?offset={off}&limit=1000", {"_stake_addresses": [stake]})
             if r is None:
-                return self._bf_balances(stake) if self._fallback() else None
+                if self._fallback():
+                    return self._bf_balance_result(stake)  # discard the partial Koios page
+                self._note("koios")
+                return None
             for a in r:
                 u = a["policy_id"] + a["asset_name"]
                 assets[u] = assets.get(u, 0) + int(a["quantity"])
             if len(r) < 1000:
                 return lov, assets
             off += 1000
+        self._note("koios")
         return None
 
     def _bf_balances(self, stake):
@@ -517,6 +557,23 @@ class KoiosLedger:
         return out
 
 
+def _baseline_snapshot(kl, stake):
+    """One tip + balance + confirm-tip pass. Nothing is seeded here, so a retry cannot add the same
+    balances (or the tip tx, which is already inside them) a second time."""
+    tip = kl.tip_height(stake)
+    if tip is None:
+        return None, kl.baseline_failure("tip")
+    bal = kl.balances(stake)
+    if bal is None:
+        return None, kl.baseline_failure("balances")
+    tip2 = kl.tip_height(stake)
+    if tip2 is None:
+        return None, kl.baseline_failure("tip")
+    if tip2 != tip:  # M3: a tx landed between the reads; do not retry into an ambiguous seed
+        return None, {"error": "baseline retry: account tip moved during baseline"}
+    return (tip, bal), None
+
+
 def run(http, cfg, data_dir, dry_run, now_s, lp_pols, bf_key=None, deadline=None, cache_dir=None, owner_env=None):
     """cache_dir: private Actions cache dir; the ledger state (tx hashes, order refs, raw positions) lives there and is
     never committed. owner_env: PRIVACY_GUARD_PATTERNS text; counterparties matching it are never tagged, and with no
@@ -547,20 +604,25 @@ def run(http, cfg, data_dir, dry_run, now_s, lp_pols, bf_key=None, deadline=None
         # the baseline balances, so never apply it again (the 8:07 PM run's tip tx would otherwise double-count)
         ledger["baseline_height"] = ledger.get("height") if not ledger.get("rows") and not ledger.get("seen") else 0
     if ledger is None:  # baseline: seed balances, start applying txs after the current account tip
-        tip = kl.tip_height(stake)
-        bal = kl.balances(stake) if tip is not None else None
-        tip2 = kl.tip_height(stake) if bal is not None else None
-        if tip is None or bal is None or tip2 is None:
-            return {"error": "baseline failed"}
-        if tip2 != tip:  # M3: a tx landed between the tip and balance reads; balances are ambiguous -> retry next run
-            return {"error": "baseline retry: account tip moved during baseline"}
-        seed = kl.txs_after(stake, tip - 1) or []
-        ledger = {"height": tip, "baseline_at": iso(now_s), "baseline_height": tip, "lovelace": bal[0],
-                  "positions_raw": dict(bal[1]), "seen": {h: hg for h, hg, _ in seed if hg <= tip}, "rows": [], "orders": {},
-                  "token_names": {}}
-        for u in bal[1]:
-            token_key(u, ledger["token_names"])
-        extra["baseline"] = True
+        # One retry of the tip/balance reads. Blockfrost still runs if Koios is tripped or the shared
+        # research deadline has already closed both providers. A failed pass seeds nothing.
+        kl.baseline_mode = True
+        try:
+            snap, err = _baseline_snapshot(kl, stake)
+            if err and err.get("error") == "baseline failed":
+                snap, err = _baseline_snapshot(kl, stake)
+            if err:
+                return err
+            tip, bal = snap
+            seed = kl.txs_after(stake, tip - 1) or []
+            ledger = {"height": tip, "baseline_at": iso(now_s), "baseline_height": tip, "lovelace": bal[0],
+                      "positions_raw": dict(bal[1]), "seen": {h: hg for h, hg, _ in seed if hg <= tip}, "rows": [],
+                      "orders": {}, "token_names": {}}
+            for u in bal[1]:
+                token_key(u, ledger["token_names"])
+            extra["baseline"] = True
+        finally:
+            kl.baseline_mode = False
     else:
         txs = kl.txs_after(stake, ledger["height"] - 1) if not late() else None  # overlap one block; dedupe by hash
         if txs is None:
