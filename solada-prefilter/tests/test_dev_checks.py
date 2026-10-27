@@ -167,9 +167,13 @@ class TagsAndRules(unittest.TestCase):
         self.assertEqual(DC.risk_of(0, False, 0, 1, 1, 0, True, True, d), "caution")
         self.assertEqual(DC.risk_of(0, False, 0, 1, 1, 10, False, True, d), "low")
         self.assertIsNone(DC.risk_of(0, None, 0, 1, 1, 10, False, False, d))
-        self.assertEqual(DC.ath_drawdown({"ath_mcap": 1000}, 400), (1000, 60.0))
-        self.assertEqual(DC.ath_drawdown({"ath_mcap": 1000}, 1200), (1200, 0.0))
+        self.assertEqual(DC.ath_drawdown({"ath_mcap": 1000}, 400), (1000, 60.0, None))
+        self.assertEqual(DC.ath_drawdown({"ath_mcap": 1000}, 1200), (1200, 0.0, None))
         self.assertIsNone(DC.ath_drawdown({"ath_mcap": 1000}, None)[1])
+        self.assertEqual(DC.ath_drawdown({"ath_mcap": 1_000_000, "mcap_basis": "geckoterminal"}, 300_000, "solada-coins"),
+                         (300_000, None, "solada-coins"))
+        self.assertEqual(DC.ath_drawdown({"ath_mcap": 300_000, "mcap_basis": "solada-coins"}, 200_000, "solada-coins"),
+                         (300_000, 33.3, "solada-coins"))
         now = FX["now_s"]
         self.assertTrue(DC.inactive_of(now - 25 * 3600, True, 500, now, None, 24))
         self.assertFalse(DC.inactive_of(now - 3600, True, 0, now, None, 24))
@@ -1255,6 +1259,634 @@ class _Resp:
 def KT_tx_info(h):
     import koios_tx as KT
     return KT.tx_info(P.Http({}), [h], 10)[h]
+
+
+class BoardAndFallback(unittest.TestCase):
+    """solada.fun /api/launches and /api/market 404 (runs 40518056969 and 40537730961). /api/coins is the board."""
+
+    def _coin(self, name, curve_ada=8000.4, graduated=False):
+        u = unit(name)
+        curve = {"state": "graduated" if graduated else "open", "progressBps": 10000 if graduated else 4200,
+                 "curveAda": curve_ada, "curveAddress": addr("curve"),
+                 "reserves": {"supply": "1000000000000000"},
+                 "pool": {"dex": "minswap", "lpUnit": "ab" * 40} if graduated else None}
+        return u, {"id": "draft-" + name.lower(), "ticker": name, "kind": "curve", "status": "live",
+                   "policyId": u[:56], "assetName": u[56:], "createdAtMs": 1_700_000_000_000,
+                   "launcherAddress": addr("dev"), "hidden": False,
+                   "priceAda": 0.0003, "marketCapAda": 300000.2, "volume24hAda": 1200.4, "holders": 40,
+                   "curve": curve}
+
+    def test_legacy_list_is_used_and_coins_is_not_fetched(self):
+        calls = []
+
+        class H:
+            def req(self, src, url, method="GET", body=None, headers=None, quiet404=True):
+                calls.append(url)
+                if url.endswith("/launches"):
+                    return [{"id": "draft-x", "ticker": "X", "policyId": "ab" * 28, "assetName": "01"}]
+                if url.endswith("/api/market"):
+                    return {"quotes": {"draft-x": {"holders": 3}}, "adaUsdMicro": 210000, "at": 5}
+                raise AssertionError("unexpected " + url.rsplit("/", 1)[-1])
+
+        rows, market, src = P.fetch_solada(H())
+        self.assertEqual(src, "launches")
+        self.assertEqual([r["ticker"] for r in rows], ["X"])
+        self.assertEqual(market["quotes"]["draft-x"]["holders"], 3)
+        self.assertFalse(any(u.endswith("/coins") for u in calls))
+
+    def test_404_launches_reads_coins_and_drops_curve_addresses(self):
+        u, coin = self._coin("BET")
+        calls = []
+
+        class H:
+            def req(self, src, url, method="GET", body=None, headers=None, quiet404=True):
+                calls.append(url)
+                if url.endswith("/launches") or url.endswith("/api/market"):
+                    return None
+                if url.endswith("/coins"):
+                    return {"coins": [coin, {"id": "nope", "hidden": True, "ticker": "HIDE"}],
+                            "adaUsd": 0.21, "atMs": 1_700_000_100_000, "kingId": "draft-bet"}
+                raise AssertionError("unexpected " + url.rsplit("/", 1)[-1])
+
+        rows, market, src = P.fetch_solada(H())
+        self.assertEqual(src, "coins")
+        self.assertEqual(len(rows), 1)
+        row = rows[0]
+        self.assertEqual(row["curve"]["realLovelace"], int(round(8000.4 * 1e6)))
+        self.assertFalse(row["curve"]["graduated"])
+        self.assertIsNone(row["pool"])
+        self.assertNotIn("curveAddress", row)
+        self.assertNotIn("curveAddress", json.dumps(row["curve"]))
+        self.assertEqual(row["volume24hAda"], 1200.4)
+        self.assertEqual(market["quotes"][row["id"]]["holders"], 40)
+        self.assertEqual(market["adaUsdMicro"], 210000)
+        self.assertEqual(market["at"], 1_700_000_100_000)
+        self.assertEqual([c.rsplit("/", 1)[-1] for c in calls], ["launches", "coins"])
+        grad_u, grad = self._coin("BEAST", graduated=True)
+        mapped = P.coin_to_launch(grad)
+        self.assertTrue(mapped["curve"]["graduated"])
+        self.assertEqual(mapped["pool"], {"dex": "minswap"})
+        self.assertNotIn("lpUnit", json.dumps(mapped))
+        self.assertNotIn("curveAddress", json.dumps(mapped["curve"]))
+
+    def test_main_uses_curve_depth_when_gecko_has_no_pool(self):
+        u, coin = self._coin("BOLT")
+        tracked = {"BOLT": {"kill": {"holders_below": 10}, "text": "holders under 10", "source": "test"}}
+
+        def fake(self_, src, url, method="GET", body=None, headers=None, quiet404=True):
+            self_.calls[src] = self_.calls.get(src, 0) + 1
+            if url.endswith("/launches") or url.endswith("/api/market"):
+                return None
+            if url.endswith("/coins"):
+                return {"coins": [coin], "adaUsd": 0.21, "atMs": 1_700_000_100_000}
+            return None
+
+        with tempfile.TemporaryDirectory() as d:
+            fresh_state(d)
+            run = run_main(d, fake, kill_patches(tracked, None, holders=(40, False)))
+        F.assert_public(run)
+        row = next(r for r in run["results"] if r.get("tracked") and r.get("ticker") == "BOLT")
+        self.assertEqual(row["unit"], u)
+        self.assertEqual(row["ada_side"], 8000)
+        self.assertEqual(row["vol_h24_ada"], 1200)
+        self.assertAlmostEqual(row["price_ada"], 0.0003)
+        self.assertEqual(row["mcap_ada"], 300000)
+        self.assertEqual(run["launches"], 1)
+        self.assertAlmostEqual(run["ada_usd"], 0.21)
+        self.assertNotIn("match", run["data_failures"])
+        self.assertNotIn(addr("dev"), json.dumps(run))
+
+    def test_solada_platform_market_fills_depth_when_gecko_404s(self):
+        u = unit("SOLADA")
+        tracked = {"SOLADA": {"kill": {"holders_below": 10}, "text": "holders under 10",
+                              "asset_id": u, "source": "test"}}
+
+        def fake(self_, src, url, method="GET", body=None, headers=None, quiet404=True):
+            self_.calls[src] = self_.calls.get(src, 0) + 1
+            if url.endswith("/launches"):
+                return None
+            if url.endswith("/coins"):
+                return {"coins": [], "adaUsd": 0.2, "atMs": 1}
+            if url.endswith("/solada/market"):
+                return {"liquidityAda": 212082.2, "priceAda": 0.00168, "marketCapAda": 1685530.2,
+                        "readAtMs": 1, "stale": False}
+            return None
+
+        with tempfile.TemporaryDirectory() as d:
+            fresh_state(d)
+            run = run_main(d, fake, kill_patches(tracked, None, holders=(484, False)))
+        F.assert_public(run)
+        row = next(r for r in run["results"] if r.get("ticker") == "SOLADA")
+        self.assertEqual(row["ada_side"], 212082)
+        self.assertAlmostEqual(row["price_ada"], 0.00168)
+        self.assertEqual(row["mcap_ada"], 1685530)
+        self.assertIsNone(row["vol_h24_ada"])  # /api/solada/market has no 24h volume
+        self.assertNotIn("match", run["data_failures"])
+
+    def test_empty_board_uses_cached_units_and_writes_tags_only(self):
+        cu, ru, books, launches, tracked = world()
+        with tempfile.TemporaryDirectory() as d:
+            _, _, doc, _ = run_dc(True, books, launches, tracked[:1], d)
+            self.assertTrue(doc["entries"])
+            # drop the public file so the only source is the private cache, and drop the board
+            os.remove(os.path.join(d, "data", "dev_checks.json"))
+            http = P.Http({})
+            seen = []
+            with mock.patch.object(P.Http, "req", fake_req(True, books, seen)):
+                summary, triggers = DC.run(
+                    http, DC_CFG, [{"ticker": "OTHER", "unit": unit("OTHER"), "launch": {}}], [],
+                    {stake("dev")[6:16]: "repeat_launcher"}, os.path.join(d, "data"), os.path.join(d, "cache"),
+                    False, FX["now_s"], bf_key="", owner_env=OWNER,
+                    top10=[{"rank": 1, "ticker": "ZEBRA", "policy_short": "ee" * 5}])
+            self.assertEqual(summary.get("fallback"), "cache")
+            self.assertEqual(triggers, [])
+            doc2 = json.load(open(os.path.join(d, "data", "dev_checks.json")))
+            F.assert_public(doc2)
+            names = [e["ticker"] for e in doc2["entries"]]
+            self.assertIn("CLEAN", names)
+            self.assertNotIn("ZEBRA", names)
+            tag = doc2["entries"][0]["dev_tag"]
+            self.assertTrue(tag and len(tag) <= 12)
+            text = json.dumps(doc2)
+            self.assertNotIn(stake("dev"), text)
+            self.assertNotIn(addr("dev"), text)
+            self.assertIsNone(doc2["entries"][0]["serial_3h"])
+
+    def test_lost_cache_rebaselines_from_the_previous_file_without_firing(self):
+        cu, ru, books, launches, tracked = world()
+        with tempfile.TemporaryDirectory() as d:
+            _, t1, doc, _ = run_dc(True, books, launches, tracked, d)
+            self.assertEqual(t1, [])
+            sold = next(e["dev_sold_ada"] for e in doc["entries"] if e["ticker"] == "RUG")
+            self.assertGreater(sold, 0)
+            os.remove(os.path.join(d, "cache", "dev-checks-cache.json"))
+            # the fixture mint has no inputs; a lost cache has to recover the dev from the mint tx
+            books = copy.deepcopy(books)
+            for txs in books.values():
+                for tx in txs:
+                    if not tx["inputs"]:
+                        tx["inputs"] = [utxo("dev", 5_000_000, {}, "fund#0")]
+            http = P.Http({})
+            seen = []
+            with mock.patch.object(P.Http, "req", fake_req(True, books, seen)):
+                summary, triggers = DC.run(
+                    http, DC_CFG, [], [], {}, os.path.join(d, "data"), os.path.join(d, "cache"),
+                    False, FX["now_s"], bf_key="", owner_env=OWNER)
+            self.assertEqual(summary.get("fallback"), "previous")
+            self.assertEqual(triggers, [])
+            doc2 = json.load(open(os.path.join(d, "data", "dev_checks.json")))
+            F.assert_public(doc2)
+            rug = next(e for e in doc2["entries"] if e["ticker"] == "RUG")
+            self.assertFalse(rug["changed_since_last"])
+            self.assertEqual(rug["dev_sold_ada"], sold)
+            self.assertTrue(rug["dev_tag"] and len(rug["dev_tag"]) <= 12)
+            text = json.dumps(doc2)
+            self.assertNotIn(stake("dev"), text)
+            self.assertNotIn(addr("dev"), text)
+
+    def test_no_cache_uses_snek_top10_and_does_not_fire(self):
+        cu, ru, books, launches, tracked = world()
+        books = copy.deepcopy(books)
+        for txs in books.values():
+            for tx in txs:
+                if not tx["inputs"]:
+                    tx["inputs"] = [utxo("dev", 5_000_000, {}, "fund#0")]
+        top = [{"rank": 2, "ticker": "RUG", "policy_short": ru[:10], "mcap_ada": 100},
+               {"rank": 1, "ticker": "NOPE", "policy_short": "ff" * 5, "mcap_ada": 1}]
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "cache"))
+            http = P.Http({})
+            seen = []
+            with mock.patch.object(P.Http, "req", fake_req(True, books, seen)):
+                summary, triggers = DC.run(
+                    http, DC_CFG, [{"ticker": "OTHER", "unit": unit("OTHER"), "launch": {}}], [],
+                    {}, os.path.join(d, "data"), os.path.join(d, "cache"),
+                    False, FX["now_s"], bf_key="", owner_env=OWNER,
+                    top10=top, units_by_ticker={"RUG": ru, "NOPE": "ab" * 28 + "cc"})
+            self.assertEqual(summary.get("fallback"), "top10")
+            self.assertEqual(triggers, [])
+            self.assertTrue(summary["wrote"])
+            doc = json.load(open(os.path.join(d, "data", "dev_checks.json")))
+            F.assert_public(doc)
+            self.assertEqual([e["ticker"] for e in doc["entries"]], ["RUG"])
+            self.assertFalse(doc["entries"][0]["changed_since_last"])
+            tag = doc["entries"][0]["dev_tag"]
+            self.assertTrue(tag and tag.startswith("w-") and len(tag) <= 12)
+            text = json.dumps(doc)
+            self.assertNotIn(stake("dev"), text)
+            self.assertNotIn(addr("dev"), text)
+
+    def test_top10_from_log_history_when_the_current_list_is_missing(self):
+        rows = DC.cardano_top10({"history": [{}, {"cardano_top10": [{"ticker": "BOLT", "rank": 1}]}]})
+        self.assertEqual(rows[0]["ticker"], "BOLT")
+        self.assertEqual(DC.cardano_top10({"cardano_top10": [{"ticker": "NOW"}]}), [{"ticker": "NOW"}])
+
+
+class ReviewFixes(unittest.TestCase):
+    """PR #35 review. One regression per fix, plus the six reverts the review found uncaught."""
+
+    def test_odd_coin_fields_are_coerced_and_one_bad_row_is_skipped(self):
+        odd = {"id": "g", "ticker": 101, "holders": "12",
+               "curve": {"state": "graduated", "progressBps": "50.5", "pool": None}}
+        row = P.coin_to_launch(odd)
+        self.assertEqual(row["ticker"], "101")
+        self.assertEqual(row["holders"], 12)
+        self.assertEqual(row["curve"]["progressBps"], 50.5)
+        self.assertEqual(row["pool"], {"dex": "graduated"})
+
+        def boom(c, _real=P.coin_to_launch):
+            if isinstance(c, dict) and c.get("id") == "boom":
+                raise RuntimeError("odd")
+            return _real(c)
+
+        good = {"id": "ok", "ticker": "BOLT", "holders": 3}
+        with mock.patch.object(P, "coin_to_launch", boom):
+            rows = P.launches_from_payload({"coins": [good, {"id": "boom", "ticker": "BOOM"}, "nope", odd]})
+        self.assertEqual([r["ticker"] for r in rows], ["BOLT", "101"])
+
+    def test_partial_coins_body_does_not_crash_the_run(self):
+        _, good = self._coin("BOLT")
+        odd = copy.deepcopy(good)
+        odd["id"] = "draft-odd"
+        odd["holders"] = "15"
+        odd["curve"] = {"state": "graduated", "progressBps": "50.5", "pool": None}
+        num = copy.deepcopy(good)
+        num["id"] = "draft-num"
+        num["ticker"] = 101
+        num["holders"] = 7
+
+        def fake(self_, src, url, method="GET", body=None, headers=None, quiet404=True):
+            self_.calls[src] = self_.calls.get(src, 0) + 1
+            if url.endswith("/launches"):
+                return None
+            if url.endswith("/coins"):
+                return {"coins": [good, odd, num, {"id": "boom", "ticker": "BOOM"}, "nope"],
+                        "adaUsd": 0.2, "atMs": 1}
+            return None
+
+        def boom(c, _real=P.coin_to_launch):
+            if isinstance(c, dict) and c.get("id") == "boom":
+                raise RuntimeError("odd")
+            return _real(c)
+
+        tracked = {"BOLT": {"kill": {"holders_below": 10}, "text": "holders under 10", "source": "test"}}
+        patches = kill_patches(tracked, None, holders=(40, False)) + [mock.patch.object(P, "coin_to_launch", boom)]
+        with tempfile.TemporaryDirectory() as d:
+            fresh_state(d)
+            run = run_main(d, fake, patches)
+        self.assertEqual(run["launches"], 3)
+        row = next(r for r in run["results"] if r.get("tracked") and r.get("ticker") == "BOLT")
+        self.assertEqual(row["holders"], 40)
+
+    def test_empty_legacy_list_falls_through_to_coins(self):
+        _, coin = self._coin("BOLT")
+        for legacy in ([], {"launches": []}):
+            calls = []
+
+            class H:
+                def req(self, src, url, method="GET", body=None, headers=None, quiet404=True):
+                    calls.append(url)
+                    if url.endswith("/launches"):
+                        return legacy
+                    if url.endswith("/coins"):
+                        return {"coins": [coin], "adaUsd": 0.2, "atMs": 1}
+                    return None
+
+            rows, _, src = P.fetch_solada(H())
+            self.assertEqual(src, "coins")
+            self.assertEqual([r["ticker"] for r in rows], ["BOLT"])
+            self.assertTrue(any(c.endswith("/coins") for c in calls))
+
+    def test_missing_curve_ada_is_not_zero(self):
+        u, coin = self._coin("BOLT", curve_ada=None)
+        coin["curve"].pop("curveAda", None)
+        mapped = P.coin_to_launch(coin)
+        self.assertNotIn("realLovelace", mapped["curve"])
+
+        http = P.Http({})
+        http.req = lambda *a, **k: None
+        pool = P.tracked_pool(http, u, mapped, "BOLT")
+        self.assertIsNone(pool["ada_side"])
+        self.assertNotEqual(pool.get("ada_side"), 0)
+        self.assertEqual(pool["basis"], "solada-coins")
+
+    def test_platform_market_is_solada_only(self):
+        calls = []
+
+        def req(src, url, method="GET", body=None, headers=None, quiet404=True):
+            calls.append(url)
+            if str(url).endswith("/solada/market"):
+                return {"liquidityAda": 10, "priceAda": 1, "marketCapAda": 10}
+            return None
+
+        _, coin = self._coin("BOLT", curve_ada=None)
+        coin["curve"].pop("curveAda", None)
+        launch = P.coin_to_launch(coin)
+        http = P.Http({})
+        http.req = req
+        P.tracked_pool(http, unit("BOLT"), launch, "BOLT")
+        self.assertFalse(any(str(c).endswith("/solada/market") for c in calls))
+        calls.clear()
+        P.tracked_pool(http, unit("SOLADA"), launch, "SOLADA")
+        self.assertTrue(any(str(c).endswith("/solada/market") for c in calls))
+
+    def test_coins_down_platform_market_still_fills_solada(self):
+        su, bu = unit("SOLADA"), unit("BOLT")
+        tracked = {
+            "SOLADA": {"kill": {"ada_side_below": 5000}, "text": "ada side under 5000", "asset_id": su, "source": "test"},
+            "BOLT": {"kill": {"ada_side_below": 5000}, "text": "ada side under 5000", "asset_id": bu, "source": "test"},
+        }
+        calls = []
+
+        def fake(self_, src, url, method="GET", body=None, headers=None, quiet404=True):
+            self_.calls[src] = self_.calls.get(src, 0) + 1
+            calls.append(url)
+            if str(url).endswith("/solada/market"):
+                return {"liquidityAda": 212082.2, "priceAda": 0.00168, "marketCapAda": 1685530.2}
+            return None
+
+        with tempfile.TemporaryDirectory() as d:
+            fresh_state(d)
+            run = run_main(d, fake, kill_patches(tracked, None, holders=(10, False)))
+        sol = next(r for r in run["results"] if r.get("ticker") == "SOLADA")
+        bolt = next(r for r in run["results"] if r.get("ticker") == "BOLT")
+        self.assertEqual(sol["ada_side"], 212082)
+        self.assertEqual(sol["pool_basis"], "solada-market")
+        self.assertEqual(sol["crossed"], [])
+        self.assertIsNone(bolt["ada_side"])
+        self.assertEqual(sum(1 for c in calls if str(c).endswith("/solada/market")), 1)
+
+    def test_pulse_units_follow_the_newest_time(self):
+        old, new = "ab" * 28, "cd" * 28
+        pulse = {"points": [
+            {"ticker": "bolt", "asset_id": new, "t": 200},
+            {"ticker": "BOLT", "asset_id": old, "t": 50},
+        ]}
+        self.assertEqual(P.pulse_units(pulse)["BOLT"], new)
+
+    def test_top10_rows_follow_rank(self):
+        def u(prefix):
+            return (prefix * 28)[:56]
+
+        rows = DC._rows_from_top10(
+            [{"rank": 3, "ticker": "C", "policy_short": "cc" * 5, "mcap_ada": 9},
+             {"ticker": "Z", "policy_short": "zz" * 5},
+             {"rank": 1, "ticker": "A", "policy_short": "aa" * 5, "mcap_ada": 1},
+             {"rank": 2, "ticker": "B", "policy_short": "bb" * 5}],
+            {"A": u("aa"), "B": u("bb"), "C": u("cc"), "Z": u("zz")}, {})
+        self.assertEqual([r["ticker"] for r in rows], ["A", "B", "C", "Z"])
+        self.assertTrue(all(r["mcap_ada"] is None for r in rows))
+
+    def test_mcap_and_ada_side_compare_only_on_the_same_basis(self):
+        self.assertIsNone(P._for_kill("mcap", 300000, "solada-coins", {}))
+        self.assertEqual(P._for_kill("mcap", 300000, "geckoterminal", {}), 300000)
+        self.assertIsNone(P._for_kill("ada_side", 1000, "dexscreener",
+                                      {"ada_side": {"basis": "geckoterminal", "value": 80000, "line": 5000}}))
+        self.assertEqual(P._for_kill("holders", 10, None, {}), 10)
+        fc = {"ada_side_drop_pct": 20, "holder_doubling_ratio": 2, "wash_vol_to_ada_side": 5,
+              "top_cluster_pct": 99, "concentration_jump_pts": 99}
+        prev = {"ada_side": 1000, "mcap_ada": 1_000_000, "holders": 10,
+                "ada_basis": "geckoterminal", "mcap_basis": "geckoterminal"}
+        other = {"ada_side": 100, "mcap_ada": 1_100_000, "holders": 4,
+                 "ada_basis": "solada-coins", "mcap_basis": "solada-coins"}
+        self.assertEqual(F.metric_flags("BOLT", other, prev, fc), [])
+        self.assertEqual(F.metric_flags("BOLT", other, {"ada_side": 1000, "mcap_ada": 1_000_000, "holders": 10}, fc), [])
+        same = dict(other, ada_basis="geckoterminal", mcap_basis="geckoterminal")
+        kinds = {f["kind"] for f in F.metric_flags("BOLT", same, prev, fc)}
+        self.assertIn("ada_side_drop", kinds)
+        self.assertIn("holders_down_mcap_up", kinds)
+
+    def test_kill_line_ignores_a_different_basis(self):
+        u = unit("BOLT")
+        tracked = {"BOLT": {"kill": {"mcap_ada_below": 400000}, "text": "mcap under 400k",
+                            "asset_id": u, "source": "test"}}
+        pools = {}
+
+        def gt(http, unit_id, _p=pools):
+            p = _p.get("pool")
+            return dict(p) if p else None
+
+        def fake(self_, src, url, method="GET", body=None, headers=None, quiet404=True):
+            self_.calls[src] = self_.calls.get(src, 0) + 1
+            return None
+
+        patches = [mock.patch.object(P, "tracked_names", lambda paper, log: json.loads(json.dumps(tracked))),
+                   mock.patch.object(P, "gt_pool", gt),
+                   mock.patch.object(P.Chain, "holders", lambda self, u, m: (300, False)),
+                   mock.patch.object(P.Chain, "handle_address", lambda self, p, n: None),
+                   mock.patch.object(P.DC, "run", lambda *a, **k: ({"entries": 0, "wrote": False}, []))]
+        with tempfile.TemporaryDirectory() as d:
+            fresh_state(d)
+            pools["pool"] = {"ada_side": 80000, "mcap_ada": 1_000_000, "price_ada": 1.0, "basis": "geckoterminal"}
+            run1 = run_main(d, fake, patches, dry=False)
+            self.assertEqual([t for t in run1["triggers"] if t["kind"] == "kill_line"], [])
+            pools["pool"] = {"ada_side": 1000, "mcap_ada": 300000, "price_ada": 1.0, "basis": "solada-coins"}
+            run2 = run_main(d, fake, patches, dry=False)
+            self.assertEqual([t for t in run2["triggers"] if t["kind"] == "kill_line"], [])
+            row = next(r for r in run2["results"] if r.get("ticker") == "BOLT")
+            self.assertEqual((row["mcap_ada"], row["mcap_basis"], row["crossed"]), (300000, "solada-coins", []))
+            pools["pool"] = {"ada_side": 9000, "mcap_ada": 300000, "price_ada": 1.0, "basis": "geckoterminal"}
+            run3 = run_main(d, fake, patches, dry=False)
+            self.assertTrue(any(t["kind"] == "kill_line" for t in run3["triggers"]))
+
+    def test_unknown_launch_time_keeps_a_stored_late_rug(self):
+        u, t0 = unit("RUG"), FX["launch_s"]
+        txs = [leg(hx("m"), t0, [], [utxo("dev", 2_000_000, {u: FX["mint_qty"]}, hx("m") + "#0")]),
+               leg(hx("s"), t0 + FX["late_after_s"],
+                   [utxo("dev", 5_000_000, {u: FX["mint_qty"]}, hx("m") + "#0")],
+                   [utxo("dev", 5_000_000 + FX["sell_lovelace"], {u: FX["mint_qty"] - FX["sell_qty"]}, hx("s") + "#0")])]
+        self.assertIsNone(DC.fold(u, txs, stake("dev"), ex_reserve(), None, dc())["late_rug"])
+        self.assertFalse(DC.fold(u, txs[:1], stake("dev"), ex_reserve(), None, dc())["late_rug"])
+        prev = {"unit": u, "ticker": "RUG", "late_rug": True, "dev_sold_ada": 2500.0,
+                "dev_sold_after_min": 120.0, "ath_mcap": 1000, "mcap_basis": "geckoterminal",
+                "serial_3h": 1, "serial_7d": 2, "risk": "high"}
+        item = {"ticker": "RUG", "unit": u, "mcap_ada": None,
+                "launch": {"ticker": "RUG", "policyId": u[:56], "assetName": u[56:]}}
+        scan = {"stake": stake("dev"), "complete": True, "saw_newest": True, "last_tx_s": FX["now_s"],
+                "txs_read": 2, "unread_txs": 0,
+                "stats": {"sold_ada": 2500.0, "late_rug": None, "first_sell_s": None,
+                          "holders_at_sell": 2, "sell_hashes": [], "sharp": False}}
+        row = DC._entry(item, scan, prev, {"units": {}}, None, dc(), FX["now_s"], FX["now_s"] * 1000, False)
+        self.assertTrue(row["late_rug"])
+        self.assertEqual(row["dev_sold_after_min"], 120.0)
+        self.assertIsNone(row["drawdown_pct"])
+        self.assertEqual(row["ath_mcap"], 1000)
+        self.assertEqual((row["serial_3h"], row["serial_7d"]), (1, 2))
+        self.assertEqual(row["risk"], "high")
+        self.assertNotIn(stake("dev"), json.dumps({k: v for k, v in row.items() if k != "coverage"}))
+
+    def test_late_rug_survives_a_fallback_and_drawdown_stays_unknown(self):
+        cu, ru, books, launches, tracked = world()
+        with tempfile.TemporaryDirectory() as d:
+            _, _, doc, _ = run_dc(True, books, launches, tracked, d)
+            rug = next(e for e in doc["entries"] if e["ticker"] == "RUG")
+            self.assertTrue(rug["late_rug"])
+            serial = (next(e["serial_3h"] for e in doc["entries"] if e["ticker"] == "CLEAN"),
+                      next(e["serial_7d"] for e in doc["entries"] if e["ticker"] == "CLEAN"))
+            self.assertIsNotNone(serial[0])
+            cache_path = os.path.join(d, "cache", "dev-checks-cache.json")
+            cache = json.load(open(cache_path))
+            cache["units"][unit("PRIOR")] = {"ticker": "PRIORX", "stake": "not-a-key", "live_at_ms": 1}
+            json.dump(cache, open(cache_path, "w"))
+            http = P.Http({})
+            seen = []
+            with mock.patch.object(P.Http, "req", fake_req(True, books, seen)):
+                summary, triggers = DC.run(
+                    http, DC_CFG, [], [], {}, os.path.join(d, "data"), os.path.join(d, "cache"),
+                    False, FX["now_s"], bf_key="", owner_env=OWNER)
+            self.assertEqual(summary.get("fallback"), "cache")
+            self.assertEqual(triggers, [])
+            doc2 = json.load(open(os.path.join(d, "data", "dev_checks.json")))
+            F.assert_public(doc2)
+            names = sorted(e["ticker"] for e in doc2["entries"])
+            self.assertEqual(names, ["CLEAN", "RUG"])
+            rug2 = next(e for e in doc2["entries"] if e["ticker"] == "RUG")
+            clean2 = next(e for e in doc2["entries"] if e["ticker"] == "CLEAN")
+            self.assertTrue(rug2["late_rug"])
+            self.assertIsNone(rug2["drawdown_pct"])
+            self.assertEqual(rug2["ath_mcap"], rug["ath_mcap"])
+            self.assertEqual((clean2["serial_3h"], clean2["serial_7d"]), serial)
+            os.remove(cache_path)
+            for e in doc2["entries"]:
+                if e["ticker"] == "RUG":
+                    e["dev_sold_after_min"] = None
+            json.dump(doc2, open(os.path.join(d, "data", "dev_checks.json"), "w"))
+            books2 = copy.deepcopy(books)
+            for txs in books2.values():
+                for tx in txs:
+                    if not tx["inputs"]:
+                        tx["inputs"] = [utxo("dev", 5_000_000, {}, "fund#0")]
+            http = P.Http({})
+            with mock.patch.object(P.Http, "req", fake_req(True, books2, [])):
+                summary, triggers = DC.run(
+                    http, DC_CFG, [], [], {}, os.path.join(d, "data"), os.path.join(d, "cache"),
+                    False, FX["now_s"], bf_key="", owner_env=OWNER)
+            self.assertEqual(summary.get("fallback"), "previous")
+            self.assertEqual(triggers, [])
+            doc3 = json.load(open(os.path.join(d, "data", "dev_checks.json")))
+            F.assert_public(doc3)
+            rug3 = next(e for e in doc3["entries"] if e["ticker"] == "RUG")
+            self.assertTrue(rug3["late_rug"])
+            self.assertEqual(rug3["dev_sold_after_min"], round(FX["late_after_s"] / 60.0, 1))
+            self.assertIsNone(rug3["drawdown_pct"])
+            self.assertNotIn(stake("dev"), json.dumps(doc3))
+            self.assertNotIn(addr("dev"), json.dumps(doc3))
+
+    def test_skipped_scan_does_not_treat_volume_zero_as_inactive(self):
+        now = FX["now_s"]
+        self.assertTrue(DC.inactive_of(None, False, 0, now, None, 24))
+        self.assertIsNone(DC.inactive_of(None, False, 0, now, None, 24, volume_counts=False))
+        _, _, books, launches, tracked = world()
+        cfg = {"dev_checks": {"budget_s": 30, "max_calls": 0, "max_bf_calls": 0},
+               "flags": {"exclude_tags": {}}}
+        with tempfile.TemporaryDirectory() as d:
+            _, _, doc, _ = run_dc(True, books, launches, [tracked[1]], d, key="", cfg=cfg)
+        self.assertTrue(doc["entries"][0]["coverage"]["skipped"])
+        self.assertEqual(tracked[1]["vol_h24_ada"], 0)
+        self.assertIsNone(doc["entries"][0]["inactive"])
+
+    def test_top10_without_a_launcher_stays_baseline_only(self):
+        cu, ru, books, launches, tracked = world()
+        first = copy.deepcopy(books)
+        for txs in first.values():
+            for tx in txs:
+                if not tx["inputs"]:
+                    tx["inputs"] = [utxo("dev", 5_000_000, {}, "fund#0")]
+        second = copy.deepcopy(first)
+        rem = FX["mint_qty"] - FX["sell_qty"]
+        second[ru].append(leg(
+            hx("rs2"), int(FX["now_s"] - 30),
+            [utxo("dev", 5_000_000, {ru: rem}, hx("rs") + "#0")],
+            [utxo("dev", 5_000_000 + 30_000_000, {ru: rem - 1000}, hx("rs2") + "#0"),
+             utxo("script:pool", 2_000_000, {ru: 1000}, hx("rs2") + "#1")]))
+        top = [{"rank": 1, "ticker": "RUG", "policy_short": ru[:10], "mcap_ada": 100}]
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "cache"))
+            data, cache = os.path.join(d, "data"), os.path.join(d, "cache")
+            http = P.Http({})
+            with mock.patch.object(P.Http, "req", fake_req(True, first, [])):
+                summary, triggers = DC.run(
+                    http, DC_CFG, [], [], {}, data, cache, False, FX["now_s"] - 100, bf_key="",
+                    owner_env=OWNER, top10=top, units_by_ticker={"RUG": ru})
+            self.assertEqual(summary.get("fallback"), "top10")
+            self.assertEqual(triggers, [])
+            stored = json.load(open(os.path.join(cache, "dev-checks-cache.json")))
+            self.assertTrue(stored["units"][ru].get("baseline_only"))
+            self.assertNotIn(stake("dev"), json.dumps(json.load(open(os.path.join(data, "dev_checks.json")))))
+            http = P.Http({})
+            with mock.patch.object(P.Http, "req", fake_req(True, second, [])):
+                summary, triggers = DC.run(
+                    http, DC_CFG, [], [], {}, data, cache, False, FX["now_s"], bf_key="",
+                    owner_env=OWNER, top10=top, units_by_ticker={"RUG": ru})
+            self.assertEqual(triggers, [])
+            doc = json.load(open(os.path.join(data, "dev_checks.json")))
+            self.assertFalse(doc["entries"][0]["changed_since_last"])
+            self.assertNotIn("baseline_only", json.dumps(doc))
+
+    def test_top10_with_a_launcher_can_fire_on_a_later_sell(self):
+        cu, ru, books, launches, tracked = world()
+        first = copy.deepcopy(books)
+        for txs in first.values():
+            for tx in txs:
+                if not tx["inputs"]:
+                    tx["inputs"] = [utxo("dev", 5_000_000, {}, "fund#0")]
+        second = copy.deepcopy(first)
+        rem = FX["mint_qty"] - FX["sell_qty"]
+        second[ru].append(leg(
+            hx("rs2"), int(FX["now_s"] - 30),
+            [utxo("dev", 5_000_000, {ru: rem}, hx("rs") + "#0")],
+            [utxo("dev", 5_000_000 + 30_000_000, {ru: rem - 1000}, hx("rs2") + "#0"),
+             utxo("script:pool", 2_000_000, {ru: 1000}, hx("rs2") + "#1")]))
+        top = [{"rank": 1, "ticker": "RUG", "policy_short": ru[:10], "launcherAddress": addr("dev")}]
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "cache"))
+            data, cache = os.path.join(d, "data"), os.path.join(d, "cache")
+            http = P.Http({})
+            with mock.patch.object(P.Http, "req", fake_req(True, first, [])):
+                _, triggers = DC.run(
+                    http, DC_CFG, [], [], {}, data, cache, False, FX["now_s"] - 100, bf_key="",
+                    owner_env=OWNER, top10=top, units_by_ticker={"RUG": ru})
+            self.assertEqual(triggers, [])
+            http = P.Http({})
+            with mock.patch.object(P.Http, "req", fake_req(True, second, [])):
+                _, triggers = DC.run(
+                    http, DC_CFG, [], [], {}, data, cache, False, FX["now_s"], bf_key="",
+                    owner_env=OWNER, top10=top, units_by_ticker={"RUG": ru})
+            self.assertEqual([t["kind"] for t in triggers], ["dev_sell"])
+            doc = json.load(open(os.path.join(data, "dev_checks.json")))
+            F.assert_public(doc)
+            self.assertNotIn(stake("dev"), json.dumps(doc))
+            self.assertNotIn(addr("dev"), json.dumps(doc))
+
+    def test_known_stake_matching_an_owner_pattern_is_dropped(self):
+        cu = unit("CLEAN")
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "cache"))
+            json.dump({"units": {cu: {"stake": stake("dev"), "ticker": "CLEAN", "live_at_ms": 1}}},
+                      open(os.path.join(d, "cache", "dev-checks-cache.json"), "w"))
+            http = P.Http({})
+            with mock.patch.object(P.Http, "req", fake_req(True, {}, [])):
+                DC.run(http, DC_CFG, [], [], {}, os.path.join(d, "data"), os.path.join(d, "cache"),
+                       False, FX["now_s"], bf_key="", owner_env="^" + re.escape(stake("dev")) + "$")
+            doc = json.load(open(os.path.join(d, "data", "dev_checks.json")))
+            F.assert_public(doc)
+            self.assertIsNone(doc["entries"][0]["dev_tag"])
+            self.assertIsNone(doc["entries"][0]["dev_sold_ada"])
+            text = json.dumps(doc)
+            self.assertNotIn(stake("dev"), text)
+            self.assertNotIn(addr("dev"), text)
+            self.assertNotIn(stake("dev"), open(os.path.join(d, "cache", "dev-checks-cache.json")).read())
+
+    def _coin(self, name, curve_ada=8000.4, graduated=False):
+        u = unit(name)
+        curve = {"state": "graduated" if graduated else "open", "progressBps": 10000 if graduated else 4200,
+                 "curveAda": curve_ada, "curveAddress": addr("curve"),
+                 "reserves": {"supply": "1000000000000000"},
+                 "pool": {"dex": "minswap"} if graduated else None}
+        return u, {"id": "draft-" + name.lower(), "ticker": name, "policyId": u[:56], "assetName": u[56:],
+                   "createdAtMs": 1_700_000_000_000, "launcherAddress": addr("dev"), "hidden": False,
+                   "priceAda": 0.0003, "marketCapAda": 300000.2, "volume24hAda": 1200.4, "holders": 40,
+                   "curve": curve}
 
 
 if __name__ == "__main__":
