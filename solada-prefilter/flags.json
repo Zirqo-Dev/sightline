@@ -1,56 +1,175 @@
 {
- "at": "2026-10-27T18:08:00Z",
+ "at": "2026-10-27T20:11:04Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "founder_whale_move",
-   "ticker": "NIGHT",
-   "tag": "w-f3186187",
-   "delta": -23595999998,
-   "decimals": 6,
-   "qty": -23596.0,
-   "ada_equiv": 4604,
-   "value_basis": "ada_leg_rate",
-   "pct": 2.5,
-   "at": "2026-10-27T18:08:00Z"
+   "kind": "watch_tags_early_buyers",
+   "ticker": "BREAD",
+   "tags": [
+    "u9n6w6w8uh"
+   ],
+   "roles": [
+    "log_whale_watch"
+   ],
+   "at": "2026-10-27T20:11:04Z"
   },
   {
-   "kind": "founder_whale_move",
-   "ticker": "SNEK",
-   "tag": "w-f3186187",
-   "delta": -1000000,
-   "decimals": 0,
-   "qty": -1000000.0,
-   "ada_equiv": 2994,
-   "value_basis": "decimals_x_price",
-   "pct": 2.0,
-   "at": "2026-10-27T18:08:00Z"
+   "kind": "watch_tags_early_buyers",
+   "ticker": "INTEL",
+   "tags": [
+    "u8ght830nm",
+    "u9n6w6w8uh"
+   ],
+   "roles": [
+    "log_whale_watch"
+   ],
+   "at": "2026-10-27T20:11:04Z"
   },
   {
-   "kind": "founder_whale_move",
-   "ticker": "CRAWJU",
-   "tag": "w-f3186187",
-   "delta": -1000000,
-   "decimals": 0,
-   "qty": -1000000.0,
-   "ada_equiv": 575,
-   "value_basis": "ada_leg_rate",
-   "pct": 11.1,
-   "at": "2026-10-27T18:08:00Z"
+   "kind": "watch_tags_early_buyers",
+   "ticker": "TCM",
+   "tags": [
+    "uxeuv5pkrv"
+   ],
+   "roles": [
+    "log_whale_watch"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "coordinated_buys",
+   "ticker": "TCM",
+   "wallets": [
+    "w-8315deec",
+    "w-94d806d7",
+    "w-9d7e7db5",
+    "w-f7844f67"
+   ],
+   "window_s": 120,
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-4982aa46",
+   "launches": [
+    "BREAD",
+    "INTEL",
+    "PINU"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-4bb7d165",
+   "launches": [
+    "BET",
+    "INTEL"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-8315deec",
+   "launches": [
+    "BET",
+    "INTEL",
+    "TCM"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-8cf161f3",
+   "launches": [
+    "BREAD",
+    "MCFA",
+    "PINU"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-8f63ef06",
+   "launches": [
+    "BREAD",
+    "TCM"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-9d7e7db5",
+   "launches": [
+    "EVIL",
+    "TCM"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-f24dee62",
+   "launches": [
+    "INTEL",
+    "MCFA",
+    "TCM"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-f7844f67",
+   "launches": [
+    "BREAD",
+    "MCFA",
+    "TCM"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "CHEESE",
+   "wallet": "w-5e239d7c",
+   "tags": [],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "INTEL",
+   "wallet": "w-12c34f91",
+   "tags": [],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "EVIL",
+   "top_addr_pct": 32.2,
+   "top_cluster_pct": 32.2,
+   "top_cluster": "w-095576b3",
+   "basis": "ex-fe819d",
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "HERO",
+   "top_addr_pct": 27.7,
+   "top_cluster_pct": 27.7,
+   "top_cluster": "w-f3186187",
+   "basis": "ex-fe819d",
+   "at": "2026-10-27T20:11:04Z"
   },
   {
    "kind": "founder_whale_move",
    "ticker": "ASCEND",
    "tag": "w-f3186187",
-   "delta": 7057367677,
+   "delta": 1752530376,
    "decimals": 6,
-   "qty": 7057.3677,
-   "ada_equiv": 9605,
+   "qty": 1752.5304,
+   "ada_equiv": 2434,
    "value_basis": "ada_leg_rate",
-   "pct": 2.4,
-   "at": "2026-10-27T18:08:00Z"
+   "pct": 0.6,
+   "at": "2026-10-27T20:11:04Z"
   }
  ],
  "recent": [
@@ -1221,10 +1340,178 @@
    "value_basis": "ada_leg_rate",
    "pct": 2.4,
    "at": "2026-10-27T18:08:00Z"
+  },
+  {
+   "kind": "watch_tags_early_buyers",
+   "ticker": "BREAD",
+   "tags": [
+    "u9n6w6w8uh"
+   ],
+   "roles": [
+    "log_whale_watch"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "watch_tags_early_buyers",
+   "ticker": "INTEL",
+   "tags": [
+    "u8ght830nm",
+    "u9n6w6w8uh"
+   ],
+   "roles": [
+    "log_whale_watch"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "watch_tags_early_buyers",
+   "ticker": "TCM",
+   "tags": [
+    "uxeuv5pkrv"
+   ],
+   "roles": [
+    "log_whale_watch"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "coordinated_buys",
+   "ticker": "TCM",
+   "wallets": [
+    "w-8315deec",
+    "w-94d806d7",
+    "w-9d7e7db5",
+    "w-f7844f67"
+   ],
+   "window_s": 120,
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-4982aa46",
+   "launches": [
+    "BREAD",
+    "INTEL",
+    "PINU"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-4bb7d165",
+   "launches": [
+    "BET",
+    "INTEL"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-8315deec",
+   "launches": [
+    "BET",
+    "INTEL",
+    "TCM"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-8cf161f3",
+   "launches": [
+    "BREAD",
+    "MCFA",
+    "PINU"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-8f63ef06",
+   "launches": [
+    "BREAD",
+    "TCM"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-9d7e7db5",
+   "launches": [
+    "EVIL",
+    "TCM"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-f24dee62",
+   "launches": [
+    "INTEL",
+    "MCFA",
+    "TCM"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-f7844f67",
+   "launches": [
+    "BREAD",
+    "MCFA",
+    "TCM"
+   ],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "CHEESE",
+   "wallet": "w-5e239d7c",
+   "tags": [],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "INTEL",
+   "wallet": "w-12c34f91",
+   "tags": [],
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "EVIL",
+   "top_addr_pct": 32.2,
+   "top_cluster_pct": 32.2,
+   "top_cluster": "w-095576b3",
+   "basis": "ex-fe819d",
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "HERO",
+   "top_addr_pct": 27.7,
+   "top_cluster_pct": 27.7,
+   "top_cluster": "w-f3186187",
+   "basis": "ex-fe819d",
+   "at": "2026-10-27T20:11:04Z"
+  },
+  {
+   "kind": "founder_whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 1752530376,
+   "decimals": 6,
+   "qty": 1752.5304,
+   "ada_equiv": 2434,
+   "value_basis": "ada_leg_rate",
+   "pct": 0.6,
+   "at": "2026-10-27T20:11:04Z"
   }
  ],
  "api_calls": {
-  "koios": 1
+  "blockfrost": 6,
+  "koios": 35
  },
  "thresholds": {
   "enabled": true,
