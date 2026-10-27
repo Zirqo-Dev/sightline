@@ -5,9 +5,9 @@ when BLOCKFROST_PROJECT_ID is set). No external score API.
 
 The dev is the launch's creator stake: Solada launcherAddress, or, when that has no stake
 key, the non-script stake that funded a verified mint tx. Output carries a short dev_tag
-only (a flags/watch prefix of at most 12 characters when one matches, else the same
-w-xxxxxxxx hash flags.py uses). Never a full address or stake key. Rows and trigger keys
-are the token (policy + asset name): a ticker that changes token is a new baseline.
+only: the watch-list role label when one matches, otherwise the same w-xxxxxxxx hash
+flags.py uses. Never a raw prefix, address, or stake key. Rows and trigger keys are the
+token (policy + asset name): a ticker that changes token is a new baseline.
 
 Phase 1 is dev sells / late rugs, serial-launcher counts, and drawdown / inactivity.
 dev_buy_ada, dev_locked_pct and unlock_date are always null. LP pulls are phase 2, with
@@ -26,7 +26,7 @@ min_sell_ada or late_rug flips true. A public row with no sell-cache entry is
 re-baselined (hashes recorded, no fire). An incomplete read never lowers stored sell
 facts; the row is marked partial. Drawdown, serial counts and inactivity do not re-fire.
 """
-import hashlib, os, re, sys, time
+import hashlib, json, os, re, sys, time
 from datetime import datetime, timezone
 
 import flags as F
@@ -37,7 +37,7 @@ BF = "https://cardano-mainnet.blockfrost.io/api/v0"
 DEFAULTS = {
     "enabled": True, "budget_s": 45, "max_calls": 36, "max_bf_calls": 50,
     "max_txs_per_unit": 25, "max_pages_per_unit": 2, "utxo_batch": 13,
-    "max_launches": 8, "max_prior": 3,
+    "max_launches": 8, "max_prior": 3, "bf_per_unit": 8,
     "rug_bag_pct": 80, "late_min_minutes": 30, "rug_min_other_holders": 1,
     "min_sell_ada": 25.0, "inactive_h": 24, "serial_3h_h": 3, "serial_7d_h": 168,
     "serial_caution_3h": 2, "serial_caution_7d": 3, "drawdown_caution_pct": 80,
@@ -47,7 +47,7 @@ NOTE = (
     "Phase 1 only: creator-stake sells and late rugs, serial launch counts, drawdown from the "
     "peak this job has seen, and inactivity. dev_buy_ada, dev_locked_pct, unlock_date and LP pulls "
     "are phase 2 (the three fields are always null). No dev lock, dev buy class, or social checks. "
-    "dev_tag is a watch prefix or a 10-character hash, never an address or stake key. Rows are keyed "
+    "dev_tag is a watch-list role label or a 10-character hash, never a prefix, address, or stake key. Rows are keyed "
     "by policy + asset name. ATH is the highest mcap this job has observed (the run is every 2h), not "
     "a tick peak. prior_rugs counts earlier launches this job has already marked late_rug for the same "
     "creator stake. A sell is token out and ADA in on the creator's own key in one tx, or ADA paid "
@@ -68,13 +68,60 @@ def iso(ts):
     return datetime.fromtimestamp(int(ts), timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+TAG_RE = re.compile(r"^w-[0-9a-f]{8}$")
+ROLE_RE = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
+
+
+def known_roles(cfg=None):
+    """Role labels from flags.snek_prefix_tags. These are names, not key material."""
+    if cfg is None:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+        try:
+            with open(path) as f:
+                cfg = json.load(f)
+        except (OSError, ValueError):
+            cfg = {}
+    tags = ((cfg or {}).get("flags") or {}).get("snek_prefix_tags") or {}
+    return {k for k in tags if isinstance(k, str) and not k.startswith("_") and ROLE_RE.fullmatch(k)}
+
+
+def dev_tag_ok(tag, roles=None):
+    """True for a missing tag, the w- hash, or a known role label."""
+    if tag is None:
+        return True
+    if isinstance(tag, str) and TAG_RE.fullmatch(tag):
+        return True
+    if roles is None:
+        roles = known_roles()
+    return isinstance(tag, str) and tag in roles
+
+
+def _role_label(role, stake, watch, roles):
+    """A watch-list value that is a role label and not a piece of the stake."""
+    if not isinstance(role, str) or role not in roles or role in (watch or {}):
+        return None
+    # A role that is itself the start of the stake payload is key material, not a label.
+    payload = stake[6:] if stake.startswith("stake1") else stake
+    if payload.startswith(role):
+        return None
+    return role
+
+
 def short_tag(stake, watch):
-    """Watch prefix when one matches and is <= 12 chars (most specific wins), else flags.tag (10 chars)."""
+    """Role label of the most specific watch-list hit, else the w- hash.
+
+    A hit with no role label still returns the hash. Never a raw prefix, address, or key fragment.
+    """
     if not stake:
         return None
-    hits = [p for p in F.match_tags(stake, watch or {}) if isinstance(p, str) and 0 < len(p) <= 12]
-    if hits:
-        return max(hits, key=len)
+    roles = known_roles()
+    watch = watch or {}
+    hits = [p for p in F.match_tags(stake, watch) if isinstance(p, str) and p]
+    hits.sort(key=len, reverse=True)
+    for p in hits:
+        role = _role_label(watch.get(p), stake, watch, roles)
+        if role:
+            return role
     return F.tag(stake)
 
 
@@ -367,7 +414,7 @@ def _keep_sell(row, prev, complete):
         row["late_rug"] = True
     if row.get("holders_at_sell") is None and prev.get("holders_at_sell") is not None and prev.get("late_rug") is True:
         row["holders_at_sell"] = prev.get("holders_at_sell")
-    if row.get("dev_tag") is None and prev.get("dev_tag"):
+    if row.get("dev_tag") is None and dev_tag_ok(prev.get("dev_tag")) and prev.get("dev_tag"):
         row["dev_tag"] = prev.get("dev_tag")
     row["coverage"]["partial"] = True
     return row
@@ -496,6 +543,61 @@ class DevChain:
     def bf_left(self):
         return int(self.dc["max_bf_calls"]) - (self.h.calls.get("blockfrost", 0) - self.bf_start)
 
+    def unit_bf_left(self):
+        """Blockfrost calls still allowed for the launch currently being scanned.
+
+        Unset until begin_unit. One launch must not spend the whole fallback budget.
+        """
+        left = self.bf_left()
+        cap = getattr(self, "_unit_bf_cap", None)
+        if cap is None:
+            return left
+        used = self.h.calls.get("blockfrost", 0) - getattr(self, "_unit_bf_start", 0)
+        return min(left, cap - used)
+
+    def _bf_floor(self):
+        """Blockfrost calls a scanned row should get before the next row starts (default 8)."""
+        try:
+            floor = int(self.dc.get("bf_per_unit", 8))
+        except (TypeError, ValueError):
+            floor = 8
+        return max(1, floor)
+
+    def afford_bf_row(self, remaining):
+        """False when a Koios outage would start this row below bf_per_unit calls.
+
+        Several rows then wait for the next rotation instead of each getting a stub.
+        One row still runs on a short budget and uses whatever is left.
+        """
+        if self.koios_open() or not self.bf_key:
+            return True
+        left = self.bf_left()
+        if left <= 0:
+            return False
+        if left >= self._bf_floor():
+            return True
+        return int(remaining or 1) <= 1
+
+    def begin_unit(self, remaining):
+        """Cap this launch's Blockfrost calls at least at bf_per_unit when the pool allows.
+
+        Dividing the pool across every remaining row left each one too thin to finish.
+        A row that is scanned gets the floor (about 8). A later row that cannot have
+        the floor is not started. One row alone may use the calls that are left.
+        """
+        left = max(0, self.bf_left())
+        floor = self._bf_floor()
+        n = max(1, int(remaining or 1))
+        self._unit_bf_start = self.h.calls.get("blockfrost", 0)
+        if left <= 0:
+            self._unit_bf_cap = 0
+            return
+        share = left // n
+        if left >= floor:
+            self._unit_bf_cap = min(left, max(floor, share))
+        else:
+            self._unit_bf_cap = left
+
     def stop_reason(self):
         if self.late():
             return "deadline"
@@ -522,12 +624,25 @@ class DevChain:
             self.koios_paused = True
 
     def bf(self, path):
-        if not self.bf_key or self.bf_left() <= 0 or self.late():
+        if not self.bf_key or self.unit_bf_left() <= 0 or self.late():
             return None
-        return self.h.req("blockfrost", BF + path, headers={"project_id": self.bf_key}, quiet404=False)
+        # Http.req retries once. That second attempt has to spend a slot too,
+        # or a single call overshoots max_bf_calls / the per-row cap by one.
+        prev = getattr(self.h, "retry_ok", None)
+        self.h.retry_ok = lambda: self.unit_bf_left() > 0 and not self.late()
+        try:
+            return self.h.req("blockfrost", BF + path, headers={"project_id": self.bf_key}, quiet404=False)
+        finally:
+            if prev is None:
+                try:
+                    del self.h.retry_ok
+                except AttributeError:
+                    pass
+            else:
+                self.h.retry_ok = prev
 
     def _fallback(self):
-        if self.bf_key and self.bf_left() > 0 and not self.late():
+        if self.bf_key and self.unit_bf_left() > 0 and not self.late():
             self.fallbacks += 1
             return True
         return False
@@ -639,7 +754,7 @@ class DevChain:
                 self.note_koios()
             if not got and self._fallback():
                 for h in chunk:
-                    if self.late():
+                    if self.late() or self.unit_bf_left() <= 0:
                         break
                     x = self.bf(f"/txs/{h}/utxos")
                     if x:
@@ -704,20 +819,36 @@ def _scan(chain, item, ex, dc):
     if chain.stop_reason():
         base["skipped"] = chain.stop_reason()
         return base
-    asc = chain.asset_txs(unit, desc=False)
-    if asc is None:
-        base["skipped"] = "koios"
-        return base
     lim = int(dc["max_txs_per_unit"])
+    pages = int(dc["max_pages_per_unit"])
+    # Koios closed: this read is Blockfrost under a short per-row cap. Newest page and
+    # newest bodies first, so a cutoff still sees a late sell. Koios-open stays oldest-first.
+    newest_first = not chain.koios_open()
     desc_rows = None
-    if len(asc) >= lim and int(dc["max_pages_per_unit"]) >= 2 and chain.stop_reason() is None:
+    if newest_first:
         desc_rows = chain.asset_txs(unit, desc=True)
+        if desc_rows is None:
+            base["skipped"] = "koios"
+            return base
+        asc = []
+        if len(desc_rows) >= lim and pages >= 2 and chain.stop_reason() is None:
+            older = chain.asset_txs(unit, desc=False)
+            if isinstance(older, list):
+                asc = older
+    else:
+        asc = chain.asset_txs(unit, desc=False)
+        if asc is None:
+            base["skipped"] = "koios"
+            return base
+        if len(asc) >= lim and pages >= 2 and chain.stop_reason() is None:
+            desc_rows = chain.asset_txs(unit, desc=True)
     merged = {}
-    for row in asc + (desc_rows or []):
+    for row in list(asc) + (desc_rows or []):
         merged[row[0]] = row
     txs = sorted(merged.values(), key=lambda t: (t[1], t[0]))
     known = stake
-    ut = chain.utxos([t[0] for t in txs], dev=known) if txs else {}
+    fetch = list(reversed(txs)) if newest_first else txs
+    ut = chain.utxos([t[0] for t in fetch], dev=known) if txs else {}
     ordered, unread = [], 0
     for h, hg, bt in txs:
         if h not in ut:
@@ -729,11 +860,16 @@ def _scan(chain, item, ex, dc):
         base["stake"] = stake
         if stake:
             chain.attach_withdrawals(ordered, stake)
-    complete = len(asc) < lim and unread == 0 and (desc_rows is None or isinstance(desc_rows, list) and len(asc) < lim)
-    # a full first page means the middle of the history was not read
-    if len(asc) >= lim:
-        complete = False
-    saw_newest = len(asc) < lim or isinstance(desc_rows, list)
+    if newest_first:
+        # a short newest page is the whole history; a full one leaves the middle unread
+        complete = len(desc_rows) < lim and unread == 0
+        saw_newest = True
+    else:
+        complete = len(asc) < lim and unread == 0 and (desc_rows is None or isinstance(desc_rows, list) and len(asc) < lim)
+        # a full first page means the middle of the history was not read
+        if len(asc) >= lim:
+            complete = False
+        saw_newest = len(asc) < lim or isinstance(desc_rows, list)
     launch_s = _launch_s(launch)
     if launch_s is None:
         launch_s = _verified_mint_s(unit, ordered)
@@ -796,6 +932,8 @@ def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline, new_h
     if skipped or not stats:
         if isinstance(prev, dict) and prev.get("unit") == unit:
             for k in ("dev_tag", "dev_sold_ada", "dev_sold_after_min", "holders_at_sell", "late_rug"):
+                if k == "dev_tag" and not dev_tag_ok(prev.get(k)):
+                    continue
                 if prev.get(k) is not None and (k != "dev_tag" or row["dev_tag"] is None):
                     row[k] = prev.get(k)
             if row["ath_mcap"] is None and prev.get("ath_mcap") is not None:
@@ -876,7 +1014,7 @@ def trigger_for(row):
                ("dev_tag", "dev_sold_ada", "dev_sold_after_min", "holders_at_sell", "late_rug", "risk", "changed_since_last")}
     F.assert_public(metrics)
     tag = metrics.get("dev_tag")
-    if tag is not None and len(tag) > 12:
+    if not dev_tag_ok(tag):
         raise SystemExit("dev_checks: refusing a dev_tag that is not a short tag")
     # public state.json stores this key. Hash the tx prefix so the raw hash is not in the fired map.
     pref = (row.get("_new_sell") or "")[:16]
@@ -887,7 +1025,7 @@ def trigger_for(row):
 def _guard(doc):
     for e in doc.get("entries") or []:
         tag = e.get("dev_tag")
-        if tag is not None and (not isinstance(tag, str) or len(tag) > 12 or tag.startswith("stake") or tag.startswith("addr")):
+        if not dev_tag_ok(tag):
             raise SystemExit("dev_checks: refusing a dev_tag that is not a short tag")
         for k in PHASE2:
             if e.get(k) is not None:
@@ -1172,10 +1310,15 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
         chain = DevChain(http, dc, bf_key, deadline)
         limit = max(0, int(dc["max_launches"]))
         scans, stop = {}, None
-        for item in rows_in[:limit]:
+        window = rows_in[:limit]
+        for i, item in enumerate(window):
             stop = chain.stop_reason()
             if stop:
                 break
+            if not chain.afford_bf_row(len(window) - i):
+                stop = "budget"
+                break
+            chain.begin_unit(len(window) - i)
             item = dict(item, watch=watch)
             try:
                 scans[item["unit"]] = _scan(chain, item, ex, dc)
@@ -1217,10 +1360,14 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
             priors.append({"ticker": l.get("ticker") or unit[:8], "unit": unit, "launch": l, "watch": watch,
                            "mcap_ada": None, "vol_h24_ada": None})
         prior_done = 0
+        prior_window = priors[:int(dc["max_prior"])]
         if chain.stop_reason() is None:
-            for item in priors[:int(dc["max_prior"])]:
+            for i, item in enumerate(prior_window):
                 if chain.stop_reason():
                     break
+                if not chain.afford_bf_row(len(prior_window) - i):
+                    break
+                chain.begin_unit(len(prior_window) - i)
                 try:
                     sc = _scan(chain, item, ex, dc)
                 except Exception as e:

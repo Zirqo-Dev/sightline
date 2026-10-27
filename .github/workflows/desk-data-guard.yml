@@ -2,6 +2,9 @@ name: desk-data-guard
 
 # Backstop: run main's privacy guard and schema validation against the
 # desk-data branch. Read-only; never writes to desk-data.
+# The guard scans every tracked file, including solada-prefilter/dev_checks.json,
+# with the same patterns and allowlist. A dev_tag there must be a role label or
+# a w- hash; the allowlist does not mask that file.
 # Pushes made with the built-in GITHUB_TOKEN (desk scan, solada-prefilter)
 # do not trigger workflows, so a timed run covers those. Primary: cron-job.org ->
 # workflow_dispatch hourly. The GitHub schedule stays as a backup only: this job is
