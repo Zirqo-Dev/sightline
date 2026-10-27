@@ -429,5 +429,54 @@ class LedgerState(unittest.TestCase):
         self.assertIn("reconcile_skipped", doc)
 
 
+class DevChecksFileGuard(unittest.TestCase):
+    """desk-data-guard scans solada-prefilter/dev_checks.json. Patterns and the allowlist stay as they are."""
+
+    def _run(self, doc, args):
+        with tempfile.TemporaryDirectory() as d:
+            main = os.path.join(d, "main")
+            os.makedirs(os.path.join(main, "scripts"))
+            shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), os.path.join(main, "scripts"))
+            shutil.copy(os.path.join(ROOT, "scripts", "privacy-public-keys.txt"), os.path.join(main, "scripts"))
+            shutil.copytree(SRC, os.path.join(main, "solada-prefilter"),
+                            ignore=shutil.ignore_patterns("tests", "__pycache__"))
+            desk = os.path.join(d, "desk-data", "solada-prefilter")
+            os.makedirs(desk)
+            with open(os.path.join(desk, "dev_checks.json"), "w") as f:
+                json.dump(doc, f)
+            with open(os.path.join(desk, "note.json"), "w") as f:
+                json.dump({"ok": True}, f)
+            cfg = json.load(open(os.path.join(main, "solada-prefilter", "config.json")))
+            with open(os.path.join(desk, "config.json"), "w") as f:
+                json.dump({"whale": {"stake": cfg["whale"]["stake"]}}, f)
+            data = os.path.join(d, "desk-data")
+            subprocess.run(["git", "init", "-q"], cwd=data, check=True)
+            subprocess.run(["git", "add", "-A"], cwd=data, check=True)
+            env = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
+            r = subprocess.run(["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data", *args],
+                               cwd=d, env=env, capture_output=True)
+            return r, cfg["whale"]["stake"]
+
+    def test_prefix_fails_even_if_the_caller_omits_the_file(self):
+        raw = F.b32_encode("stake", b"\xe1" + kh("dev-tag-guard"))
+        prefix = raw[6:16]
+        doc = {"entries": [{"ticker": "T", "dev_tag": prefix}, {"ticker": "U", "dev_tag": "w-0123abcd"}]}
+        r, _ = self._run(doc, ["solada-prefilter/note.json"])
+        self.assertEqual(r.returncode, 1)
+        self.assertIn(b"dev_tag is not a role label or w- hash", r.stderr)
+        self.assertFalse(prefix.encode() in r.stdout + r.stderr)
+        self.assertFalse(raw.encode() in r.stdout + r.stderr)
+
+    def test_role_and_hash_pass_and_the_allowlist_does_not_mask_this_file(self):
+        good = {"entries": [{"dev_tag": "w-0123abcd"}, {"dev_tag": "repeat_launcher"}, {"dev_tag": None}]}
+        r, key = self._run(good, [])
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse(key.encode() in r.stdout + r.stderr)
+        bad = {"entries": [{"dev_tag": key}]}
+        r, key = self._run(bad, [])
+        self.assertEqual(r.returncode, 1)
+        self.assertFalse(key.encode() in r.stdout + r.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

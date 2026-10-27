@@ -113,6 +113,18 @@ else
   [ ${#files[@]} -eq 0 ] && mapfile -t files < <(git ls-files)
 fi
 
+# desk-data publishes solada-prefilter/dev_checks.json. In --root mode (desk-data-guard
+# and the prefilter push) that file is always part of the scan, even if the caller
+# passed a list that left it out. Pattern and allowlist handling below is unchanged;
+# this file is not in mask_files, so an allowlisted key here still fails.
+if [ -n "${root_mode:-}" ] && [ -f solada-prefilter/dev_checks.json ]; then
+  have=0
+  for f in "${files[@]}"; do
+    [ "$f" = "solada-prefilter/dev_checks.json" ] && have=1 && break
+  done
+  [ "$have" -eq 0 ] && files+=("solada-prefilter/dev_checks.json")
+fi
+
 if [ -n "${root_mode:-}" ] && [ ${#files[@]} -eq 0 ]; then
   echo "PRIVACY GUARD FAILED: no tracked files found under --root" >&2; exit 1
 fi
@@ -131,6 +143,40 @@ for f in "${files[@]}"; do
       fail=1
     fi
   done
+  # dev_tag must be a w- hash or a role label from config. A watch-list prefix is not a tag.
+  # Entry indexes only: the value itself is never printed. Allowlist masking is not applied.
+  if [ "$f" = "solada-prefilter/dev_checks.json" ] || [ "$(basename "$f")" = "dev_checks.json" -a "$(basename "$(dirname "$f")")" = "solada-prefilter" ]; then
+    if ! python3 -c '
+import json, os, re, sys
+path, cfg_path = sys.argv[1], sys.argv[2]
+try:
+    cfg = json.load(open(cfg_path))
+    doc = json.load(open(path))
+except Exception:
+    sys.stderr.write("PRIVACY GUARD FAILED: cannot read dev_checks.json\n")
+    sys.exit(1)
+roles = set()
+tags = ((cfg.get("flags") or {}).get("snek_prefix_tags") or {})
+role_re = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
+for k in tags:
+    if isinstance(k, str) and not k.startswith("_") and role_re.fullmatch(k):
+        roles.add(k)
+ok = re.compile(r"^w-[0-9a-f]{8}$")
+bad = []
+for i, e in enumerate(doc.get("entries") or []):
+    if not isinstance(e, dict) or "dev_tag" not in e:
+        continue
+    tag = e.get("dev_tag")
+    if tag is None or (isinstance(tag, str) and (ok.fullmatch(tag) or tag in roles)):
+        continue
+    bad.append(str(i))
+if bad:
+    sys.stderr.write("PRIVACY GUARD: %s: dev_tag is not a role label or w- hash (entries %s)\n" % (path, ",".join(bad[:10])))
+    sys.exit(1)
+' "$f" "$script_dir/../solada-prefilter/config.json"; then
+      fail=1
+    fi
+  fi
 done
 if [ $fail -ne 0 ]; then
   echo "PRIVACY GUARD FAILED: owner wallet data must not be committed. See PRIVACY.md." >&2

@@ -188,7 +188,7 @@
     "min_ada_row": 1.0
   },
   "dev_checks": {
-    "_note": "Phase 1 dev checks (dev_checks.py). Own budget_s and max_calls, capped at run start + 600s, run before the webhook, separate from research_budget_s. Koios primary, Blockfrost fallback via the existing BLOCKFROST_PROJECT_ID. A Koios 429 stops Koios here and pauses it for ~60s, then Koios resumes; the breaker is not tripped. A new dev sell (unseen sell tx, changed_since_last) on a tracked token may add one dev_sell trigger; unchanged state does not re-fire. Rows are keyed by policy + asset name. min_sell_ada is a dust floor. Curve reserve stays in flags.exclude_tags and is left out of holder and seller logic. dev_buy_ada, dev_locked_pct, unlock_date and LP pulls are phase 2 (the three fields are always null).",
+    "_note": "Phase 1 dev checks (dev_checks.py). Own budget_s and max_calls, capped at run start + 600s, run before the webhook, separate from research_budget_s. Koios primary, Blockfrost fallback via the existing BLOCKFROST_PROJECT_ID. A Koios 429 stops Koios here and pauses it for ~60s, then Koios resumes; the breaker is not tripped. Blockfrost fallback calls are shared across the launches this run scans, so one row cannot spend max_bf_calls. A new dev sell (unseen sell tx, changed_since_last) on a tracked token may add one dev_sell trigger; unchanged state does not re-fire. Rows are keyed by policy + asset name. min_sell_ada is a dust floor. Curve reserve stays in flags.exclude_tags and is left out of holder and seller logic. dev_buy_ada, dev_locked_pct, unlock_date and LP pulls are phase 2 (the three fields are always null).",
     "enabled": true,
     "budget_s": 45,
     "max_calls": 36,

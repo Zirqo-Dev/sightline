@@ -5,9 +5,9 @@ when BLOCKFROST_PROJECT_ID is set). No external score API.
 
 The dev is the launch's creator stake: Solada launcherAddress, or, when that has no stake
 key, the non-script stake that funded a verified mint tx. Output carries a short dev_tag
-only (a flags/watch prefix of at most 12 characters when one matches, else the same
-w-xxxxxxxx hash flags.py uses). Never a full address or stake key. Rows and trigger keys
-are the token (policy + asset name): a ticker that changes token is a new baseline.
+only: the watch-list role label when one matches, otherwise the same w-xxxxxxxx hash
+flags.py uses. Never a raw prefix, address, or stake key. Rows and trigger keys are the
+token (policy + asset name): a ticker that changes token is a new baseline.
 
 Phase 1 is dev sells / late rugs, serial-launcher counts, and drawdown / inactivity.
 dev_buy_ada, dev_locked_pct and unlock_date are always null. LP pulls are phase 2, with
@@ -26,7 +26,7 @@ min_sell_ada or late_rug flips true. A public row with no sell-cache entry is
 re-baselined (hashes recorded, no fire). An incomplete read never lowers stored sell
 facts; the row is marked partial. Drawdown, serial counts and inactivity do not re-fire.
 """
-import hashlib, os, re, sys, time
+import hashlib, json, os, re, sys, time
 from datetime import datetime, timezone
 
 import flags as F
@@ -47,7 +47,7 @@ NOTE = (
     "Phase 1 only: creator-stake sells and late rugs, serial launch counts, drawdown from the "
     "peak this job has seen, and inactivity. dev_buy_ada, dev_locked_pct, unlock_date and LP pulls "
     "are phase 2 (the three fields are always null). No dev lock, dev buy class, or social checks. "
-    "dev_tag is a watch prefix or a 10-character hash, never an address or stake key. Rows are keyed "
+    "dev_tag is a watch-list role label or a 10-character hash, never a prefix, address, or stake key. Rows are keyed "
     "by policy + asset name. ATH is the highest mcap this job has observed (the run is every 2h), not "
     "a tick peak. prior_rugs counts earlier launches this job has already marked late_rug for the same "
     "creator stake. A sell is token out and ADA in on the creator's own key in one tx, or ADA paid "
@@ -68,13 +68,60 @@ def iso(ts):
     return datetime.fromtimestamp(int(ts), timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+TAG_RE = re.compile(r"^w-[0-9a-f]{8}$")
+ROLE_RE = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
+
+
+def known_roles(cfg=None):
+    """Role labels from flags.snek_prefix_tags. These are names, not key material."""
+    if cfg is None:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+        try:
+            with open(path) as f:
+                cfg = json.load(f)
+        except (OSError, ValueError):
+            cfg = {}
+    tags = ((cfg or {}).get("flags") or {}).get("snek_prefix_tags") or {}
+    return {k for k in tags if isinstance(k, str) and not k.startswith("_") and ROLE_RE.fullmatch(k)}
+
+
+def dev_tag_ok(tag, roles=None):
+    """True for a missing tag, the w- hash, or a known role label."""
+    if tag is None:
+        return True
+    if isinstance(tag, str) and TAG_RE.fullmatch(tag):
+        return True
+    if roles is None:
+        roles = known_roles()
+    return isinstance(tag, str) and tag in roles
+
+
+def _role_label(role, stake, watch, roles):
+    """A watch-list value that is a role label and not a piece of the stake."""
+    if not isinstance(role, str) or role not in roles or role in (watch or {}):
+        return None
+    # A role that is itself the start of the stake payload is key material, not a label.
+    payload = stake[6:] if stake.startswith("stake1") else stake
+    if payload.startswith(role):
+        return None
+    return role
+
+
 def short_tag(stake, watch):
-    """Watch prefix when one matches and is <= 12 chars (most specific wins), else flags.tag (10 chars)."""
+    """Role label of the most specific watch-list hit, else the w- hash.
+
+    A hit with no role label still returns the hash. Never a raw prefix, address, or key fragment.
+    """
     if not stake:
         return None
-    hits = [p for p in F.match_tags(stake, watch or {}) if isinstance(p, str) and 0 < len(p) <= 12]
-    if hits:
-        return max(hits, key=len)
+    roles = known_roles()
+    watch = watch or {}
+    hits = [p for p in F.match_tags(stake, watch) if isinstance(p, str) and p]
+    hits.sort(key=len, reverse=True)
+    for p in hits:
+        role = _role_label(watch.get(p), stake, watch, roles)
+        if role:
+            return role
     return F.tag(stake)
 
 
@@ -367,7 +414,7 @@ def _keep_sell(row, prev, complete):
         row["late_rug"] = True
     if row.get("holders_at_sell") is None and prev.get("holders_at_sell") is not None and prev.get("late_rug") is True:
         row["holders_at_sell"] = prev.get("holders_at_sell")
-    if row.get("dev_tag") is None and prev.get("dev_tag"):
+    if row.get("dev_tag") is None and dev_tag_ok(prev.get("dev_tag")) and prev.get("dev_tag"):
         row["dev_tag"] = prev.get("dev_tag")
     row["coverage"]["partial"] = True
     return row
@@ -496,6 +543,30 @@ class DevChain:
     def bf_left(self):
         return int(self.dc["max_bf_calls"]) - (self.h.calls.get("blockfrost", 0) - self.bf_start)
 
+    def unit_bf_left(self):
+        """Blockfrost calls still allowed for the launch currently being scanned.
+
+        Unset until begin_unit. One launch must not spend the whole fallback budget.
+        """
+        left = self.bf_left()
+        cap = getattr(self, "_unit_bf_cap", None)
+        if cap is None:
+            return left
+        used = self.h.calls.get("blockfrost", 0) - getattr(self, "_unit_bf_start", 0)
+        return min(left, cap - used)
+
+    def begin_unit(self, remaining):
+        """Share the remaining Blockfrost budget across the launches still to be scanned."""
+        left = max(0, self.bf_left())
+        n = max(1, int(remaining or 1))
+        self._unit_bf_start = self.h.calls.get("blockfrost", 0)
+        if left <= 0:
+            self._unit_bf_cap = 0
+        elif left < n:
+            self._unit_bf_cap = 1
+        else:
+            self._unit_bf_cap = left // n
+
     def stop_reason(self):
         if self.late():
             return "deadline"
@@ -522,12 +593,12 @@ class DevChain:
             self.koios_paused = True
 
     def bf(self, path):
-        if not self.bf_key or self.bf_left() <= 0 or self.late():
+        if not self.bf_key or self.unit_bf_left() <= 0 or self.late():
             return None
         return self.h.req("blockfrost", BF + path, headers={"project_id": self.bf_key}, quiet404=False)
 
     def _fallback(self):
-        if self.bf_key and self.bf_left() > 0 and not self.late():
+        if self.bf_key and self.unit_bf_left() > 0 and not self.late():
             self.fallbacks += 1
             return True
         return False
@@ -639,7 +710,7 @@ class DevChain:
                 self.note_koios()
             if not got and self._fallback():
                 for h in chunk:
-                    if self.late():
+                    if self.late() or self.unit_bf_left() <= 0:
                         break
                     x = self.bf(f"/txs/{h}/utxos")
                     if x:
@@ -796,6 +867,8 @@ def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline, new_h
     if skipped or not stats:
         if isinstance(prev, dict) and prev.get("unit") == unit:
             for k in ("dev_tag", "dev_sold_ada", "dev_sold_after_min", "holders_at_sell", "late_rug"):
+                if k == "dev_tag" and not dev_tag_ok(prev.get(k)):
+                    continue
                 if prev.get(k) is not None and (k != "dev_tag" or row["dev_tag"] is None):
                     row[k] = prev.get(k)
             if row["ath_mcap"] is None and prev.get("ath_mcap") is not None:
@@ -876,7 +949,7 @@ def trigger_for(row):
                ("dev_tag", "dev_sold_ada", "dev_sold_after_min", "holders_at_sell", "late_rug", "risk", "changed_since_last")}
     F.assert_public(metrics)
     tag = metrics.get("dev_tag")
-    if tag is not None and len(tag) > 12:
+    if not dev_tag_ok(tag):
         raise SystemExit("dev_checks: refusing a dev_tag that is not a short tag")
     # public state.json stores this key. Hash the tx prefix so the raw hash is not in the fired map.
     pref = (row.get("_new_sell") or "")[:16]
@@ -887,7 +960,7 @@ def trigger_for(row):
 def _guard(doc):
     for e in doc.get("entries") or []:
         tag = e.get("dev_tag")
-        if tag is not None and (not isinstance(tag, str) or len(tag) > 12 or tag.startswith("stake") or tag.startswith("addr")):
+        if not dev_tag_ok(tag):
             raise SystemExit("dev_checks: refusing a dev_tag that is not a short tag")
         for k in PHASE2:
             if e.get(k) is not None:
@@ -1172,10 +1245,12 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
         chain = DevChain(http, dc, bf_key, deadline)
         limit = max(0, int(dc["max_launches"]))
         scans, stop = {}, None
-        for item in rows_in[:limit]:
+        window = rows_in[:limit]
+        for i, item in enumerate(window):
             stop = chain.stop_reason()
             if stop:
                 break
+            chain.begin_unit(len(window) - i)
             item = dict(item, watch=watch)
             try:
                 scans[item["unit"]] = _scan(chain, item, ex, dc)
@@ -1217,10 +1292,12 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
             priors.append({"ticker": l.get("ticker") or unit[:8], "unit": unit, "launch": l, "watch": watch,
                            "mcap_ada": None, "vol_h24_ada": None})
         prior_done = 0
+        prior_window = priors[:int(dc["max_prior"])]
         if chain.stop_reason() is None:
-            for item in priors[:int(dc["max_prior"])]:
+            for i, item in enumerate(prior_window):
                 if chain.stop_reason():
                     break
+                chain.begin_unit(len(prior_window) - i)
                 try:
                     sc = _scan(chain, item, ex, dc)
                 except Exception as e:

@@ -62,16 +62,30 @@ def dc():
 
 
 class TagsAndRules(unittest.TestCase):
-    def test_dev_tag_joins_watch_prefix_and_never_a_full_key(self):
+    def test_dev_tag_is_a_role_or_hash_never_a_prefix(self):
         st = stake("dev")
         prefix = st[6:16]
-        self.assertEqual(len(prefix), 10)
-        self.assertEqual(DC.short_tag(st, {prefix: "repeat_launcher", st[6:12]: "watch"}), prefix)
-        self.assertEqual(DC.short_tag(st, {st[6:26]: "too_long"}), F.tag(st))
+        short = st[6:12]
+        roles = DC.known_roles()
+        self.assertIn("repeat_launcher", roles)
+        self.assertIn("watch", roles)
+        # most specific hit that has a role label
+        hit = DC.short_tag(st, {prefix: "repeat_launcher", short: "watch"})
+        self.assertEqual(hit, "repeat_launcher")
+        self.assertFalse(hit == prefix or prefix in hit or st in hit)
+        # a hit whose value is not a role label falls through to a shorter role, else the hash
+        self.assertEqual(DC.short_tag(st, {prefix: prefix, short: "watch"}), "watch")
+        self.assertEqual(DC.short_tag(st, {prefix: ""}), F.tag(st))
+        self.assertEqual(DC.short_tag(st, {prefix: prefix}), F.tag(st))
+        self.assertEqual(DC.short_tag(st, {st[6:26]: "repeat_launcher"}), "repeat_launcher")
         self.assertEqual(DC.short_tag(st, {}), F.tag(st))
-        self.assertLessEqual(len(DC.short_tag(st, {})), 12)
-        self.assertNotIn(st, DC.short_tag(st, {prefix: "repeat_launcher"}))
+        self.assertRegex(DC.short_tag(st, {}), r"^w-[0-9a-f]{8}$")
         self.assertIsNone(DC.short_tag(None, {}))
+        for label in ("dev", "buyer", "reserve"):
+            for watch in ({}, {prefix: "repeat_launcher"}, {prefix: prefix}):
+                tag = DC.short_tag(stake(label), watch)
+                self.assertTrue(tag is None or DC.dev_tag_ok(tag))
+                self.assertTrue(DC.TAG_RE.fullmatch(tag) or tag in roles)
 
     def test_config_curve_reserve_is_the_excluded_tag(self):
         cfg = json.load(open(CFG_PATH))
@@ -328,8 +342,11 @@ class Run(unittest.TestCase):
             self.assertEqual(t1, [])
             by = {e["ticker"]: e for e in doc["entries"]}
             rug, clean = by["RUG"], by["CLEAN"]
-            self.assertEqual(rug["dev_tag"], prefix)
-            self.assertLessEqual(len(rug["dev_tag"]), 12)
+            self.assertEqual(rug["dev_tag"], "repeat_launcher")
+            self.assertFalse(rug["dev_tag"] == prefix or prefix in rug["dev_tag"])
+            self.assertTrue(all(DC.dev_tag_ok(e["dev_tag"]) for e in doc["entries"]))
+            self.assertTrue(all(DC.TAG_RE.fullmatch(e["dev_tag"]) or e["dev_tag"] in DC.known_roles()
+                                for e in doc["entries"]))
             self.assertEqual(rug["policy_short"], ru[:12])
             self.assertEqual(rug["dev_sold_ada"], 2500.0)
             self.assertEqual(rug["dev_sold_after_min"], FX["late_after_s"] / 60.0)
@@ -473,6 +490,66 @@ class Fallback(unittest.TestCase):
         self.assertFalse(doc["coverage"]["blockfrost_available"])
         self.assertTrue(all(e["coverage"]["skipped"] == "koios" for e in doc["entries"]))
         self.assertEqual(triggers, [])
+
+    def test_blockfrost_fallback_is_shared_across_launches(self):
+        """One Koios 429 must not spend the whole Blockfrost budget on the first row.
+
+        Run 40575149871: 3 Koios calls, then a 429, then 50 Blockfrost calls on one row
+        and 15 rows skipped for budget. The fallback share lets every launch in the
+        window start. The Koios call cap is unchanged.
+        """
+        n, txs_each = 4, 10
+        books, tracked, launches = {}, [], []
+        t0 = FX["launch_s"]
+        for i in range(n):
+            u = unit(f"B{i}")
+            rows = [leg(hx(f"b{i}m"), t0, [],
+                        [utxo("dev", 2_000_000, {u: 1000}, hx(f"b{i}m") + "#0")])]
+            for k in range(txs_each - 1):
+                rows.append(leg(hx(f"b{i}t{k}"), t0 + 60 + k,
+                                [utxo("dev", 2_000_000, {u: 1000}, rows[-1]["hash"] + "#0")],
+                                [utxo("dev", 2_000_000, {u: 1000}, hx(f"b{i}t{k}") + "#0")]))
+            books[u] = rows
+            launch = {"id": f"b{i}", "ticker": f"B{i}", "policyId": u[:56], "assetName": u[56:],
+                      "launcherAddress": addr("dev"), "liveAtMs": t0 * 1000}
+            launches.append(launch)
+            tracked.append({"ticker": f"B{i}", "unit": u, "launch": launch, "mcap_ada": 10, "vol_h24_ada": 1})
+
+        def req(self_, src, url, method="GET", body=None, headers=None, quiet404=True):
+            self_.calls[src] = self_.calls.get(src, 0) + 1
+            if src == "koios":
+                return None
+            if "/transactions" in url:
+                uid = url.split("/assets/")[1].split("/")[0]
+                rows = books[uid]
+                return [{"tx_hash": t["hash"], "block_height": t["height"], "block_time": t["time"]} for t in rows]
+            if url.endswith("/utxos"):
+                h = url.split("/txs/")[1].split("/")[0]
+                tx = next(t for rows in books.values() for t in rows if t["hash"] == h)
+                return _bf_tx(tx)
+            if url.endswith("/withdrawals"):
+                return []
+            return None
+
+        cfg = {"dev_checks": {"budget_s": 30, "max_calls": 36, "max_bf_calls": 8, "max_launches": n,
+                              "max_txs_per_unit": txs_each, "max_pages_per_unit": 1, "max_prior": 0},
+               "flags": {"exclude_tags": {}}}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "cache"))
+            http = P.Http({})
+            http.koios_pause_until = time.time() + 120
+            with mock.patch.object(P.Http, "req", req):
+                summary, _ = DC.run(http, cfg, tracked, launches, {}, os.path.join(d, "data"),
+                                    os.path.join(d, "cache"), False, FX["now_s"], bf_key=KEY, owner_env=OWNER)
+            doc = json.load(open(os.path.join(d, "data", "dev_checks.json")))
+        self.assertEqual(summary["koios_calls"], 0)
+        self.assertLessEqual(summary["blockfrost_calls"], 8)
+        self.assertGreater(summary["blockfrost_calls"], 0)
+        self.assertEqual(doc["coverage"]["scanned"], n)
+        budget_skips = [e for e in doc["entries"] if (e.get("coverage") or {}).get("skipped") == "budget"]
+        self.assertEqual(budget_skips, [])
+        self.assertTrue(all(DC.dev_tag_ok(e["dev_tag"]) for e in doc["entries"]))
+        self.assertTrue(all((e.get("coverage") or {}).get("txs_read", 0) > 0 for e in doc["entries"]))
 
 
 class Wiring(unittest.TestCase):
@@ -731,6 +808,27 @@ class Review(unittest.TestCase):
             DC.trigger_for(row)
         with self.assertRaises(SystemExit):
             DC._guard({"entries": [row]})
+
+    def test_prefix_dev_tag_is_refused_and_a_role_label_is_kept(self):
+        prefix = stake("dev")[6:16]
+        bad = {"ticker": "T", "unit": unit("PRE"), "dev_tag": prefix, "changed_since_last": True,
+               "dev_sold_ada": 100, "dev_sold_after_min": None, "holders_at_sell": 1, "late_rug": False,
+               "risk": "caution", "_new_sell": hx("pre"),
+               "dev_buy_ada": None, "dev_locked_pct": None, "unlock_date": None}
+        with self.assertRaises(SystemExit):
+            DC.trigger_for(bad)
+        with self.assertRaises(SystemExit):
+            DC._guard({"entries": [bad]})
+        good = dict(bad, dev_tag="first_block_sniper")
+        trig = DC.trigger_for(good)
+        self.assertEqual(trig["metrics"]["dev_tag"], "first_block_sniper")
+        self.assertFalse(prefix in json.dumps(trig))
+        DC._guard({"entries": [dict(good, changed_since_last=False)]})
+        kept = {"dev_tag": None, "coverage": {}, "unit": bad["unit"]}
+        DC._keep_sell(kept, {"dev_tag": prefix, "dev_sold_ada": 10, "late_rug": True}, False)
+        self.assertIsNone(kept["dev_tag"])
+        DC._keep_sell(kept, {"dev_tag": "repeat_launcher", "dev_sold_ada": 10, "late_rug": True}, False)
+        self.assertEqual(kept["dev_tag"], "repeat_launcher")
 
     def test_dev_checks_429_does_not_arm_the_breaker_and_research_skips_koios(self):
         http = P.Http({"koios": 0}, backoff={"koios": [0]})
@@ -1406,7 +1504,7 @@ class BoardAndFallback(unittest.TestCase):
             self.assertIn("CLEAN", names)
             self.assertNotIn("ZEBRA", names)
             tag = doc2["entries"][0]["dev_tag"]
-            self.assertTrue(tag and len(tag) <= 12)
+            self.assertTrue(DC.dev_tag_ok(tag) and (DC.TAG_RE.fullmatch(tag) or tag in DC.known_roles()))
             text = json.dumps(doc2)
             self.assertNotIn(stake("dev"), text)
             self.assertNotIn(addr("dev"), text)
@@ -1439,7 +1537,8 @@ class BoardAndFallback(unittest.TestCase):
             rug = next(e for e in doc2["entries"] if e["ticker"] == "RUG")
             self.assertFalse(rug["changed_since_last"])
             self.assertEqual(rug["dev_sold_ada"], sold)
-            self.assertTrue(rug["dev_tag"] and len(rug["dev_tag"]) <= 12)
+            self.assertTrue(DC.dev_tag_ok(rug["dev_tag"]))
+            self.assertTrue(DC.TAG_RE.fullmatch(rug["dev_tag"]) or rug["dev_tag"] in DC.known_roles())
             text = json.dumps(doc2)
             self.assertNotIn(stake("dev"), text)
             self.assertNotIn(addr("dev"), text)
@@ -1471,7 +1570,7 @@ class BoardAndFallback(unittest.TestCase):
             self.assertEqual([e["ticker"] for e in doc["entries"]], ["RUG"])
             self.assertFalse(doc["entries"][0]["changed_since_last"])
             tag = doc["entries"][0]["dev_tag"]
-            self.assertTrue(tag and tag.startswith("w-") and len(tag) <= 12)
+            self.assertRegex(tag, r"^w-[0-9a-f]{8}$")
             text = json.dumps(doc)
             self.assertNotIn(stake("dev"), text)
             self.assertNotIn(addr("dev"), text)
