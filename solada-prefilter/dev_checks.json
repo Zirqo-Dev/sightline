@@ -1,7 +1,7 @@
 {
- "at": "2026-10-27T20:11:04Z",
+ "at": "2026-10-27T22:10:22Z",
  "phase": 1,
- "note": "Phase 1 only: creator-stake sells and late rugs, serial launch counts, drawdown from the peak this job has seen, and inactivity. dev_buy_ada, dev_locked_pct, unlock_date and LP pulls are phase 2 (the three fields are always null). No dev lock, dev buy class, or social checks. dev_tag is a watch prefix or a 10-character hash, never an address or stake key. Rows are keyed by policy + asset name. ATH is the highest mcap this job has observed (the run is every 2h), not a tick peak. prior_rugs counts earlier launches this job has already marked late_rug for the same creator stake. A sell is token out and ADA in on the creator's own key in one tx, or ADA paid later for tokens parked at a script (a cancel is not a sell). late_rug needs the net drop and tokens actually sold, both at least rug_bag_pct of that stake's peak; a lock is not a sell. min_sell_ada is a dust floor on the ADA of sell txs not seen before. A partial read adds that fresh ADA to the stored total and does not lower it. An incomplete read is marked partial.",
+ "note": "Phase 1 only: creator-stake sells and late rugs, serial launch counts, drawdown from the peak this job has seen, and inactivity. dev_buy_ada, dev_locked_pct, unlock_date and LP pulls are phase 2 (the three fields are always null). No dev lock, dev buy class, or social checks. dev_tag is a watch-list role label or a 10-character hash, never a prefix, address, or stake key. Rows are keyed by policy + asset name. ATH is the highest mcap this job has observed (the run is every 2h), not a tick peak. prior_rugs counts earlier launches this job has already marked late_rug for the same creator stake. A sell is token out and ADA in on the creator's own key in one tx, or ADA paid later for tokens parked at a script (a cancel is not a sell). late_rug needs the net drop and tokens actually sold, both at least rug_bag_pct of that stake's peak; a lock is not a sell. min_sell_ada is a dust floor on the ADA of sell txs not seen before. A partial read adds that fresh ADA to the stored total and does not lower it. An incomplete read is marked partial.",
  "thresholds": {
   "rug_bag_pct": 80,
   "late_min_minutes": 30,
@@ -27,19 +27,19 @@
    "prior_rugs": 0,
    "ath_mcap": 22262,
    "drawdown_pct": 0.0,
-   "inactive": false,
+   "inactive": null,
    "risk": "caution",
    "changed_since_last": false,
-   "asof": "2026-10-27T20:11:04Z",
+   "asof": "2026-10-27T22:10:22Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
-    "txs_read": 49,
+    "txs_read": 0,
     "complete": false,
     "partial": true,
-    "skipped": null,
-    "unread_txs": 1
+    "skipped": "deadline",
+    "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
   },
@@ -48,7 +48,7 @@
    "unit": "8d249692cefbe5d47c5196598b9780d26a2a60a20c2499e9e27e77000014df10424554",
    "policy_short": "8d249692cefb",
    "dev_tag": "w-b3fd7f50",
-   "dev_sold_ada": null,
+   "dev_sold_ada": 0.0,
    "dev_sold_after_min": null,
    "holders_at_sell": null,
    "late_rug": null,
@@ -57,18 +57,18 @@
    "prior_rugs": 0,
    "ath_mcap": 29470,
    "drawdown_pct": 0.0,
-   "inactive": null,
+   "inactive": false,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-27T20:11:04Z",
+   "asof": "2026-10-27T22:10:22Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
-    "txs_read": 0,
+    "txs_read": 50,
     "complete": false,
-    "partial": false,
-    "skipped": "budget",
+    "partial": true,
+    "skipped": null,
     "unread_txs": 0
    },
    "mcap_basis": "solada-curve"
@@ -78,27 +78,27 @@
    "unit": "14628c260a749e78e69e58acca32d0baa09808d50388c84fa7e1ae470014df10424f4c54",
    "policy_short": "14628c260a74",
    "dev_tag": "w-0f4ede9f",
-   "dev_sold_ada": null,
+   "dev_sold_ada": 0.0,
    "dev_sold_after_min": null,
    "holders_at_sell": null,
    "late_rug": null,
    "serial_3h": 0,
    "serial_7d": 0,
    "prior_rugs": 0,
-   "ath_mcap": 321454,
+   "ath_mcap": 324846,
    "drawdown_pct": 0.0,
-   "inactive": null,
+   "inactive": false,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-27T20:11:04Z",
+   "asof": "2026-10-27T22:10:22Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
-    "txs_read": 0,
+    "txs_read": 50,
     "complete": false,
-    "partial": false,
-    "skipped": "budget",
+    "partial": true,
+    "skipped": null,
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -108,27 +108,27 @@
    "unit": "c1b89ed48dfc2b82167c1548b88942d367af1e517947c3dd8bdead0b0014df10434c4f56452d33",
    "policy_short": "c1b89ed48dfc",
    "dev_tag": "w-8eee2b5c",
-   "dev_sold_ada": null,
+   "dev_sold_ada": 0.0,
    "dev_sold_after_min": null,
    "holders_at_sell": null,
    "late_rug": null,
    "serial_3h": 0,
    "serial_7d": 0,
    "prior_rugs": 0,
-   "ath_mcap": 260919,
+   "ath_mcap": 277116,
    "drawdown_pct": 0.0,
-   "inactive": null,
+   "inactive": false,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-27T20:11:04Z",
+   "asof": "2026-10-27T22:10:22Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
-    "txs_read": 0,
+    "txs_read": 50,
     "complete": false,
-    "partial": false,
-    "skipped": "budget",
+    "partial": true,
+    "skipped": null,
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -146,19 +146,19 @@
    "serial_7d": 0,
    "prior_rugs": 0,
    "ath_mcap": 43202,
-   "drawdown_pct": 0.0,
+   "drawdown_pct": 0.5,
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-27T20:11:04Z",
+   "asof": "2026-10-27T22:10:22Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
     "txs_read": 0,
     "complete": false,
-    "partial": false,
-    "skipped": "budget",
+    "partial": true,
+    "skipped": "deadline",
     "unread_txs": 0
    },
    "mcap_basis": "solada-coins"
@@ -180,15 +180,15 @@
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-27T20:11:04Z",
+   "asof": "2026-10-27T22:10:22Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
     "txs_read": 0,
     "complete": false,
-    "partial": false,
-    "skipped": "budget",
+    "partial": true,
+    "skipped": "deadline",
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -206,19 +206,19 @@
    "serial_7d": 1,
    "prior_rugs": 0,
    "ath_mcap": 5704,
-   "drawdown_pct": 0.0,
+   "drawdown_pct": 2.5,
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-27T20:11:04Z",
+   "asof": "2026-10-27T22:10:22Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
     "txs_read": 0,
     "complete": false,
-    "partial": false,
-    "skipped": "budget",
+    "partial": true,
+    "skipped": "deadline",
     "unread_txs": 0
    },
    "mcap_basis": "solada-curve"
@@ -240,15 +240,15 @@
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-27T20:11:04Z",
+   "asof": "2026-10-27T22:10:22Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
     "txs_read": 0,
     "complete": false,
-    "partial": false,
-    "skipped": "budget",
+    "partial": true,
+    "skipped": "deadline",
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -270,15 +270,15 @@
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-27T20:11:04Z",
+   "asof": "2026-10-27T22:10:22Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
     "txs_read": 0,
     "complete": false,
-    "partial": false,
-    "skipped": "budget",
+    "partial": true,
+    "skipped": "deadline",
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -300,15 +300,15 @@
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-27T20:11:04Z",
+   "asof": "2026-10-27T22:10:22Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
     "txs_read": 0,
     "complete": false,
-    "partial": false,
-    "skipped": "budget",
+    "partial": true,
+    "skipped": "deadline",
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -326,19 +326,19 @@
    "serial_7d": 0,
    "prior_rugs": 0,
    "ath_mcap": 16587,
-   "drawdown_pct": 0.0,
+   "drawdown_pct": 5.1,
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-27T20:11:04Z",
+   "asof": "2026-10-27T22:10:22Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
     "txs_read": 0,
     "complete": false,
-    "partial": false,
-    "skipped": "budget",
+    "partial": true,
+    "skipped": "deadline",
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -360,15 +360,15 @@
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-27T20:11:04Z",
+   "asof": "2026-10-27T22:10:22Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
     "txs_read": 0,
     "complete": false,
-    "partial": false,
-    "skipped": "budget",
+    "partial": true,
+    "skipped": "deadline",
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -390,15 +390,15 @@
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-27T20:11:04Z",
+   "asof": "2026-10-27T22:10:22Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
     "txs_read": 0,
     "complete": false,
-    "partial": false,
-    "skipped": "budget",
+    "partial": true,
+    "skipped": "deadline",
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -416,19 +416,19 @@
    "serial_7d": 1,
    "prior_rugs": 0,
    "ath_mcap": 33771,
-   "drawdown_pct": 0.0,
+   "drawdown_pct": 13.1,
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-27T20:11:04Z",
+   "asof": "2026-10-27T22:10:22Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
     "txs_read": 0,
     "complete": false,
-    "partial": false,
-    "skipped": "budget",
+    "partial": true,
+    "skipped": "deadline",
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -450,15 +450,15 @@
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-27T20:11:04Z",
+   "asof": "2026-10-27T22:10:22Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
     "txs_read": 0,
     "complete": false,
-    "partial": false,
-    "skipped": "budget",
+    "partial": true,
+    "skipped": "deadline",
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -475,20 +475,20 @@
    "serial_3h": 0,
    "serial_7d": 1,
    "prior_rugs": 0,
-   "ath_mcap": 17277,
+   "ath_mcap": 22535,
    "drawdown_pct": 0.0,
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-27T20:11:04Z",
+   "asof": "2026-10-27T22:10:22Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
     "txs_read": 0,
     "complete": false,
-    "partial": false,
-    "skipped": "budget",
+    "partial": true,
+    "skipped": "deadline",
     "unread_txs": 0
    },
    "mcap_basis": "solada-curve"
@@ -496,76 +496,68 @@
  ],
  "coverage": {
   "tracked": 16,
-  "scanned": 1,
+  "scanned": 3,
   "complete": 0,
   "skipped": [
    {
-    "ticker": "BET",
-    "reason": "budget"
-   },
-   {
-    "ticker": "BOLT",
-    "reason": "budget"
-   },
-   {
-    "ticker": "CLOVE",
-    "reason": "budget"
+    "ticker": "BEAST",
+    "reason": "deadline"
    },
    {
     "ticker": "CORE",
-    "reason": "budget"
+    "reason": "deadline"
    },
    {
     "ticker": "DEXY",
-    "reason": "budget"
+    "reason": "deadline"
    },
    {
     "ticker": "EVIL",
-    "reason": "budget"
+    "reason": "deadline"
    },
    {
     "ticker": "FEED",
-    "reason": "budget"
+    "reason": "deadline"
    },
    {
     "ticker": "GOLFY",
-    "reason": "budget"
+    "reason": "deadline"
    },
    {
     "ticker": "HERO",
-    "reason": "budget"
+    "reason": "deadline"
    },
    {
     "ticker": "HIVE",
-    "reason": "budget"
+    "reason": "deadline"
    },
    {
     "ticker": "HOWDY",
-    "reason": "budget"
+    "reason": "deadline"
    },
    {
     "ticker": "JUICE",
-    "reason": "budget"
+    "reason": "deadline"
    },
    {
     "ticker": "SER",
-    "reason": "budget"
+    "reason": "deadline"
    },
    {
     "ticker": "SHARKY",
-    "reason": "budget"
+    "reason": "deadline"
    },
    {
     "ticker": "VAMP",
-    "reason": "budget"
+    "reason": "deadline"
    }
   ],
   "prior_unchecked": 0,
-  "koios_calls": 3,
-  "blockfrost_calls": 50,
-  "blockfrost_fallbacks": 4,
+  "koios_calls": 18,
+  "blockfrost_calls": 0,
+  "blockfrost_fallbacks": 0,
   "blockfrost_available": true,
-  "basis": "mixed",
+  "basis": "koios",
   "budget_s": 45,
   "max_calls": 36
  }
