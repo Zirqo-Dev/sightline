@@ -1,5 +1,5 @@
 {
- "at": "2026-10-27T16:09:20Z",
+ "at": "2026-10-27T18:09:23Z",
  "basis": "blockfrost",
  "dry_run": false,
  "baseline": false,
@@ -24,26 +24,50 @@
     "asset": "LP",
     "lp": true,
     "dex": "minswap_v2",
-    "delta": 104034
+    "delta": -2000000
    }
   ],
-  "ada_delta": 1521,
+  "ada_delta": 2884,
   "moves": [
    {
-    "asset": "CHEESE",
-    "delta": 1545762751156,
-    "ada_equiv": 142,
-    "value_basis": "ada_leg",
-    "pct": 10.2
+    "asset": "NIGHT",
+    "delta": -23595999998,
+    "decimals": 6,
+    "qty": -23596.0,
+    "ada_equiv": 4604,
+    "value_basis": "ada_leg_rate",
+    "pct": 2.5
+   },
+   {
+    "asset": "SNEK",
+    "delta": -1000000,
+    "decimals": 0,
+    "qty": -1000000.0,
+    "ada_equiv": 2994,
+    "value_basis": "decimals_x_price",
+    "pct": 2.0
+   },
+   {
+    "asset": "CRAWJU",
+    "delta": -1000000,
+    "decimals": 0,
+    "qty": -1000000.0,
+    "ada_equiv": 575,
+    "value_basis": "ada_leg_rate",
+    "pct": 11.1
    },
    {
     "asset": "ASCEND",
-    "delta": 1443282805,
+    "delta": 7057367677,
     "decimals": 6,
-    "qty": 1443.2828,
-    "ada_equiv": 1858,
-    "value_basis": "ada_leg",
-    "pct": 0.5
+    "qty": 7057.3677,
+    "ada_equiv": 9605,
+    "value_basis": "ada_leg_rate",
+    "pct": 2.4
+   },
+   {
+    "asset": "ADA",
+    "delta": 2884
    }
   ]
  },
@@ -56,27 +80,51 @@
     "tag": "w-f3186187",
     "moves": [
      {
-      "asset": "CHEESE",
-      "delta": 1545762751156,
-      "ada_equiv": 142,
-      "value_basis": "ada_leg",
-      "pct": 10.2
+      "asset": "NIGHT",
+      "delta": -23595999998,
+      "decimals": 6,
+      "qty": -23596.0,
+      "ada_equiv": 4604,
+      "value_basis": "ada_leg_rate",
+      "pct": 2.5
+     },
+     {
+      "asset": "SNEK",
+      "delta": -1000000,
+      "decimals": 0,
+      "qty": -1000000.0,
+      "ada_equiv": 2994,
+      "value_basis": "decimals_x_price",
+      "pct": 2.0
+     },
+     {
+      "asset": "CRAWJU",
+      "delta": -1000000,
+      "decimals": 0,
+      "qty": -1000000.0,
+      "ada_equiv": 575,
+      "value_basis": "ada_leg_rate",
+      "pct": 11.1
      },
      {
       "asset": "ASCEND",
-      "delta": 1443282805,
+      "delta": 7057367677,
       "decimals": 6,
-      "qty": 1443.2828,
-      "ada_equiv": 1858,
-      "value_basis": "ada_leg",
-      "pct": 0.5
+      "qty": 7057.3677,
+      "ada_equiv": 9605,
+      "value_basis": "ada_leg_rate",
+      "pct": 2.4
+     },
+     {
+      "asset": "ADA",
+      "delta": 2884
      }
     ]
    }
   }
  ],
  "webhook_sent": true,
- "flags_new": 2,
+ "flags_new": 4,
  "dev_checks": {
   "skipped": "launches unavailable",
   "wrote": false,
@@ -84,35 +132,36 @@
  },
  "big_moves": {
   "units_scanned": 2,
-  "txs_read": 50,
-  "capped": [],
-  "koios_calls": 8,
-  "moves_new": 0
+  "txs_read": 152,
+  "capped": [
+   "SOLADA"
+  ],
+  "koios_calls": 15,
+  "moves_new": 6
  },
  "whale_ledger": {
   "capped": false,
-  "koios_calls": 9,
+  "koios_calls": 11,
   "blockfrost_fallbacks": 0,
   "blockfrost_calls": 0,
-  "ada_balance": 2290.522038,
+  "ada_balance": 5175.012178,
   "basis": "koios",
-  "rows": 213,
-  "open_orders": 1,
+  "rows": 281,
+  "open_orders": 3,
   "reconcile_ok": true,
   "stale": false
  },
  "data_failures": {
   "solada": 1,
-  "match": 18,
-  "koios": 1
+  "match": 18
  },
  "api_calls": {
   "solada": 2,
-  "geckoterminal": 3,
+  "geckoterminal": 6,
   "blockfrost": 20,
-  "koios": 28,
+  "koios": 42,
   "dexscreener": 1,
-  "tokenregistry": 2,
+  "tokenregistry": 3,
   "webhook": 1
  },
  "results": [
@@ -120,11 +169,11 @@
    "ticker": "COCK",
    "tracked": true,
    "unit": "49e423161ef818adc475c783571cb479d5f15ad52a01a240eacc0d3b434f434b",
-   "ada_side": 169611,
+   "ada_side": 161908,
    "mcap_ada": null,
    "holders": 1000,
-   "vol_h24_ada": 5505,
-   "price_ada": 0.005831150173,
+   "vol_h24_ada": 7955,
+   "price_ada": 0.0054472696,
    "decimals": 0,
    "crossed": [],
    "kill": {
@@ -137,7 +186,7 @@
    "unit": "e7c77b2784e52949b3f95f8f9f2d1668dd47d7ed56491eab588bb730534f4c414441",
    "ada_side": null,
    "mcap_ada": null,
-   "holders": 484,
+   "holders": 487,
    "vol_h24_ada": null,
    "price_ada": null,
    "decimals": null,
