@@ -11,6 +11,13 @@ overstatement came from re-counting a tx window). Positions change only from the
 the whale's own UTxOs; each run's balances are checked against Koios account_info / account_assets
 and any drift is reported (never silently "fixed").
 
+Token labels are the display name plus the policy, not arrival order. Every entry stores policy
+(first 8 hex). One unit keeps the bare name; several units with that name are each name~policy
+(first 6 hex, or 8 when those prefixes collide), so a later Koios or Blockfrost page cannot swap
+which unit is unsuffixed. Same-name holdings with the same quantity are marked dup_of / same_qty_as
+and left out of positions_counted and position_deltas (information only, not a second total or move).
+A renamed key is remembered in key_alias; position_deltas treats the old key as the new one.
+
 DEX orders (batcher-style: Splash/Spectrum/Minswap/Genius etc.): a whale tx that sends a token (or 10+ ADA)
 to a script address without getting value back opens an order (ref = tx#index). A later tx that spends
 that ref is a fill (whale gets the other side) or a cancel (whale gets the same token back). If the ref is
@@ -56,15 +63,255 @@ def token_name(unit):
     return s if s and s.isprintable() and len(s) <= 24 else unit[:12]
 
 
-def token_key(unit, names):
-    """Stable display key per unit; a second unit with the same name gets ~policy6 appended."""
-    if unit in names:
-        return names[unit]
-    k = token_name(unit)
-    if k in names.values():
-        k = f"{k}~{unit[:6]}"
-    names[unit] = k
-    return k
+def policy_short(unit, n=8):
+    """First n hex chars of the policy id. Public asset data; never a wallet or stake key."""
+    pol = unit[:56] if isinstance(unit, str) else ""
+    hexed = "".join(c for c in pol if c in "0123456789abcdefABCDEF").lower()
+    return hexed[:n]
+
+
+def _base_name(key):
+    """Display name of a token key. A ~ suffix is a policy id (6-8 hex, or the full policy if 8 collided)."""
+    if isinstance(key, str) and "~" in key:
+        base, suf = key.rsplit("~", 1)
+        if suf and all(c in "0123456789abcdef" for c in suf) and (6 <= len(suf) <= 8 or len(suf) == 56):
+            return base
+    return key
+
+
+def assign_token_keys(units):
+    """{unit: display key} from the set of units alone. Insertion order is not an input.
+
+    A name used once stays bare. A name used by several units is name~policy for every unit,
+    including the one that used to be stored without a suffix. The suffix is the first 6 policy
+    hex, or 8 when two policies share those 6, so the keys cannot swap between runs.
+    """
+    if isinstance(units, dict):
+        units = list(units)
+    groups = {}
+    for u in units:
+        if not isinstance(u, str) or not u or u == "lovelace":
+            continue
+        groups.setdefault(token_name(u), []).append(u)
+    out = {}
+    for name, us in groups.items():
+        uniq = sorted(set(us))
+        if len(uniq) == 1:
+            out[uniq[0]] = name
+            continue
+        width = 6
+        labels = [policy_short(u, width) for u in uniq]
+        if len(set(labels)) < len(uniq):
+            width = 8
+            labels = [policy_short(u, width) for u in uniq]
+        used = {}
+        for u, label in zip(uniq, labels):
+            key = f"{name}~{label}" if label else name
+            if key in used and used[key] != u:
+                label = policy_short(u, 56)
+                key = f"{name}~{label[:8]}" if label else name
+                if key in used and used[key] != u:
+                    key = f"{name}~{label}" if label else name
+            used[key] = u
+            out[u] = key
+    return out
+
+
+def _collapse_alias(alias):
+    out = {}
+    for src in list(alias):
+        seen, cur = set(), src
+        while isinstance(cur, str) and cur in alias and cur not in seen:
+            seen.add(cur)
+            nxt = alias[cur]
+            if not isinstance(nxt, str) or nxt == cur:
+                break
+            cur = nxt
+        if isinstance(cur, str) and cur != src:
+            out[src] = cur
+    return out
+
+
+def _bind_alias(alias, old_map, new_map):
+    """Record old display key -> current key. A key that is still in use is not a rename source."""
+    for u, prev in old_map.items():
+        nxt = new_map.get(u)
+        if nxt and prev and prev != nxt:
+            alias[prev] = nxt
+    collapsed = _collapse_alias(alias)
+    current = set(new_map.values())
+    alias.clear()
+    alias.update({k: v for k, v in collapsed.items() if k != v and k not in current})
+
+
+def _map_token(tok, alias):
+    if not isinstance(tok, str) or not alias:
+        return tok
+    seen = set()
+    while tok in alias and tok not in seen:
+        seen.add(tok)
+        tok = alias[tok]
+    return tok
+
+
+def token_key(unit, names, alias=None):
+    """Display key for unit. Recomputed from every unit in names, so call order does not matter."""
+    if unit == "lovelace":
+        return "ADA"
+    if not isinstance(unit, str) or not unit:
+        return unit
+    old = {u: names[u] for u in list(names) if isinstance(names.get(u), str)}
+    if unit not in names:
+        names[unit] = token_name(unit)
+    new = assign_token_keys(names)
+    if alias is not None:
+        _bind_alias(alias, old, new)
+    names.clear()
+    names.update(new)
+    return new.get(unit, token_name(unit))
+
+
+_ROW_TOKEN_FIELDS = ("token", "sold")
+_ORDER_TOKEN_FIELDS = ("token", "filled_token")
+
+
+def sync_token_keys(ledger, extra_rows=None):
+    """Rewrite token_names, rows and orders onto assign_token_keys. Old keys land in key_alias."""
+    names = ledger.setdefault("token_names", {})
+    units = set()
+    for u in list(names):
+        if isinstance(u, str):
+            units.add(u)
+    for u in (ledger.get("positions_raw") or {}):
+        if isinstance(u, str):
+            units.add(u)
+    for o in (ledger.get("orders") or {}).values():
+        if isinstance(o, dict) and isinstance(o.get("unit"), str) and o["unit"] != "lovelace":
+            units.add(o["unit"])
+    old = {u: names[u] for u in list(names) if isinstance(names.get(u), str)}
+    for u in units:
+        names.setdefault(u, token_name(u))
+    new = assign_token_keys(units)
+    alias = ledger.setdefault("key_alias", {})
+    _bind_alias(alias, old, new)
+    names.clear()
+    names.update(new)
+    seen, rows = set(), []
+    if extra_rows:
+        rows.extend(extra_rows)
+    rows.extend(ledger.get("rows") or [])
+    for row in rows:
+        if not isinstance(row, dict) or id(row) in seen:
+            continue
+        seen.add(id(row))
+        for f in _ROW_TOKEN_FIELDS:
+            if f in row:
+                row[f] = _map_token(row[f], alias)
+    for o in (ledger.get("orders") or {}).values():
+        if not isinstance(o, dict):
+            continue
+        for f in _ORDER_TOKEN_FIELDS:
+            if f in o:
+                o[f] = _map_token(o[f], alias)
+    if not alias:
+        ledger.pop("key_alias", None)
+    return names
+
+
+def token_view(ledger):
+    """Published holdings. policy is the first 8 hex of every entry, including a bare-name one.
+
+    Two entries with the same display name and the same qty are the same balance twice (a copy
+    or a copycat). same_qty_as is on each of them; dup_of is on every one except the lowest
+    policy. positions lists them all; positions_counted is the total that does not add the copy.
+    """
+    names = ledger.get("token_names") or {}
+    entries = []
+    for unit, qty in (ledger.get("positions_raw") or {}).items():
+        if not isinstance(unit, str) or not qty:
+            continue
+        entries.append({"token": names.get(unit) or token_name(unit), "name": token_name(unit),
+                        "policy": policy_short(unit, 8), "qty": qty, "unit": unit})
+    groups = {}
+    for e in entries:
+        groups.setdefault(e["name"], []).append(e)
+    for group in groups.values():
+        if len(group) < 2:
+            continue
+        by_qty = {}
+        for e in group:
+            by_qty.setdefault(e["qty"], []).append(e)
+        for same in by_qty.values():
+            if len(same) < 2:
+                continue
+            same.sort(key=lambda e: (e["policy"], e["unit"]))
+            keys = [e["token"] for e in same]
+            canon = same[0]["token"]
+            for e in same:
+                e["same_qty_as"] = [k for k in keys if k != e["token"]]
+                if e["token"] != canon:
+                    e["dup_of"] = canon
+    public = []
+    for e in sorted(entries, key=lambda e: (e["token"], e["policy"], e["unit"])):
+        row = {"token": e["token"], "policy": e["policy"], "qty": e["qty"]}
+        if e.get("same_qty_as"):
+            row["same_qty_as"] = list(e["same_qty_as"])
+        if e.get("dup_of"):
+            row["dup_of"] = e["dup_of"]
+        public.append(row)
+    return {"tokens": public,
+            "positions": {e["token"]: e["qty"] for e in public},
+            "positions_counted": {e["token"]: e["qty"] for e in public if not e.get("dup_of")}}
+
+
+def omit_dup_drift(drift, tokens):
+    """Drop a copy's drift when it equals the canonical token's drift, so the two are not added."""
+    dup_of = {t["token"]: t["dup_of"] for t in tokens or [] if isinstance(t, dict) and t.get("dup_of")}
+    out = {}
+    for k, v in (drift or {}).items():
+        canon = dup_of.get(k)
+        if canon is not None and (drift or {}).get(canon) == v:
+            continue
+        out[k] = v
+    return out
+
+
+def position_deltas(prev, cur, aliases=None):
+    """Counted qty change per current token key.
+
+    aliases maps a renamed key onto the key used now, so the migration is not a move.
+    Same-name keys that shared a qty and then changed by the same amount count once
+    (the lowest key). A copy whose qty diverges is its own change.
+    """
+    aliases = aliases or {}
+    prev_r, cur_r = {}, {}
+    for k, q in (prev or {}).items():
+        if isinstance(k, str):
+            prev_r[_map_token(k, aliases)] = q
+    for k, q in (cur or {}).items():
+        if isinstance(k, str):
+            cur_r[_map_token(k, aliases)] = q
+    deltas = {}
+    for k in set(prev_r) | set(cur_r):
+        d = cur_r.get(k, 0) - prev_r.get(k, 0)
+        if d:
+            deltas[k] = d
+    groups = {}
+    for k in set(prev_r) | set(cur_r):
+        groups.setdefault(_base_name(k), []).append(k)
+    for keys in groups.values():
+        clusters = {}
+        for k in keys:
+            sig = (prev_r.get(k, 0), cur_r.get(k, 0) - prev_r.get(k, 0))
+            clusters.setdefault(sig, []).append(k)
+        for members in clusters.values():
+            if len(members) < 2:
+                continue
+            if len({prev_r.get(k, 0) for k in members}) != 1:
+                continue
+            for k in sorted(members)[1:]:
+                deltas.pop(k, None)
+    return deltas
 
 
 def _is_mine(u, stake):
@@ -94,6 +341,7 @@ def classify(tx, stake, ledger, lp_pols, wc):
     """Rows + net deltas for one tx. tx = {hash, time, inputs/outputs: [{ref, addr, stake, lovelace, assets}]}.
     Mutates ledger['orders'] (open/fill/cancel). Pure otherwise (no network)."""
     names = ledger.setdefault("token_names", {})
+    alias = ledger.setdefault("key_alias", {})
     orders = ledger.setdefault("orders", {})
     lov, toks = 0, {}
     for side, sign in (("inputs", -1), ("outputs", 1)):
@@ -218,8 +466,8 @@ def classify(tx, stake, ledger, lp_pols, wc):
             row("order_cancel", "ADA", o["qty_raw"], lov / 1e6, order_ref_short=o["ref_short"], order_status="cancelled")
         elif got:  # filled with tokens (ADA buy order, or token -> token)
             (gu, gq), = sorted(got.items(), key=lambda x: -x[1])[:1]
-            o.update(status="filled", closed_tx=ts, closed_at=t, filled_token=token_key(gu, names), filled_qty=gq)
-            row("order_fill", token_key(gu, names), gq, o["ada"] if o["unit"] == "lovelace" else None,
+            o.update(status="filled", closed_tx=ts, closed_at=t, filled_token=token_key(gu, names, alias), filled_qty=gq)
+            row("order_fill", token_key(gu, names, alias), gq, o["ada"] if o["unit"] == "lovelace" else None,
                 order_ref_short=o["ref_short"], order_status="filled", sold=o["token"])
             handled.update(got)  # S8: received units are the fill, not a stray transfer_in
         else:  # sell order filled with ADA
@@ -254,7 +502,7 @@ def classify(tx, stake, ledger, lp_pols, wc):
                 toks_here = {k: q for k, q in u["assets"].items() if q > 0}
                 if toks_here:
                     (unit, q), = sorted(toks_here.items(), key=lambda x: -x[1])[:1]
-                    key = token_key(unit, names)
+                    key = token_key(unit, names, alias)
                 elif u["lovelace"] / 1e6 >= wc["order_min_ada"]:
                     unit, q, key = "lovelace", u["lovelace"], "ADA"
                 else:
@@ -270,7 +518,7 @@ def classify(tx, stake, ledger, lp_pols, wc):
             if sent and lov <= 0 and not any(_script(x["addr"]) for x in others_in):
                 (unit, q), = sorted(sent.items(), key=lambda x: -x[1])[:1]
                 ref = u.get("ref") or f"{tx['hash']}#{i}"
-                orders[ref] = {"ref_short": ref[:10] + ref[ref.index("#"):], "unit": unit, "token": token_key(unit, names),
+                orders[ref] = {"ref_short": ref[:10] + ref[ref.index("#"):], "unit": unit, "token": token_key(unit, names, alias),
                                "qty_raw": q, "ada": round(u["lovelace"] / 1e6, 6), "status": "open", "opened_tx": ts, "opened_at": t}
                 row("order_open", orders[ref]["token"], q, u["lovelace"] / 1e6, order_ref_short=orders[ref]["ref_short"], order_status="open")
                 rest.pop(unit, None)
@@ -284,7 +532,7 @@ def classify(tx, stake, ledger, lp_pols, wc):
                 handled.add("lovelace")
     # 4) remaining token moves: swap through a script, else transfer
     for unit, q in rest.items():
-        key = token_key(unit, names)
+        key = token_key(unit, names, alias)
         pool_in = any(_script(x["addr"]) for x in others_in)
         if (script_io and lov and (q > 0) != (lov > 0)) or (pool_in and len(rest) > 1):
             one = len(rest) == 1 and lov and (q > 0) != (lov > 0)
@@ -298,6 +546,7 @@ def classify(tx, stake, ledger, lp_pols, wc):
             row("order_fill", "ADA", None, lov / 1e6, order_status="filled_untracked")  # order opened before the ledger started
         else:
             row("transfer_in" if lov > 0 else "transfer_out", "ADA", None, abs(lov) / 1e6, cp_tag(others_in if lov > 0 else others_out))
+    sync_token_keys(ledger, rows)
     return rows, lov, toks
 
 
@@ -308,25 +557,33 @@ def apply(ledger, tx, stake, lp_pols, wc):
         return []
     rows, lov, toks = classify(tx, stake, ledger, lp_pols, wc)
     names = ledger.setdefault("token_names", {})
+    alias = ledger.setdefault("key_alias", {})
     pos = ledger.setdefault("positions_raw", {})
     for unit, q in toks.items():
         pos[unit] = pos.get(unit, 0) + q
         if not pos[unit]:
             pos.pop(unit)
-        token_key(unit, names)
+        token_key(unit, names, alias)
     ledger["lovelace"] = ledger.get("lovelace", 0) + lov
     seen[tx["hash"]] = tx.get("height")
     ledger.setdefault("rows", []).extend(rows)
+    sync_token_keys(ledger)  # rows are on the ledger, so a key changed by the lines above is rewritten here
     return rows
 
 
 def public_doc(ledger, whale_tag, now_s, wc, extra):
-    names = ledger.get("token_names", {})
+    sync_token_keys(ledger)
+    ledger["rows"] = dedupe_rows(ledger.get("rows") or [])
+    view = token_view(ledger)
+    alias = ledger.get("key_alias") or {}
     doc = {"at": iso(now_s), "whale_tag": whale_tag, "basis": extra.pop("basis", "koios"),
-           "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash).",
+           "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). "
+                   "tokens[].policy is the first 8 hex of the policy. Same-name holdings with the same qty are "
+                   "dup_of / same_qty_as and are left out of positions_counted.",
            "height": ledger.get("height"), "baseline_at": ledger.get("baseline_at"),
            "ada_balance": round(ledger.get("lovelace", 0) / 1e6, 6),
-           "positions": {names.get(u, u[:12]): q for u, q in sorted(ledger.get("positions_raw", {}).items()) if q},
+           "positions": view["positions"], "positions_counted": view["positions_counted"], "tokens": view["tokens"],
+           **({"key_alias": alias} if alias else {}),
            "orders": {o["ref_short"]: {k: v for k, v in o.items() if k not in ("unit",)} for o in ledger.get("orders", {}).values()},
            "rows": ledger.get("rows", [])[-wc["keep_rows"]:], **extra}
     return F.assert_public(doc)
@@ -618,8 +875,9 @@ def run(http, cfg, data_dir, dry_run, now_s, lp_pols, bf_key=None, deadline=None
             ledger = {"height": tip, "baseline_at": iso(now_s), "baseline_height": tip, "lovelace": bal[0],
                       "positions_raw": dict(bal[1]), "seen": {h: hg for h, hg, _ in seed if hg <= tip}, "rows": [],
                       "orders": {}, "token_names": {}}
-            for u in bal[1]:
-                token_key(u, ledger["token_names"])
+            alias = ledger.setdefault("key_alias", {})
+            for u in sorted(bal[1]):  # sorted: the label does not depend on the provider's asset order
+                token_key(u, ledger["token_names"], alias)
             extra["baseline"] = True
         finally:
             kl.baseline_mode = False
@@ -657,9 +915,22 @@ def run(http, cfg, data_dir, dry_run, now_s, lp_pols, bf_key=None, deadline=None
             if bal is None:
                 extra["reconcile_skipped"] = "account tip moved past the applied height (or unreadable); next run"
             if bal is not None:
+                sync_token_keys(ledger)
                 names = ledger["token_names"]
-                drift = {names.get(u, u[:12]) if u in names else token_name(u): bal[1].get(u, 0) - ledger["positions_raw"].get(u, 0)
-                         for u in set(bal[1]) | set(ledger["positions_raw"]) if bal[1].get(u, 0) != ledger["positions_raw"].get(u, 0)}
+                raw_drift = {}
+                held = set(names.values())
+                for u in set(bal[1]) | set(ledger.get("positions_raw") or {}):
+                    dlt = bal[1].get(u, 0) - (ledger.get("positions_raw") or {}).get(u, 0)
+                    if not dlt:
+                        continue
+                    if u in names:
+                        label = names[u]
+                    else:
+                        base = token_name(u)
+                        # a chain-only unit must not share a drift slot with a held token of the same name
+                        label = f"{base}~{policy_short(u, 8)}" if base in {_base_name(v) for v in held} else base
+                    raw_drift[label] = dlt
+                drift = omit_dup_drift(raw_drift, token_view(ledger)["tokens"])
                 extra["reconcile"] = {"ada_drift": round((bal[0] - ledger["lovelace"]) / 1e6, 6), "token_drift": drift,
                                       "ok": not drift and abs(bal[0] - ledger["lovelace"]) < 1_000_000}
     prune_seen(ledger)
