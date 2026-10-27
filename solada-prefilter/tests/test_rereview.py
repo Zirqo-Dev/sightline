@@ -197,6 +197,40 @@ class SF3OwnerKeyDerivation(unittest.TestCase):
         self.assertIn(b"not config.json whale.stake", r.stderr)
 
 
+class RootModePublicKeys(unittest.TestCase):
+    def test_root_mode_loads_public_keys_after_cd(self):
+        # CI runs `bash main/scripts/privacy-guard.sh --root desk-data` from the parent
+        # of both checkouts. The script directory has to be resolved before that cd,
+        # or privacy-public-keys.txt is missed and the public whale key is not masked.
+        key = F.b32_encode("stake", b"\xe1" + kh("public-whale"))
+        with tempfile.TemporaryDirectory() as d:
+            main = os.path.join(d, "main")
+            os.makedirs(os.path.join(main, "scripts"))
+            shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), os.path.join(main, "scripts"))
+            with open(os.path.join(main, "scripts", "privacy-public-keys.txt"), "w") as f:
+                f.write(key + "\n")
+            shutil.copytree(SRC, os.path.join(main, "solada-prefilter"), ignore=shutil.ignore_patterns("tests", "__pycache__"))
+            cfg_path = os.path.join(main, "solada-prefilter", "config.json")
+            with open(cfg_path) as f:
+                cfg = json.load(f)
+            cfg["whale"]["stake"] = key
+            with open(cfg_path, "w") as f:
+                json.dump(cfg, f)
+            desk = os.path.join(d, "desk-data")
+            os.makedirs(os.path.join(desk, "solada-prefilter"))
+            with open(os.path.join(desk, "solada-prefilter", "config.json"), "w") as f:
+                json.dump({"whale": {"stake": key}}, f)
+            subprocess.run(["git", "init", "-q"], cwd=desk, check=True)
+            subprocess.run(["git", "add", "solada-prefilter/config.json"], cwd=desk, check=True)
+            env = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
+            r = subprocess.run(
+                ["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data"],
+                cwd=d, env=env, capture_output=True)
+        self.assertNotIn(b"No such file", r.stderr)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn(key.encode(), r.stderr + r.stdout)
+
+
 class SF4ReplaceRules(unittest.TestCase):
     def setUp(self):
         self.led = fresh()
