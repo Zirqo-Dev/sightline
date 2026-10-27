@@ -4,6 +4,11 @@
 #   --root DIR: scan the git checkout at DIR (e.g. a desk-data worktree) with this script's rules.
 # Extra private patterns (one ERE per line): env PRIVACY_GUARD_PATTERNS and/or gitignored .privacy-patterns
 set -u
+# Resolve this script's directory before any cd. In --root mode the workflow
+# runs `bash main/scripts/privacy-guard.sh --root desk-data`; cd "$2" first
+# makes that relative path miss, so privacy-public-keys.txt never loads
+# (cd: main/scripts: No such file or directory).
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ "${1:-}" = "--root" ]; then
   [ -d "${2:-}" ] || { echo "privacy-guard: --root needs a directory" >&2; exit 2; }
   cd "$2" || exit 2; shift 2; root_mode=1
@@ -42,7 +47,7 @@ fi
 # is OFF when no owner patterns are loaded (an allowlist must never be checked against an empty owner list); only
 # whole tokens are masked (a longer id containing the key is not hidden); and only in the files listed in
 # mask_files (the key lives in solada-prefilter/config.json; anywhere else it is still a failure).
-allow_file="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/privacy-public-keys.txt"
+allow_file="$script_dir/privacy-public-keys.txt"
 mask_files=("solada-prefilter/config.json")
 allow=()
 if [ -f "$allow_file" ]; then
@@ -63,7 +68,7 @@ done
 # (addr1q/r/s/t... with a stake part) and must not be allowlisted, so a secret listing only the owner's payment
 # address still protects the owner's stake key. Nothing is printed except a generic failure line.
 if [ ${#allow[@]} -gt 0 ]; then
-  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  here="$script_dir"
   pycode=$(cat <<'PYEOF'
 import json, os, re, sys
 src, allow = sys.argv[1], sys.argv[2:]
