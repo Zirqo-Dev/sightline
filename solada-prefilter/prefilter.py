@@ -49,6 +49,9 @@ class Http:
     def blocked(self, src):
         if src in self.tripped:
             return True
+        # a dev-checks 429 pauses Koios until koios_pause_until, then it resumes (not a whole-run trip)
+        if src == "koios" and time.time() < (getattr(self, "koios_pause_until", 0) or 0):
+            return True
         if self.deadline is not None and src in self.deadline_srcs and time.time() >= self.deadline:
             return True
         return False
@@ -190,14 +193,13 @@ def research_plan(cfg, t_start, now):
 
 
 def note_koios_pause(http):
-    """If dev checks saw a Koios 429, skip Koios for the research window (~60s).
+    """A dev-checks 429 already set koios_pause_until. blocked('koios') is true until that time, then Koios resumes.
 
-    The breaker stays unarmed while dev checks itself is running, so its Blockfrost fallback still works.
-    Arming it only here keeps big_moves and whale_ledger from retrying an IP the public tier has blocked.
+    Do not trip the breaker: a trip would skip Koios for the rest of the run, including big_moves after the ~60s block.
     """
     until = getattr(http, "koios_pause_until", 0) or 0
-    if until > time.time() and "koios" not in http.tripped:
-        http.trip("koios", "429 during dev checks; skip Koios for ~60s")
+    if until > time.time():
+        print("  koios: paused ~60s after a dev-checks 429; resumes when that window ends", file=sys.stderr)
 
 
 def write_json(path, obj, **kw):
@@ -1026,7 +1028,7 @@ def main():
 
     summary_path = os.path.join(args.data_dir, "last-run.json" if not args.dry_run else "dry-run.json")
     write_json(summary_path, build_summary(None, None), indent=1)  # written before research too (nice-to-have)
-    note_koios_pause(http)  # a 429 during dev checks: skip Koios for ~60s so research is not starved
+    note_koios_pause(http)  # a 429 during dev checks: Koios stays paused ~60s, then resumes for research
     shared_end, whale_end = research_plan(cfg, t_start, time.time())
     # ---- SPD-44 founder whale ledger first, inside its own slice of the shared deadline, so big_moves
     # cannot exhaust the 240s and skip it (PR #31). Still after the webhook and the state writes (M1).

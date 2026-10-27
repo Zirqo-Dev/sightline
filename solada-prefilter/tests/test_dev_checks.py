@@ -1,5 +1,5 @@
 """Phase 1 dev checks. Offline, no secrets, no network. Addresses are generated from labels."""
-import copy, hashlib, json, os, re, sys, tempfile, time, unittest, urllib.error
+import contextlib, copy, hashlib, io, json, os, re, sys, tempfile, time, unittest, urllib.error
 from unittest import mock
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.dirname(HERE)
@@ -362,6 +362,8 @@ class Run(unittest.TestCase):
             self.assertEqual(t3[0]["name"], "CLEAN")
             self.assertIn(cu, t3[0]["key"])
             self.assertFalse(t3[0]["key"].startswith("devsell:CLEAN:"))
+            self.assertNotIn(hx("cs")[:16], t3[0]["key"])
+            self.assertIn(hashlib.sha256(hx("cs")[:16].encode()).hexdigest()[:16], t3[0]["key"])
             self.assertTrue(t3[0]["metrics"]["changed_since_last"])
             self.assertNotIn(stake("dev"), json.dumps(t3))
             clean3 = next(e for e in doc3["entries"] if e["ticker"] == "CLEAN")
@@ -781,7 +783,10 @@ class Review(unittest.TestCase):
             self.assertIsNone(http2.deadline)
             self.assertGreater(http2.koios_pause_until, time.time())
             P.note_koios_pause(http2)
-            self.assertIn("koios", http2.tripped)
+            self.assertNotIn("koios", http2.tripped)
+            self.assertTrue(http2.blocked("koios"))
+            http2.koios_pause_until = time.time() - 1
+            self.assertFalse(http2.blocked("koios"))
             self.assertEqual(triggers, [])  # first read is a baseline
 
     def test_research_sees_the_pause_and_dev_checks_does_not_set_the_deadline(self):
@@ -794,7 +799,8 @@ class Review(unittest.TestCase):
             return {"entries": 0}, []
 
         def wl_run(http, *a, **k):
-            seen["whale_paused"] = "koios" in http.tripped
+            seen["whale_paused"] = http.blocked("koios")
+            seen["whale_tripped"] = "koios" in http.tripped
             return {"ok": True}
 
         with tempfile.TemporaryDirectory() as d:
@@ -804,6 +810,7 @@ class Review(unittest.TestCase):
         self.assertIsNone(seen["deadline"])
         self.assertFalse(seen["tripped_before"])
         self.assertTrue(seen["whale_paused"])
+        self.assertFalse(seen["whale_tripped"])
 
     def test_max_calls_cap(self):
         _, _, books, launches, tracked = world()
@@ -923,6 +930,220 @@ class Review(unittest.TestCase):
         self.assertTrue(DC._worth_firing(25, False, {"late_rug": False}, dc()))
         self.assertIn("LP pulls", DC.NOTE)
         self.assertIn("LP pulls", cfg["dev_checks"]["_note"])
+
+
+class Review2(unittest.TestCase):
+    """Second-review regressions. Each test fails if that fix is removed."""
+
+    def test_lost_sell_cache_rebaselines_without_firing(self):
+        _, ru, books, launches, tracked = world()
+        sell = hx("rs")
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "cache"))
+            _, t1, _, _ = run_dc(True, books, launches, tracked, d)
+            self.assertEqual(t1, [])
+            cache_path = os.path.join(d, "cache", "dev-checks-cache.json")
+            cache = json.load(open(cache_path))
+            self.assertIn(sell, cache["sells"][ru])
+            del cache["sells"][ru]
+            json.dump(cache, open(cache_path, "w"))
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                _, t2, doc2, _ = run_dc(True, books, launches, tracked, d)
+            rug = next(e for e in doc2["entries"] if e["unit"] == ru)
+            self.assertEqual(t2, [])
+            self.assertFalse(rug["changed_since_last"])
+            self.assertEqual(rug["dev_sold_ada"], 2500.0)
+            self.assertIn("sell cache missing", err.getvalue())
+            self.assertNotIn(sell, err.getvalue())
+            cache = json.load(open(cache_path))
+            self.assertIn(sell, cache["sells"][ru])
+            cache["sells"][ru] = "corrupt"
+            json.dump(cache, open(cache_path, "w"))
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                _, t3, _, _ = run_dc(True, books, launches, tracked, d)
+            self.assertEqual(t3, [])
+            self.assertIn("sell cache missing", err.getvalue())
+            self.assertNotIn(sell, err.getvalue())
+
+    def test_lock_is_not_a_late_rug_and_a_real_sale_still_is(self):
+        u, t0 = unit("LOCK"), FX["launch_s"]
+        peak = FX["mint_qty"]
+        small = peak // 10
+        rest = peak - small
+        txs = [leg(hx("lm"), t0, [],
+                   [utxo("dev", 5_000_000, {u: peak}, hx("lm") + "#0"),
+                    utxo("buyer", 2_000_000, {u: FX["buyer_qty"]}, hx("lm") + "#1")]),
+               leg(hx("ls"), t0 + FX["late_after_s"],
+                   [utxo("dev", 5_000_000, {u: peak}, hx("lm") + "#0")],
+                   [utxo("dev", 5_000_000 + FX["sell_lovelace"], {u: rest}, hx("ls") + "#0"),
+                    utxo("buyer", 2_000_000, {u: small}, hx("ls") + "#1")]),
+               leg(hx("lk"), t0 + FX["late_after_s"] + 30,
+                   [utxo("dev", 5_000_000 + FX["sell_lovelace"], {u: rest}, hx("ls") + "#0")],
+                   [utxo("dev", 3_000_000, {}, hx("lk") + "#0"),
+                    utxo("script:vest", 2_000_000, {u: rest}, hx("lk") + "#1")])]
+        locked = DC.fold(u, txs, stake("dev"), set(), t0, dc())
+        self.assertGreaterEqual(locked["net_drop_pct"], 80)
+        self.assertLess(locked["sold_qty"] / peak * 100.0, 80)
+        self.assertFalse(locked["late_rug"])
+        self.assertNotIn(hx("lk"), locked["sell_hashes"])
+        dumped = DC.fold(u, txs[:2], stake("dev"), set(), t0, dc())
+        # the 10% sale alone is not a rug either
+        self.assertFalse(dumped["late_rug"])
+        full = [leg(hx("fm"), t0, [],
+                    [utxo("dev", 2_000_000, {u: peak}, hx("fm") + "#0"),
+                     utxo("buyer", 2_000_000, {u: FX["buyer_qty"]}, hx("fm") + "#1")]),
+                leg(hx("fs"), t0 + FX["late_after_s"],
+                    [utxo("dev", 5_000_000, {u: peak}, hx("fm") + "#0")],
+                    [utxo("dev", 5_000_000 + FX["sell_lovelace"], {u: peak - FX["sell_qty"]}, hx("fs") + "#0"),
+                     utxo("script:pool", 2_000_000, {u: FX["sell_qty"]}, hx("fs") + "#1")])]
+        sold = DC.fold(u, full, stake("dev"), set(), t0, dc())
+        self.assertTrue(sold["late_rug"])
+
+    def test_blockfrost_withdrawals_use_their_endpoint_and_the_budget(self):
+        u, t0 = unit("BFW"), FX["launch_s"]
+        reward = 5_000_000_000
+        sell_h, drop_h = hx("bws"), hx("bwd")
+        books = {u: [
+            leg(hx("bwm"), t0, [], [utxo("dev", 2_000_000, {u: FX["mint_qty"]}, hx("bwm") + "#0"),
+                                    utxo("buyer", 2_000_000, {u: FX["buyer_qty"]}, hx("bwm") + "#1")]),
+            # dev spends ADA here, so this tx must not trigger a withdrawals read
+            leg(drop_h, t0 + 30,
+                [utxo("dev", 2_000_000, {}, "keep#0")],
+                [utxo("dev", 1_000_000, {}, drop_h + "#0"),
+                 utxo("friend", 1_000_000, {}, drop_h + "#1")]),
+            leg(sell_h, t0 + FX["late_after_s"],
+                [utxo("dev", 5_000_000, {u: FX["mint_qty"]}, hx("bwm") + "#0")],
+                [utxo("dev", 5_000_000 + FX["sell_lovelace"] + reward, {u: FX["mint_qty"] - FX["sell_qty"]}, sell_h + "#0"),
+                 utxo("buyer", 2_000_000, {u: FX["buyer_qty"]}, sell_h + "#1")]),
+        ]}
+        launch = {"id": "b", "ticker": "BFW", "policyId": u[:56], "assetName": u[56:],
+                  "launcherAddress": addr("dev"), "liveAtMs": t0 * 1000}
+        tracked = [{"ticker": "BFW", "unit": u, "launch": launch, "mcap_ada": 10, "vol_h24_ada": 1}]
+        calls = []
+
+        def req(self_, src, url, method="GET", body=None, headers=None, quiet404=True):
+            self_.calls[src] = self_.calls.get(src, 0) + 1
+            calls.append((src, url))
+            if src == "koios":
+                return None
+            if "/transactions" in url:
+                rows = books[u]
+                return [{"tx_hash": t["hash"], "block_height": t["height"], "block_time": t["time"]} for t in rows]
+            if url.endswith("/withdrawals"):
+                h = url.split("/txs/")[1].split("/")[0]
+                if h == sell_h:
+                    return [{"address": stake("dev"), "amount": str(reward)}]
+                return []
+            if url.endswith("/utxos"):
+                h = url.split("/txs/")[1].split("/")[0]
+                tx = next(t for t in books[u] if t["hash"] == h)
+                body = _bf_tx(tx)
+                body["withdrawals"] = [{"address": stake("dev"), "amount": "1"}]
+                return body
+            return None
+
+        def once(max_bf):
+            calls.clear()
+            with tempfile.TemporaryDirectory() as d:
+                os.makedirs(os.path.join(d, "cache"))
+                http = P.Http({})
+                cfg = {"dev_checks": {"budget_s": 30, "max_calls": 10, "max_bf_calls": max_bf},
+                       "flags": {"exclude_tags": {}}}
+                with mock.patch.object(P.Http, "req", req):
+                    summary, _, = DC.run(http, cfg, tracked, [launch], {}, os.path.join(d, "data"),
+                                         os.path.join(d, "cache"), False, FX["now_s"], bf_key=KEY, owner_env=OWNER)
+                doc = json.load(open(os.path.join(d, "data", "dev_checks.json")))
+            return summary, doc["entries"][0], [url for src, url in calls if src == "blockfrost"]
+
+        _, row, urls = once(20)
+        wd = [url for url in urls if url.endswith("/withdrawals")]
+        self.assertTrue(any(sell_h in url for url in wd))
+        self.assertFalse(any(drop_h in url for url in wd))
+        self.assertEqual(row["dev_sold_ada"], FX["sell_lovelace"] / 1e6)
+        # asset list, mint utxo, mint withdrawals, drop utxo, sell utxo: the sell's withdrawals call is the next one
+        summary_s, starved, urls_s = once(5)
+        self.assertLessEqual(summary_s["blockfrost_calls"], 5)
+        self.assertFalse(any(sell_h in url for url in urls_s if url.endswith("/withdrawals")))
+        self.assertGreater(starved["dev_sold_ada"], FX["sell_lovelace"] / 1e6)
+
+    def test_cancel_is_not_a_sell_and_the_floor_is_the_new_ada(self):
+        u, t0 = unit("CAN"), FX["launch_s"]
+        park = hx("cp") + "#1"
+        txs = [leg(hx("cm"), t0, [], [utxo("dev", 5_000_000, {u: FX["mint_qty"]}, hx("cm") + "#0")]),
+               leg(hx("cp"), t0 + 60,
+                   [utxo("dev", 5_000_000, {u: FX["mint_qty"]}, hx("cm") + "#0")],
+                   [utxo("dev", 3_000_000, {}, hx("cp") + "#0"),
+                    utxo("script:pool", 2_000_000, {u: FX["mint_qty"]}, park)])]
+        cancel = leg(hx("cc"), t0 + 120,
+                     [utxo("script:pool", 2_000_000, {u: FX["mint_qty"]}, park),
+                      utxo("dev", 3_000_000, {}, hx("cp") + "#0")],
+                     [utxo("dev", 4_500_000, {u: FX["mint_qty"]}, hx("cc") + "#0")])
+        stats = DC.fold(u, txs + [cancel], stake("dev"), set(), t0, dc())
+        self.assertEqual(stats["sold_ada"], 0)
+        self.assertEqual(stats["sold_qty"], 0)
+        self.assertNotIn(hx("cc"), stats["sell_hashes"])
+        part = FX["mint_qty"] // 5
+        filled = FX["mint_qty"] - part
+        fill = leg(hx("cf"), t0 + 120,
+                   [utxo("script:pool", 2_000_000, {u: FX["mint_qty"]}, park),
+                    utxo("dev", 3_000_000, {}, hx("cp") + "#0")],
+                   [utxo("dev", 3_000_000 + FX["sell_lovelace"], {u: part}, hx("cf") + "#0"),
+                    utxo("script:pool", 2_000_000, {u: filled}, hx("cf") + "#1")])
+        done = DC.fold(u, txs + [fill], stake("dev"), set(), t0, dc())
+        self.assertEqual(done["sold_qty"], filled)
+        self.assertNotEqual(done["sold_qty"], FX["mint_qty"])
+        self.assertEqual(done["sold_ada"], FX["sell_lovelace"] / 1e6)
+        prev = {"dev_sold_ada": 100, "late_rug": False}
+        self.assertFalse(DC._worth_firing(120, False, prev, dc()))
+        self.assertTrue(DC._worth_firing(130, False, prev, dc()))
+
+    def test_owner_address_pattern_hides_a_sibling_stake(self):
+        sib = F.b32_encode("addr", bytes([0x01]) + kh("sib/p") + kh("dev"))
+        self.assertEqual(F.addr_info(sib)[0], stake("dev"))
+        self.assertNotEqual(sib, addr("dev"))
+        _, _, books, launches, tracked = world()
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "cache"))
+            _, _, doc, _ = run_dc(True, books, launches, tracked, d, owner_env="^" + re.escape(addr("other")) + "$")
+            self.assertIsNotNone(next(e for e in doc["entries"] if e["ticker"] == "RUG")["dev_tag"])
+            self.assertIn(stake("dev"), open(os.path.join(d, "cache", "dev-checks-cache.json")).read())
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "cache"))
+            _, triggers, doc, _ = run_dc(True, books, launches, tracked, d, owner_env="^" + re.escape(sib) + "$")
+            text = json.dumps(doc)
+            cache = open(os.path.join(d, "cache", "dev-checks-cache.json")).read()
+            self.assertEqual(triggers, [])
+            self.assertNotIn(stake("dev"), text)
+            self.assertNotIn(stake("dev"), cache)
+            self.assertNotIn(sib, text)
+            self.assertIsNone(next(e for e in doc["entries"] if e["ticker"] == "RUG")["dev_tag"])
+
+    def test_sell_cache_keeps_the_newest_hashes(self):
+        old = [f"{i:064x}" for i in range(2000)]
+        newest = "f" * 64
+        cache = {"sells": {"u": list(old)}}
+        fresh = DC._note_sells(cache, "u", old + [newest], prev=None)
+        self.assertEqual(fresh, [newest])
+        self.assertEqual(len(cache["sells"]["u"]), 2000)
+        self.assertEqual(cache["sells"]["u"][-1], newest)
+        self.assertNotIn(old[0], cache["sells"]["u"])
+
+    def test_prefilter_baseline_does_not_take_dev_sell_triggers(self):
+        key = "devsell:UNIT:abc"
+
+        def dc_run(*a, **k):
+            return {"entries": 1}, [{"key": key, "kind": "dev_sell", "name": "QUIET",
+                                    "metrics": {"dev_tag": "w-abcdef01", "dev_sold_ada": 100,
+                                                "changed_since_last": True, "late_rug": False}}]
+
+        with tempfile.TemporaryDirectory() as d:
+            json.dump({"fired": {}, "kill_status": {}}, open(os.path.join(d, "state.json"), "w"))
+            summary = run_main(d, quiet_req, [mock.patch.object(P.DC, "run", dc_run)], dry=False)
+            st = json.load(open(os.path.join(d, "state.json")))
+        self.assertNotIn(key, st.get("fired") or {})
+        self.assertNotIn("dev_sell", [t.get("kind") for t in summary.get("triggers") or []])
 
 
 class _Resp:

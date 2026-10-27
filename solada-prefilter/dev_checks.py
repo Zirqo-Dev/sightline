@@ -14,16 +14,19 @@ dev_buy_ada, dev_locked_pct and unlock_date are always null. LP pulls are phase 
 dev lock, dev buy class, and social checks.
 
 A sell is one transaction whose creator key UTxOs lose this token and gain ADA, or a
-later tx that pays the dev ADA for tokens they had parked at a script. Staking-reward
-withdrawals in that tx are not part of the ADA gain. late_rug uses the net drop from the
-dev's peak balance, not the sum of every sell (a round trip is not a rug).
+later tx that pays the dev ADA for tokens they had parked at a script without returning
+those tokens (a cancel is not a sell; a partial fill counts only the filled quantity).
+Staking-reward withdrawals in that tx are not part of the ADA gain. late_rug needs both
+the net drop from the dev's peak and tokens actually sold (including batcher fills) of
+at least rug_bag_pct. A lock or vesting transfer is not a sell, and a round trip is not a rug.
 
 The first row for a token is a baseline (no webhook). Later, a dev_sell fires only for a
-sell tx hash the private cache has not seen, and only when sold ADA rises by at least
-min_sell_ada or late_rug flips true. An incomplete read never lowers stored sell facts;
-the row is marked partial. Drawdown, serial counts and inactivity do not re-fire.
+sell tx hash the private cache has not seen, and only when the new sell is at least
+min_sell_ada or late_rug flips true. A public row with no sell-cache entry is
+re-baselined (hashes recorded, no fire). An incomplete read never lowers stored sell
+facts; the row is marked partial. Drawdown, serial counts and inactivity do not re-fire.
 """
-import os, sys, time
+import hashlib, os, re, sys, time
 from datetime import datetime, timezone
 
 import flags as F
@@ -48,8 +51,9 @@ NOTE = (
     "by policy + asset name. ATH is the highest mcap this job has observed (the run is every 2h), not "
     "a tick peak. prior_rugs counts earlier launches this job has already marked late_rug for the same "
     "creator stake. A sell is token out and ADA in on the creator's own key in one tx, or ADA paid "
-    "later for tokens parked at a script. late_rug is the net drop from that stake's peak, not churn. "
-    "min_sell_ada is a dust floor. An incomplete read is partial and does not lower a stored sell."
+    "later for tokens parked at a script (a cancel is not a sell). late_rug needs the net drop and "
+    "tokens actually sold, both at least rug_bag_pct of that stake's peak; a lock is not a sell. "
+    "min_sell_ada is a dust floor on the new sell. An incomplete read is partial and does not lower a stored sell."
 )
 
 
@@ -140,9 +144,11 @@ def fold(unit, ordered, dev, ex, launch_s, dc):
 
     Excluded tags (the Solada curve reserve) are neither holders nor sellers. Script payment addresses
     are not holders; stake-less enterprise key addresses are. Peak is the dev's balance before each sell.
-    late_rug is (peak - current) / peak after a sell that landed at least late_min_minutes after launch,
-    not the sum of sold qty (selling and buying back is churn). ADA gained is net of staking withdrawals.
-    Tokens the dev parks at a script stay pending until a later tx pays the dev ADA for that output.
+    late_rug needs a late sell, a net drop of rug_bag_pct, and tokens actually sold (same-tx or batcher
+    fills) of at least rug_bag_pct of peak. Selling and buying back is churn. Tokens sent to a lock or
+    vesting script are not a sell. ADA gained is net of staking withdrawals.
+    Tokens the dev parks at a script stay pending until a later tx pays the dev ADA for the filled part.
+    A cancel returns the tokens (balance goes up) plus the deposit and is not a sell.
     """
     bal, peak = {}, 0
     sold_ada, sold_qty = 0.0, 0
@@ -193,9 +199,11 @@ def fold(unit, ordered, dev, ex, launch_s, dc):
                 if left <= 0:
                     break
         elif dev and dev_lov > 0 and spent:
-            qty = sum(pending.pop(ref, 0) for ref in spent)
-            if qty > 0:
-                is_sell, sell_q = True, qty
+            parked = sum(pending.pop(ref, 0) for ref in spent)
+            returned = dev_qty if dev_qty > 0 else 0  # cancel or the unfilled change of a partial fill
+            filled = parked - returned
+            if filled > 0:
+                is_sell, sell_q = True, filled
                 sold_ada += dev_lov / 1e6
         elif spent:
             for ref in spent:
@@ -214,9 +222,12 @@ def fold(unit, ordered, dev, ex, launch_s, dc):
             late_sell = True
     cur = bal.get(dev, 0) if dev else 0
     net = ((peak - cur) / peak * 100.0) if peak else 0.0
+    sold_pct = (sold_qty / peak * 100.0) if peak else 0.0
     others = sum(1 for s, q in bal.items() if s != dev and q > 0)
     pending_qty = sum(pending.values())
-    late = bool(late_sell and net >= float(dc["rug_bag_pct"]) and others >= int(dc["rug_min_other_holders"]))
+    # net drop alone is not a rug: a lock can empty the wallet without a sale
+    bag = float(dc["rug_bag_pct"])
+    late = bool(late_sell and net >= bag and sold_pct >= bag and others >= int(dc["rug_min_other_holders"]))
     sharp = bool(peak and (net >= float(dc["rug_bag_pct"]) or pending_qty / peak * 100.0 >= float(dc["rug_bag_pct"])))
     return {"peak": peak, "sold_ada": round(sold_ada, 2), "sold_qty": sold_qty, "first_sell_s": first_sell_s,
             "holders_at_sell": holders_at, "late_rug": late, "sell_hashes": sell_hashes,
@@ -306,8 +317,9 @@ def _may_fire(prev, baseline):
 
 
 def _worth_firing(observed, late, prev, dc):
-    """A new sell hash fires when this read saw at least min_sell_ada, or late_rug flipped true."""
-    if float(observed or 0) >= float(dc["min_sell_ada"]):
+    """A new sell hash fires when the new ADA (not the running total) is at least min_sell_ada, or late_rug flipped."""
+    prev_sold = float(prev.get("dev_sold_ada") or 0) if isinstance(prev, dict) else 0.0
+    if observed is not None and round(float(observed) - prev_sold, 2) >= float(dc["min_sell_ada"]):
         return True
     return late is True and (not isinstance(prev, dict) or prev.get("late_rug") is not True)
 
@@ -459,18 +471,56 @@ class DevChain:
                 rows.append({"ref": ref, "addr": u.get("address", ""), "stake": F.addr_info(u.get("address", ""))[0],
                              "lovelace": lov, "assets": assets})
             out[s] = rows
-        wds = {}
-        for w in x.get("withdrawals") or []:
-            st = w.get("stake_address") or w.get("address") or ""
+        return out
+
+    def _ada_up(self, tx, dev):
+        """True when `dev`'s lovelace rose in this tx, before withdrawals are subtracted."""
+        if not dev:
+            return False
+        net = 0
+        for side, sign in (("inputs", -1), ("outputs", 1)):
+            for u in tx.get(side) or []:
+                if (u.get("stake") or "") != dev:
+                    continue
+                try:
+                    net += sign * int(u.get("lovelace") or 0)
+                except (TypeError, ValueError):
+                    pass
+        return net > 0
+
+    def _pull_withdrawals(self, h):
+        """Blockfrost /txs/{h}/withdrawals. None when the call budget or the deadline says not to call."""
+        if not self.bf_key or self.bf_left() <= 0 or self.late():
+            return None
+        rows = self.bf(f"/txs/{h}/withdrawals")
+        out = {}
+        if not isinstance(rows, list):
+            return {}
+        for w in rows:
+            st = w.get("address") or w.get("stake_address") or ""
             try:
                 amt = int(w.get("amount") or 0)
             except (TypeError, ValueError):
                 amt = 0
             if st and amt > 0:
-                wds[st] = wds.get(st, 0) + amt
-        if wds:
-            out["withdrawals"] = wds
+                out[st] = out.get(st, 0) + amt
         return out
+
+    def _maybe_withdrawals(self, parsed, h, dev):
+        if not dev or not self._ada_up(parsed, dev) or "withdrawals" in parsed:
+            return
+        got = self._pull_withdrawals(h)
+        if got is not None:
+            parsed["withdrawals"] = got
+
+    def attach_withdrawals(self, ordered, dev):
+        """For a dev learned after the utxo read (mint fallback): fetch withdrawals only where ADA rose."""
+        for tx in ordered or []:
+            if not tx.get("hash"):
+                continue
+            self._maybe_withdrawals(tx, tx["hash"], dev)
+            if self.bf_left() <= 0 or self.late():
+                break
 
     def asset_txs(self, unit, desc=False):
         if self.stop_reason() and self.koios_open():
@@ -497,7 +547,7 @@ class DevChain:
         rows.sort(key=lambda t: (t[1], t[0]), reverse=desc)
         return rows[:lim]
 
-    def utxos(self, hashes):
+    def utxos(self, hashes, dev=None):
         out = {}
         for body in KT.batches(hashes, "_tx_hashes", int(self.dc["utxo_batch"]), KT.TX_INFO_FLAGS):
             if self.late():
@@ -513,9 +563,13 @@ class DevChain:
                 self.note_koios()
             if not got and self._fallback():
                 for h in chunk:
+                    if self.late():
+                        break
                     x = self.bf(f"/txs/{h}/utxos")
                     if x:
-                        out[h] = self._bf_utxo(x)
+                        parsed = self._bf_utxo(x)
+                        self._maybe_withdrawals(parsed, h, dev)
+                        out[h] = parsed
                 continue
             out.update(got or {})
         return out
@@ -576,7 +630,8 @@ def _scan(chain, item, ex, dc):
     for row in asc + (desc_rows or []):
         merged[row[0]] = row
     txs = sorted(merged.values(), key=lambda t: (t[1], t[0]))
-    ut = chain.utxos([t[0] for t in txs]) if txs else {}
+    known = stake
+    ut = chain.utxos([t[0] for t in txs], dev=known) if txs else {}
     ordered, unread = [], 0
     for h, hg, bt in txs:
         if h not in ut:
@@ -586,6 +641,8 @@ def _scan(chain, item, ex, dc):
     if not stake and ordered:
         stake = creator_from_mint(unit, ordered[0], ex)
         base["stake"] = stake
+        if stake:
+            chain.attach_withdrawals(ordered, stake)
     complete = len(asc) < lim and unread == 0 and (desc_rows is None or isinstance(desc_rows, list) and len(asc) < lim)
     # a full first page means the middle of the history was not read
     if len(asc) >= lim:
@@ -704,8 +761,10 @@ def trigger_for(row):
     tag = metrics.get("dev_tag")
     if tag is not None and len(tag) > 12:
         raise SystemExit("dev_checks: refusing a dev_tag that is not a short tag")
-    h = (row.get("_new_sell") or "")[:16]
-    return {"key": f"devsell:{unit}:{h}", "kind": "dev_sell", "name": row["ticker"], "metrics": metrics}
+    # public state.json stores this key. Hash the tx prefix so the raw hash is not in the fired map.
+    pref = (row.get("_new_sell") or "")[:16]
+    digest = hashlib.sha256(pref.encode()).hexdigest()[:16] if pref else ""
+    return {"key": f"devsell:{unit}:{digest}", "kind": "dev_sell", "name": row["ticker"], "metrics": metrics}
 
 
 def _guard(doc):
@@ -733,8 +792,15 @@ def dev_deadline(budget_s, t_start, now):
     return min(float(now) + max(0.0, float(budget_s)), start + 600.0)
 
 
+_ADDR_IN_PATTERN = re.compile(r"addr1[02-9ac-hj-np-z]{50,}")
+
+
 def _patterns(owner_env):
-    """Compiled PRIVACY_GUARD_PATTERNS, or None when missing or unusable (fail closed). Never prints a pattern."""
+    """(compiled patterns, stake keys derived from full-address patterns), or None when unusable (fail closed).
+
+    Never prints a pattern or a derived stake. Stake derivation matches the privacy guard: a full base
+    address in a pattern line contributes addr_info's stake, so a sibling address of that wallet matches.
+    """
     import big_moves as BM
     if owner_env is None:
         owner_env = os.environ.get("PRIVACY_GUARD_PATTERNS", "")
@@ -742,34 +808,61 @@ def _patterns(owner_env):
     if bad or not pats:
         print(f"dev_checks: skipped: owner patterns unusable ({bad} bad, {len(pats)} usable)", file=sys.stderr)
         return None
-    return pats
-
-
-def _hidden(pats, *vals):
-    for v in vals:
-        if not v or not pats:
+    stakes = set()
+    for line in (owner_env or "").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
             continue
-        if any(p.search(v) for p in pats):
+        for addr in _ADDR_IN_PATTERN.findall(line):
+            st = F.addr_info(addr)[0]
+            if st:
+                stakes.add(st)
+    return pats, stakes
+
+
+def _hidden(pats, stakes, *vals):
+    for v in vals:
+        if not v:
+            continue
+        if stakes and v in stakes:
+            return True
+        if pats and any(p.search(v) for p in pats):
             return True
     return False
 
 
-def _note_sells(cache, unit, observed):
-    """Union sell-tx hashes into the private cache. Returns hashes not stored before this read."""
-    prev = [h for h in ((cache.get("sells") or {}).get(unit) or []) if isinstance(h, str)]
-    seen = set(prev)
-    fresh = [h for h in (observed or []) if isinstance(h, str) and h not in seen]
-    cache.setdefault("sells", {})[unit] = (prev + fresh)[:2000]
+def _note_sells(cache, unit, observed, prev=None, ticker=None):
+    """Union sell-tx hashes into the private cache. Returns hashes not stored before this read.
+
+    No seen-sells entry (missing or not a list) for a token that already has a public row is a
+    re-baseline: record this read's hashes, including none, and do not fire. Keeps the newest 2000.
+    """
+    observed = [h for h in (observed or []) if isinstance(h, str)]
+    sells = cache.get("sells") if isinstance(cache.get("sells"), dict) else None
+    entry = sells.get(unit) if sells else None
+    if isinstance(prev, dict) and prev.get("unit") == unit and not isinstance(entry, list):
+        if not isinstance(cache.get("sells"), dict):
+            cache["sells"] = {}
+        cache["sells"][unit] = observed[-2000:]
+        print(f"dev_checks: {ticker or 'token'} sell cache missing; recording current sells without firing",
+              file=sys.stderr)
+        return []
+    prev_h = [h for h in (entry or []) if isinstance(h, str)]
+    seen = set(prev_h)
+    fresh = [h for h in observed if h not in seen]
+    if not isinstance(cache.get("sells"), dict):
+        cache["sells"] = {}
+    cache["sells"][unit] = (prev_h + fresh)[-2000:]
     return fresh
 
 
-def _quiet_owner(sc, item, pats):
-    """Drop a creator stake that matches an owner pattern. The stake is not cached and not printed."""
+def _quiet_owner(sc, item, pats, stakes):
+    """Drop a creator stake that matches an owner pattern or a stake derived from one. Not cached, not printed."""
     if not sc or not pats:
         return sc
     st = sc.get("stake")
     addr = ((item.get("launch") or {}).get("launcherAddress") or "")
-    if st and _hidden(pats, st, addr):
+    if st and _hidden(pats, stakes, st, addr):
         sc["stake"] = None
         if sc.get("stats"):
             sc["stats"] = dict(sc["stats"], sell_hashes=[], sharp=False)
@@ -789,9 +882,10 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
     dc = dc_cfg(cfg)
     if not dc.get("enabled", True):
         return {"enabled": False}, []
-    pats = _patterns(owner_env)
-    if pats is None:
+    loaded = _patterns(owner_env)
+    if loaded is None:
         return {"skipped": "owner patterns unusable", "wrote": False}, []
+    pats, owner_stakes = loaded
     if bf_key is None:
         bf_key = os.environ.get("BLOCKFROST_PROJECT_ID", "")
     ex = F.excluded_tags((cfg or {}).get("flags"))
@@ -835,7 +929,7 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
                 scans[item["unit"]] = {"stake": _launcher_stake(item.get("launch"), ex), "skipped": "error",
                                        "complete": False, "txs_read": 0, "unread_txs": 0, "saw_newest": False,
                                        "last_tx_s": None, "stats": None}
-            sc = _quiet_owner(scans[item["unit"]], item, pats)
+            sc = _quiet_owner(scans[item["unit"]], item, pats, owner_stakes)
             scans[item["unit"]] = sc
             _remember(cache, item["unit"], sc.get("stake"), (item.get("launch") or {}).get("liveAtMs"),
                       (sc.get("stats") or {}).get("late_rug") if sc.get("complete") else None, sc.get("complete"))
@@ -845,7 +939,7 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
         priors = []
         for l in launches:
             st = _launcher_stake(l, ex)
-            if st and _hidden(pats, st, l.get("launcherAddress") or ""):
+            if st and _hidden(pats, owner_stakes, st, l.get("launcherAddress") or ""):
                 st = None
             unit = (l.get("policyId") or "") + (l.get("assetName") or "")
             if not st or st not in stakes or not unit or unit in scanned_units:
@@ -870,7 +964,7 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
                     continue
                 prior_done += 1
                 scanned_units.add(item["unit"])
-                sc = _quiet_owner(sc, item, pats)
+                sc = _quiet_owner(sc, item, pats, owner_stakes)
                 _remember(cache, item["unit"], sc.get("stake"), (item.get("launch") or {}).get("liveAtMs"),
                           (sc.get("stats") or {}).get("late_rug") if sc.get("complete") else None, sc.get("complete"))
         prior_unchecked = max(0, len(priors) - prior_done)
@@ -888,7 +982,8 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
             sc = {"stake": _launcher_stake(item.get("launch"), ex), "skipped": why, "stats": None}
         prev = prev_rows.get(item.get("unit"))
         observed = ((sc.get("stats") or {}).get("sell_hashes") if sc.get("stats") else None)
-        fresh = _note_sells(cache, item["unit"], observed) if sc.get("stats") is not None and sc.get("stake") else []
+        fresh = (_note_sells(cache, item["unit"], observed, prev, item.get("ticker"))
+                 if sc.get("stats") is not None and sc.get("stake") else [])
         row = _entry(item, sc, prev, cache, launches, dc, now_s, now_ms, baseline, fresh)
         entries.append(row)
         trig = trigger_for(row)
