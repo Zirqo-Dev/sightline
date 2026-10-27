@@ -1,5 +1,5 @@
 {
- "at": "2026-10-27T12:09:27Z",
+ "at": "2026-10-27T14:10:37Z",
  "basis": "blockfrost",
  "dry_run": false,
  "baseline": false,
@@ -19,34 +19,58 @@
  "ada_usd": 0.0,
  "whale": {
   "tag": "w-f3186187",
-  "ada_delta": -2602,
+  "lp_moves": [
+   {
+    "asset": "LP",
+    "lp": true,
+    "dex": "minswap_v2",
+    "delta": -2000000
+   }
+  ],
+  "ada_delta": -100,
   "moves": [
    {
     "asset": "CHEESE",
-    "delta": 11454950586101,
-    "new_position": true,
-    "ada_equiv": 1071,
-    "value_basis": "ada_leg_rate"
+    "delta": 3635669091256,
+    "ada_equiv": 381,
+    "value_basis": "ada_leg_rate",
+    "pct": 31.7
    },
    {
-    "asset": "HOWDY",
-    "delta": -5000000000000,
-    "ada_equiv": 111,
-    "value_basis": "ada_leg",
-    "pct": 33.3
+    "asset": "USDCX",
+    "delta": 905948,
+    "new_position": true,
+    "decimals": 6,
+    "qty": 0.9059,
+    "ada_equiv": 22,
+    "value_basis": "decimals_x_price"
+   },
+   {
+    "asset": "HUNT",
+    "delta": 92112257,
+    "new_position": true,
+    "decimals": 6,
+    "qty": 92.1123,
+    "ada_equiv": 27,
+    "value_basis": "decimals_x_price"
    },
    {
     "asset": "ASCEND",
-    "delta": 709367466,
+    "delta": 3186255388,
     "decimals": 6,
-    "qty": 709.3675,
-    "ada_equiv": 865,
+    "qty": 3186.2554,
+    "ada_equiv": 3975,
     "value_basis": "ada_leg_rate",
-    "pct": 0.2
+    "pct": 1.1
    },
    {
-    "asset": "ADA",
-    "delta": -2602
+    "asset": "STRIKE",
+    "delta": 707675,
+    "new_position": true,
+    "decimals": 6,
+    "qty": 0.7077,
+    "ada_equiv": 2,
+    "value_basis": "decimals_x_price"
    }
   ]
  },
@@ -60,67 +84,89 @@
     "moves": [
      {
       "asset": "CHEESE",
-      "delta": 11454950586101,
-      "new_position": true,
-      "ada_equiv": 1071,
-      "value_basis": "ada_leg_rate"
+      "delta": 3635669091256,
+      "ada_equiv": 381,
+      "value_basis": "ada_leg_rate",
+      "pct": 31.7
      },
      {
-      "asset": "HOWDY",
-      "delta": -5000000000000,
-      "ada_equiv": 111,
-      "value_basis": "ada_leg",
-      "pct": 33.3
+      "asset": "USDCX",
+      "delta": 905948,
+      "new_position": true,
+      "decimals": 6,
+      "qty": 0.9059,
+      "ada_equiv": 22,
+      "value_basis": "decimals_x_price"
+     },
+     {
+      "asset": "HUNT",
+      "delta": 92112257,
+      "new_position": true,
+      "decimals": 6,
+      "qty": 92.1123,
+      "ada_equiv": 27,
+      "value_basis": "decimals_x_price"
      },
      {
       "asset": "ASCEND",
-      "delta": 709367466,
+      "delta": 3186255388,
       "decimals": 6,
-      "qty": 709.3675,
-      "ada_equiv": 865,
+      "qty": 3186.2554,
+      "ada_equiv": 3975,
       "value_basis": "ada_leg_rate",
-      "pct": 0.2
+      "pct": 1.1
      },
      {
-      "asset": "ADA",
-      "delta": -2602
+      "asset": "STRIKE",
+      "delta": 707675,
+      "new_position": true,
+      "decimals": 6,
+      "qty": 0.7077,
+      "ada_equiv": 2,
+      "value_basis": "decimals_x_price"
      }
     ]
    }
   }
  ],
  "webhook_sent": true,
- "flags_new": 3,
+ "flags_new": 5,
+ "dev_checks": {
+  "skipped": "launches unavailable",
+  "wrote": false,
+  "entries": 0
+ },
  "big_moves": {
   "units_scanned": 2,
-  "txs_read": 91,
+  "txs_read": 108,
   "capped": [],
-  "koios_calls": 11,
-  "moves_new": 0
+  "koios_calls": 12,
+  "moves_new": 18
  },
  "whale_ledger": {
   "capped": false,
-  "koios_calls": 12,
+  "koios_calls": 11,
   "blockfrost_fallbacks": 0,
   "blockfrost_calls": 0,
-  "ada_balance": 869.228126,
+  "ada_balance": 984.795644,
   "basis": "koios",
-  "rows": 63,
+  "rows": 173,
   "open_orders": 1,
-  "reconcile_ok": true,
+  "reconcile_ok": null,
   "stale": false
  },
  "data_failures": {
   "solada": 1,
-  "match": 18
+  "match": 18,
+  "geckoterminal": 1
  },
  "api_calls": {
   "solada": 2,
-  "geckoterminal": 3,
+  "geckoterminal": 8,
   "blockfrost": 20,
-  "koios": 40,
-  "dexscreener": 1,
-  "tokenregistry": 6,
+  "koios": 42,
+  "dexscreener": 2,
+  "tokenregistry": 3,
   "webhook": 1
  },
  "results": [
@@ -128,11 +174,11 @@
    "ticker": "COCK",
    "tracked": true,
    "unit": "49e423161ef818adc475c783571cb479d5f15ad52a01a240eacc0d3b434f434b",
-   "ada_side": 168090,
+   "ada_side": 171026,
    "mcap_ada": null,
    "holders": 1000,
-   "vol_h24_ada": 3669,
-   "price_ada": 0.00570436212,
+   "vol_h24_ada": 3960,
+   "price_ada": 0.005954435623,
    "decimals": 0,
    "crossed": [],
    "kill": {
@@ -145,7 +191,7 @@
    "unit": "e7c77b2784e52949b3f95f8f9f2d1668dd47d7ed56491eab588bb730534f4c414441",
    "ada_side": null,
    "mcap_ada": null,
-   "holders": 480,
+   "holders": 485,
    "vol_h24_ada": null,
    "price_ada": null,
    "decimals": null,
