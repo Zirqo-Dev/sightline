@@ -545,18 +545,27 @@ def coin_to_launch(c):
     supply under different names. Curve addresses are not copied. launcherAddress
     stays in memory for the dev-stake read and is never logged.
     """
-    if not isinstance(c, dict) or c.get("hidden") or not c.get("id") or not c.get("ticker"):
+    if not isinstance(c, dict):
+        return None
+    raw_tk = c.get("ticker")
+    if c.get("hidden") or not c.get("id") or raw_tk is None or raw_tk == "":
+        return None
+    ticker = str(raw_tk).strip()
+    if not ticker:
         return None
     curve = c.get("curve") if isinstance(c.get("curve"), dict) else None
-    pool_doc = (curve or {}).get("pool") if isinstance((curve or {}).get("pool"), dict) else None
+    raw_pool = (curve or {}).get("pool")
+    pool_doc = raw_pool if isinstance(raw_pool, dict) else None
     graduated = bool(curve and (curve.get("state") == "graduated" or pool_doc))
     reserves = (curve or {}).get("reserves") if isinstance((curve or {}).get("reserves"), dict) else {}
     out_curve = None
     if curve is not None:
-        out_curve = {"graduated": graduated, "progressBps": curve.get("progressBps") or 0}
+        pb = _num(curve.get("progressBps"))
+        out_curve = {"graduated": graduated, "progressBps": int(pb) if pb is not None and pb == int(pb) else (pb or 0)}
         if not graduated:
             ada = _num(curve.get("curveAda"))
-            if ada is not None:
+            # missing curve ADA is unknown, not a pool of 0
+            if ada is not None and ada > 0:
                 out_curve["realLovelace"] = int(round(ada * 1e6))
         price = _num(c.get("priceAda"))
         if price is not None:
@@ -564,15 +573,22 @@ def coin_to_launch(c):
         mcap = _num(c.get("marketCapAda"))
         if mcap is not None:
             out_curve["marketCapLovelace"] = int(round(mcap * 1e6))
+    holders = _num(c.get("holders"))
+    if holders is not None and holders == int(holders):
+        holders = int(holders)
+    live = _num(c.get("createdAtMs"))
+    if live is not None and live == int(live):
+        live = int(live)
+    supply = _num(reserves.get("supply"))
     launch = {
-        "id": c["id"], "ticker": c["ticker"],
+        "id": c["id"], "ticker": ticker,
         "policyId": c.get("policyId") or "", "assetName": c.get("assetName") or "",
-        "liveAtMs": c.get("createdAtMs"), "launcherAddress": c.get("launcherAddress") or "",
-        "pumpMint": c.get("pumpMint"), "totalSupply": reserves.get("supply"),
-        "pool": {"dex": pool_doc.get("dex") or "graduated"} if graduated else None,
+        "liveAtMs": live, "launcherAddress": c.get("launcherAddress") or "",
+        "pumpMint": c.get("pumpMint"), "totalSupply": supply,
+        "pool": {"dex": (pool_doc or {}).get("dex") or "graduated"} if graduated else None,
         "curve": out_curve,
         "priceAda": _num(c.get("priceAda")), "marketCapAda": _num(c.get("marketCapAda")),
-        "volume24hAda": _num(c.get("volume24hAda")), "holders": c.get("holders"),
+        "volume24hAda": _num(c.get("volume24hAda")), "holders": holders,
     }
     return launch
 
@@ -585,7 +601,7 @@ def market_from_coins(doc):
     quotes = {}
     for c in doc.get("coins") or []:
         if isinstance(c, dict) and c.get("id"):
-            quotes[c["id"]] = {"holders": c.get("holders")}
+            quotes[c["id"]] = {"holders": _num(c.get("holders"))}
     at = doc.get("atMs") if doc.get("atMs") is not None else doc.get("at")
     return {"adaUsdMicro": int(round(ada * 1_000_000)) if ada is not None else 0, "at": at, "quotes": quotes}
 
@@ -600,7 +616,15 @@ def launches_from_payload(payload):
     if isinstance(payload, dict) and isinstance(payload.get("launches"), list):
         return launches_from_payload(payload["launches"])
     if isinstance(payload, dict) and isinstance(payload.get("coins"), list):
-        return [x for x in (coin_to_launch(c) for c in payload["coins"]) if x]
+        out = []
+        for c in payload["coins"]:
+            try:
+                row = coin_to_launch(c)
+            except Exception:
+                continue  # one odd coin must not drop the rest of the board
+            if row:
+                out.append(row)
+        return out
     return None
 
 
@@ -645,6 +669,28 @@ def solada_market_pool(http):
     return pool
 
 
+# Desk kill lines were written against a pool quote. Curve ADA, coin mcap and the
+# platform-market liquidity figure are different bases and must not cross those lines.
+POOL_LINE_BASES = ("geckoterminal", "dexscreener")
+
+
+def _for_kill(metric, value, basis, prev_metrics):
+    """Value compared with a kill line. Holders have no basis.
+
+    mcap and ADA side count only on a pool-quote basis, and only when that basis matches
+    the one already stored for the metric. A different basis is unknown: it does not cross
+    and it is not a recovery. The line numbers themselves are not changed.
+    """
+    if value is None or metric == "holders":
+        return value
+    if basis not in POOL_LINE_BASES:
+        return None
+    prev_b = ((prev_metrics or {}).get(metric) or {}).get("basis") if isinstance(prev_metrics, dict) else None
+    if prev_b and prev_b != basis:
+        return None
+    return value
+
+
 def tracked_pool(http, unit, launch, ticker):
     """Pool for a tracked name: GeckoTerminal, then the coin's curve, then the platform market for SOLADA."""
     pool = gt_pool(http, unit) if unit else None
@@ -674,13 +720,20 @@ def tracked_pool(http, unit, launch, ticker):
 
 
 def pulse_units(pulse):
-    """ticker -> asset id from the newest pulse point that has one."""
+    """ticker -> asset id from the newest pulse point that has one.
+
+    Points are ordered by `t`. The last row in the file is not assumed to be the newest.
+    """
     out = {}
     if not isinstance(pulse, dict):
         return out
-    for p in pulse.get("points") or []:
-        if not isinstance(p, dict):
-            continue
+    points = [p for p in (pulse.get("points") or []) if isinstance(p, dict)]
+
+    def _when(p):
+        n = _num(p.get("t"))
+        return n if n is not None else float("-inf")
+
+    for p in sorted(points, key=_when):
         tk = str(p.get("ticker") or "").upper()
         aid = p.get("asset_id")
         if tk and isinstance(aid, str) and len(aid) >= 56:
@@ -866,7 +919,8 @@ def main():
             vol = _num(l.get("volume24hAda"))
             if vol is not None:
                 pool["vol_h24_ada"] = round(vol)
-            row["curve_pct"] = round(int(cv.get("progressBps") or 0) / 100, 1)
+            pb = _num(cv.get("progressBps"))
+            row["curve_pct"] = round((int(pb) if pb is not None else 0) / 100, 1)
         row["ada_side"] = pool["ada_side"] if pool else None
         row["mcap_ada"] = pool["mcap_ada"] if pool else None
         row["pool_basis"] = pool["basis"] if pool else None
@@ -875,6 +929,8 @@ def main():
         row["decimals"] = 6 if l.get("curve") else None  # Solada curve launches mint 6-decimal supply
         if row["mcap_ada"] is None and pool and pool.get("price_ada"):
             row["mcap_ada"] = round(pool["price_ada"] * supply_whole(l)) or None
+        row["ada_basis"] = row["pool_basis"] if row.get("ada_side") is not None else None
+        row["mcap_basis"] = row["pool_basis"] if row.get("mcap_ada") is not None else None
         # only spend holder calls when depth already passes (k and y both need depth)
         if row["ada_side"] is not None and row["ada_side"] >= th["min_ada_side"] and holder_budget > 0:
             holder_budget -= 1
@@ -901,7 +957,12 @@ def main():
     # ---- tracked names vs kill lines
     by_ticker = {}
     for l in launches:
-        by_ticker.setdefault(l["ticker"].upper(), []).append(l)
+        name = l.get("ticker")
+        if not isinstance(name, str):
+            name = str(name) if name is not None else ""
+        name = name.strip()
+        if name:
+            by_ticker.setdefault(name.upper(), []).append(l)
     for tk, t in sorted(tracked.items()):
         opts = by_ticker.get(tk, [])
         l = None
@@ -910,7 +971,7 @@ def main():
         if t.get("asset_id"):
             l = next((x for x in opts if unit_of(x) == t["asset_id"]), None)
         if l is None and opts:
-            l = max(opts, key=lambda x: (graduated(x), (quotes.get(x["id"]) or {}).get("holders") or 0))
+            l = max(opts, key=lambda x: (graduated(x), _num((quotes.get(x["id"]) or {}).get("holders")) or 0))
         u = t.get("asset_id") or (unit_of(l) if l else None)
         if not u:
             http._fail("match", f"no unit for tracked {tk}")
@@ -923,14 +984,20 @@ def main():
              "vol_h24_ada": pool.get("vol_h24_ada") if pool else None,
              # re-review S2: tracked names carry price + decimals so big moves can value transfers / multi-token legs
              "price_ada": pool.get("price_ada") if pool else None,
-             "decimals": 6 if (l is not None and l.get("curve") and unit_of(l) == u) else chain.decimals(u)}
+             "decimals": 6 if (l is not None and l.get("curve") and unit_of(l) == u) else chain.decimals(u),
+             "pool_basis": pool.get("basis") if pool else None}
         if m["mcap_ada"] is None and pool and pool.get("price_ada") and l is not None and unit_of(l) == u:
             m["mcap_ada"] = round(pool["price_ada"] * supply_whole(l)) or None
+        m["ada_basis"] = m["pool_basis"] if m["ada_side"] is not None else None
+        m["mcap_basis"] = m["pool_basis"] if m["mcap_ada"] is not None else None
         k = t["kill"]
         # label -> (metric field, kill key); an unknown (None) value never crosses a line
         km = {"ada_side": ("ada_side", "ada_side_below"), "holders": ("holders", "holders_below"), "mcap": ("mcap_ada", "mcap_ada_below")}
         lines = {lb: float(k[kk]) for lb, (f, kk) in km.items() if kk in k}
-        values = {lb: m[km[lb][0]] for lb in lines}
+        prev_rep = state["kill_reported"].get(tk)
+        prev_mets = ((V.migrate_kill_entry(prev_rep) or {}).get("metrics") if prev_rep else {}) or {}
+        bases = {"ada_side": m.get("ada_basis"), "mcap": m.get("mcap_basis")}
+        values = {lb: _for_kill(lb, m[km[lb][0]], bases.get(lb), prev_mets) for lb in lines}
         crossed_m = {lb: (values[lb], lines[lb]) for lb in lines if values[lb] is not None and values[lb] < lines[lb]}
         crossed = [f"{lb} {values[lb]} < {lines[lb]:.0f}" for lb in ("ada_side", "holders", "mcap") if lb in crossed_m]
         # complete = every metric this kill line checks was actually read (a data gap is not a recovery)
@@ -941,8 +1008,14 @@ def main():
         results.append({"ticker": tk, "tracked": True, "unit": u, **m, "crossed": crossed, "kill": k})
         if l is not None and u and unit_of(l) == u:
             solada_tracked.append({"ticker": tk, "unit": u, "launch": l, "mcap_ada": m.get("mcap_ada"),
-                                   "vol_h24_ada": m.get("vol_h24_ada")})
+                                   "mcap_basis": m.get("mcap_basis"), "vol_h24_ada": m.get("vol_h24_ada")})
         fire, entry, reasons = V.kill_decide(state["kill_reported"].get(tk), crossed_m, values, lines, complete, kc)
+        if fire and isinstance(entry, dict):
+            for metric, info in (entry.get("metrics") or {}).items():
+                if isinstance(info, dict) and metric in ("ada_side", "mcap") and not info.get("basis"):
+                    b = bases.get(metric)
+                    if b:
+                        info["basis"] = b
         ks = V.kill_status_entry(prev_ks.get(tk), t.get("text", ""), values, lines, crossed_m, complete, now_iso(),
                                  desk_hit=bool(t.get("desk_hit")), prev_hit=prev_hit,
                                  prev_hit_at=(state["kill_reported"].get(tk) or {}).get("at"),
@@ -972,7 +1045,11 @@ def main():
     wcfg = cfg["whale"]
     lp_pols = V.lp_policies(cfg)
     unit_decimals = {unit_of(l): 6 for l in launches if l.get("curve") and unit_of(l)}
-    unit_curve = {unit_of(l): round(int((l.get("curve") or {}).get("progressBps") or 0) / 100, 1)
+    def _curve_pct(l):
+        pb = _num((l.get("curve") or {}).get("progressBps"))
+        return round((int(pb) if pb is not None else 0) / 100, 1)
+
+    unit_curve = {unit_of(l): _curve_pct(l)
                   for l in launches if unit_of(l) and l.get("curve") and not graduated(l)}
     dust = V.dust_cfg(wcfg)
     whale_summary = None

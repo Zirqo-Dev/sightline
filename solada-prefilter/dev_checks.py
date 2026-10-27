@@ -244,6 +244,9 @@ def fold(unit, ordered, dev, ex, launch_s, dc):
     # net drop alone is not a rug: a lock can empty the wallet without a sale
     bag = float(dc["rug_bag_pct"])
     late = bool(late_sell and net >= bag and sold_pct >= bag and others >= int(dc["rug_min_other_holders"]))
+    # no launch time: a sell cannot be called late or not-late. None keeps a stored True.
+    if not launch_s and (sell_hashes or sold_qty):
+        late = None
     sharp = bool(peak and (net >= float(dc["rug_bag_pct"]) or pending_qty / peak * 100.0 >= float(dc["rug_bag_pct"])))
     return {"peak": peak, "sold_ada": round(sold_ada, 2), "sold_qty": sold_qty, "first_sell_s": first_sell_s,
             "holders_at_sell": holders_at, "late_rug": late, "sell_hashes": sell_hashes, "sell_ada": sell_ada,
@@ -323,12 +326,19 @@ def sell_changed(prev, sold, late, min_ada):
     return grew or (late is True and prev.get("late_rug") is not True)
 
 
-def _may_fire(prev, baseline):
-    """Both baseline guards. The first row for a token, and a --baseline run, never fire."""
+def _may_fire(prev, baseline, item=None):
+    """Both baseline guards. The first row for a token, and a --baseline run, never fire.
+
+    A top-10 row with no launcher address stays baseline-only: the mint funder of an older
+    token is not a Solada dev, so a later sell does not fire.
+    """
     if not isinstance(prev, dict):
         return False
     if baseline:
         return False
+    if isinstance(item, dict) and item.get("baseline_only"):
+        if not ((item.get("launch") or {}).get("launcherAddress")):
+            return False
     return True
 
 
@@ -363,11 +373,19 @@ def _keep_sell(row, prev, complete):
     return row
 
 
-def inactive_of(last_tx_s, saw_newest, vol, now_s, launch_s, hours):
-    """True when nothing has traded for about `hours` (default 24). Newest chain tx wins; else 24h pool volume."""
+def inactive_of(last_tx_s, saw_newest, vol, now_s, launch_s, hours, volume_counts=True):
+    """True when nothing has traded for about `hours` (default 24). Newest chain tx wins; else 24h pool volume.
+
+    volume_counts=False when the scan was skipped: a volume of 0 from a board we did not
+    confirm is not inactivity.
+    """
     window = float(hours) * 3600.0
     if saw_newest and last_tx_s:
         return (now_s - last_tx_s) >= window
+    if not volume_counts:
+        if saw_newest and not last_tx_s and launch_s:
+            return (now_s - launch_s) >= window
+        return None
     if saw_newest and not last_tx_s:
         if launch_s:
             return (now_s - launch_s) >= window
@@ -379,19 +397,36 @@ def inactive_of(last_tx_s, saw_newest, vol, now_s, launch_s, hours):
     return None
 
 
-def ath_drawdown(prev, mcap):
-    """Peak mcap this job has stored, and percent down from it. Unknown current mcap leaves drawdown null."""
-    prev_ath = (prev or {}).get("ath_mcap") if isinstance(prev, dict) else None
-    ath = float(prev_ath) if isinstance(prev_ath, (int, float)) else None
-    cur = float(mcap) if isinstance(mcap, (int, float)) else None
-    if cur is not None and cur >= 0:
+def ath_drawdown(prev, mcap, basis=None):
+    """Peak mcap this job has stored, percent down from it, and the basis of that peak.
+
+    Unknown current mcap leaves drawdown null and keeps the stored peak. A reading on a
+    different basis starts a new peak and does not report a drop against the old one.
+    Returns (ath, drawdown, basis).
+    """
+    prev = prev if isinstance(prev, dict) else {}
+    raw_ath = prev.get("ath_mcap")
+    ath = float(raw_ath) if isinstance(raw_ath, (int, float)) and not isinstance(raw_ath, bool) else None
+    prev_basis = prev.get("mcap_basis") if isinstance(prev.get("mcap_basis"), str) and prev.get("mcap_basis") else None
+    cur = float(mcap) if isinstance(mcap, (int, float)) and not isinstance(mcap, bool) else None
+    cur_basis = basis if isinstance(basis, str) and basis else None
+    tagged = bool(cur_basis or prev_basis)
+    same = (cur_basis == prev_basis) if tagged else True
+    if cur is not None and cur >= 0 and ath is not None and not same:
+        shown = int(cur) if cur == int(cur) else round(cur, 2)
+        return shown, None, cur_basis
+    if cur is not None and cur >= 0 and (same or ath is None):
         ath = cur if ath is None else max(ath, cur)
     dd = None
-    if ath and cur is not None and ath > 0:
+    if ath and cur is not None and ath > 0 and (same or raw_ath is None):
         dd = round(max(0.0, (ath - cur) / ath * 100.0), 1)
+    out_basis = prev_basis
+    if cur is not None and (same or raw_ath is None):
+        out_basis = cur_basis or prev_basis
     if ath is None:
-        return None, dd
-    return (int(ath) if ath == int(ath) else round(ath, 2)), dd
+        return None, dd, out_basis
+    shown = int(ath) if ath == int(ath) else round(ath, 2)
+    return shown, dd, out_basis
 
 
 def _blank(ticker, policy_short, asof, unit=None):
@@ -411,6 +446,28 @@ def _blank(ticker, policy_short, asof, unit=None):
 def _launch_s(launch):
     ms = (launch or {}).get("liveAtMs")
     return float(ms) / 1000.0 if ms else None
+
+
+def _known_launch_s(launch, scan):
+    """Board launch time, else the verified mint tx time the scan found."""
+    s = _launch_s(launch)
+    if s is not None:
+        return s
+    alt = (scan or {}).get("launch_s")
+    if isinstance(alt, (int, float)) and not isinstance(alt, bool):
+        return float(alt)
+    return None
+
+
+def _verified_mint_s(unit, ordered):
+    """Block time of a tx that creates `unit` (token on outputs, on no input)."""
+    for tx in ordered or []:
+        inputs, outputs = tx.get("inputs") or [], tx.get("outputs") or []
+        if sum(_qty(u, unit) for u in inputs) > 0:
+            continue
+        if sum(_qty(u, unit) for u in outputs) > 0 and tx.get("time"):
+            return float(tx["time"])
+    return None
 
 
 def _policy_short(unit):
@@ -614,7 +671,7 @@ def _launcher_stake(launch, ex):
     return stake
 
 
-def _remember(cache, unit, stake, live_ms, late, complete, ticker=None):
+def _remember(cache, unit, stake, live_ms, late, complete, ticker=None, baseline_only=False):
     if not stake:
         return
     prev = (cache.get("units") or {}).get(unit) or {}
@@ -626,6 +683,8 @@ def _remember(cache, unit, stake, live_ms, late, complete, ticker=None):
     name = ticker or prev.get("ticker")
     if name:
         row["ticker"] = str(name).upper()
+    if baseline_only:
+        row["baseline_only"] = True
     cache.setdefault("units", {})[unit] = row
 
 
@@ -675,12 +734,16 @@ def _scan(chain, item, ex, dc):
     if len(asc) >= lim:
         complete = False
     saw_newest = len(asc) < lim or isinstance(desc_rows, list)
-    stats = fold(unit, ordered, stake, ex, _launch_s(launch), dc)
+    launch_s = _launch_s(launch)
+    if launch_s is None:
+        launch_s = _verified_mint_s(unit, ordered)
+    stats = fold(unit, ordered, stake, ex, launch_s, dc)
     if complete and stats["sold_ada"] == 0:
         stats["holders_at_sell"] = None
     # An incomplete read keeps the observed sells. _entry never lowers a stored sell and marks the row partial.
     base.update(complete=complete, txs_read=len(ordered), unread_txs=unread, saw_newest=saw_newest,
-                last_tx_s=max((t["time"] for t in ordered), default=None), stats=stats, stake=stake)
+                last_tx_s=max((t["time"] for t in ordered), default=None), stats=stats, stake=stake,
+                launch_s=launch_s)
     return base
 
 
@@ -713,11 +776,21 @@ def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline, new_h
     stake = (scan or {}).get("stake")
     row["dev_tag"] = short_tag(stake, item.get("watch"))
     s3, s7 = serial_counts(launches, stake, now_ms, dc, this_unit=unit)
+    if launches is None and stake and isinstance(prev, dict) and prev.get("unit") == unit:
+        if s3 is None and prev.get("serial_3h") is not None:
+            s3 = prev.get("serial_3h")
+        if s7 is None and prev.get("serial_7d") is not None:
+            s7 = prev.get("serial_7d")
     row["serial_3h"], row["serial_7d"] = s3, s7
+    launch_s = _known_launch_s(launch, scan)
     live_ms = launch.get("liveAtMs")
+    if live_ms is None and launch_s is not None:
+        live_ms = int(launch_s * 1000)
     row["prior_rugs"] = prior_rug_count(cache, stake, unit, live_ms)
-    ath, dd = ath_drawdown(prev, item.get("mcap_ada"))
+    ath, dd, mcap_basis = ath_drawdown(prev, item.get("mcap_ada"), item.get("mcap_basis"))
     row["ath_mcap"], row["drawdown_pct"] = ath, dd
+    if mcap_basis:
+        row["mcap_basis"] = mcap_basis
     skipped = (scan or {}).get("skipped")
     stats = (scan or {}).get("stats")
     if skipped or not stats:
@@ -727,7 +800,10 @@ def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline, new_h
                     row[k] = prev.get(k)
             if row["ath_mcap"] is None and prev.get("ath_mcap") is not None:
                 row["ath_mcap"] = prev.get("ath_mcap")
-        row["inactive"] = inactive_of(None, False, item.get("vol_h24_ada"), now_s, _launch_s(launch), dc["inactive_h"])
+            if not row.get("mcap_basis") and prev.get("mcap_basis"):
+                row["mcap_basis"] = prev.get("mcap_basis")
+        row["inactive"] = inactive_of(None, False, item.get("vol_h24_ada"), now_s, launch_s, dc["inactive_h"],
+                                      volume_counts=not bool(skipped))
         risk = risk_of(row["dev_sold_ada"], row["late_rug"], row["prior_rugs"], s3, s7, row["drawdown_pct"],
                        row["inactive"], False, dc)
         if risk is None and isinstance(prev, dict) and prev.get("unit") == unit and prev.get("risk") in ("low", "caution", "high"):
@@ -738,16 +814,22 @@ def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline, new_h
         return _no_stake(row, stake, keep=True)
     complete = bool(scan.get("complete"))
     observed = stats["sold_ada"]
-    late = True if stats["late_rug"] else (False if complete else None)
+    raw_late = stats["late_rug"]
+    if raw_late is True:
+        late = True
+    elif raw_late is None:
+        late = None
+    else:
+        late = False if complete else None
     after = None
-    if stats.get("first_sell_s") and _launch_s(launch):
-        after = round((stats["first_sell_s"] - _launch_s(launch)) / 60.0, 1)
+    if stats.get("first_sell_s") and launch_s:
+        after = round((stats["first_sell_s"] - launch_s) / 60.0, 1)
     row["dev_sold_ada"] = observed
     row["dev_sold_after_min"] = after
     row["holders_at_sell"] = stats["holders_at_sell"] if (complete or stats["late_rug"]) else None
     row["late_rug"] = late
     row["inactive"] = inactive_of(scan.get("last_tx_s"), scan.get("saw_newest"), item.get("vol_h24_ada"),
-                                  now_s, _launch_s(launch), dc["inactive_h"])
+                                  now_s, launch_s, dc["inactive_h"])
     row["coverage"] = {"txs_read": scan.get("txs_read") or 0, "complete": complete, "partial": not complete,
                        "skipped": None, "unread_txs": scan.get("unread_txs") or 0}
     # only the same policy+asset continues a row. A ticker that changed token is a new baseline.
@@ -757,6 +839,11 @@ def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline, new_h
         row["dev_sold_ada"] = round(float(same.get("dev_sold_ada") or 0) + float(fresh_ada or 0), 2)
     if not complete:
         _keep_sell(row, same, False)
+    elif row.get("late_rug") is None and isinstance(same, dict) and same.get("late_rug") is True:
+        # a complete read that still cannot time the launch must not erase a real late rug
+        row["late_rug"] = True
+        if row.get("dev_sold_after_min") is None and same.get("dev_sold_after_min") is not None:
+            row["dev_sold_after_min"] = same["dev_sold_after_min"]
     sharp = bool(stats.get("sharp"))
     risk = risk_of(row["dev_sold_ada"], row["late_rug"], row["prior_rugs"], s3, s7, dd, row["inactive"],
                    complete, dc, sharp=sharp)
@@ -766,7 +853,7 @@ def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline, new_h
         risk = same.get("risk")
     row["risk"] = risk
     row["changed_since_last"] = bool(
-        _may_fire(same, baseline) and new_hashes and _worth_firing(fresh_ada, row["late_rug"], same, dc))
+        _may_fire(same, baseline, item) and new_hashes and _worth_firing(fresh_ada, row["late_rug"], same, dc))
     if new_hashes:
         row["_new_sell"] = new_hashes[-1]
     return _no_stake(row, stake)
@@ -941,16 +1028,21 @@ def _ticker_for_unit(unit, prev_rows, units_by_ticker, cached):
 
 def _rows_from_cache(cache, prev_rows, units_by_ticker):
     units = cache.get("units") if isinstance(cache.get("units"), dict) else {}
+    # A previous public file is the allow-list. Priors scanned for serial counts stay private.
+    allow = set(prev_rows) if prev_rows else None
     rows = []
     for unit, info in units.items():
         if not isinstance(info, dict):
             continue
+        if allow is not None and unit not in allow:
+            continue
         tk = _ticker_for_unit(unit, prev_rows, units_by_ticker, info)
-        prev = (prev_rows or {}).get(unit) or {}
-        row = _row_for(tk, unit, info.get("live_at_ms"), prev.get("ath_mcap") if isinstance(prev, dict) else None,
-                       info.get("stake"))
-        if row:
-            rows.append(row)
+        row = _row_for(tk, unit, info.get("live_at_ms"), None, info.get("stake"))
+        if not row:
+            continue
+        if info.get("baseline_only") is True and not (row["launch"].get("launcherAddress")):
+            row["baseline_only"] = True
+        rows.append(row)
     return rows
 
 
@@ -960,7 +1052,7 @@ def _rows_from_prev(prev_rows):
     for unit, prev in (prev_rows or {}).items():
         if not isinstance(prev, dict):
             continue
-        row = _row_for(prev.get("ticker"), unit, None, prev.get("ath_mcap"))
+        row = _row_for(prev.get("ticker"), unit, None, None)
         if row:
             rows.append(row)
     return rows
@@ -991,19 +1083,26 @@ def _rows_from_top10(top10, units_by_ticker, prev_rows):
         if short and not unit.startswith(short):
             continue
         seen.add(unit)
-        mcap = r.get("mcap_ada") if isinstance(r.get("mcap_ada"), (int, float)) and not isinstance(r.get("mcap_ada"), bool) else None
-        row = _row_for(tk, unit, None, mcap)
-        if row:
-            rows.append(row)
+        launcher = r.get("launcherAddress") if isinstance(r.get("launcherAddress"), str) else ""
+        row = _row_for(tk, unit, None, None)
+        if not row:
+            continue
+        if launcher:
+            row["launch"]["launcherAddress"] = launcher
+        else:
+            row["baseline_only"] = True
+        rows.append(row)
     return rows
 
 
 def _fallback_rows(cache, prev_rows, top10, units_by_ticker):
     """Units to check when the Solada board did not load.
 
-    Cached units first (they carry the creator stake). If that cache is gone, the units already
-    in dev_checks.json. If this job has never written one, Snek's top 10, resolved through
-    desk pulse / config asset ids. A policy_short that does not match the unit is skipped.
+    Cached units first (they carry the creator stake), and only the units already in the last
+    dev_checks.json when that file exists. If that cache is gone, the units in the file. If this
+    job has never written one, Snek's top 10, resolved through desk pulse / config asset ids.
+    A policy_short that does not match the unit is skipped. Fallback rows carry no current mcap
+    (drawdown stays unknown). Top-10 rows with no launcher address are baseline-only.
     """
     cached = _rows_from_cache(cache, prev_rows, units_by_ticker)
     if cached:
@@ -1087,9 +1186,17 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
                                        "last_tx_s": None, "stats": None}
             sc = _quiet_owner(scans[item["unit"]], item, pats, owner_stakes)
             scans[item["unit"]] = sc
-            _remember(cache, item["unit"], sc.get("stake"), (item.get("launch") or {}).get("liveAtMs"),
+            if not sc.get("stake"):
+                info = cache["units"].get(item["unit"]) if isinstance(cache.get("units"), dict) else None
+                if isinstance(info, dict) and _hidden(pats, owner_stakes, info.get("stake") or "", ""):
+                    cache["units"].pop(item["unit"], None)
+            live_ms = (item.get("launch") or {}).get("liveAtMs")
+            if live_ms is None and sc.get("launch_s"):
+                live_ms = int(float(sc["launch_s"]) * 1000)
+            keep_base = bool(item.get("baseline_only")) and not (item.get("launch") or {}).get("launcherAddress")
+            _remember(cache, item["unit"], sc.get("stake"), live_ms,
                       (sc.get("stats") or {}).get("late_rug") if sc.get("complete") else None, sc.get("complete"),
-                      item.get("ticker"))
+                      item.get("ticker"), baseline_only=keep_base)
         # priors: other recent launches by a dev we already identified, only with calls left
         scanned_units = set(scans)
         stakes = {sc.get("stake") for sc in scans.values() if sc.get("stake")}

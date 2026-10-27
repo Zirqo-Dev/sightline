@@ -320,19 +320,35 @@ def conc_basis(ex):
     return "all" if not ex else "ex-" + hashlib.sha256(",".join(sorted(ex)).encode()).hexdigest()[:6]
 
 
+def _same_metric_basis(prev, cur, key):
+    """True when both sides are untagged, or both carry the same basis tag.
+
+    A tagged reading is not compared with an untagged or differently tagged one.
+    """
+    b0, b1 = prev.get(key), cur.get(key)
+    if not b0 and not b1:
+        return True
+    return bool(b0) and b0 == b1
+
+
 def metric_flags(ticker, cur, prev, cfg):
-    """Flags from public per-name metric history (ada_side, holders, mcap_ada, vol_h24_ada, conc). No I/O."""
+    """Flags from public per-name metric history (ada_side, holders, mcap_ada, vol_h24_ada, conc). No I/O.
+
+    ADA side and mcap are compared across runs only when both readings share a basis.
+    """
     f = []
     if not prev:
         return f
     a0, a1 = prev.get("ada_side"), cur.get("ada_side")
     h0, h1 = prev.get("holders"), cur.get("holders")
     m0, m1 = prev.get("mcap_ada"), cur.get("mcap_ada")
-    if a0 and a1 is not None and 100 * (a0 - a1) / a0 >= cfg["ada_side_drop_pct"]:
+    ada_ok = _same_metric_basis(prev, cur, "ada_basis")
+    mcap_ok = _same_metric_basis(prev, cur, "mcap_basis")
+    if ada_ok and a0 and a1 is not None and 100 * (a0 - a1) / a0 >= cfg["ada_side_drop_pct"]:
         f.append({"kind": "ada_side_drop", "ticker": ticker, "from": a0, "to": a1})
-    if h0 and h1 is not None and m0 and m1 and h1 < h0 and m1 > m0:
+    if mcap_ok and h0 and h1 is not None and m0 and m1 and h1 < h0 and m1 > m0:
         f.append({"kind": "holders_down_mcap_up", "ticker": ticker, "holders": [h0, h1], "mcap_ada": [m0, m1]})
-    if h0 and h1 and a0 and a1 and h1 >= cfg["holder_doubling_ratio"] * h0 and a1 > a0:
+    if ada_ok and h0 and h1 and a0 and a1 and h1 >= cfg["holder_doubling_ratio"] * h0 and a1 > a0:
         f.append({"kind": "holders_doubled_ada_up", "ticker": ticker, "positive": True, "holders": [h0, h1], "ada_side": [a0, a1]})
     v = cur.get("vol_h24_ada")
     if v and a1 and v / a1 >= cfg["wash_vol_to_ada_side"] and h0 is not None and h1 is not None and h1 <= h0:
@@ -490,7 +506,7 @@ def run_flags(http, bf_key, cfg, launches, new_ids, rows, dists, watch, whale_su
     hist = state.setdefault("flag_metrics", {})
     for r in rows:
         tk = r["ticker"]
-        cur = {k: r.get(k) for k in ("ada_side", "holders", "mcap_ada", "vol_h24_ada")}
+        cur = {k: r.get(k) for k in ("ada_side", "holders", "mcap_ada", "vol_h24_ada", "ada_basis", "mcap_basis")}
         u = r.get("unit")
         if u and u in dists:
             cur["conc"] = holder_concentration(dists[u], fc)
