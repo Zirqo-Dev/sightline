@@ -40,6 +40,8 @@ class Http:
         self.tripped, self.trip_after, self.research_failures = {}, {"koios": 3}, {}
         self.deadline = None  # unix time; after it, calls in deadline_srcs return None (research sections)
         self.deadline_srcs = ("koios", "blockfrost")
+        self.allow_blocked = False  # whale-ledger baseline fallback sets this so the other provider still runs
+        self.last_fail = {}  # src -> {"status": http code or "deadline"/"skipped"/exc name, "why": short text}
 
     def blocked(self, src):
         if src in self.tripped:
@@ -69,11 +71,13 @@ class Http:
             data = json.dumps(body).encode()
             h["Content-Type"] = "application/json"
         waits = self.backoff.get(src) or [3]
-        if self.blocked(src):
+        if self.blocked(src) and not self.allow_blocked:
             self.calls[src + "_skipped"] = self.calls.get(src + "_skipped", 0) + 1
+            self._remember_block(src)
             return None
         for attempt in range(len(waits) + 1):
-            if self.blocked(src):
+            if self.blocked(src) and not self.allow_blocked:
+                self._remember_block(src)
                 return None
             self._wait(src)
             self.calls[src] = self.calls.get(src, 0) + 1
@@ -84,9 +88,10 @@ class Http:
                     return json.loads(raw) if raw else {}
             except urllib.error.HTTPError as e:
                 if e.code == 404 and quiet404:
+                    self.last_fail[src] = {"status": 404, "why": "http 404"}
                     return None
                 if e.code == 429 and src == "koios" and self.deadline is not None:
-                    self._fail(src, "http 429")
+                    self._fail(src, "http 429", 429)
                     self.trip(src, "429 (public tier blocks the IP ~60 s)")
                     return None
                 if e.code == 429 and attempt < len(waits):
@@ -99,13 +104,13 @@ class Http:
                 if e.code >= 500 and attempt == 0:
                     self.sleep(1.5)
                     continue
-                self._fail(src, f"http {e.code}")
+                self._fail(src, f"http {e.code}", e.code)
                 return None
-            except Exception as e:  # network / json
+            except Exception as e:  # network / json; type name only (the message can contain the URL)
                 if attempt == 0:
                     time.sleep(1.5)
                     continue
-                self._fail(src, type(e).__name__)
+                self._fail(src, type(e).__name__, type(e).__name__)
                 return None
 
     def post_webhook(self, url, body, headers=None):
@@ -137,8 +142,14 @@ class Http:
                 return False
         return False
 
-    def _fail(self, src, why):
+    def _remember_block(self, src):
+        """Keep the earlier HTTP status (a 429 that tripped the breaker). A pure deadline/breaker skip has no code."""
+        self.last_fail.setdefault(src, {"status": "skipped" if src in self.tripped else "deadline",
+                                        "why": self.tripped.get(src, "deadline")})
+
+    def _fail(self, src, why, status=None):
         self.failures[src] = self.failures.get(src, 0) + 1
+        self.last_fail[src] = {"status": why if status is None else status, "why": why}
         print(f"  data failure [{src}]: {why}", file=sys.stderr)
         # the breaker is armed only inside the research window (deadline set): rules-screen and kill-line reads
         # keep their normal retries even after a Koios failure (re-review should-fix 1)

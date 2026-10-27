@@ -98,7 +98,7 @@ class Fallback(unittest.TestCase):
     def test_empty_key_skips_blockfrost_gracefully(self):
         base, r, doc, seen, _ = two_runs(False, "")
         self.assertEqual({s for s, _, _ in seen}, {"koios"})
-        self.assertEqual(base, {"error": "baseline failed"})
+        self.assertEqual(base, {"error": "baseline failed", "failed_read": "tip", "provider": "koios", "status": None})
         self.assertIsNone(doc)
 
     def test_key_read_from_env_only_when_not_passed(self):
