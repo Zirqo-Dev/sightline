@@ -199,5 +199,176 @@ class Migration(unittest.TestCase):
         F.assert_public(doc2)
 
 
+def _state(raw, names, alias, height=50):
+    return {"height": height, "baseline_at": "2026-10-26T12:00:00Z", "baseline_height": height, "lovelace": 0,
+            "positions_raw": raw, "seen": {}, "orders": {}, "token_names": names, "key_alias": alias, "rows": []}
+
+
+class K(WL.KoiosLedger):
+    """Offline ledger. Subclasses set `bal` to the balances() asset dict (insertion order kept)."""
+    bal = {}
+    tip = 50
+
+    def txs_after(self, stake, height):
+        return []
+
+    def tip_height(self, stake):
+        return self.tip
+
+    def utxos(self, hs):
+        return {}
+
+    def balances(self, stake):
+        return (0, self.bal)
+
+    def spent(self, refs):
+        return {}
+
+
+def run_state(state, balances, height=50):
+    cfg = {"whale": {"stake": STAKE, "stake_prefix": STAKE[6:14]}, "whale_ledger": {}}
+    K.bal, K.tip = balances, height
+    with mock.patch.object(WL, "KoiosLedger", K), tempfile.TemporaryDirectory() as d:
+        os.makedirs(os.path.join(d, "c"))
+        if state is not None:
+            with open(os.path.join(d, "c", "whale-ledger-state.json"), "w") as f:
+                json.dump(state, f)
+        summary = WL.run(P.Http({}), cfg, d, False, 1793050000, {}, cache_dir=os.path.join(d, "c"),
+                         owner_env="^zzOWNERzz$")
+        with open(os.path.join(d, "whale_ledger.json")) as f:
+            doc = json.load(f)
+    return summary, doc
+
+
+class ReviewFixes(unittest.TestCase):
+    def test_same_policy_unprintable_nfts_are_not_deduped(self):
+        policy = pol("cd")
+        a, b = policy + ("ab" * 28), policy + ("cd" * 28)
+        qty = 4
+        view, _ = view_of({a: qty, b: qty})
+        self.assertEqual(sum(view["positions_counted"].values()), qty * 2)
+        self.assertEqual(set(view["positions_counted"]), set(view["positions"]))
+        self.assertEqual(len(view["tokens"]), 2)
+        for t in view["tokens"]:
+            self.assertNotIn("dup_of", t)
+            self.assertNotIn("same_qty_as", t)
+            self.assertIn("+", t["token"])
+            self.assertIn(policy[:6], t["token"])
+            self.assertNotIn(policy, t["token"])
+            self.assertLess(len(t["token"]), 32)
+            self.assertNotEqual(t["token"], a[:12])
+
+    def test_assign_token_keys_gives_the_lower_unit_the_short_key(self):
+        # Same policy, two printable spellings of one name (plain and CIP-68). The short key
+        # belongs to the lexicographically lower unit. sorted() in assign_token_keys is what
+        # makes that true for both input orders; without it the first unit in the call wins.
+        policy = pol("ab")
+        name = "NFT"
+        plain = policy + name.encode().hex()
+        cip = policy + "000de140" + name.encode().hex()
+        low, high = sorted((plain, cip))
+        self.assertLess(low, high)
+        forward = WL.assign_token_keys([high, low])
+        backward = WL.assign_token_keys([low, high])
+        self.assertEqual(forward, backward)
+        self.assertEqual(forward[low], "NFT~" + policy[:6])
+        self.assertTrue(forward[high].startswith("NFT~" + policy[:6] + "+"))
+        self.assertLess(len(forward[low]), len(forward[high]))
+        self.assertNotIn(policy, forward[low])
+        self.assertNotIn(policy, forward[high])
+        view, _ = view_of({plain: 3, cip: 3})
+        self.assertEqual(sum(view["positions_counted"].values()), 6)
+        self.assertTrue(all("dup_of" not in t and "same_qty_as" not in t for t in view["tokens"]))
+        for t in view["tokens"]:
+            self.assertNotIn(policy, t["token"])
+
+    def test_corrupt_key_alias_and_quantities_do_not_crash(self):
+        a = unit("aa")
+        summary, doc = run_state(_state({a: "1000"}, {a: "fADA"}, None), {a: 1000})
+        self.assertTrue(summary["reconcile_ok"])
+        self.assertEqual(doc["positions"], {"fADA": 1000})
+        self.assertEqual(doc["positions_counted"], {"fADA": 1000})
+        self.assertEqual(doc["reconcile"]["token_drift"], {})
+        blob = json.dumps(doc)
+        self.assertNotIn(STAKE, blob)
+        self.assertNotIn(addr("whale"), blob)
+        self.assertNotIn(a, blob)
+        F.assert_public(doc)
+
+        summary2, doc2 = run_state(_state({a: "nope"}, {a: "fADA"}, []), {a: 1000})
+        self.assertIn("reconcile_ok", summary2)
+        self.assertNotIn(a, json.dumps(doc2))
+        self.assertNotIn(STAKE, json.dumps(doc2))
+        F.assert_public(doc2)
+        led = fresh()
+        led["key_alias"] = None
+        led["positions_raw"] = {a: "1000", unit("bb"): "nope"}
+        WL.sync_token_keys(led)
+        WL.token_view(led)
+        WL.token_key(a, {}, [])
+        WL.token_key(a, {}, None)
+
+    def test_ada_named_asset_does_not_share_the_lovelace_key(self):
+        u = unit("ee", "ADA")
+        names, alias = {}, {}
+        self.assertNotEqual(WL.token_key(u, names, alias), "ADA")
+        self.assertTrue(names[u].startswith("ADA~"))
+        self.assertNotIn("ADA", alias)
+        led = fresh()
+        led["token_names"] = {u: "ADA"}
+        led["rows"] = [{"time": "2026-10-26T12:00:00Z", "tx_short": "abc1234567", "kind": "transfer_in",
+                        "token": "ADA", "qty": None, "ada_leg": 2.0, "counterparty_tag": None}]
+        led["orders"] = {"r#0": {"ref_short": "r#0", "unit": "lovelace", "token": "ADA", "status": "open"}}
+        led["positions_raw"] = {u: 5}
+        WL.sync_token_keys(led)
+        self.assertEqual(led["rows"][0]["token"], "ADA")
+        self.assertEqual(led["orders"]["r#0"]["token"], "ADA")
+        self.assertTrue(led["token_names"][u].startswith("ADA~"))
+        self.assertNotEqual(led["token_names"][u], "ADA")
+        self.assertNotIn("ADA", led.get("key_alias") or {})
+        view, _ = view_of({u: 9})
+        self.assertNotIn("ADA", view["positions"])
+        self.assertTrue(all(k.startswith("ADA~") for k in view["positions"]))
+
+    def test_chain_only_unit_drift_is_name_tilde_policy8(self):
+        held, other = unit("aa"), unit("bb")
+        summary, doc = run_state(_state({held: 1000}, {held: "fADA"}, {}), {held: 1000, other: 50})
+        label = "fADA~" + other[:8]
+        self.assertEqual(doc["reconcile"]["token_drift"], {label: 50})
+        self.assertEqual(len(label.split("~", 1)[1]), 8)
+        self.assertTrue(summary["reconcile_ok"] is False)
+        blob = json.dumps(doc)
+        self.assertNotIn(held, blob)
+        self.assertNotIn(other, blob)
+        self.assertNotIn(STAKE, blob)
+        self.assertNotIn(addr("whale"), blob)
+        F.assert_public(doc)
+
+    def test_baseline_seeds_token_keys_in_sorted_unit_order(self):
+        low, high = unit("aa"), unit("ff")
+        self.assertLess(low, high)
+        seen = []
+        real = WL.token_key
+
+        def spy(u, names, alias=None):
+            seen.append(u)
+            return real(u, names, alias)
+
+        assets = {}
+        assets[high] = 1
+        assets[low] = 1
+        self.assertEqual(list(assets), [high, low])
+        with mock.patch.object(WL, "token_key", spy):
+            summary, doc = run_state(None, assets)
+        self.assertEqual(seen, [low, high])
+        self.assertNotIn("error", summary)
+        blob = json.dumps(doc)
+        self.assertNotIn(low, blob)
+        self.assertNotIn(high, blob)
+        self.assertNotIn(STAKE, blob)
+        self.assertNotIn(addr("whale"), blob)
+        F.assert_public(doc)
+
+
 if __name__ == "__main__":
     unittest.main()

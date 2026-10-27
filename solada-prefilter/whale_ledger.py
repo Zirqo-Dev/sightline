@@ -14,9 +14,12 @@ and any drift is reported (never silently "fixed").
 Token labels are the display name plus the policy, not arrival order. Every entry stores policy
 (first 8 hex). One unit keeps the bare name; several units with that name are each name~policy
 (first 6 hex, or 8 when those prefixes collide), so a later Koios or Blockfrost page cannot swap
-which unit is unsuffixed. Same-name holdings with the same quantity are marked dup_of / same_qty_as
-and left out of positions_counted and position_deltas (information only, not a second total or move).
-A renamed key is remembered in key_alias; position_deltas treats the old key as the new one.
+which unit is unsuffixed. A name that is not printable is policy6 plus an asset-name hex prefix,
+not the policy id. Same-name holdings on different policies with the same quantity are marked
+dup_of / same_qty_as and left out of positions_counted (information only, not a second total).
+Units of one policy are never marked as copies. A renamed key is remembered in key_alias. The key
+ADA is lovelace only. position_deltas can map an old key onto the new one, but it has no production
+caller yet.
 
 DEX orders (batcher-style: Splash/Spectrum/Minswap/Genius etc.): a whale tx that sends a token (or 10+ ADA)
 to a script address without getting value back opens an order (ref = tx#index). A later tx that spends
@@ -53,14 +56,30 @@ def iso(ts):
     return datetime.fromtimestamp(int(ts), timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _asset_hex(unit):
+    """Hex of the asset name (everything after the 56-char policy). Public asset data."""
+    if not isinstance(unit, str) or len(unit) <= 56:
+        return ""
+    return "".join(c for c in unit[56:] if c in "0123456789abcdefABCDEF").lower()
+
+
 def token_name(unit):
+    """Printable asset name, or policy6 + an asset-name hex prefix when the name is not printable.
+
+    The fallback used to be unit[:12], which is the policy prefix, so every non-printable NFT
+    under one policy shared a name.
+    """
+    if not isinstance(unit, str):
+        return ""
     h = unit[56:]
     h = h[8:] if h[:8] in ("0014df10", "000de140", "000643b0") else h
     try:
         s = bytes.fromhex(h).decode("utf-8")
     except (ValueError, UnicodeDecodeError):
         s = ""
-    return s if s and s.isprintable() and len(s) <= 24 else unit[:12]
+    if s and s.isprintable() and len(s) <= 24:
+        return s
+    return f"{policy_short(unit, 6)}+{_asset_hex(unit)[:8]}"
 
 
 def policy_short(unit, n=8):
@@ -70,21 +89,88 @@ def policy_short(unit, n=8):
     return hexed[:n]
 
 
+def _policy_id(unit):
+    pol = unit[:56] if isinstance(unit, str) else ""
+    return "".join(c for c in pol if c in "0123456789abcdefABCDEF").lower()
+
+
 def _base_name(key):
-    """Display name of a token key. A ~ suffix is a policy id (6-8 hex, or the full policy if 8 collided)."""
+    """Display name of a token key. A ~ suffix is a policy id, or policy plus an asset-name hex prefix."""
     if isinstance(key, str) and "~" in key:
         base, suf = key.rsplit("~", 1)
-        if suf and all(c in "0123456789abcdef" for c in suf) and (6 <= len(suf) <= 8 or len(suf) == 56):
+        if _policy_suffix(suf):
             return base
     return key
+
+
+def _policy_suffix(suf):
+    if not suf:
+        return False
+    pol, plus, asset = suf.partition("+")
+    if not pol or not all(c in "0123456789abcdef" for c in pol):
+        return False
+    if not plus:
+        return 6 <= len(pol) <= 8 or len(pol) == 56
+    return 6 <= len(pol) <= 8 and bool(asset) and all(c in "0123456789abcdef" for c in asset)
+
+
+def _ada_key(key, unit):
+    """Lovelace rows use the bare key ADA. A native asset named ADA must not take it."""
+    if key != "ADA":
+        return key
+    lab = policy_short(unit, 6) or _asset_hex(unit)[:8] or "asset"
+    return f"ADA~{lab}"
+
+
+def _shared_name_keys(name, uniq):
+    """Keys for units that share a display name. uniq is sorted; the lowest unit keeps the short key."""
+    labels6 = [policy_short(u, 6) for u in uniq]
+    if len(set(labels6)) == len(uniq):
+        return {u: _ada_key(f"{name}~{lab}" if lab else name, u) for u, lab in zip(uniq, labels6)}
+    labels8 = [policy_short(u, 8) for u in uniq]
+    if len(set(labels8)) == len(uniq):
+        return {u: _ada_key(f"{name}~{lab}" if lab else name, u) for u, lab in zip(uniq, labels8)}
+    out, used = {}, {}
+    for u in uniq:
+        key = _clash_key(name, u, used)
+        used[key] = u
+        out[u] = _ada_key(key, u)
+    return out
+
+
+def _clash_key(name, unit, used):
+    """Same policy (or policies that still share 8 hex). Never the full 56-hex policy."""
+    lab = policy_short(unit, 6)
+    asset = _asset_hex(unit)
+    cands = [f"{name}~{lab}" if lab else name]
+    width = 8
+    while True:
+        piece = asset[:width]
+        if piece:
+            cands.append(f"{name}~{lab}+{piece}" if lab else f"{name}+{piece}")
+        if width >= len(asset):
+            break
+        width += 4
+    for n in range(9, 56):
+        longer = policy_short(unit, n)
+        if len(longer) < n:
+            break
+        cands.append(f"{name}~{longer}")
+    for key in cands:
+        if key not in used:
+            return key
+    return cands[-1]
 
 
 def assign_token_keys(units):
     """{unit: display key} from the set of units alone. Insertion order is not an input.
 
-    A name used once stays bare. A name used by several units is name~policy for every unit,
-    including the one that used to be stored without a suffix. The suffix is the first 6 policy
-    hex, or 8 when two policies share those 6, so the keys cannot swap between runs.
+    A name used once stays bare, except ADA, which is reserved for lovelace. A name used by
+    several units is name~policy for every unit, including the one that used to be stored
+    without a suffix. The suffix is the first 6 policy hex, or 8 when two policies share
+    those 6. Units of one policy keep name~policy6 on the lexicographically lowest unit and
+    append an asset-name hex prefix on the rest. Units are sorted before that choice, so the
+    provider's order cannot swap which unit gets the short key.
     """
     if isinstance(units, dict):
         units = list(units)
@@ -95,25 +181,12 @@ def assign_token_keys(units):
         groups.setdefault(token_name(u), []).append(u)
     out = {}
     for name, us in groups.items():
-        uniq = sorted(set(us))
+        # sorted, not first-seen: drop the sorted() and the lower unit no longer owns the short key
+        uniq = sorted(dict.fromkeys(us))
         if len(uniq) == 1:
-            out[uniq[0]] = name
+            out[uniq[0]] = _ada_key(name, uniq[0])
             continue
-        width = 6
-        labels = [policy_short(u, width) for u in uniq]
-        if len(set(labels)) < len(uniq):
-            width = 8
-            labels = [policy_short(u, width) for u in uniq]
-        used = {}
-        for u, label in zip(uniq, labels):
-            key = f"{name}~{label}" if label else name
-            if key in used and used[key] != u:
-                label = policy_short(u, 56)
-                key = f"{name}~{label[:8]}" if label else name
-                if key in used and used[key] != u:
-                    key = f"{name}~{label}" if label else name
-            used[key] = u
-            out[u] = key
+        out.update(_shared_name_keys(name, uniq))
     return out
 
 
@@ -133,15 +206,23 @@ def _collapse_alias(alias):
 
 
 def _bind_alias(alias, old_map, new_map):
-    """Record old display key -> current key. A key that is still in use is not a rename source."""
-    for u, prev in old_map.items():
-        nxt = new_map.get(u)
-        if nxt and prev and prev != nxt:
-            alias[prev] = nxt
-    collapsed = _collapse_alias(alias)
-    current = set(new_map.values())
-    alias.clear()
-    alias.update({k: v for k, v in collapsed.items() if k != v and k not in current})
+    """Record old display key -> current key. A key that is still in use is not a rename source.
+
+    The source key ADA is the lovelace row. A native asset must never take it over.
+    """
+    try:
+        if not isinstance(alias, dict) or not isinstance(old_map, dict) or not isinstance(new_map, dict):
+            return
+        for u, prev in list(old_map.items()):
+            nxt = new_map.get(u)
+            if nxt and isinstance(prev, str) and prev != nxt and prev != "ADA":
+                alias[prev] = nxt
+        collapsed = _collapse_alias(alias)
+        current = set(new_map.values())
+        alias.clear()
+        alias.update({k: v for k, v in collapsed.items() if k != v and k not in current and k != "ADA"})
+    except (TypeError, ValueError, AttributeError):
+        return
 
 
 def _map_token(tok, alias):
@@ -164,8 +245,13 @@ def token_key(unit, names, alias=None):
     if unit not in names:
         names[unit] = token_name(unit)
     new = assign_token_keys(names)
-    if alias is not None:
-        _bind_alias(alias, old, new)
+    if not isinstance(alias, dict):
+        alias = None
+    try:
+        if alias is not None:
+            _bind_alias(alias, old, new)
+    except (TypeError, ValueError, AttributeError):
+        pass
     names.clear()
     names.update(new)
     return new.get(unit, token_name(unit))
@@ -175,8 +261,53 @@ _ROW_TOKEN_FIELDS = ("token", "sold")
 _ORDER_TOKEN_FIELDS = ("token", "filled_token")
 
 
+def _coerce_qty(v):
+    """Int quantity, or None when the cached value cannot be used. bool is not a quantity."""
+    if isinstance(v, bool) or v is None:
+        return None
+    if isinstance(v, int):
+        return v
+    if isinstance(v, float):
+        return int(v) if v.is_integer() else None
+    if isinstance(v, str):
+        s = v.strip()
+        if not s:
+            return None
+        try:
+            return int(s, 10)
+        except ValueError:
+            return None
+    return None
+
+
+def _prepare_ledger(ledger):
+    """Coerce a cached ledger so a null key_alias or a bad quantity cannot crash the run."""
+    if not isinstance(ledger, dict):
+        return ledger
+    if not isinstance(ledger.get("key_alias", {}), dict):
+        ledger["key_alias"] = {}
+    if not isinstance(ledger.get("token_names", {}), dict):
+        ledger["token_names"] = {}
+    raw = ledger.get("positions_raw", {})
+    if not isinstance(raw, dict):
+        ledger["positions_raw"] = {}
+        return ledger
+    clean = {}
+    for k, v in raw.items():
+        if not isinstance(k, str) or not k:
+            continue
+        q = _coerce_qty(v)
+        if q is None or q == 0:
+            continue
+        clean[k] = q
+    if clean != raw:
+        ledger["positions_raw"] = clean
+    return ledger
+
+
 def sync_token_keys(ledger, extra_rows=None):
     """Rewrite token_names, rows and orders onto assign_token_keys. Old keys land in key_alias."""
+    _prepare_ledger(ledger)
     names = ledger.setdefault("token_names", {})
     units = set()
     for u in list(names):
@@ -193,7 +324,13 @@ def sync_token_keys(ledger, extra_rows=None):
         names.setdefault(u, token_name(u))
     new = assign_token_keys(units)
     alias = ledger.setdefault("key_alias", {})
-    _bind_alias(alias, old, new)
+    if not isinstance(alias, dict):
+        alias = {}
+        ledger["key_alias"] = alias
+    try:
+        _bind_alias(alias, old, new)
+    except (TypeError, ValueError, AttributeError):
+        pass
     names.clear()
     names.update(new)
     seen, rows = set(), []
@@ -221,10 +358,12 @@ def sync_token_keys(ledger, extra_rows=None):
 def token_view(ledger):
     """Published holdings. policy is the first 8 hex of every entry, including a bare-name one.
 
-    Two entries with the same display name and the same qty are the same balance twice (a copy
-    or a copycat). same_qty_as is on each of them; dup_of is on every one except the lowest
-    policy. positions lists them all; positions_counted is the total that does not add the copy.
+    Two entries with the same display name, the same qty, and different policies are the same
+    balance twice (a copy or a copycat). same_qty_as lists the other policies; dup_of is set
+    only on a unit whose policy is not the lowest one. Units of one policy are never marked.
+    positions lists every unit; positions_counted does not add the cross-policy copy.
     """
+    _prepare_ledger(ledger)
     names = ledger.get("token_names") or {}
     entries = []
     for unit, qty in (ledger.get("positions_raw") or {}).items():
@@ -245,11 +384,25 @@ def token_view(ledger):
             if len(same) < 2:
                 continue
             same.sort(key=lambda e: (e["policy"], e["unit"]))
-            keys = [e["token"] for e in same]
+            policies = []
+            for e in same:
+                pid = _policy_id(e["unit"])
+                if pid not in policies:
+                    policies.append(pid)
+            if len(policies) < 2:
+                continue
+            canon_pol = _policy_id(same[0]["unit"])
             canon = same[0]["token"]
             for e in same:
-                e["same_qty_as"] = [k for k in keys if k != e["token"]]
-                if e["token"] != canon:
+                epol = _policy_id(e["unit"])
+                others = []
+                for o in same:
+                    if _policy_id(o["unit"]) == epol or o["token"] in others:
+                        continue
+                    others.append(o["token"])
+                if others:
+                    e["same_qty_as"] = others
+                if epol != canon_pol:
                     e["dup_of"] = canon
     public = []
     for e in sorted(entries, key=lambda e: (e["token"], e["policy"], e["unit"])):
@@ -279,9 +432,11 @@ def omit_dup_drift(drift, tokens):
 def position_deltas(prev, cur, aliases=None):
     """Counted qty change per current token key.
 
-    aliases maps a renamed key onto the key used now, so the migration is not a move.
+    aliases maps a renamed key onto the key used now, so a migration is not a move.
     Same-name keys that shared a qty and then changed by the same amount count once
     (the lowest key). A copy whose qty diverges is its own change.
+
+    No production caller yet: run() does not call this.
     """
     aliases = aliases or {}
     prev_r, cur_r = {}, {}
@@ -340,6 +495,7 @@ def _creds(tx, stake):
 def classify(tx, stake, ledger, lp_pols, wc):
     """Rows + net deltas for one tx. tx = {hash, time, inputs/outputs: [{ref, addr, stake, lovelace, assets}]}.
     Mutates ledger['orders'] (open/fill/cancel). Pure otherwise (no network)."""
+    _prepare_ledger(ledger)
     names = ledger.setdefault("token_names", {})
     alias = ledger.setdefault("key_alias", {})
     orders = ledger.setdefault("orders", {})
@@ -552,10 +708,12 @@ def classify(tx, stake, ledger, lp_pols, wc):
 
 def apply(ledger, tx, stake, lp_pols, wc):
     """Apply one tx once. Returns rows (empty when the tx was already applied)."""
+    _prepare_ledger(ledger)
     seen = _seen_map(ledger)
     if tx["hash"] in seen:
         return []
     rows, lov, toks = classify(tx, stake, ledger, lp_pols, wc)
+    _prepare_ledger(ledger)
     names = ledger.setdefault("token_names", {})
     alias = ledger.setdefault("key_alias", {})
     pos = ledger.setdefault("positions_raw", {})
@@ -572,14 +730,18 @@ def apply(ledger, tx, stake, lp_pols, wc):
 
 
 def public_doc(ledger, whale_tag, now_s, wc, extra):
+    _prepare_ledger(ledger)
     sync_token_keys(ledger)
     ledger["rows"] = dedupe_rows(ledger.get("rows") or [])
     view = token_view(ledger)
     alias = ledger.get("key_alias") or {}
+    if not isinstance(alias, dict):
+        alias = {}
     doc = {"at": iso(now_s), "whale_tag": whale_tag, "basis": extra.pop("basis", "koios"),
            "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). "
-                   "tokens[].policy is the first 8 hex of the policy. Same-name holdings with the same qty are "
-                   "dup_of / same_qty_as and are left out of positions_counted.",
+                   "tokens[].policy is the first 8 hex of the policy. Same-name holdings on different policies "
+                   "with the same qty are dup_of / same_qty_as and are left out of positions_counted. "
+                   "Units of one policy are never marked as copies.",
            "height": ledger.get("height"), "baseline_at": ledger.get("baseline_at"),
            "ada_balance": round(ledger.get("lovelace", 0) / 1e6, 6),
            "positions": view["positions"], "positions_counted": view["positions_counted"], "tokens": view["tokens"],
@@ -854,6 +1016,8 @@ def run(http, cfg, data_dir, dry_run, now_s, lp_pols, bf_key=None, deadline=None
     legacy_spath = os.path.join(data_dir, "whale_ledger_state.json")  # #29 wrote it to desk-data; read-only now
     cpath = os.path.join(cache_dir, "whale-ledger-state.json") if cache_dir else None
     ledger, src = load(path, [(cpath, "cache"), (legacy_spath, "desk-data-legacy")])
+    if isinstance(ledger, dict):
+        _prepare_ledger(ledger)
     extra = {"capped": False, "state_source": src or "baseline", "counterparty_tags": bool(wc["_owner_pats"])}
     late = lambda: bool(deadline) and __import__("time").time() >= deadline  # noqa: E731
     if ledger is not None and ledger.get("baseline_height") is None and ledger.get("baseline_at"):
