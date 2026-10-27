@@ -148,6 +148,10 @@
       "watch": [
         "uy3gz02eqt"
       ]
+    },
+    "_exclude_tags_note": "Tags (w-xxxxxxxx = sha256 of the stake key or address) left out of holder_concentration / concentration_jump and the early-buyer cluster flags: protocol wallets, not holders. w-f46e5a31 = Solada curve reserve (Snek, Oct 26). Map tag -> label.",
+    "exclude_tags": {
+      "w-f46e5a31": "solada_curve_reserve"
     }
   },
   "geckoterminal": {
@@ -167,19 +171,20 @@
     "keep_h": 72,
     "max_units": 12,
     "max_txs_per_unit": 100,
-    "utxo_batch": 10,
+    "utxo_batch": 13,
     "max_calls": 80
   },
   "whale_ledger": {
     "_note": "SPD-44 founder whale ledger (whale_ledger.py). Research only, never triggers or the webhook. Free Koios public tier: max_calls per run, utxo_batch hashes per POST, max_txs per run (backlog resumes next run).",
     "enabled": true,
     "max_txs": 100,
-    "utxo_batch": 10,
+    "utxo_batch": 13,
     "max_calls": 60,
     "max_bf_calls": 120,
     "keep_rows": 3000,
     "keep_seen": 20000,
     "order_min_ada": 10,
     "min_ada_row": 1.0
-  }
+  },
+  "research_budget_s": 240
 }

@@ -14,6 +14,7 @@ full address or stake key.
 import hashlib, json, os, re, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import valuation as V  # noqa: E402
+import koios_tx as KT  # noqa: E402
 
 KOIOS = "https://api.koios.rest/api/v1"
 BF = "https://cardano-mainnet.blockfrost.io/api/v0"
@@ -118,12 +119,14 @@ class FlagChain:
         return t[:n]
 
     def tx_utxos(self, hashes):
-        """{tx_hash: {'inputs': [(addr, lovelace, {unit: qty})], 'outputs': [...]}}. 1 Koios call per 25 txs."""
+        """{tx_hash: {'inputs': [(addr, lovelace, {unit: qty})], 'outputs': [...]}}. One Koios call per batch,
+        clamped to the public tier's 1 KB body limit (25 hashes = 1,716 B = HTTP 413; 14 fit)."""
         out = {}
-        for i in range(0, len(hashes), 25):
-            r = self.h.req("koios", f"{KOIOS}/tx_utxos", method="POST", body={"_tx_hashes": hashes[i:i + 25]})
+        for body in KT.batches(hashes, "_tx_hashes", 25):
+            chunk = body["_tx_hashes"]
+            r = self.h.req("koios", f"{KOIOS}/tx_utxos", method="POST", body=body)
             if r is None and self.bf_key:  # per-tx Blockfrost fallback
-                for hsh in hashes[i:i + 25]:
+                for hsh in chunk:
                     x = self.h.req("blockfrost", f"{BF}/txs/{hsh}/utxos", headers={"project_id": self.bf_key})
                     if x:
                         out[hsh] = {s: [(u["address"], int(next((a["quantity"] for a in u["amount"] if a["unit"] == "lovelace"), 0)),
@@ -200,6 +203,12 @@ def buyers_from_txs(unit, txs, utxos, decimals=None, price_ada=None, lp_pols=Non
     return rows
 
 
+def excluded_tags(cfg):
+    """Tags excluded from holder/cluster flags (config flags.exclude_tags, e.g. Solada's curve reserve). Matched on
+    both the stake tag and the address tag, so a reserve without a stake key is covered too."""
+    return {str(t).strip() for t in ((cfg or {}).get("exclude_tags") or {}) if str(t).strip()}
+
+
 def match_tags(stake, watch):
     """Snek prefix tags that this stake key starts with. watch = {prefix: role}."""
     return [p for p in watch if stake.startswith("stake1" + p)]
@@ -208,6 +217,9 @@ def match_tags(stake, watch):
 def analyze_launch(ticker, unit, buyers, watch, cfg, live_at_s=None, first_heights=None, launcher_stake=None):
     """Return list of flags for one launch from its early buyers. No I/O."""
     f, first_heights = [], first_heights or {}
+    ex = excluded_tags(cfg)
+    if ex:  # a configured protocol wallet (curve reserve) is not a buyer cluster
+        buyers = [b for b in buyers if tag(b["stake"]) not in ex and not any(tag(a) in ex for a in b.get("addrs") or ())]
     early = buyers[: cfg["first_x_buyers"]]
     stakes = []
     for b in early:
@@ -280,12 +292,17 @@ def analyze_launch(ticker, unit, buyers, watch, cfg, live_at_s=None, first_heigh
 
 
 def holder_concentration(dist, cfg):
-    """dist = [(addr, qty)]. Top holder and top stake-cluster share, script (pool) addresses excluded."""
+    """dist = [(addr, qty)]. Top holder and top stake-cluster share, script (pool) addresses excluded, and so are
+    holders whose stake tag or address tag is in flags.exclude_tags (e.g. the Solada curve reserve w-f46e5a31):
+    they are left out of the total too, so the shares are of the circulating (non-reserve) supply."""
     by_stake, tot = {}, 0
     top_addr = 0
+    ex = excluded_tags(cfg)
     for addr, q in dist:
         stake, script = addr_info(addr)
         if script or q <= 0:
+            continue
+        if ex and (tag(addr) in ex or (stake and tag(stake) in ex)):
             continue
         tot += q
         top_addr = max(top_addr, q)

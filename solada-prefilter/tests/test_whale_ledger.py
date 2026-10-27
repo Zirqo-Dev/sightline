@@ -1,5 +1,5 @@
 """SPD-44 founder whale ledger (offline, no secrets, no network). Fake addresses come from labels."""
-import hashlib, json, os, subprocess, sys, tempfile, unittest
+import shutil, hashlib, json, os, subprocess, sys, tempfile, unittest
 from unittest import mock
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -34,7 +34,7 @@ def full(h):
 def tx(t):
     def side(rows, out):
         res = []
-        for i, (lab, lov, assets) in enumerate(rows):
+        for i, (lab, lov, assets, *dt) in enumerate(rows):
             if lab.startswith("@"):  # spend of an earlier output
                 h, idx = lab[1:].split("#")
                 ref, lab = f"{full(h)}#{idx}", "order"
@@ -42,9 +42,18 @@ def tx(t):
                 ref = f"{full(t['hash'])}#{i}" if out else f"{full('ffff')}#{i}"
             a = addr(lab)
             res.append({"ref": ref, "addr": a, "stake": F.addr_info(a)[0] if lab not in SCRIPTS else None,
-                        "lovelace": lov, "assets": {UNITS[k]: q for k, q in assets.items()}})
+                        "lovelace": lov, "assets": {UNITS[k]: q for k, q in assets.items()}, "datum": datum(dt[0]) if dt else ""})
         return res
     return {"hash": full(t["hash"]), "time": t["time"], "inputs": side(t["in"], False), "outputs": side(t["out"], True)}
+
+
+def datum(spec):
+    """Fixture datum text: 'datum-refs:<hash4>#<i>+whale' -> json naming that full tx hash and the whale's stake cred."""
+    body = spec.split(":", 1)[1]
+    ref, who = body.split("+")
+    h, i = ref.split("#")
+    creds = {"whale": F.b32_decode(STAKE)[1][1:].hex()}
+    return json.dumps({"fields": [{"bytes": full(h)}, {"int": int(i)}, {"bytes": creds[who]}]})
 
 
 def fresh():
@@ -63,15 +72,20 @@ def by_tx(led, h):
 
 
 class Orders(unittest.TestCase):
-    def test_cock_order_open_then_fill(self):
+    def test_cock_order_open_then_replaced_not_filled(self):
+        # review S8 / Snek (a): the real Oct 26 11:59 AM ET case. 6c16 spends the order and puts the same 1M COCK in a
+        # new vault output whose datum names the old order and the whale -> replaced (still open), not a 930 ADA fill
         led = replay()
         o = by_tx(led, "c8c1")
         self.assertEqual([(r["kind"], r["token"], r["qty"], r["ada_leg"]) for r in o], [("order_open", "COCK", 1000000, 4.3)])
         f = by_tx(led, "6c16")
-        self.assertEqual([(r["kind"], r["token"], r["qty"], r["ada_leg"], r["order_status"]) for r in f],
-                         [("order_fill", "COCK", 1000000, 930.3, "filled")])
+        self.assertEqual([(r["kind"], r["token"], r.get("order_status")) for r in f],
+                         [("order_cancel", "COCK", "replaced"), ("order_open", "COCK", "open"), ("transfer_in", "ADA", None)])
+        self.assertEqual((f[2]["ada_leg"], f[2]["via"]), (930.3, "script"))
         od = [x for x in led["orders"].values() if x["opened_tx"] == full("c8c1")[:10]][0]
-        self.assertEqual((od["status"], od["filled_ada"]), ("filled", 930.3))
+        self.assertEqual(od["status"], "replaced")
+        new = [x for x in led["orders"].values() if x.get("replaces") == od["ref_short"]][0]
+        self.assertEqual((new["status"], new["qty_raw"], od["replaced_by"]), ("open", 1000000, new["ref_short"]))
 
     def test_cancel_returns_token(self):
         led = replay()
@@ -122,7 +136,7 @@ class Idempotent(unittest.TestCase):
     def test_positions_are_net_deltas(self):
         led = replay()
         names = {v: k for k, v in led["token_names"].items()}
-        # COCK: -1M (order, filled) -50k (swap) -200k +200k (cancel) -10k (transfer) = -1,060,000 from a 0 seed
+        # COCK: -1M (order, replaced: still out of the wallet) -50k (swap) -200k +200k (cancel) -10k (transfer) = -1,060,000 from a 0 seed
         self.assertEqual(led["positions_raw"][names["COCK"]], -1060000)
         self.assertEqual(led["positions_raw"][names["ASCEND"]], 247218407 + 861130600)
 
@@ -181,17 +195,38 @@ class Config(unittest.TestCase):
         self.assertTrue(cfg["whale"]["stake"].startswith("stake1" + cfg["whale"]["stake_prefix"]))
         self.assertEqual(cfg["whale"]["stake_prefix"], "uylu74g0")
         guard = os.path.join(ROOT, "scripts", "privacy-guard.sh")
-        env = dict(os.environ, PRIVACY_GUARD_PATTERNS="")
+        dummy = "^zzOWNERzz-not-a-real-pattern$"  # a loaded owner pattern (the real one is a secret)
+        env = dict(os.environ, PRIVACY_GUARD_PATTERNS=dummy)
+        run = lambda f, e=env: subprocess.run(["bash", guard, f], env=e, capture_output=True, cwd=ROOT).returncode  # noqa: E731
+        cfgp = "solada-prefilter/config.json"
         with tempfile.TemporaryDirectory() as d:
-            ok = os.path.join(d, "ok.txt")
-            open(ok, "w").write(cfg["whale"]["stake"] + "\n")
             bad = os.path.join(d, "bad.txt")
             open(bad, "w").write(STAKE + "\n")
-            self.assertEqual(subprocess.run(["bash", guard, ok], env=env, capture_output=True).returncode, 0)
-            self.assertEqual(subprocess.run(["bash", guard, bad], env=env, capture_output=True).returncode, 1)
-            env["PRIVACY_GUARD_PATTERNS"] = cfg["whale"]["stake"][:20]  # an owner pattern always wins
-            self.assertEqual(subprocess.run(["bash", guard, ok], env=env, capture_output=True).returncode, 1)
+            other = os.path.join(d, "other.txt")  # the allowlisted key outside config.json is NOT masked
+            open(other, "w").write(cfg["whale"]["stake"] + "\n")
+            longer = os.path.join(d, "longer.txt")
+            open(longer, "w").write(cfg["whale"]["stake"] + "qqqq\n")
+            self.assertEqual(run(cfgp), 0)
+            self.assertEqual(run(bad), 1)
+            self.assertEqual(run(other), 1)
+            self.assertEqual(run(longer), 1)
+            # M4: with NO owner patterns loaded the allowlist is not applied -> config.json fails closed
+            self.assertEqual(run(cfgp, dict(os.environ, PRIVACY_GUARD_PATTERNS="")), 1)
+            e2 = dict(env, PRIVACY_GUARD_PATTERNS=cfg["whale"]["stake"][:20])  # an owner pattern always wins
+            self.assertEqual(run(cfgp, e2), 1)
 
+    def test_guard_rejects_malformed_allowlist_entry(self):
+        src = os.path.join(ROOT, "scripts")
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "scripts"))
+            shutil.copy(os.path.join(src, "privacy-guard.sh"), os.path.join(d, "scripts"))
+            open(os.path.join(d, "scripts", "privacy-public-keys.txt"), "w").write("stake1u\n")  # prefix, not a key
+            f = os.path.join(d, "x.txt")
+            open(f, "w").write("hello\n")
+            env = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
+            r = subprocess.run(["bash", os.path.join(d, "scripts", "privacy-guard.sh"), f], env=env, capture_output=True, cwd=d)
+            self.assertEqual(r.returncode, 1)
+            self.assertIn(b"not exactly one full stake key", r.stderr)
 
 if __name__ == "__main__":
     unittest.main()

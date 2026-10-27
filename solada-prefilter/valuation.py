@@ -210,24 +210,33 @@ def kill_decide(entry, crossed, values, lines, complete, kc):
 KILL_METRIC_ORDER = ("ada_side", "holders", "mcap")
 
 
-def kill_status_entry(prev, text, values, lines, crossed, complete, now, desk_hit=False, prev_hit=None, deeper=False):
-    """One ticker's kill_status.json row (SPD-47): {line, metric, value, hit, first_hit_at, changed_since_last}.
+def kill_status_entry(prev, text, values, lines, crossed, complete, now, desk_hit=False, prev_hit=None, deeper=False,
+                      prev_hit_at=None):
+    """One ticker's kill_status.json row (SPD-47): {line, metric, value, hit, first_hit_at, changed_since_last, crossed}.
 
     prev: last run's row for this ticker (or None). values/lines/crossed as in kill_decide.
     metric/value/line: the first crossed metric when hit, else the first metric the kill line checks.
-    A data gap (not complete and nothing crossed) keeps the previous hit state and is not a change.
-    changed_since_last: hit flipped, the crossed metric changed, or the line itself changed.
-    deeper=True (kill_decide re-fire: a crossed value moved refire_deeper_pct%+ past the last REPORTED value)
-    also counts as a change. Small value drift (same metric, same line, still hit) is NOT a change.
-    prev_hit seeds hit when there is no previous row (state.json kill_status from older runs)."""
+    crossed: every metric currently below its line (sorted). A data gap (not complete and nothing crossed) keeps the
+    previous hit state and crossed set, is not a change, and is marked data_gap.
+    changed_since_last: hit flipped, the crossed set GAINED a metric (a second metric crossing is news even when the
+    first one was already hit), the hit metric changed, or its line changed. Old rows without `crossed` fall back to
+    {prev.metric}. deeper=True (kill_decide re-fire: refire_deeper_pct%+ past the last REPORTED value) also counts.
+    Small value drift is NOT a change. prev_hit seeds hit when there is no previous row (state.json kill_status);
+    prev_hit_at (kill_reported.at) seeds first_hit_at for a line that was already hit before this file existed."""
     prev = prev if isinstance(prev, dict) else None
     order = [m for m in KILL_METRIC_ORDER if m in lines] + sorted(m for m in lines if m not in KILL_METRIC_ORDER)
+    gap = not crossed and not complete
     if crossed:
         hit = True
     elif complete:
         hit = False
     else:
-        hit = bool(prev["hit"]) if prev else bool(prev_hit)
+        hit = bool(prev.get("hit")) if prev else bool(prev_hit)
+    if prev is not None:
+        prev_set = set(prev.get("crossed") or ([prev["metric"]] if prev.get("hit") and prev.get("metric") else []))
+    else:
+        prev_set = set()
+    cur_set = set(crossed) if crossed else (prev_set if gap and hit else set())
     metric = next((m for m in order if m in crossed), None) if hit and crossed else None
     if metric is None:
         metric = (prev or {}).get("metric") if hit and (prev or {}).get("metric") in lines else (order[0] if order else None)
@@ -235,17 +244,22 @@ def kill_status_entry(prev, text, values, lines, crossed, complete, now, desk_hi
     line = lines.get(metric) if metric else None
     if prev is not None:
         was_hit = bool(prev.get("hit"))
-        changed = (hit != was_hit) or (hit and (deeper or prev.get("metric") != metric or prev.get("line") != line))
+        changed = (hit != was_hit) or (hit and (deeper or bool(cur_set - prev_set) or prev.get("metric") != metric
+                                                 or prev.get("line") != line))
     else:
         was_hit = bool(prev_hit)
         changed = (hit != was_hit) or (hit and deeper)
     if hit:
-        first = (prev or {}).get("first_hit_at") if was_hit and prev else None
+        first = prev.get("first_hit_at") if was_hit and prev else None
+        if not first and was_hit and prev_hit_at:
+            first = prev_hit_at  # hit before this file existed: keep the original time, not the deploy time
         first = first or (now if (changed or not prev) else None)
     else:
         first = None
     row = {"line": line, "metric": metric, "value": value, "hit": hit, "first_hit_at": first,
-           "changed_since_last": bool(changed), "text": text}
+           "changed_since_last": bool(changed), "crossed": sorted(cur_set), "text": text}
+    if gap:
+        row["data_gap"] = True
     if desk_hit:
         row["desk_hit"] = True
     return row

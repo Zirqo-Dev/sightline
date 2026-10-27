@@ -66,14 +66,14 @@ class Legs(unittest.TestCase):
         self.assertEqual(rows[0]["ticker"], "LP")
 
     def test_owner_patterns_drop_owner_before_anything_else(self):
-        pats = BM.owner_patterns(owner("owner")[:30] + "\n# comment\n[bad")
+        pats = BM.owner_patterns(owner("owner")[:30] + "\n# comment")[0]
         self.assertFalse([x for x in all_legs(pats) if x["owner"] == owner("owner")])
         self.assertTrue([x for x in all_legs() if x["owner"] == owner("owner")])
 
 
 class Flagging(unittest.TestCase):
     def rows(self, **kw):
-        excl = BM.owner_patterns(owner("owner"))
+        excl = BM.owner_patterns(owner("owner"))[0]
         return BM.flag_moves(all_legs(excl), json.loads(json.dumps(META)), FX["now"], dict(BM.DEFAULTS, **kw))
 
     def test_mid_flagged_only_by_24h_sum(self):
@@ -129,13 +129,14 @@ class EndToEnd(unittest.TestCase):
             if "/asset_txs" in url:
                 return [(lambda h, t: {"tx_hash": h, "block_height": 1000000 - t["age_h"] * 180, "block_time": FX["now"] - t["age_h"] * 3600})(h, t)
                         for h, t in sorted(txs.items(), key=lambda x: -x[1]["age_h"])]
-            if url.endswith("/tx_utxos"):
+            if url.endswith("/tx_info"):
                 out = []
                 for h in body["_tx_hashes"]:
                     u = utxo(txs[h])
-                    out.append({"tx_hash": h, **{s: [{"payment_addr": {"bech32": a}, "stake_addr": None, "value": str(l),
+                    out.append({"tx_hash": h, **{s: [{"tx_hash": h if s == "outputs" else "ee" * 32, "tx_index": i,
+                                                      "payment_addr": {"bech32": a}, "stake_addr": None, "value": str(l),
                                                       "asset_list": [{"policy_id": k[:56], "asset_name": k[56:], "quantity": str(q)} for k, q in m.items()]}
-                                                     for a, l, m, _ in u[s]] for s in ("inputs", "outputs")}})
+                                                     for i, (a, l, m, _) in enumerate(u[s])] for s in ("inputs", "outputs")}})
                 return out
             return None
         return req
@@ -145,12 +146,12 @@ class EndToEnd(unittest.TestCase):
         http = P.Http({"koios": 0})
         with mock.patch.object(P.Http, "req", self.fake_req(calls)), tempfile.TemporaryDirectory() as d:
             summ, doc = BM.run(http, {"big_moves": {"utxo_batch": 3}}, json.loads(json.dumps(META)), os.path.join(d, "c"), d,
-                               False, FX["now"], V.lp_policies(), BM.owner_patterns(owner("owner")))
+                               False, FX["now"], V.lp_policies(), BM.owner_patterns(owner("owner"))[0])
             on_disk = json.load(open(os.path.join(d, "big_moves.json")))
             self.assertTrue(os.path.exists(os.path.join(d, "c", "big-moves-cache.json")))
             # second run: cached height, no duplicate rows
             summ2, doc2 = BM.run(http, {"big_moves": {"utxo_batch": 3}}, json.loads(json.dumps(META)), os.path.join(d, "c"), d,
-                                 False, FX["now"], V.lp_policies(), BM.owner_patterns(owner("owner")))
+                                 False, FX["now"], V.lp_policies(), BM.owner_patterns(owner("owner"))[0])
         self.assertEqual(on_disk["moves"], doc["moves"])
         self.assertEqual(len(doc2["moves"]), len(doc["moves"]))
         self.assertTrue(all(len(b["_tx_hashes"]) <= 3 for s, u, b in calls if b))

@@ -35,6 +35,23 @@ class Http:
         self.pace, self.last, self.failures, self.calls = pace, {}, {}, {}
         self.backoff = backoff or {}  # src -> [seconds, ...]: extra 429 retries (Retry-After honoured, capped)
         self.sleep = time.sleep
+        # circuit breaker: a tripped source returns None at once for the rest of the run
+        # (Koios blocks an IP ~60 s after a 429, so retrying after 3 s only burns the run)
+        self.tripped, self.trip_after = {}, {"koios": 3}
+        self.deadline = None  # unix time; after it, calls in deadline_srcs return None (research sections)
+        self.deadline_srcs = ("koios", "blockfrost")
+
+    def blocked(self, src):
+        if src in self.tripped:
+            return True
+        if self.deadline is not None and src in self.deadline_srcs and time.time() >= self.deadline:
+            return True
+        return False
+
+    def trip(self, src, why):
+        if src not in self.tripped:
+            self.tripped[src] = why
+            print(f"  circuit breaker [{src}]: {why}; skipped for the rest of this run", file=sys.stderr)
 
     def _wait(self, src):
         gap = self.pace.get(src, 0.3)
@@ -52,7 +69,12 @@ class Http:
             data = json.dumps(body).encode()
             h["Content-Type"] = "application/json"
         waits = self.backoff.get(src) or [3]
+        if self.blocked(src):
+            self.calls[src + "_skipped"] = self.calls.get(src + "_skipped", 0) + 1
+            return None
         for attempt in range(len(waits) + 1):
+            if self.blocked(src):
+                return None
             self._wait(src)
             self.calls[src] = self.calls.get(src, 0) + 1
             try:
@@ -62,6 +84,10 @@ class Http:
                     return json.loads(raw) if raw else {}
             except urllib.error.HTTPError as e:
                 if e.code == 404 and quiet404:
+                    return None
+                if e.code == 429 and src == "koios":
+                    self._fail(src, "http 429")
+                    self.trip(src, "429 (public tier blocks the IP ~60 s)")
                     return None
                 if e.code == 429 and attempt < len(waits):
                     ra = (e.headers.get("Retry-After") if getattr(e, "headers", None) else None) or ""
@@ -114,6 +140,17 @@ class Http:
     def _fail(self, src, why):
         self.failures[src] = self.failures.get(src, 0) + 1
         print(f"  data failure [{src}]: {why}", file=sys.stderr)
+        n = self.trip_after.get(src)
+        if n and self.failures[src] >= n:
+            self.trip(src, f"{self.failures[src]} failures")
+
+
+def write_json(path, obj, **kw):
+    """Atomic JSON write: temp file in the same dir, then os.replace (a killed run never leaves half a file)."""
+    tmp = f"{path}.tmp-{os.getpid()}"
+    with open(tmp, "w") as f:
+        json.dump(obj, f, **kw)
+    os.replace(tmp, path)
 
 
 # ---------------------------------------------------------------- thresholds
@@ -655,6 +692,8 @@ def main():
         u = t.get("asset_id") or (unit_of(l) if l else None)
         if not u:
             http._fail("match", f"no unit for tracked {tk}")
+            if isinstance(prev_ks.get(tk), dict):  # keep its last row (marked stale) instead of dropping it
+                kill_status[tk] = {**prev_ks[tk], "changed_since_last": False, "stale": True}
             continue
         pool = gt_pool(http, u)
         n, _ = chain.holders(u, cfg["max_holder_pages"])
@@ -678,6 +717,7 @@ def main():
         fire, entry, reasons = V.kill_decide(state["kill_reported"].get(tk), crossed_m, values, lines, complete, kc)
         ks = V.kill_status_entry(prev_ks.get(tk), t.get("text", ""), values, lines, crossed_m, complete, now_iso(),
                                  desk_hit=bool(t.get("desk_hit")), prev_hit=prev_hit,
+                                 prev_hit_at=(state["kill_reported"].get(tk) or {}).get("at"),
                                  deeper=fire and any("deeper" in r for r in reasons))
         kill_status[tk] = ks
         if fire and not ks["changed_since_last"] and not t.get("desk_hit"):
@@ -842,35 +882,8 @@ def main():
         "api_calls": flag_calls,
         "thresholds": {k: v for k, v in cfg["flags"].items() if not k.startswith("_") and k != "snek_prefix_tags"},
     })
-    json.dump(flags_doc, open(fpath, "w"), indent=1)
+    write_json(fpath, flags_doc, indent=1)
     print(f"flags: {len(new_flags)} new ({', '.join(sorted({f['kind'] for f in new_flags})) or 'none'}); calls {json.dumps(flag_calls)}")
-
-    # ---- SPD-43 big moves (research rows for Snek; never triggers, never the webhook)
-    big_moves = None
-    if BM.bm_cfg(cfg)["enabled"]:
-        meta = {}
-        for r in results:
-            if r.get("unit") and r["unit"] not in meta:
-                meta[r["unit"]] = {"ticker": r.get("ticker"), "ada_side": r.get("ada_side"), "decimals": r.get("decimals")}
-        try:
-            big_moves, _ = BM.run(http, cfg, meta, args.cache_dir, args.data_dir, args.dry_run, time.time(), lp_pols,
-                                  BM.owner_patterns(os.environ.get("PRIVACY_GUARD_PATTERNS", "")))
-            print(f"big moves: {json.dumps(big_moves)}")
-        except SystemExit:
-            raise
-        except Exception as e:  # big moves must never break the rules screen
-            http._fail("big_moves", type(e).__name__)
-
-    # ---- SPD-44 founder whale ledger (research rows for Snek; never triggers, never the webhook)
-    whale_ledger = None
-    if WL.wl_cfg(cfg)["enabled"]:
-        try:
-            whale_ledger = WL.run(http, cfg, args.data_dir, args.dry_run, time.time(), lp_pols)
-            print(f"whale ledger: {json.dumps(whale_ledger)}")
-        except SystemExit:
-            raise
-        except Exception as e:  # the ledger must never break the rules screen
-            http._fail("whale_ledger", type(e).__name__)
 
     # ---- dedupe + webhook
     # pending triggers (webhook failed on an earlier run) are retried first; a newer trigger with the same
@@ -912,6 +925,40 @@ def main():
     if len(state["fired"]) > 2000:
         state["fired"] = dict(sorted(state["fired"].items(), key=lambda x: x[1])[-2000:])
 
+    if not args.dry_run:
+        write_json(state_path, state, indent=1, sort_keys=True)
+        # SPD-47: per-ticker kill-line status for Snek (desk-data only; lines from paper.json + log.json kill_lines)
+        write_json(ks_path, kill_status, indent=1, sort_keys=True)
+
+    # ---- research sections (SPD-43/44): run AFTER the webhook and state writes, with a time budget, so a slow
+    # Koios or a research bug can never cost the webhook, state.json or kill_status.json (M1)
+    http.deadline = time.time() + float(cfg.get("research_budget_s", 240))
+    # ---- SPD-43 big moves (research rows for Snek; never triggers, never the webhook)
+    big_moves = None
+    if BM.bm_cfg(cfg)["enabled"]:
+        meta = {}
+        for r in results:
+            if r.get("unit") and r["unit"] not in meta:
+                meta[r["unit"]] = {"ticker": r.get("ticker"), "ada_side": r.get("ada_side"), "decimals": r.get("decimals"),
+                                   "price_ada": r.get("price_ada")}
+        try:
+            big_moves, _ = BM.run(http, cfg, meta, args.cache_dir, args.data_dir, args.dry_run, time.time(), lp_pols,
+                                  os.environ.get("PRIVACY_GUARD_PATTERNS", ""), deadline=http.deadline)
+            print(f"big moves: {json.dumps(big_moves)}")
+        except (SystemExit, Exception) as e:  # research must never stop the webhook/state (M1)
+            http._fail("big_moves", type(e).__name__)
+
+    # ---- SPD-44 founder whale ledger (research rows for Snek; never triggers, never the webhook)
+    whale_ledger = None
+    if WL.wl_cfg(cfg)["enabled"]:
+        try:
+            whale_ledger = WL.run(http, cfg, args.data_dir, args.dry_run, time.time(), lp_pols, deadline=http.deadline)
+            print(f"whale ledger: {json.dumps(whale_ledger)}")
+        except (SystemExit, Exception) as e:  # research must never stop the webhook/state (M1)
+            http._fail("whale_ledger", type(e).__name__)
+
+    http.deadline = None
+
     summary = {
         "at": now_iso(), "basis": chain.basis, "dry_run": args.dry_run, "baseline": baseline,
         "launches": len(launches), "new_launches": 0 if baseline else len(new_ids), "candidates": len(cands),
@@ -920,12 +967,7 @@ def main():
         "first_block_hits": fb_hits, "triggers": [{k: v for k, v in t.items() if k not in NOPUB} for t in fresh],
         "webhook_sent": sent, "flags_new": len(new_flags), "big_moves": big_moves, "whale_ledger": whale_ledger, "data_failures": http.failures, "api_calls": http.calls, "results": results,
     }
-    if not args.dry_run:
-        json.dump(state, open(state_path, "w"), indent=1, sort_keys=True)
-        # SPD-47: per-ticker kill-line status for Snek (desk-data only; lines from paper.json + log.json kill_lines)
-        json.dump(kill_status,
-                  open(ks_path, "w"), indent=1, sort_keys=True)
-    json.dump(summary, open(os.path.join(args.data_dir, "last-run.json" if not args.dry_run else "dry-run.json"), "w"), indent=1)
+    write_json(os.path.join(args.data_dir, "last-run.json" if not args.dry_run else "dry-run.json"), summary, indent=1)
     print(f"whale: {json.dumps(summary['whale'])[:300]}")
     print(json.dumps({k: summary[k] for k in ("launches", "new_launches", "candidates", "passed_k_y", "first_block_hits", "data_failures", "api_calls")}))
     for t in fresh:

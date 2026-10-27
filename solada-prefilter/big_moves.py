@@ -22,6 +22,7 @@ import hashlib, json, os, re
 from datetime import datetime, timezone
 
 import flags as F
+import koios_tx as KT
 import valuation as V
 
 KOIOS = "https://api.koios.rest/api/v1"
@@ -40,20 +41,35 @@ def tag(owner):
     return "m-" + hashlib.sha256(owner.encode()).hexdigest()[:8]  # 10 chars
 
 
+def otag(owner):
+    """Tag an owner once (cached legs already hold m- tags)."""
+    return owner if str(owner).startswith("m-") and len(owner) == 10 else tag(owner)
+
+
 def iso(ts):
     return datetime.fromtimestamp(int(ts), timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+_POSIX = re.compile(r"\[\[:[a-z]+:\]\]|\[:[a-z]+:\]")
+
+
 def owner_patterns(env_text):
-    pats = []
+    """(compiled patterns, n_unusable). The privacy guard reads these with grep -E (POSIX ERE); a line Python's re
+    cannot compile, or one using a POSIX class like [[:alnum:]] (a different meaning in Python), is unusable.
+    Callers skip the run when the list is empty or anything is unusable (fail closed, S4). Never printed."""
+    pats, bad = [], 0
     for p in (env_text or "").splitlines():
         p = p.strip()
-        if p and not p.startswith("#"):
-            try:
-                pats.append(re.compile(p))
-            except re.error:
-                pass
-    return pats
+        if not p or p.startswith("#"):
+            continue
+        if _POSIX.search(p):
+            bad += 1
+            continue
+        try:
+            pats.append(re.compile(p))
+        except re.error:
+            bad += 1
+    return pats, bad
 
 
 def _owner(addr, stake):
@@ -66,36 +82,67 @@ def _owner(addr, stake):
     return None if script or not addr else addr
 
 
-def legs_from_tx(unit, tx_hash, tx_time, utxo, lp_pols, excluded=()):
-    """[{owner, unit, direction, lovelace, qty_raw, lp, tx, time}] for one tx.
+def _row(row):
+    if isinstance(row, dict):
+        return row["addr"], row["lovelace"], row["assets"], row.get("stake")
+    return row[0], row[1], row[2], (row[3] if len(row) > 3 else None)
 
-    utxo = {'inputs'|'outputs': [(addr, lovelace, {unit: qty}, stake_or_None)]}. Net per owner across the tx.
-    excluded: compiled owner patterns; an owner is dropped when ANY of its addresses or its stake key match."""
+
+def legs_from_tx(unit, tx_hash, tx_time, utxo, lp_pols, excluded=(), m=None, exclude_tags=()):
+    """[{owner, unit, direction, lovelace, qty_raw, lp, ada_basis, tx, time}] for one tx.
+
+    utxo = {'inputs'|'outputs': [(addr, lovelace, {unit: qty}, stake_or_None) or {addr, lovelace, assets, stake}]}.
+    Net per owner across the tx. A script-payment row (addr1z/addr1x pool or order contract carrying a stake key)
+    is a counterparty, not that stake's wallet, unless the same stake also has a key-payment UTxO in the tx (M2).
+    ADA per leg (S2): the owner's net ADA only when it moves opposite to the token and this is the owner's only
+    non-LP token in the tx (ada_basis "tx"); otherwise qty x price_ada from m (ada_basis "price"), else 0 ("none").
+    excluded: compiled owner patterns (dropped when ANY of its addresses or its stake key match).
+    exclude_tags: flags-style w- tags (curve reserve etc.) dropped as movers."""
+    rows = {side: [_row(r) for r in utxo.get(side, [])] for side in ("inputs", "outputs")}
+    key_stakes = set()
+    for side in rows.values():
+        for addr, _, _, stake in side:
+            s, script = F.addr_info(addr)
+            if not script and (stake or s):
+                key_stakes.add(stake or s)
     acc, addrs = {}, {}
     for side, sign in (("inputs", -1), ("outputs", 1)):
-        for row in utxo.get(side, []):
-            addr, lov, assets = row[0], row[1], row[2]
-            stake = row[3] if len(row) > 3 else None
+        for addr, lov, assets, stake in rows[side]:
+            if F.addr_info(addr)[1] and (stake or F.addr_info(addr)[0]) not in key_stakes:
+                continue  # script output with a stake part: a pool / contract, not the stake's wallet
             o = _owner(addr, stake)
             if not o:
                 continue
             addrs.setdefault(o, set()).add(addr)
-            a = acc.setdefault(o, {"lov": 0, "q": 0, "lp": False})
+            a = acc.setdefault(o, {"lov": 0, "q": 0, "lp": False, "other": {}})
             a["lov"] += sign * int(lov)
             for u, q in assets.items():
                 if u == unit:
                     a["q"] += sign * int(q)
                 elif V.lp_dex(u, lp_pols) and int(q):
                     a["lp"] = True
+                elif int(q):
+                    a["other"][u] = a["other"].get(u, 0) + sign * int(q)
+    m = m or {}
     out = []
     for o, a in acc.items():
         if not a["q"]:
             continue
         if any(p.search(x) for p in excluded for x in addrs[o] | {o}):
             continue
-        out.append({"owner": o, "unit": unit, "direction": "in" if a["q"] > 0 else "out", "lovelace": abs(a["lov"]),
-                    "qty_raw": abs(a["q"]), "lp": a["lp"] or bool(V.lp_dex(unit, lp_pols)),
-                    "lp_unit": bool(V.lp_dex(unit, lp_pols)), "tx": tx_hash, "time": int(tx_time or 0)})
+        if exclude_tags and any(F.tag(x) in exclude_tags for x in addrs[o] | {o}):
+            continue
+        others = [u for u, q in a["other"].items() if q]
+        lp_unit = bool(V.lp_dex(unit, lp_pols))
+        if a["lov"] and ((a["lov"] > 0) != (a["q"] > 0) and not others and not lp_unit or lp_unit):
+            lov, basis = abs(a["lov"]), "tx"  # LP-token legs keep the tx's ADA (the liquidity added/removed)
+        elif m.get("price_ada") and m.get("decimals") is not None:
+            lov, basis = int(abs(a["q"]) / 10 ** m["decimals"] * float(m["price_ada"]) * 1e6), "price"
+        else:
+            lov, basis = 0, "none"
+        out.append({"owner": o, "unit": unit, "direction": "in" if a["q"] > 0 else "out", "lovelace": lov,
+                    "qty_raw": abs(a["q"]), "lp": a["lp"] or lp_unit, "lp_unit": lp_unit, "ada_basis": basis,
+                    "tx": tx_hash, "time": int(tx_time or 0)})
     return out
 
 
@@ -116,11 +163,12 @@ def flag_moves(legs, meta, now_s, bc):
             continue
         dec = m.get("decimals")
         for l in sorted(ls, key=lambda x: x["time"]):
-            rows.append({"tag": tag(o), "ticker": "LP" if l.get("lp_unit") else m.get("ticker", "?"),
+            rows.append({"tag": otag(o), "ticker": "LP" if l.get("lp_unit") else m.get("ticker", "?"),
                          "direction": d, "ada": round(l["lovelace"] / 1e6, 2),
                          "qty": round(l["qty_raw"] / 10 ** dec, 6) if dec is not None else l["qty_raw"],
                          "qty_basis": "whole" if dec is not None else "raw", "tx_short": l["tx"][:10], "time": iso(l["time"]),
-                         "window_ada": round(total, 2), "pool_pct": pct, "lp": l["lp"], "unit_short": u[:10], "next_hop": None})
+                         "window_ada": round(total, 2), "pool_pct": pct, "lp": l["lp"], "unit_short": u[:10],
+                         "ada_basis": l.get("ada_basis", "tx"), "next_hop": None})
     return rows
 
 
@@ -145,61 +193,79 @@ class KoiosMoves:
         return self.bc["max_calls"] - (self.h.calls.get("koios", 0) - self.start)
 
     def tip(self):
-        r = self.h.req("koios", KOIOS + "/tip")
+        r = self.h.req("koios", KOIOS + "/tip", quiet404=False)
         return (r[0]["block_height"], r[0]["block_time"]) if r else (None, None)
 
-    def asset_txs(self, unit, after):
+    def asset_txs(self, unit, after, desc=False):
         r = self.h.req("koios", f"{KOIOS}/asset_txs?_asset_policy={unit[:56]}&_asset_name={unit[56:]}"
-                       f"&_after_block_height={after}&_history=true&order=block_height.asc&limit={self.bc['max_txs_per_unit']}")
-        return None if r is None else [(x["tx_hash"], x["block_height"], x.get("block_time")) for x in r]
+                       f"&_after_block_height={after}&_history=true&order=block_height.{'desc' if desc else 'asc'}"
+                       f"&limit={self.bc['max_txs_per_unit']}", quiet404=False)
+        if r is None:
+            return None
+        return sorted(((x["tx_hash"], x["block_height"], x.get("block_time")) for x in r), key=lambda t: t[1])
 
     def tx_utxos(self, hashes):
-        out = {}
-        n = max(1, int(self.bc["utxo_batch"]))
-        for i in range(0, len(hashes), n):
-            if self.budget_left() <= 0:
-                break
-            r = self.h.req("koios", KOIOS + "/tx_utxos", method="POST", body={"_tx_hashes": hashes[i:i + n]})
-            for tx in r or []:
-                out[tx["tx_hash"]] = {s: [((u.get("payment_addr") or {}).get("bech32") or "", int(u.get("value") or 0),
-                                           {a["policy_id"] + a["asset_name"]: int(a["quantity"]) for a in (u.get("asset_list") or [])},
-                                           u.get("stake_addr")) for u in tx.get(s, [])] for s in ("inputs", "outputs")}
-        return out
+        """/tx_info (S9): spend inputs only (collateral/reference excluded), batches under 1 KB."""
+        return KT.tx_info(self.h, hashes, self.bc["utxo_batch"], lambda: self.budget_left() > 0)
 
 
-def run(http, cfg, meta, cache_dir, data_dir, dry_run, now_s, lp_pols, excluded):
-    """meta = {unit: {ticker, ada_side, decimals}}. Returns (summary, doc)."""
+def run(http, cfg, meta, cache_dir, data_dir, dry_run, now_s, lp_pols, excluded, deadline=None):
+    """meta = {unit: {ticker, ada_side, decimals, price_ada}}. excluded = PRIVACY_GUARD_PATTERNS text (or a
+    pre-compiled list). Returns (summary, doc). Skips (fails closed) when the owner patterns are empty or unusable."""
     bc = bm_cfg(cfg)
     if not bc["enabled"]:
         return {"enabled": False}, None
+    if isinstance(excluded, str):
+        excluded, bad = owner_patterns(excluded)
+        if bad or not excluded:
+            print(f"big_moves: skipped: owner patterns unusable ({bad} bad, {len(excluded)} usable)")
+            return {"skipped": "owner patterns unusable", "bad_patterns": bad}, None
+    ex_tags = F.excluded_tags(cfg.get("flags"))
     km = KoiosMoves(http, bc)
     cpath = os.path.join(cache_dir, "big-moves-cache.json")
-    cache = json.load(open(cpath)) if os.path.exists(cpath) else {}
+    cache = KT.read_json(cpath, {})
     cache.setdefault("height", {})
     cache.setdefault("legs", [])
+    cache.setdefault("capped", [])
+    cache["legs"] = [{**l, "owner": otag(l["owner"])} for l in cache["legs"] if isinstance(l, dict) and l.get("owner")]
     tip_h, _ = km.tip()
     units = sorted(meta, key=lambda u: -(meta[u].get("ada_side") or 0))[: bc["max_units"]]
+    if units:  # rotate the start so a budget cap never starves the same tail units (S3)
+        k = int(cache.get("rot", 0)) % len(units)
+        units = units[k:] + units[:k]
+        cache["rot"] = k + 1
     stats = {"units": len(units), "txs": 0, "capped": []}
+    was_capped = set(cache["capped"])
+    now_capped = []
     for u in units:
-        if tip_h is None or km.budget_left() <= 1:
+        if tip_h is None or km.budget_left() <= 1 or (deadline and __import__("time").time() >= deadline):
             stats["capped"].append(meta[u].get("ticker"))
+            now_capped.append(u) if u in was_capped else None
             continue
         after = max(cache["height"].get(u, 0), tip_h - bc["window_h"] * BLOCKS_PER_HOUR)
-        txs = km.asset_txs(u, after)
+        desc = u in was_capped  # busy token: read newest-first back to the cached height so it catches up (S3)
+        txs = km.asset_txs(u, after, desc=desc)
         if txs is None:
             continue
         ut = km.tx_utxos([t[0] for t in txs])
         done_h = after
         for hsh, hgt, bt in txs:
             if hsh not in ut:
+                if desc:
+                    continue
                 break  # budget ran out: resume from here next run
-            cache["legs"].extend(legs_from_tx(u, hsh, bt, ut[hsh], lp_pols, excluded))
-            done_h = hgt  # asset_txs is block-ordered; partial blocks are re-read next run (deduped below)
+            cache["legs"].extend({**l, "owner": otag(l["owner"])}  # cache holds tags only (S4)
+                                 for l in legs_from_tx(u, hsh, bt, ut[hsh], lp_pols, excluded, meta.get(u), ex_tags))
+            done_h = max(done_h, hgt)
             stats["txs"] += 1
-        if len(txs) >= bc["max_txs_per_unit"] or any(t[0] not in ut for t in txs):
+        full = len(txs) >= bc["max_txs_per_unit"]
+        if full or any(t[0] not in ut for t in txs):
             stats["capped"].append(meta[u].get("ticker"))
+            now_capped.append(u)
+            # asc: partial blocks are re-read next run (deduped). desc: newest window read; the middle gap is skipped
             done_h = max(after, done_h - 1)
         cache["height"][u] = done_h
+    cache["capped"] = now_capped
     seen, legs = set(), []
     for l in cache["legs"]:
         k = (l["owner"], l["unit"], l["tx"])
@@ -209,17 +275,19 @@ def run(http, cfg, meta, cache_dir, data_dir, dry_run, now_s, lp_pols, excluded)
     cache["legs"] = legs
     rows = flag_moves(legs, meta, now_s, bc)
     path = os.path.join(data_dir, "big_moves.json")
-    prev = json.load(open(path)).get("moves", []) if os.path.exists(path) else []
+    prev = KT.read_json(path, {}).get("moves", [])
+    prev_keys = {(r.get("tag"), r.get("unit_short"), r.get("tx_short"), r.get("direction")) for r in prev}
     moves = merge(prev, rows, now_s, bc["keep_h"])
     doc = F.assert_public({
         "at": iso(now_s), "phase": 1, "window_h": bc["window_h"], "keep_h": bc["keep_h"],
         "thresholds": {"min_ada": bc["min_ada"], "min_pool_pct": bc["min_pool_pct"]},
-        "note": "Research data for Snek. next_hop is phase 2 (null). ada = the mover's net ADA across the whole tx; LP = liquidity token.",
+        "note": "Research data for Snek. next_hop is phase 2 (null). ada = the mover's net ADA when it is the only token "
+                "against ADA in the tx (ada_basis tx), else qty x price (ada_basis price). LP = liquidity token.",
         "moves": moves, "units_scanned": stats["units"], "txs_read": stats["txs"], "capped": stats["capped"],
         "koios_calls": http.calls.get("koios", 0) - km.start,
     })
     if not dry_run:
-        os.makedirs(cache_dir, exist_ok=True)
-        json.dump(cache, open(cpath, "w"))
-        json.dump(doc, open(path, "w"), indent=1)
-    return {k: doc[k] for k in ("units_scanned", "txs_read", "capped", "koios_calls")} | {"moves_new": len(rows)}, doc
+        KT.write_json(cpath, cache)
+        KT.write_json(path, doc, indent=1)
+    new = sum(1 for r in rows if (r["tag"], r["unit_short"], r["tx_short"], r["direction"]) not in prev_keys)
+    return {k: doc[k] for k in ("units_scanned", "txs_read", "capped", "koios_calls")} | {"moves_new": new}, doc
