@@ -1,5 +1,5 @@
 {
- "at": "2026-10-27T04:15:01Z",
+ "at": "2026-10-27T06:09:13Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash).",
@@ -116,9 +116,13 @@
  "orders": {},
  "rows": [],
  "capped": false,
- "state_source": "baseline",
+ "state_source": "cache",
  "counterparty_tags": true,
- "baseline": true,
+ "reconcile": {
+  "ada_drift": 0.0,
+  "token_drift": {},
+  "ok": true
+ },
  "koios_calls": 5,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
