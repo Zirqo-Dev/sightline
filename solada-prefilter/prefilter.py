@@ -15,6 +15,7 @@ import flags as flagmod  # noqa: E402  flag-only signals, never triggers
 import valuation as V  # noqa: E402  LP detection, raw-unit valuation, kill dedupe
 import big_moves as BM  # noqa: E402  SPD-43 big-move detector (research rows, never triggers)
 import whale_ledger as WL  # noqa: E402  SPD-44 founder whale ledger (research rows, never triggers)
+import dev_checks as DC  # noqa: E402  phase-1 dev sells / serial / drawdown (own budget; may add a dev_sell trigger)
 from datetime import datetime, timezone
 
 UA = "sightline-solada-prefilter/1.0"
@@ -165,6 +166,19 @@ def research_deadline(cfg, t_start, now):
     """Research budget (config research_budget_s, default 240 s), capped at run start + 720 s so the whole run
     always fits the 780 s job limit."""
     return min(now + float(cfg.get("research_budget_s", 240)), t_start + 720)
+
+
+def research_plan(cfg, t_start, now):
+    """(shared_end, whale_end).
+
+    big_moves has consumed the whole shared research deadline and left whale_ledger with no time (PR #31).
+    whale_ledger therefore runs first, for at most whale_ledger.budget_s seconds, and never past the shared
+    end. big_moves then uses whatever remains of that same shared end. dev_checks is not in this window:
+    it has its own dev_checks.budget_s and runs before the webhook.
+    """
+    shared = research_deadline(cfg, t_start, now)
+    budget = float(WL.wl_cfg(cfg).get("budget_s", 90))
+    return shared, min(shared, now + max(0.0, budget))
 
 
 def write_json(path, obj, **kw):
@@ -639,7 +653,7 @@ def main():
     now_ms = time.time() * 1000
     seen = set(state["seen_launches"])
     new_ids = [l["id"] for l in launches if l["id"] not in seen]
-    triggers, results = [], []
+    triggers, results, solada_tracked = [], [], []
 
     def graduated(l):
         return bool(l.get("pool")) or bool((l.get("curve") or {}).get("graduated"))
@@ -740,6 +754,9 @@ def main():
         if crossed or complete:
             state["kill_status"][tk] = bool(crossed)
         results.append({"ticker": tk, "tracked": True, "unit": u, **m, "crossed": crossed, "kill": k})
+        if l is not None and u and unit_of(l) == u:
+            solada_tracked.append({"ticker": tk, "unit": u, "launch": l, "mcap_ada": m.get("mcap_ada"),
+                                   "vol_h24_ada": m.get("vol_h24_ada")})
         fire, entry, reasons = V.kill_decide(state["kill_reported"].get(tk), crossed_m, values, lines, complete, kc)
         ks = V.kill_status_entry(prev_ks.get(tk), t.get("text", ""), values, lines, crossed_m, complete, now_iso(),
                                  desk_hit=bool(t.get("desk_hit")), prev_hit=prev_hit,
@@ -914,6 +931,21 @@ def main():
         new_flags = []
     print(f"flags: {len(new_flags)} new ({', '.join(sorted({f['kind'] for f in new_flags})) or 'none'}); calls {json.dumps(flag_calls)}")
 
+    # ---- phase-1 dev checks. Own wall-clock budget, before the webhook, so a new dev sell can join this
+    # payload. Does not set http.deadline (a Koios 429 here must not trip the breaker or close whale_ledger).
+    # Errors are swallowed: a failure here must not stop the webhook, state.json or kill_status.json.
+    dev_summary = None
+    if DC.dc_cfg(cfg).get("enabled", True):
+        try:
+            dev_summary, dev_triggers = DC.run(
+                http, cfg, solada_tracked, launches, flagmod.watch_map(cfg.get("flags") or {}, wkeys),
+                args.data_dir, args.cache_dir, args.dry_run, time.time(), bf_key=bf_key, baseline=baseline)
+            if not baseline:
+                triggers.extend(dev_triggers or [])
+            print(f"dev checks: {json.dumps(dev_summary)}")
+        except (SystemExit, Exception) as e:
+            http._fail("dev_checks", type(e).__name__)
+
     # ---- dedupe + webhook
     # pending triggers (webhook failed on an earlier run) are retried first; a newer trigger with the same
     # key, or a newer kill trigger for the same ticker, supersedes the queued one
@@ -968,13 +1000,27 @@ def main():
             "passed_k_y": [r["ticker"] for r in passed], "thresholds": {k: v for k, v in th.items() if k != "source"},
             "market_age_min": market_age_min, "ada_usd": ada_usd, "whale": {k: v for k, v in (whale_summary or {}).items()},
             "first_block_hits": fb_hits, "triggers": [{k: v for k, v in t.items() if k not in NOPUB} for t in fresh],
-            "webhook_sent": sent, "flags_new": len(new_flags), "big_moves": big_moves, "whale_ledger": whale_ledger, "data_failures": http.failures, "api_calls": http.calls, "results": results,
+            "webhook_sent": sent, "flags_new": len(new_flags), "dev_checks": dev_summary,
+            "big_moves": big_moves, "whale_ledger": whale_ledger, "data_failures": http.failures, "api_calls": http.calls, "results": results,
         }
 
     summary_path = os.path.join(args.data_dir, "last-run.json" if not args.dry_run else "dry-run.json")
     write_json(summary_path, build_summary(None, None), indent=1)  # written before research too (nice-to-have)
-    http.deadline = research_deadline(cfg, t_start, time.time())
-    # ---- SPD-43 big moves (research rows for Snek; never triggers, never the webhook)
+    shared_end, whale_end = research_plan(cfg, t_start, time.time())
+    # ---- SPD-44 founder whale ledger first, inside its own slice of the shared deadline, so big_moves
+    # cannot exhaust the 240s and skip it (PR #31). Still after the webhook and the state writes (M1).
+    http.deadline = whale_end
+    whale_ledger = None
+    if WL.wl_cfg(cfg)["enabled"]:
+        try:
+            whale_ledger = WL.run(http, cfg, args.data_dir, args.dry_run, time.time(), lp_pols, deadline=http.deadline,
+                                  cache_dir=args.cache_dir, owner_env=os.environ.get("PRIVACY_GUARD_PATTERNS", ""))
+            print(f"whale ledger: {json.dumps(whale_ledger)}")
+        except (SystemExit, Exception) as e:  # research must never stop the webhook/state (M1)
+            http._fail("whale_ledger", type(e).__name__)
+
+    # ---- SPD-43 big moves get the remainder of the same shared deadline (research rows; never triggers)
+    http.deadline = shared_end
     big_moves = None
     if BM.bm_cfg(cfg)["enabled"]:
         meta = {}
@@ -988,16 +1034,6 @@ def main():
             print(f"big moves: {json.dumps(big_moves)}")
         except (SystemExit, Exception) as e:  # research must never stop the webhook/state (M1)
             http._fail("big_moves", type(e).__name__)
-
-    # ---- SPD-44 founder whale ledger (research rows for Snek; never triggers, never the webhook)
-    whale_ledger = None
-    if WL.wl_cfg(cfg)["enabled"]:
-        try:
-            whale_ledger = WL.run(http, cfg, args.data_dir, args.dry_run, time.time(), lp_pols, deadline=http.deadline,
-                                  cache_dir=args.cache_dir, owner_env=os.environ.get("PRIVACY_GUARD_PATTERNS", ""))
-            print(f"whale ledger: {json.dumps(whale_ledger)}")
-        except (SystemExit, Exception) as e:  # research must never stop the webhook/state (M1)
-            http._fail("whale_ledger", type(e).__name__)
 
     http.deadline = None
 
