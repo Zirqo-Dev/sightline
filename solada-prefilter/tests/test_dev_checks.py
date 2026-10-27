@@ -492,11 +492,11 @@ class Fallback(unittest.TestCase):
         self.assertEqual(triggers, [])
 
     def test_blockfrost_fallback_is_shared_across_launches(self):
-        """One Koios 429 must not spend the whole Blockfrost budget on the first row.
+        """A Koios outage gives the first row the per-row floor, not an equal slice of the pool.
 
-        Run 40575149871: 3 Koios calls, then a 429, then 50 Blockfrost calls on one row
-        and 15 rows skipped for budget. The fallback share lets every launch in the
-        window start. The Koios call cap is unchanged.
+        Four rows and 8 Blockfrost calls used to start every row on about 2 calls.
+        The floor keeps those 8 on one row (newest txs first). The other rows are
+        marked budget and come up on a later rotation. The Koios call cap is unchanged.
         """
         n, txs_each = 4, 10
         books, tracked, launches = {}, [], []
@@ -514,11 +514,13 @@ class Fallback(unittest.TestCase):
                       "launcherAddress": addr("dev"), "liveAtMs": t0 * 1000}
             launches.append(launch)
             tracked.append({"ticker": f"B{i}", "unit": u, "launch": launch, "mcap_ada": 10, "vol_h24_ada": 1})
+        urls = []
 
         def req(self_, src, url, method="GET", body=None, headers=None, quiet404=True):
             self_.calls[src] = self_.calls.get(src, 0) + 1
             if src == "koios":
                 return None
+            urls.append(url)
             if "/transactions" in url:
                 uid = url.split("/assets/")[1].split("/")[0]
                 rows = books[uid]
@@ -543,13 +545,13 @@ class Fallback(unittest.TestCase):
                                     os.path.join(d, "cache"), False, FX["now_s"], bf_key=KEY, owner_env=OWNER)
             doc = json.load(open(os.path.join(d, "data", "dev_checks.json")))
         self.assertEqual(summary["koios_calls"], 0)
-        self.assertLessEqual(summary["blockfrost_calls"], 8)
-        self.assertGreater(summary["blockfrost_calls"], 0)
-        self.assertEqual(doc["coverage"]["scanned"], n)
+        self.assertEqual(summary["blockfrost_calls"], 8)
+        self.assertEqual(doc["coverage"]["scanned"], 1)
         budget_skips = [e for e in doc["entries"] if (e.get("coverage") or {}).get("skipped") == "budget"]
-        self.assertEqual(budget_skips, [])
+        self.assertEqual(len(budget_skips), n - 1)
         self.assertTrue(all(DC.dev_tag_ok(e["dev_tag"]) for e in doc["entries"]))
-        self.assertTrue(all((e.get("coverage") or {}).get("txs_read", 0) > 0 for e in doc["entries"]))
+        self.assertIn("order=desc", urls[0])
+        self.assertIn(hx("b0t8"), urls[1])
 
 
 class Wiring(unittest.TestCase):
@@ -1986,6 +1988,227 @@ class ReviewFixes(unittest.TestCase):
                    "createdAtMs": 1_700_000_000_000, "launcherAddress": addr("dev"), "hidden": False,
                    "priceAda": 0.0003, "marketCapAda": 300000.2, "volume24hAda": 1200.4, "holders": 40,
                    "curve": curve}
+
+
+def _bf_spans(urls):
+    """Blockfrost calls grouped by asset-transaction list. Each group is one scanned row."""
+    spans = []
+    for url in urls:
+        if "/transactions" in url:
+            spans.append({"url": url, "n": 1, "utxos": []})
+        elif spans:
+            spans[-1]["n"] += 1
+            if url.endswith("/utxos"):
+                spans[-1]["utxos"].append(url)
+    return spans
+
+
+def _paused_books(names, txs_each, flat=True):
+    """One launcher, one book per ticker. flat keeps lovelace unchanged so a row is list + utxo calls."""
+    books, tracked, launches = {}, [], []
+    t0 = FX["launch_s"]
+    for name in names:
+        u = unit(name)
+        rows = []
+        for k in range(txs_each):
+            h = hx(f"{name}t{k}")
+            prev = hx(f"{name}p{k}") + "#0"
+            if k == 0 and not flat:
+                rows.append(leg(h, t0, [], [utxo("dev", 2_000_000, {u: 1000}, h + "#0")]))
+            else:
+                rows.append(leg(h, t0 + k,
+                                [utxo("dev", 2_000_000, {u: 1000}, prev)],
+                                [utxo("dev", 2_000_000, {u: 1000}, h + "#0")]))
+        books[u] = rows
+        launch = {"id": name, "ticker": name, "policyId": u[:56], "assetName": u[56:],
+                  "launcherAddress": addr("dev"), "liveAtMs": (FX["now_s"] - 3600) * 1000}
+        launches.append(launch)
+        tracked.append({"ticker": name, "unit": u, "launch": launch, "mcap_ada": 10, "vol_h24_ada": 1})
+    return books, tracked, launches
+
+
+def _bf_req(books, urls):
+    def req(self_, src, url, method="GET", body=None, headers=None, quiet404=True):
+        self_.calls[src] = self_.calls.get(src, 0) + 1
+        if src == "koios":
+            return None
+        urls.append(url)
+        if "/transactions" in url:
+            uid = url.split("/assets/")[1].split("/")[0]
+            rows = books[uid]
+            return [{"tx_hash": t["hash"], "block_height": t["height"], "block_time": t["time"]} for t in rows]
+        if url.endswith("/utxos"):
+            h = url.split("/txs/")[1].split("/")[0]
+            tx = next(t for rows in books.values() for t in rows if t["hash"] == h)
+            return _bf_tx(tx)
+        if url.endswith("/withdrawals"):
+            return []
+        return None
+    return req
+
+
+def _run_paused(books, tracked, launches, cfg, d, watch=None):
+    urls = []
+    http = P.Http({"koios": 0, "blockfrost": 0})
+    http.koios_pause_until = time.time() + 120
+    with mock.patch.object(P.Http, "req", _bf_req(books, urls)):
+        summary, _ = DC.run(http, cfg, tracked, launches, watch or {}, os.path.join(d, "data"),
+                            os.path.join(d, "cache"), False, FX["now_s"], bf_key=KEY, owner_env=OWNER)
+    with open(os.path.join(d, "data", "dev_checks.json")) as f:
+        doc = json.load(f)
+    return summary, doc, urls
+
+
+class ReviewFloor(unittest.TestCase):
+    """Locks the review guards. Each test fails if that guard is removed."""
+
+    def test_unknown_role_is_not_published(self):
+        tag = DC.short_tag(stake("dev"), {stake("dev")[6:16]: "not_a_configured_role"})
+        self.assertTrue(DC.TAG_RE.fullmatch(tag) is not None)
+        self.assertFalse(tag == "not_a_configured_role")
+
+    def test_role_that_starts_the_stake_payload_is_not_published(self):
+        role = "watch"
+        payload = role + ("u" * 24)
+        tag = DC.short_tag("stake1" + payload, {payload[:12]: role})
+        self.assertTrue(DC.TAG_RE.fullmatch(tag) is not None)
+        self.assertFalse(tag == role)
+
+    def test_skipped_row_does_not_carry_a_bad_dev_tag(self):
+        u = unit("SKIP")
+        bad = stake("dev")[6:16]
+        item = {"ticker": "SKIP", "unit": u, "launch": {}, "watch": {}, "mcap_ada": None, "vol_h24_ada": 1}
+        scan = {"stake": None, "skipped": "budget", "stats": None}
+        prev = {"unit": u, "dev_tag": bad, "dev_sold_ada": 10, "late_rug": False}
+        row = DC._entry(item, scan, prev, {"units": {}}, [], dc(), FX["now_s"], FX["now_s"] * 1000, False)
+        self.assertTrue(DC.dev_tag_ok(row.get("dev_tag")))
+        self.assertFalse(row.get("dev_tag") == bad)
+
+    def test_non_string_watch_keys_do_not_drop_the_run(self):
+        st = stake("dev")
+        watch = {1: "nope", None: "nope", st[6:16]: "repeat_launcher"}
+        hits = F.match_tags(st, watch)
+        self.assertEqual(len(hits), 1)
+        self.assertTrue(all(isinstance(h, str) for h in hits))
+        self.assertEqual(DC.short_tag(st, watch), "repeat_launcher")
+        self.assertEqual(F.match_tags(st, {1: "nope", None: "nope"}), [])
+        self.assertEqual(F.match_tags(None, {1: "nope"}), [])
+        self.assertEqual(F.match_tags(1, {"abc": "watch"}), [])
+        books, tracked, launches = _paused_books(["NS"], 1, flat=True)
+        cfg = {"dev_checks": {"budget_s": 30, "max_calls": 10, "max_bf_calls": 8, "max_launches": 1},
+               "flags": {"exclude_tags": {}}}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "cache"))
+            summary, doc, _ = _run_paused(books, tracked, launches, cfg, d, watch={1: "nope", None: "nope"})
+        self.assertEqual(summary["koios_calls"], 0)
+        self.assertTrue(DC.dev_tag_ok(doc["entries"][0]["dev_tag"]))
+
+    def test_blockfrost_retry_counts_against_the_cap(self):
+        opens = {"n": 0}
+
+        def boom(req, timeout=30):
+            opens["n"] += 1
+            raise urllib.error.URLError("nope")
+
+        http = P.Http({"blockfrost": 0})
+        chain = DC.DevChain(http, {"max_calls": 5, "max_bf_calls": 1, "bf_per_unit": 8}, KEY, time.time() + 30)
+        chain.begin_unit(1)
+        with mock.patch("urllib.request.urlopen", side_effect=boom), mock.patch("time.sleep"):
+            self.assertIsNone(chain.bf("/tip"))
+        self.assertLessEqual(http.calls.get("blockfrost", 0), 1)
+        self.assertEqual(opens["n"], 1)
+
+    def test_tx_body_loop_stops_at_the_blockfrost_cap(self):
+        books, tracked, launches = _paused_books(["CAP"], 20, flat=True)
+        cfg = {"dev_checks": {"budget_s": 30, "max_calls": 10, "max_bf_calls": 4, "max_launches": 1,
+                              "max_txs_per_unit": 25, "max_pages_per_unit": 1, "bf_per_unit": 8, "max_prior": 0},
+               "flags": {"exclude_tags": {}}}
+        seen = {"n": 0}
+        orig = DC.DevChain.bf
+
+        def wrapped(self, path):
+            seen["n"] += 1
+            return orig(self, path)
+
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "cache"))
+            with mock.patch.object(DC.DevChain, "bf", wrapped):
+                summary, doc, _ = _run_paused(books, tracked, launches, cfg, d)
+        self.assertLessEqual(summary["blockfrost_calls"], 4)
+        self.assertLessEqual(seen["n"], 4)
+        self.assertGreater(seen["n"], 0)
+        self.assertFalse((doc["entries"][0].get("coverage") or {}).get("complete"))
+
+    def test_each_scanned_row_gets_the_blockfrost_floor(self):
+        n, txs_each = 16, 30
+        names = [f"F{i:02d}" for i in range(n)]
+        books, tracked, launches = _paused_books(names, txs_each, flat=True)
+        cfg = {"dev_checks": {"budget_s": 30, "max_calls": 36, "max_bf_calls": 50, "max_launches": n,
+                              "max_txs_per_unit": txs_each, "max_pages_per_unit": 1, "max_prior": 0},
+               "flags": {"exclude_tags": {}}}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "cache"))
+            summary, doc, urls = _run_paused(books, tracked, launches, cfg, d)
+        spans = _bf_spans(urls)
+        self.assertEqual(summary["koios_calls"], 0)
+        self.assertLessEqual(summary["blockfrost_calls"], 50)
+        self.assertGreater(len(spans), 0)
+        self.assertLessEqual(len(spans), 50 // 8)
+        self.assertTrue(all(s["n"] >= 8 for s in spans))
+        self.assertTrue(any((e.get("coverage") or {}).get("skipped") == "budget" for e in doc["entries"]))
+        self.assertIn("order=desc", spans[0]["url"])
+        self.assertTrue(spans[0]["utxos"])
+        self.assertIn(hx("F00t29"), spans[0]["utxos"][0])
+
+    def test_prior_launches_share_the_blockfrost_floor(self):
+        main_b, main_t, main_l = _paused_books(["MAIN"], 2, flat=False)
+        p0_b, _, p0_l = _paused_books(["P0"], 20, flat=True)
+        p1_b, _, p1_l = _paused_books(["P1"], 20, flat=True)
+        books = {}
+        books.update(main_b)
+        books.update(p0_b)
+        books.update(p1_b)
+        launches = main_l + p0_l + p1_l
+        cfg = {"dev_checks": {"budget_s": 30, "max_calls": 36, "max_bf_calls": 20, "max_launches": 1,
+                              "max_prior": 2, "max_txs_per_unit": 25, "max_pages_per_unit": 1, "bf_per_unit": 8},
+               "flags": {"exclude_tags": {}}}
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "cache"))
+            summary, _, urls = _run_paused(books, main_t, launches, cfg, d)
+        spans = _bf_spans(urls)
+        self.assertEqual(len(spans), 3)
+        self.assertLessEqual(summary["blockfrost_calls"], 20)
+        self.assertLessEqual(spans[1]["n"], 8)
+        self.assertGreaterEqual(spans[2]["n"], 1)
+
+    def test_koios_outage_reads_some_rows_in_full(self):
+        """16 rows, Koios paused, 50 Blockfrost calls. An equal split cannot finish a row; the floor can."""
+        n, txs_each = 16, 4
+        names = [f"T{i:02d}" for i in range(n)]
+        books, tracked, launches = _paused_books(names, txs_each, flat=False)
+        cfg = {"dev_checks": {"budget_s": 30, "max_calls": 36, "max_bf_calls": 50, "max_launches": n,
+                              "max_txs_per_unit": 25, "max_pages_per_unit": 2, "max_prior": 0},
+               "flags": {"exclude_tags": {}}}
+
+        def full(doc):
+            return {e["ticker"] for e in doc["entries"]
+                    if (e.get("coverage") or {}).get("complete") and (e.get("coverage") or {}).get("txs_read") == txs_each}
+
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "cache"))
+            summary, doc, urls = _run_paused(books, tracked, launches, cfg, d)
+            first = full(doc)
+            summary2, doc2, urls2 = _run_paused(books, tracked, launches, cfg, d)
+            second = full(doc2)
+        self.assertEqual(summary["koios_calls"], 0)
+        self.assertLessEqual(summary["blockfrost_calls"], 50)
+        self.assertTrue(first)
+        self.assertTrue(any((e.get("coverage") or {}).get("skipped") == "budget" for e in doc["entries"]))
+        self.assertIn("order=desc", urls[0])
+        self.assertTrue(first != second)
+        self.assertTrue(second)
+        self.assertLessEqual(summary2["blockfrost_calls"], 50)
+        self.assertIn("order=desc", urls2[0])
 
 
 if __name__ == "__main__":

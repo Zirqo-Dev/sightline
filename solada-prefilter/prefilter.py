@@ -84,6 +84,10 @@ class Http:
             self._remember_block(src)
             return None
         for attempt in range(len(waits) + 1):
+            # A caller (dev-checks Blockfrost) can count a retry against its cap.
+            # Absent retry_ok, retries stay as they were.
+            if attempt and getattr(self, "retry_ok", None) is not None and not self.retry_ok():
+                return None
             if self.blocked(src) and not self.allow_blocked:
                 self._remember_block(src)
                 return None

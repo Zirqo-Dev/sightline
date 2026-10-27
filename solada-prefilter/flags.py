@@ -210,8 +210,20 @@ def excluded_tags(cfg):
 
 
 def match_tags(stake, watch):
-    """Snek prefix tags that this stake key starts with. watch = {prefix: role}."""
-    return [p for p in watch if stake.startswith("stake1" + p)]
+    """Snek prefix tags that this stake key starts with. watch = {prefix: role}.
+
+    Non-string keys are skipped. `"stake1" + p` would raise TypeError and the
+    dev-checks run would be dropped for the whole payload.
+    """
+    if not isinstance(stake, str) or not stake or not watch:
+        return []
+    hits = []
+    for p in watch:
+        if not isinstance(p, str) or not p:
+            continue
+        if stake.startswith("stake1" + p):
+            hits.append(p)
+    return hits
 
 
 def analyze_launch(ticker, unit, buyers, watch, cfg, live_at_s=None, first_heights=None, launcher_stake=None):
