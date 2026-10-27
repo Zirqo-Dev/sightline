@@ -1,5 +1,5 @@
 {
- "at": "2026-10-27T10:09:01Z",
+ "at": "2026-10-27T12:09:27Z",
  "basis": "blockfrost",
  "dry_run": false,
  "baseline": false,
@@ -19,29 +19,94 @@
  "ada_usd": 0.0,
  "whale": {
   "tag": "w-f3186187",
-  "ada_delta": 0,
-  "moves": []
+  "ada_delta": -2602,
+  "moves": [
+   {
+    "asset": "CHEESE",
+    "delta": 11454950586101,
+    "new_position": true,
+    "ada_equiv": 1071,
+    "value_basis": "ada_leg_rate"
+   },
+   {
+    "asset": "HOWDY",
+    "delta": -5000000000000,
+    "ada_equiv": 111,
+    "value_basis": "ada_leg",
+    "pct": 33.3
+   },
+   {
+    "asset": "ASCEND",
+    "delta": 709367466,
+    "decimals": 6,
+    "qty": 709.3675,
+    "ada_equiv": 865,
+    "value_basis": "ada_leg_rate",
+    "pct": 0.2
+   },
+   {
+    "asset": "ADA",
+    "delta": -2602
+   }
+  ]
  },
  "first_block_hits": [],
- "triggers": [],
- "webhook_sent": false,
- "flags_new": 0,
+ "triggers": [
+  {
+   "kind": "whale_move",
+   "name": "$cockwhale",
+   "metrics": {
+    "tag": "w-f3186187",
+    "moves": [
+     {
+      "asset": "CHEESE",
+      "delta": 11454950586101,
+      "new_position": true,
+      "ada_equiv": 1071,
+      "value_basis": "ada_leg_rate"
+     },
+     {
+      "asset": "HOWDY",
+      "delta": -5000000000000,
+      "ada_equiv": 111,
+      "value_basis": "ada_leg",
+      "pct": 33.3
+     },
+     {
+      "asset": "ASCEND",
+      "delta": 709367466,
+      "decimals": 6,
+      "qty": 709.3675,
+      "ada_equiv": 865,
+      "value_basis": "ada_leg_rate",
+      "pct": 0.2
+     },
+     {
+      "asset": "ADA",
+      "delta": -2602
+     }
+    ]
+   }
+  }
+ ],
+ "webhook_sent": true,
+ "flags_new": 3,
  "big_moves": {
   "units_scanned": 2,
-  "txs_read": 127,
+  "txs_read": 91,
   "capped": [],
-  "koios_calls": 15,
-  "moves_new": 1
+  "koios_calls": 11,
+  "moves_new": 0
  },
  "whale_ledger": {
   "capped": false,
-  "koios_calls": 5,
+  "koios_calls": 12,
   "blockfrost_fallbacks": 0,
   "blockfrost_calls": 0,
-  "ada_balance": 3470.790827,
+  "ada_balance": 869.228126,
   "basis": "koios",
-  "rows": 0,
-  "open_orders": 0,
+  "rows": 63,
+  "open_orders": 1,
   "reconcile_ok": true,
   "stale": false
  },
@@ -51,22 +116,23 @@
  },
  "api_calls": {
   "solada": 2,
-  "geckoterminal": 2,
+  "geckoterminal": 3,
   "blockfrost": 20,
-  "koios": 25,
+  "koios": 40,
   "dexscreener": 1,
-  "tokenregistry": 1
+  "tokenregistry": 6,
+  "webhook": 1
  },
  "results": [
   {
    "ticker": "COCK",
    "tracked": true,
    "unit": "49e423161ef818adc475c783571cb479d5f15ad52a01a240eacc0d3b434f434b",
-   "ada_side": 170230,
+   "ada_side": 168090,
    "mcap_ada": null,
    "holders": 1000,
-   "vol_h24_ada": 3455,
-   "price_ada": 0.005950523658,
+   "vol_h24_ada": 3669,
+   "price_ada": 0.00570436212,
    "decimals": 0,
    "crossed": [],
    "kill": {
@@ -79,7 +145,7 @@
    "unit": "e7c77b2784e52949b3f95f8f9f2d1668dd47d7ed56491eab588bb730534f4c414441",
    "ada_side": null,
    "mcap_ada": null,
-   "holders": 483,
+   "holders": 480,
    "vol_h24_ada": null,
    "price_ada": null,
    "decimals": null,
