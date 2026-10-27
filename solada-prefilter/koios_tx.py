@@ -39,11 +39,26 @@ def norm_utxo(u):
             "datum": _datum_text(u)}
 
 
-TX_INFO_FLAGS = {"_inputs": True, "_assets": True, "_scripts": True}
+TX_INFO_FLAGS = {"_inputs": True, "_assets": True, "_scripts": True, "_withdrawals": True}
+
+
+def _withdrawals(tx):
+    """{stake: lovelace} claimed in this tx. Reward withdrawals are not sale proceeds."""
+    out = {}
+    for w in tx.get("withdrawals") or []:
+        st = w.get("stake_address") or w.get("stake_addr") or ""
+        try:
+            amt = int(w.get("amount") or 0)
+        except (TypeError, ValueError):
+            amt = 0
+        if st and amt > 0:
+            out[st] = out.get(st, 0) + amt
+    return out
 
 
 def tx_info(http, hashes, n, budget_ok=lambda: True):
-    """{hash: {inputs, outputs}} with normalized UTxO dicts (spend inputs only). Missing hashes = not read."""
+    """{hash: {inputs, outputs, withdrawals}} with normalized UTxO dicts (spend inputs only). Missing hashes = not read.
+    `_withdrawals` is requested so a staking reward claimed in the same tx can be taken out of the ADA gain."""
     out = {}
     for body in batches(hashes, "_tx_hashes", n, TX_INFO_FLAGS):
         if not budget_ok():
@@ -52,7 +67,8 @@ def tx_info(http, hashes, n, budget_ok=lambda: True):
         for tx in r or []:
             out[tx["tx_hash"]] = {"inputs": [norm_utxo(u) for u in tx.get("inputs") or []],
                                   "outputs": sorted((norm_utxo(u) for u in tx.get("outputs") or []),
-                                                    key=lambda x: int(x["ref"].split("#")[1]))}
+                                                    key=lambda x: int(x["ref"].split("#")[1])),
+                                  "withdrawals": _withdrawals(tx)}
     return out
 
 

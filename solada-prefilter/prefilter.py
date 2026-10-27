@@ -43,6 +43,8 @@ class Http:
         self.deadline_srcs = ("koios", "blockfrost")
         self.allow_blocked = False  # whale-ledger baseline fallback sets this so the other provider still runs
         self.last_fail = {}  # src -> {"status": http code or "deadline"/"skipped"/exc name, "why": short text}
+        self.dev_checks = False  # while set, a Koios 429 does not trip the breaker (dev checks falls back instead)
+        self.koios_pause_until = 0  # unix time; research skips Koios until then after a dev-checks 429
 
     def blocked(self, src):
         if src in self.tripped:
@@ -90,6 +92,12 @@ class Http:
             except urllib.error.HTTPError as e:
                 if e.code == 404 and quiet404:
                     self.last_fail[src] = {"status": 404, "why": "http 404"}
+                    return None
+                if e.code == 429 and src == "koios" and self.dev_checks and self.deadline is None:
+                    # first 429 during dev checks: no retry and no breaker. Blockfrost can still run.
+                    # research (below) skips Koios until koios_pause_until so the 240s window is not spent here.
+                    self.koios_pause_until = time.time() + 60
+                    self._fail(src, "http 429", 429)
                     return None
                 if e.code == 429 and src == "koios" and self.deadline is not None:
                     self._fail(src, "http 429", 429)
@@ -179,6 +187,17 @@ def research_plan(cfg, t_start, now):
     shared = research_deadline(cfg, t_start, now)
     budget = float(WL.wl_cfg(cfg).get("budget_s", 90))
     return shared, min(shared, now + max(0.0, budget))
+
+
+def note_koios_pause(http):
+    """If dev checks saw a Koios 429, skip Koios for the research window (~60s).
+
+    The breaker stays unarmed while dev checks itself is running, so its Blockfrost fallback still works.
+    Arming it only here keeps big_moves and whale_ledger from retrying an IP the public tier has blocked.
+    """
+    until = getattr(http, "koios_pause_until", 0) or 0
+    if until > time.time() and "koios" not in http.tripped:
+        http.trip("koios", "429 during dev checks; skip Koios for ~60s")
 
 
 def write_json(path, obj, **kw):
@@ -939,7 +958,8 @@ def main():
         try:
             dev_summary, dev_triggers = DC.run(
                 http, cfg, solada_tracked, launches, flagmod.watch_map(cfg.get("flags") or {}, wkeys),
-                args.data_dir, args.cache_dir, args.dry_run, time.time(), bf_key=bf_key, baseline=baseline)
+                args.data_dir, args.cache_dir, args.dry_run, time.time(), bf_key=bf_key, baseline=baseline,
+                t_start=t_start, owner_env=os.environ.get("PRIVACY_GUARD_PATTERNS", ""))
             if not baseline:
                 triggers.extend(dev_triggers or [])
             print(f"dev checks: {json.dumps(dev_summary)}")
@@ -1006,6 +1026,7 @@ def main():
 
     summary_path = os.path.join(args.data_dir, "last-run.json" if not args.dry_run else "dry-run.json")
     write_json(summary_path, build_summary(None, None), indent=1)  # written before research too (nice-to-have)
+    note_koios_pause(http)  # a 429 during dev checks: skip Koios for ~60s so research is not starved
     shared_end, whale_end = research_plan(cfg, t_start, time.time())
     # ---- SPD-44 founder whale ledger first, inside its own slice of the shared deadline, so big_moves
     # cannot exhaust the 240s and skip it (PR #31). Still after the webhook and the state writes (M1).

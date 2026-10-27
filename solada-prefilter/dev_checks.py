@@ -4,27 +4,26 @@ Writes desk-data:solada-prefilter/dev_checks.json. Chain data only (Koios, then 
 when BLOCKFROST_PROJECT_ID is set). No external score API.
 
 The dev is the launch's creator stake: Solada launcherAddress, or, when that has no stake
-key, the largest non-excluded key that received the token in the mint tx. Output carries a
-short dev_tag only (a flags/watch prefix of at most 12 characters when one matches, else
-the same w-xxxxxxxx hash flags.py uses). Never a full address or stake key.
+key, the non-script stake that funded a verified mint tx. Output carries a short dev_tag
+only (a flags/watch prefix of at most 12 characters when one matches, else the same
+w-xxxxxxxx hash flags.py uses). Never a full address or stake key. Rows and trigger keys
+are the token (policy + asset name): a ticker that changes token is a new baseline.
 
 Phase 1 is dev sells / late rugs, serial-launcher counts, and drawdown / inactivity.
-dev_buy_ada, dev_locked_pct and unlock_date are always null (phase 2). No dev-lock check,
-no dev-buy class, no social checks.
+dev_buy_ada, dev_locked_pct and unlock_date are always null. LP pulls are phase 2, with
+dev lock, dev buy class, and social checks.
 
-A sell is one transaction whose creator key UTxOs lose this token and gain ADA. A two-step
-DEX order (tokens parked at a script, ADA paid back later) is not a sell here. late_rug is
-true only when a complete read shows the dev sold at least rug_bag_pct of the tokens that
-stake received, at least late_min_minutes after launch, while another non-excluded wallet
-still holds. "The supply" is the creator stake's own received supply: the curve reserve is
-excluded and usually holds the rest of the mint.
+A sell is one transaction whose creator key UTxOs lose this token and gain ADA, or a
+later tx that pays the dev ADA for tokens they had parked at a script. Staking-reward
+withdrawals in that tx are not part of the ADA gain. late_rug uses the net drop from the
+dev's peak balance, not the sum of every sell (a round trip is not a rug).
 
-The first time a ticker is measured, changed_since_last is false (baseline). Later, it is
-true only when dev_sold_ada rises by at least min_sell_ada, or late_rug flips to true.
-That is the only thing that may add a dev_sell trigger. Drawdown, serial counts and
-inactivity update the row without re-firing.
+The first row for a token is a baseline (no webhook). Later, a dev_sell fires only for a
+sell tx hash the private cache has not seen, and only when sold ADA rises by at least
+min_sell_ada or late_rug flips true. An incomplete read never lowers stored sell facts;
+the row is marked partial. Drawdown, serial counts and inactivity do not re-fire.
 """
-import os, sys
+import os, sys, time
 from datetime import datetime, timezone
 
 import flags as F
@@ -37,18 +36,20 @@ DEFAULTS = {
     "max_txs_per_unit": 25, "max_pages_per_unit": 2, "utxo_batch": 13,
     "max_launches": 8, "max_prior": 3,
     "rug_bag_pct": 80, "late_min_minutes": 30, "rug_min_other_holders": 1,
-    "min_sell_ada": 1.0, "inactive_h": 24, "serial_3h_h": 3, "serial_7d_h": 168,
+    "min_sell_ada": 25.0, "inactive_h": 24, "serial_3h_h": 3, "serial_7d_h": 168,
     "serial_caution_3h": 2, "serial_caution_7d": 3, "drawdown_caution_pct": 80,
 }
 PHASE2 = ("dev_buy_ada", "dev_locked_pct", "unlock_date")
 NOTE = (
     "Phase 1 only: creator-stake sells and late rugs, serial launch counts, drawdown from the "
-    "peak this job has seen, and inactivity. dev_buy_ada, dev_locked_pct and unlock_date are "
-    "phase 2 and always null. No dev lock, dev buy class, or social checks. dev_tag is a watch "
-    "prefix or a 10-character hash, never an address or stake key. ATH is the highest mcap this "
-    "job has observed (the run is every 2h), not a tick peak. prior_rugs counts earlier launches "
-    "this job has already marked late_rug for the same creator stake. A sell is token out and ADA "
-    "in on the creator's own key UTxOs in one tx."
+    "peak this job has seen, and inactivity. dev_buy_ada, dev_locked_pct, unlock_date and LP pulls "
+    "are phase 2 (the three fields are always null). No dev lock, dev buy class, or social checks. "
+    "dev_tag is a watch prefix or a 10-character hash, never an address or stake key. Rows are keyed "
+    "by policy + asset name. ATH is the highest mcap this job has observed (the run is every 2h), not "
+    "a tick peak. prior_rugs counts earlier launches this job has already marked late_rug for the same "
+    "creator stake. A sell is token out and ADA in on the creator's own key in one tx, or ADA paid "
+    "later for tokens parked at a script. late_rug is the net drop from that stake's peak, not churn. "
+    "min_sell_ada is a dust floor. An incomplete read is partial and does not lower a stored sell."
 )
 
 
@@ -87,43 +88,83 @@ def _who(u):
     return stake, bool(script), addr
 
 
+def _enterprise_key(addr):
+    """True for a stake-less key address (addr1v / enterprise). Script enterprise (addr1w) is not a holder."""
+    hrp, raw = F.b32_decode(addr or "")
+    if not raw or hrp not in ("addr", "addr_test"):
+        return False
+    return (raw[0] >> 4) == 6
+
+
+def _holder_key(u, ex):
+    """Stake key, else an enterprise key address. Scripts and excluded tags are neither holders nor sellers."""
+    st, script, addr = _who(u)
+    if script or _hit(st, addr, ex):
+        return None
+    if st:
+        return st
+    if addr and _enterprise_key(addr):
+        return "e:" + addr
+    return None
+
+
+def _qty(u, unit):
+    try:
+        return int((u.get("assets") or {}).get(unit, 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 def creator_from_mint(unit, tx, ex):
-    """Largest key recipient of `unit` in the mint tx, skipping excluded tags and scripts."""
-    best, qty = None, 0
-    for u in tx.get("outputs") or []:
+    """Stake that funded a verified mint. None when this tx is not the mint, or the funder is a script or excluded.
+
+    Verified mint: the token is on outputs and on no input (it is created here). The dev is the non-script,
+    non-excluded stake that paid the largest ADA into that tx, not the largest recipient.
+    """
+    inputs, outputs = tx.get("inputs") or [], tx.get("outputs") or []
+    if sum(_qty(u, unit) for u in inputs) > 0 or sum(_qty(u, unit) for u in outputs) <= 0:
+        return None
+    best, lov = None, -1
+    for u in inputs:
         st, script, addr = _who(u)
         if script or not st or _hit(st, addr, ex):
             continue
-        q = int((u.get("assets") or {}).get(unit, 0) or 0)
-        if q > qty:
-            best, qty = st, q
+        n = int(u.get("lovelace") or 0)
+        if n > lov:
+            best, lov = st, n
     return best
 
 
 def fold(unit, ordered, dev, ex, launch_s, dc):
     """Replay txs in chain order. Pure. Returns sell stats for `dev` (or zeros if dev is None).
 
-    Excluded tags (the Solada curve reserve) are neither holders nor sellers. Script payment
-    addresses are not holders. Peak is the dev's balance before each sell, so a same-tx dump
-    still counts against the amount they received.
+    Excluded tags (the Solada curve reserve) are neither holders nor sellers. Script payment addresses
+    are not holders; stake-less enterprise key addresses are. Peak is the dev's balance before each sell.
+    late_rug is (peak - current) / peak after a sell that landed at least late_min_minutes after launch,
+    not the sum of sold qty (selling and buying back is churn). ADA gained is net of staking withdrawals.
+    Tokens the dev parks at a script stay pending until a later tx pays the dev ADA for that output.
     """
     bal, peak = {}, 0
     sold_ada, sold_qty = 0.0, 0
-    first_sell_s, holders_at, late = None, None, False
+    first_sell_s, holders_at, late_sell = None, None, False
+    sell_hashes, pending = [], {}
     for tx in ordered:
         deltas, dev_qty, dev_lov = {}, 0, 0
         for side, sign in (("inputs", -1), ("outputs", 1)):
             for u in tx.get(side) or []:
-                st, script, addr = _who(u)
-                if _hit(st, addr, ex) or script or not st:
-                    continue
-                q = int((u.get("assets") or {}).get(unit, 0) or 0)
-                if q:
-                    deltas[st] = deltas.get(st, 0) + sign * q
-                if dev and st == dev:
+                key = _holder_key(u, ex)
+                q = _qty(u, unit)
+                if key and q:
+                    deltas[key] = deltas.get(key, 0) + sign * q
+                if dev and key == dev:
                     dev_lov += sign * int(u.get("lovelace") or 0)
                     dev_qty += sign * q
         if dev:
+            wd = (tx.get("withdrawals") or {}).get(dev) or 0
+            try:
+                dev_lov -= int(wd)
+            except (TypeError, ValueError):
+                pass
             peak = max(peak, bal.get(dev, 0))
         for st, dq in deltas.items():
             bal[st] = bal.get(st, 0) + dq
@@ -131,34 +172,73 @@ def fold(unit, ordered, dev, ex, launch_s, dc):
                 bal.pop(st, None)
         if dev and dev_qty > 0:
             peak = max(peak, bal.get(dev, 0))
-        if not (dev and dev_qty < 0 and dev_lov > 0):
+        script_outs = []
+        for u in tx.get("outputs") or []:
+            st, script, addr = _who(u)
+            ref, q = u.get("ref") or "", _qty(u, unit)
+            if script and q and ref and not _hit(st, addr, ex):
+                script_outs.append((ref, q))
+        spent = [u.get("ref") for u in (tx.get("inputs") or []) if u.get("ref") in pending]
+        is_sell, sell_q = False, 0
+        if dev and dev_qty < 0 and dev_lov > 0:
+            is_sell, sell_q = True, -dev_qty
+            sold_ada += dev_lov / 1e6
+        elif dev and dev_qty < 0 and script_outs:
+            left = -dev_qty
+            for ref, q in script_outs:
+                take = min(left, q)
+                if take > 0:
+                    pending[ref] = pending.get(ref, 0) + take
+                    left -= take
+                if left <= 0:
+                    break
+        elif dev and dev_lov > 0 and spent:
+            qty = sum(pending.pop(ref, 0) for ref in spent)
+            if qty > 0:
+                is_sell, sell_q = True, qty
+                sold_ada += dev_lov / 1e6
+        elif spent:
+            for ref in spent:
+                pending.pop(ref, None)
+        if not is_sell:
             continue
-        sold_ada += dev_lov / 1e6
-        sold_qty += -dev_qty
+        sold_qty += sell_q
+        if tx.get("hash"):
+            sell_hashes.append(tx["hash"])
         holders = sum(1 for q in bal.values() if q > 0)
-        others = sum(1 for s, q in bal.items() if s != dev and q > 0)
         if first_sell_s is None:
             first_sell_s = tx.get("time")
             holders_at = holders
         after = (tx["time"] - launch_s) / 60.0 if launch_s and tx.get("time") else None
-        bag = (sold_qty / peak * 100.0) if peak else 0.0
-        if (after is not None and after >= float(dc["late_min_minutes"]) and bag >= float(dc["rug_bag_pct"])
-                and others >= int(dc["rug_min_other_holders"])):
-            late = True
-            holders_at = holders
+        if after is not None and after >= float(dc["late_min_minutes"]):
+            late_sell = True
+    cur = bal.get(dev, 0) if dev else 0
+    net = ((peak - cur) / peak * 100.0) if peak else 0.0
+    others = sum(1 for s, q in bal.items() if s != dev and q > 0)
+    pending_qty = sum(pending.values())
+    late = bool(late_sell and net >= float(dc["rug_bag_pct"]) and others >= int(dc["rug_min_other_holders"]))
+    sharp = bool(peak and (net >= float(dc["rug_bag_pct"]) or pending_qty / peak * 100.0 >= float(dc["rug_bag_pct"])))
     return {"peak": peak, "sold_ada": round(sold_ada, 2), "sold_qty": sold_qty, "first_sell_s": first_sell_s,
-            "holders_at_sell": holders_at, "late_rug": late}
+            "holders_at_sell": holders_at, "late_rug": late, "sell_hashes": sell_hashes,
+            "net_drop_pct": round(net, 2), "pending_qty": pending_qty, "sharp": sharp}
 
 
-def serial_counts(launches, stake, now_ms, dc):
+def serial_counts(launches, stake, now_ms, dc, this_unit=None):
     """How many Solada launches in this payload share `stake` and went live in the last 3h / 7d.
-    Includes this launch. Launches with no creator stake or no liveAtMs are not counted."""
+
+    Includes this launch. A mint-found dev (launcherAddress has no stake) still counts `this_unit`.
+    Launches with no liveAtMs are not counted. Other launches with no creator stake are not counted.
+    """
     if not stake:
         return None, None
     n3 = n7 = 0
     h3, h7 = float(dc["serial_3h_h"]) * 3_600_000, float(dc["serial_7d_h"]) * 3_600_000
     for l in launches or []:
-        if F.addr_info(l.get("launcherAddress") or "")[0] != stake:
+        st = F.addr_info(l.get("launcherAddress") or "")[0]
+        unit = (l.get("policyId") or "") + (l.get("assetName") or "")
+        if st == stake or (this_unit and unit == this_unit and not st):
+            pass
+        else:
             continue
         live = l.get("liveAtMs")
         if not live:
@@ -188,28 +268,68 @@ def prior_rug_count(cache, stake, unit, live_ms):
     return n
 
 
-def risk_of(sold, late, prior, s3, s7, drawdown, inactive, complete, dc):
-    """low | caution | high, or None when a partial read is not enough to call it low."""
+def risk_of(sold, late, prior, s3, s7, drawdown, inactive, complete, dc, sharp=False):
+    """low | caution | high, or None when a partial read is not enough to call it low.
+
+    sharp: the dev's balance fell by rug_bag_pct, or that much is still parked at a script.
+    That is never "low" (a batcher order is not a same-tx sell, and a round trip is not a rug).
+    """
     if late is True or (prior or 0) >= 1:
         return "high"
     caution = ((sold or 0) >= float(dc["min_sell_ada"]) or (s3 or 0) >= int(dc["serial_caution_3h"])
                or (s7 or 0) >= int(dc["serial_caution_7d"])
                or (drawdown is not None and drawdown >= float(dc["drawdown_caution_pct"]))
-               or inactive is True)
+               or inactive is True or sharp)
     if caution:
         return "caution"
-    if late is None or not complete:
+    if late is None or not complete or sharp:
         return None
     return "low"
 
 
 def sell_changed(prev, sold, late, min_ada):
-    """True only when a previous row exists and the sell picture moved. The first row for a ticker is a baseline."""
+    """True only when a previous row exists and the sell picture moved. The first row for a token is a baseline."""
     if not isinstance(prev, dict):
         return False
     prev_sold = float(prev.get("dev_sold_ada") or 0)
     grew = sold is not None and round(float(sold) - prev_sold, 2) >= float(min_ada)
     return grew or (late is True and prev.get("late_rug") is not True)
+
+
+def _may_fire(prev, baseline):
+    """Both baseline guards. The first row for a token, and a --baseline run, never fire."""
+    if not isinstance(prev, dict):
+        return False
+    if baseline:
+        return False
+    return True
+
+
+def _worth_firing(observed, late, prev, dc):
+    """A new sell hash fires when this read saw at least min_sell_ada, or late_rug flipped true."""
+    if float(observed or 0) >= float(dc["min_sell_ada"]):
+        return True
+    return late is True and (not isinstance(prev, dict) or prev.get("late_rug") is not True)
+
+
+def _keep_sell(row, prev, complete):
+    """Never lower stored sell facts on an incomplete read. Mark the row partial instead."""
+    if complete or not isinstance(prev, dict):
+        return row
+    old = prev.get("dev_sold_ada")
+    new = row.get("dev_sold_ada")
+    if old is not None and (new is None or float(new) < float(old)):
+        row["dev_sold_ada"] = old
+        if prev.get("dev_sold_after_min") is not None:
+            row["dev_sold_after_min"] = prev.get("dev_sold_after_min")
+    if prev.get("late_rug") is True and row.get("late_rug") is not True:
+        row["late_rug"] = True
+    if row.get("holders_at_sell") is None and prev.get("holders_at_sell") is not None and prev.get("late_rug") is True:
+        row["holders_at_sell"] = prev.get("holders_at_sell")
+    if row.get("dev_tag") is None and prev.get("dev_tag"):
+        row["dev_tag"] = prev.get("dev_tag")
+    row["coverage"]["partial"] = True
+    return row
 
 
 def inactive_of(last_tx_s, saw_newest, vol, now_s, launch_s, hours):
@@ -243,9 +363,9 @@ def ath_drawdown(prev, mcap):
     return (int(ath) if ath == int(ath) else round(ath, 2)), dd
 
 
-def _blank(ticker, policy_short, asof):
+def _blank(ticker, policy_short, asof, unit=None):
     row = {
-        "ticker": ticker, "policy_short": policy_short, "dev_tag": None,
+        "ticker": ticker, "unit": unit, "policy_short": policy_short, "dev_tag": None,
         "dev_sold_ada": None, "dev_sold_after_min": None, "holders_at_sell": None, "late_rug": None,
         "serial_3h": None, "serial_7d": None, "prior_rugs": None,
         "ath_mcap": None, "drawdown_pct": None, "inactive": None, "risk": None,
@@ -253,7 +373,7 @@ def _blank(ticker, policy_short, asof):
     }
     for k in PHASE2:
         row[k] = None
-    row["coverage"] = {"txs_read": 0, "complete": False, "skipped": None, "unread_txs": 0}
+    row["coverage"] = {"txs_read": 0, "complete": False, "partial": False, "skipped": None, "unread_txs": 0}
     return row
 
 
@@ -269,7 +389,7 @@ def _policy_short(unit):
 class DevChain:
     """Koios first. A failed Koios read is retried on Blockfrost when the project id is set, under its own cap.
     The key is sent only as a request header. This class does not set Http.deadline, so a 429 here cannot trip
-    the research circuit breaker or close whale_ledger's providers."""
+    the research circuit breaker. The first 429 stops further Koios calls and sets koios_pause_until instead."""
 
     def __init__(self, http, dc, bf_key, deadline):
         self.h, self.dc, self.deadline = http, dc, deadline
@@ -277,6 +397,7 @@ class DevChain:
         self.start = http.calls.get("koios", 0)
         self.bf_start = http.calls.get("blockfrost", 0)
         self.fallbacks = 0
+        self.koios_paused = False
 
     def late(self):
         return __import__("time").time() >= self.deadline
@@ -290,9 +411,27 @@ class DevChain:
     def stop_reason(self):
         if self.late():
             return "deadline"
+        if not self.koios_open():
+            # a 429 already stopped Koios; Blockfrost may finish the run inside its own cap
+            if self.bf_key and self.bf_left() > 0:
+                return None
+            return "budget"
         if self.koios_left() <= 0:
             return "budget"
         return None
+
+    def koios_open(self):
+        """False after a 429: no more Koios calls this run. Blockfrost may still be used."""
+        if self.koios_paused:
+            return False
+        if getattr(self.h, "dev_checks", False) and (getattr(self.h, "koios_pause_until", 0) or 0) > time.time():
+            self.koios_paused = True
+            return False
+        return True
+
+    def note_koios(self):
+        if getattr(self.h, "dev_checks", False) and (getattr(self.h, "koios_pause_until", 0) or 0) > time.time():
+            self.koios_paused = True
 
     def bf(self, path):
         if not self.bf_key or self.bf_left() <= 0 or self.late():
@@ -320,17 +459,36 @@ class DevChain:
                 rows.append({"ref": ref, "addr": u.get("address", ""), "stake": F.addr_info(u.get("address", ""))[0],
                              "lovelace": lov, "assets": assets})
             out[s] = rows
+        wds = {}
+        for w in x.get("withdrawals") or []:
+            st = w.get("stake_address") or w.get("address") or ""
+            try:
+                amt = int(w.get("amount") or 0)
+            except (TypeError, ValueError):
+                amt = 0
+            if st and amt > 0:
+                wds[st] = wds.get(st, 0) + amt
+        if wds:
+            out["withdrawals"] = wds
         return out
 
     def asset_txs(self, unit, desc=False):
-        if self.stop_reason():
+        if self.stop_reason() and self.koios_open():
+            return None
+        if self.late():
             return None
         lim = int(self.dc["max_txs_per_unit"])
         order = "desc" if desc else "asc"
         url = (f"{KOIOS}/asset_txs?_asset_policy={unit[:56]}&_asset_name={unit[56:]}"
                f"&_history=true&order=block_height.{order}&limit={lim}")
-        r = self.h.req("koios", url, quiet404=False)
-        if r is None and self._fallback():
+        r, allow_bf = None, not self.koios_open()
+        if self.koios_open() and self.koios_left() > 0:
+            r = self.h.req("koios", url, quiet404=False)
+            self.note_koios()
+            allow_bf = r is None
+        elif self.koios_left() <= 0 and self.koios_open():
+            return None
+        if r is None and allow_bf and self._fallback():
             r = self.bf(f"/assets/{unit}/transactions?order={order}&count={min(lim, 100)}")
         if not isinstance(r, list):
             return None
@@ -342,10 +500,17 @@ class DevChain:
     def utxos(self, hashes):
         out = {}
         for body in KT.batches(hashes, "_tx_hashes", int(self.dc["utxo_batch"]), KT.TX_INFO_FLAGS):
-            if self.stop_reason():
+            if self.late():
                 break
             chunk = body["_tx_hashes"]
-            got = KT.tx_info(self.h, chunk, len(chunk), lambda: self.stop_reason() is None)
+            got = None
+            if self.koios_open() and self.koios_left() > 0:
+                def budget_ok(chain=self):
+                    if not chain.koios_open() or chain.koios_left() <= 0 or chain.late():
+                        return False
+                    return True
+                got = KT.tx_info(self.h, chunk, len(chunk), budget_ok)
+                self.note_koios()
             if not got and self._fallback():
                 for h in chunk:
                     x = self.bf(f"/txs/{h}/utxos")
@@ -427,12 +592,9 @@ def _scan(chain, item, ex, dc):
         complete = False
     saw_newest = len(asc) < lim or isinstance(desc_rows, list)
     stats = fold(unit, ordered, stake, ex, _launch_s(launch), dc)
-    if not complete:
-        stats = dict(stats, late_rug=None, holders_at_sell=None)
-        if stats["sold_ada"] == 0:
-            stats["sold_ada"] = None
-    elif stats["sold_ada"] == 0:
+    if complete and stats["sold_ada"] == 0:
         stats["holders_at_sell"] = None
+    # An incomplete read keeps the observed sells. _entry never lowers a stored sell and marks the row partial.
     base.update(complete=complete, txs_read=len(ordered), unread_txs=unread, saw_newest=saw_newest,
                 last_tx_s=max((t["time"] for t in ordered), default=None), stats=stats, stake=stake)
     return base
@@ -460,13 +622,13 @@ def _no_stake(row, stake, keep=False):
     return row
 
 
-def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline):
+def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline, new_hashes=()):
     launch = item.get("launch") or {}
     unit = item.get("unit") or ""
-    row = _blank(item.get("ticker"), _policy_short(unit), iso(now_s))
+    row = _blank(item.get("ticker"), _policy_short(unit), iso(now_s), unit)
     stake = (scan or {}).get("stake")
     row["dev_tag"] = short_tag(stake, item.get("watch"))
-    s3, s7 = serial_counts(launches, stake, now_ms, dc)
+    s3, s7 = serial_counts(launches, stake, now_ms, dc, this_unit=unit)
     row["serial_3h"], row["serial_7d"] = s3, s7
     live_ms = launch.get("liveAtMs")
     row["prior_rugs"] = prior_rug_count(cache, stake, unit, live_ms)
@@ -475,7 +637,7 @@ def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline):
     skipped = (scan or {}).get("skipped")
     stats = (scan or {}).get("stats")
     if skipped or not stats:
-        if isinstance(prev, dict):
+        if isinstance(prev, dict) and prev.get("unit") == unit:
             for k in ("dev_tag", "dev_sold_ada", "dev_sold_after_min", "holders_at_sell", "late_rug"):
                 if prev.get(k) is not None and (k != "dev_tag" or row["dev_tag"] is None):
                     row[k] = prev.get(k)
@@ -484,40 +646,47 @@ def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline):
         row["inactive"] = inactive_of(None, False, item.get("vol_h24_ada"), now_s, _launch_s(launch), dc["inactive_h"])
         risk = risk_of(row["dev_sold_ada"], row["late_rug"], row["prior_rugs"], s3, s7, row["drawdown_pct"],
                        row["inactive"], False, dc)
-        if risk is None and isinstance(prev, dict) and prev.get("risk") in ("low", "caution", "high"):
+        if risk is None and isinstance(prev, dict) and prev.get("unit") == unit and prev.get("risk") in ("low", "caution", "high"):
             risk = prev.get("risk")
         row["risk"] = risk
         row["changed_since_last"] = False
-        row["coverage"] = {"txs_read": 0, "complete": False, "skipped": skipped or "budget", "unread_txs": 0}
+        row["coverage"] = {"txs_read": 0, "complete": False, "partial": bool(prev), "skipped": skipped or "budget", "unread_txs": 0}
         return _no_stake(row, stake, keep=True)
     complete = bool(scan.get("complete"))
-    sold = stats["sold_ada"]
-    late = stats["late_rug"] if complete else None
+    observed = stats["sold_ada"]
+    late = True if stats["late_rug"] else (False if complete else None)
     after = None
     if stats.get("first_sell_s") and _launch_s(launch):
         after = round((stats["first_sell_s"] - _launch_s(launch)) / 60.0, 1)
-    row["dev_sold_ada"] = sold
+    row["dev_sold_ada"] = observed
     row["dev_sold_after_min"] = after
-    row["holders_at_sell"] = stats["holders_at_sell"] if complete else None
-    row["late_rug"] = True if late else (False if complete else None)
+    row["holders_at_sell"] = stats["holders_at_sell"] if (complete or stats["late_rug"]) else None
+    row["late_rug"] = late
     row["inactive"] = inactive_of(scan.get("last_tx_s"), scan.get("saw_newest"), item.get("vol_h24_ada"),
                                   now_s, _launch_s(launch), dc["inactive_h"])
-    risk = risk_of(sold, row["late_rug"], row["prior_rugs"], s3, s7, dd, row["inactive"], complete, dc)
-    if risk is None and isinstance(prev, dict) and prev.get("risk") in ("low", "caution", "high"):
-        risk = prev.get("risk")
+    row["coverage"] = {"txs_read": scan.get("txs_read") or 0, "complete": complete, "partial": not complete,
+                       "skipped": None, "unread_txs": scan.get("unread_txs") or 0}
+    # only the same policy+asset continues a row. A ticker that changed token is a new baseline.
+    same = prev if isinstance(prev, dict) and prev.get("unit") == unit else None
+    if not complete:
+        _keep_sell(row, same, False)
+    sharp = bool(stats.get("sharp"))
+    risk = risk_of(row["dev_sold_ada"], row["late_rug"], row["prior_rugs"], s3, s7, dd, row["inactive"],
+                   complete, dc, sharp=sharp)
+    if risk == "low" and (not complete or sharp):
+        risk = "caution" if sharp else None
+    if risk is None and isinstance(same, dict) and same.get("risk") in ("low", "caution", "high"):
+        risk = same.get("risk")
     row["risk"] = risk
-    allow = not baseline
-    measured = sold if (complete or sold) else None
-    row["changed_since_last"] = bool(allow and sell_changed(prev, measured, row["late_rug"], dc["min_sell_ada"]))
-    if not complete and sold is None:
-        row["changed_since_last"] = False
-    row["coverage"] = {"txs_read": scan.get("txs_read") or 0, "complete": complete, "skipped": None,
-                       "unread_txs": scan.get("unread_txs") or 0}
+    row["changed_since_last"] = bool(
+        _may_fire(same, baseline) and new_hashes and _worth_firing(observed, row["late_rug"], same, dc))
+    if new_hashes:
+        row["_new_sell"] = new_hashes[-1]
     return _no_stake(row, stake)
 
 
 def trigger_for(row):
-    """One dev_sell trigger when this row's sell picture changed. None otherwise. Metrics are short tags and numbers."""
+    """One dev_sell trigger when this row's sell picture changed. The key is the token plus the new sell tx."""
     if not row.get("changed_since_last"):
         return None
     sold = float(row.get("dev_sold_ada") or 0)
@@ -526,14 +695,17 @@ def trigger_for(row):
         return None
     if sold == 0 and not late:
         return None
+    unit = row.get("unit") or ""
+    if not unit:
+        return None
     metrics = {k: row.get(k) for k in
                ("dev_tag", "dev_sold_ada", "dev_sold_after_min", "holders_at_sell", "late_rug", "risk", "changed_since_last")}
     F.assert_public(metrics)
     tag = metrics.get("dev_tag")
     if tag is not None and len(tag) > 12:
         raise SystemExit("dev_checks: refusing a dev_tag that is not a short tag")
-    return {"key": f"devsell:{row['ticker']}:{sold:.2f}:{1 if late else 0}", "kind": "dev_sell",
-            "name": row["ticker"], "metrics": metrics}
+    h = (row.get("_new_sell") or "")[:16]
+    return {"key": f"devsell:{unit}:{h}", "kind": "dev_sell", "name": row["ticker"], "metrics": metrics}
 
 
 def _guard(doc):
@@ -555,23 +727,77 @@ def _basis(koios_calls, bf_calls):
     return "koios"
 
 
-def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s, bf_key=None, baseline=False):
+def dev_deadline(budget_s, t_start, now):
+    """Wall-clock end for dev checks: min(now + budget, run start + 600s). A past `now_s` is not the clock."""
+    start = float(now) if t_start is None else float(t_start)
+    return min(float(now) + max(0.0, float(budget_s)), start + 600.0)
+
+
+def _patterns(owner_env):
+    """Compiled PRIVACY_GUARD_PATTERNS, or None when missing or unusable (fail closed). Never prints a pattern."""
+    import big_moves as BM
+    if owner_env is None:
+        owner_env = os.environ.get("PRIVACY_GUARD_PATTERNS", "")
+    pats, bad = BM.owner_patterns(owner_env)
+    if bad or not pats:
+        print(f"dev_checks: skipped: owner patterns unusable ({bad} bad, {len(pats)} usable)", file=sys.stderr)
+        return None
+    return pats
+
+
+def _hidden(pats, *vals):
+    for v in vals:
+        if not v or not pats:
+            continue
+        if any(p.search(v) for p in pats):
+            return True
+    return False
+
+
+def _note_sells(cache, unit, observed):
+    """Union sell-tx hashes into the private cache. Returns hashes not stored before this read."""
+    prev = [h for h in ((cache.get("sells") or {}).get(unit) or []) if isinstance(h, str)]
+    seen = set(prev)
+    fresh = [h for h in (observed or []) if isinstance(h, str) and h not in seen]
+    cache.setdefault("sells", {})[unit] = (prev + fresh)[:2000]
+    return fresh
+
+
+def _quiet_owner(sc, item, pats):
+    """Drop a creator stake that matches an owner pattern. The stake is not cached and not printed."""
+    if not sc or not pats:
+        return sc
+    st = sc.get("stake")
+    addr = ((item.get("launch") or {}).get("launcherAddress") or "")
+    if st and _hidden(pats, st, addr):
+        sc["stake"] = None
+        if sc.get("stats"):
+            sc["stats"] = dict(sc["stats"], sell_hashes=[], sharp=False)
+    return sc
+
+
+def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s, bf_key=None, baseline=False,
+        t_start=None, owner_env=None):
     """Write dev_checks.json (unless dry_run). Returns (summary, triggers).
 
     `tracked` is a list of {ticker, unit, launch, mcap_ada, vol_h24_ada} for tracked Solada launches.
-    `launches` is the Solada payload already fetched this run (serial counts). Full stake keys are
-    written only to the private cache, and only when that directory is not the public data dir.
-    Does not set http.deadline. Raises nothing for a data gap: skipped names are listed in coverage.
+    `launches` is the Solada payload already fetched this run (serial counts). Full stake keys and sell-tx
+    hashes are written only to the private cache, and only when that directory is not the public data dir.
+    Does not set http.deadline. Rows are keyed by unit (policy + asset name). A Koios 429 sets
+    http.koios_pause_until and stops Koios inside this job; it does not trip the breaker.
     """
     dc = dc_cfg(cfg)
     if not dc.get("enabled", True):
         return {"enabled": False}, []
+    pats = _patterns(owner_env)
+    if pats is None:
+        return {"skipped": "owner patterns unusable", "wrote": False}, []
     if bf_key is None:
         bf_key = os.environ.get("BLOCKFROST_PROJECT_ID", "")
     ex = F.excluded_tags((cfg or {}).get("flags"))
     path = os.path.join(data_dir, "dev_checks.json")
     prev_doc = KT.read_json(path, {})
-    prev_rows = {r.get("ticker"): r for r in (prev_doc.get("entries") or []) if isinstance(r, dict) and r.get("ticker")}
+    prev_rows = {r.get("unit"): r for r in (prev_doc.get("entries") or []) if isinstance(r, dict) and r.get("unit")}
     if not launches:
         # an empty payload is a fetch failure (prefilter already logged it); do not wipe a good file or seed a baseline
         return {"skipped": "launches unavailable", "wrote": False, "entries": len(prev_rows)}, []
@@ -589,57 +815,67 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
         rows_in = rows_in[k:] + rows_in[:k]
         cache["rot"] = int(cache.get("rot") or 0) + 1
     # Wall clock, not the asof timestamp: a historical now_s must not make the budget look already spent.
-    deadline = __import__("time").time() + float(dc["budget_s"])
-    chain = DevChain(http, dc, bf_key, deadline)
-    limit = max(0, int(dc["max_launches"]))
-    scans, stop = {}, None
-    for item in rows_in[:limit]:
-        stop = chain.stop_reason()
-        if stop:
-            break
-        item = dict(item, watch=watch)
-        try:
-            scans[item["unit"]] = _scan(chain, item, ex, dc)
-        except Exception as e:  # one bad launch must not drop the rest or the webhook
-            print(f"dev_checks: {item.get('ticker')} skipped ({type(e).__name__})", file=sys.stderr)
-            scans[item["unit"]] = {"stake": _launcher_stake(item.get("launch"), ex), "skipped": "error",
-                                   "complete": False, "txs_read": 0, "unread_txs": 0, "saw_newest": False,
-                                   "last_tx_s": None, "stats": None}
-        sc = scans[item["unit"]]
-        _remember(cache, item["unit"], sc.get("stake"), (item.get("launch") or {}).get("liveAtMs"),
-                  (sc.get("stats") or {}).get("late_rug") if sc.get("complete") else None, sc.get("complete"))
-    # priors: other recent launches by a dev we already identified, only with calls left
-    scanned_units = set(scans)
-    stakes = {sc.get("stake") for sc in scans.values() if sc.get("stake")}
-    priors = []
-    for l in launches:
-        st = _launcher_stake(l, ex)
-        unit = (l.get("policyId") or "") + (l.get("assetName") or "")
-        if not st or st not in stakes or not unit or unit in scanned_units:
-            continue
-        live = l.get("liveAtMs")
-        if not live or (float(now_s) * 1000 - float(live)) > float(dc["serial_7d_h"]) * 3_600_000:
-            continue
-        known = cache["units"].get(unit) or {}
-        if known.get("complete") and known.get("stake") == st and known.get("late_rug") is not None:
-            continue
-        priors.append({"ticker": l.get("ticker") or unit[:8], "unit": unit, "launch": l, "watch": watch,
-                       "mcap_ada": None, "vol_h24_ada": None})
-    prior_done = 0
-    if chain.stop_reason() is None:
-        for item in priors[:int(dc["max_prior"])]:
-            if chain.stop_reason():
+    # Capped at run start + 600s so a long rules screen cannot hand this job the rest of the process.
+    wall = time.time()
+    deadline = dev_deadline(dc["budget_s"], t_start, wall)
+    http.dev_checks = True
+    try:
+        chain = DevChain(http, dc, bf_key, deadline)
+        limit = max(0, int(dc["max_launches"]))
+        scans, stop = {}, None
+        for item in rows_in[:limit]:
+            stop = chain.stop_reason()
+            if stop:
                 break
+            item = dict(item, watch=watch)
             try:
-                sc = _scan(chain, item, ex, dc)
-            except Exception as e:
-                print(f"dev_checks: prior {item.get('ticker')} skipped ({type(e).__name__})", file=sys.stderr)
-                continue
-            prior_done += 1
-            scanned_units.add(item["unit"])
+                scans[item["unit"]] = _scan(chain, item, ex, dc)
+            except Exception as e:  # one bad launch must not drop the rest or the webhook
+                print(f"dev_checks: {item.get('ticker')} skipped ({type(e).__name__})", file=sys.stderr)
+                scans[item["unit"]] = {"stake": _launcher_stake(item.get("launch"), ex), "skipped": "error",
+                                       "complete": False, "txs_read": 0, "unread_txs": 0, "saw_newest": False,
+                                       "last_tx_s": None, "stats": None}
+            sc = _quiet_owner(scans[item["unit"]], item, pats)
+            scans[item["unit"]] = sc
             _remember(cache, item["unit"], sc.get("stake"), (item.get("launch") or {}).get("liveAtMs"),
                       (sc.get("stats") or {}).get("late_rug") if sc.get("complete") else None, sc.get("complete"))
-    prior_unchecked = max(0, len(priors) - prior_done)
+        # priors: other recent launches by a dev we already identified, only with calls left
+        scanned_units = set(scans)
+        stakes = {sc.get("stake") for sc in scans.values() if sc.get("stake")}
+        priors = []
+        for l in launches:
+            st = _launcher_stake(l, ex)
+            if st and _hidden(pats, st, l.get("launcherAddress") or ""):
+                st = None
+            unit = (l.get("policyId") or "") + (l.get("assetName") or "")
+            if not st or st not in stakes or not unit or unit in scanned_units:
+                continue
+            live = l.get("liveAtMs")
+            if not live or (float(now_s) * 1000 - float(live)) > float(dc["serial_7d_h"]) * 3_600_000:
+                continue
+            known = cache["units"].get(unit) or {}
+            if known.get("complete") and known.get("stake") == st and known.get("late_rug") is not None:
+                continue
+            priors.append({"ticker": l.get("ticker") or unit[:8], "unit": unit, "launch": l, "watch": watch,
+                           "mcap_ada": None, "vol_h24_ada": None})
+        prior_done = 0
+        if chain.stop_reason() is None:
+            for item in priors[:int(dc["max_prior"])]:
+                if chain.stop_reason():
+                    break
+                try:
+                    sc = _scan(chain, item, ex, dc)
+                except Exception as e:
+                    print(f"dev_checks: prior {item.get('ticker')} skipped ({type(e).__name__})", file=sys.stderr)
+                    continue
+                prior_done += 1
+                scanned_units.add(item["unit"])
+                sc = _quiet_owner(sc, item, pats)
+                _remember(cache, item["unit"], sc.get("stake"), (item.get("launch") or {}).get("liveAtMs"),
+                          (sc.get("stats") or {}).get("late_rug") if sc.get("complete") else None, sc.get("complete"))
+        prior_unchecked = max(0, len(priors) - prior_done)
+    finally:
+        http.dev_checks = False
     now_ms = float(now_s) * 1000
     # entries follow tracker order (ticker), not the rotated scan order
     by_unit = {r["unit"]: r for r in (tracked or []) if isinstance(r, dict) and r.get("unit")}
@@ -650,10 +886,13 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
         if sc is None:
             why = stop or ("budget" if item["unit"] not in {r["unit"] for r in rows_in[:limit]} else chain.stop_reason() or "budget")
             sc = {"stake": _launcher_stake(item.get("launch"), ex), "skipped": why, "stats": None}
-        prev = prev_rows.get(item.get("ticker"))
-        row = _entry(item, sc, prev, cache, launches, dc, now_s, now_ms, baseline)
+        prev = prev_rows.get(item.get("unit"))
+        observed = ((sc.get("stats") or {}).get("sell_hashes") if sc.get("stats") else None)
+        fresh = _note_sells(cache, item["unit"], observed) if sc.get("stats") is not None and sc.get("stake") else []
+        row = _entry(item, sc, prev, cache, launches, dc, now_s, now_ms, baseline, fresh)
         entries.append(row)
         trig = trigger_for(row)
+        row.pop("_new_sell", None)
         if trig is not None:
             triggers.append(trig)
     koios_calls = http.calls.get("koios", 0) - chain.start
