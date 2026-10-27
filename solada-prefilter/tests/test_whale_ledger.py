@@ -1,5 +1,5 @@
 """SPD-44 founder whale ledger (offline, no secrets, no network). Fake addresses come from labels."""
-import shutil, hashlib, json, os, subprocess, sys, tempfile, unittest
+import re, shutil, hashlib, json, os, subprocess, sys, tempfile, unittest
 from unittest import mock
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -47,6 +47,11 @@ def tx(t):
     return {"hash": full(t["hash"]), "time": t["time"], "inputs": side(t["in"], False), "outputs": side(t["out"], True)}
 
 
+def wc():
+    """Ledger config with a loaded (dummy) owner pattern: counterparty tags are only emitted when owner patterns load."""
+    return dict(WL.wl_cfg(), _owner_pats=[re.compile("^zzOWNERzz$")])
+
+
 def datum(spec):
     """Fixture datum text: 'datum-refs:<hash4>#<i>+whale' -> json naming that full tx hash and the whale's stake cred."""
     body = spec.split(":", 1)[1]
@@ -63,7 +68,7 @@ def fresh():
 def replay(ledger=None, txs=None):
     led = ledger or fresh()
     for t in txs or FX["txs"]:
-        WL.apply(led, tx(t), STAKE, V.lp_policies(), WL.wl_cfg())
+        WL.apply(led, tx(t), STAKE, V.lp_policies(), wc())
     return led
 
 
@@ -72,20 +77,19 @@ def by_tx(led, h):
 
 
 class Orders(unittest.TestCase):
-    def test_cock_order_open_then_replaced_not_filled(self):
-        # review S8 / Snek (a): the real Oct 26 11:59 AM ET case. 6c16 spends the order and puts the same 1M COCK in a
-        # new vault output whose datum names the old order and the whale -> replaced (still open), not a 930 ADA fill
+    def test_cock_order_open_then_moved_not_filled(self):
+        # Snek (a) + re-review S8: the real Oct 26 11:59 AM ET case. 6c16 spends the order WITHOUT a whale key input
+        # (batcher/protocol-built) and puts the same 1M COCK in a new vault output whose datum names the old order and
+        # the whale -> order_moved (still open at the new ref, 930.3 ADA paid), not a 930 ADA fill
         led = replay()
         o = by_tx(led, "c8c1")
         self.assertEqual([(r["kind"], r["token"], r["qty"], r["ada_leg"]) for r in o], [("order_open", "COCK", 1000000, 4.3)])
         f = by_tx(led, "6c16")
-        self.assertEqual([(r["kind"], r["token"], r.get("order_status")) for r in f],
-                         [("order_cancel", "COCK", "replaced"), ("order_open", "COCK", "open"), ("transfer_in", "ADA", None)])
-        self.assertEqual((f[2]["ada_leg"], f[2]["via"]), (930.3, "script"))
+        self.assertEqual([(r["kind"], r["token"], r["order_status"], r["paid_ada"]) for r in f], [("order_moved", "COCK", "moved", 930.3)])
         od = [x for x in led["orders"].values() if x["opened_tx"] == full("c8c1")[:10]][0]
-        self.assertEqual(od["status"], "replaced")
-        new = [x for x in led["orders"].values() if x.get("replaces") == od["ref_short"]][0]
-        self.assertEqual((new["status"], new["qty_raw"], od["replaced_by"]), ("open", 1000000, new["ref_short"]))
+        self.assertEqual(od["status"], "moved")
+        new = [x for x in led["orders"].values() if x.get("moved_from") == od["ref_short"]][0]
+        self.assertEqual((new["status"], new["qty_raw"], od["moved_to"]), ("open", 1000000, new["ref_short"]))
 
     def test_cancel_returns_token(self):
         led = replay()
@@ -122,7 +126,7 @@ class Transfers(unittest.TestCase):
                         {"ref": "x#1", "addr": addr("pool"), "stake": None, "lovelace": 10**10, "assets": {}}],
              "outputs": [{"ref": "y#0", "addr": addr("whale"), "stake": STAKE, "lovelace": 2000000, "assets": {lp: 77}},
                          {"ref": "y#1", "addr": addr("pool"), "stake": None, "lovelace": 10**10 + 98000000, "assets": {UNITS["COCK"]: 500}}]}
-        rows = WL.apply(led, t, STAKE, V.lp_policies(), WL.wl_cfg())
+        rows = WL.apply(led, t, STAKE, V.lp_policies(), wc())
         self.assertEqual([(r["kind"], r["token"], r["qty"]) for r in rows], [("lp_add", "LP:minswap_v2", 77)])
 
 
@@ -167,10 +171,10 @@ class Idempotent(unittest.TestCase):
         with mock.patch.object(WL, "KoiosLedger", K), tempfile.TemporaryDirectory() as d:
             http = P.Http({"koios": 0})
             with mock.patch.object(K, "balances", lambda self, s: (0, {})):
-                base = WL.run(http, cfg, d, False, 1793050000, V.lp_policies())  # baseline: seed, no rows
-            r1 = WL.run(http, cfg, d, False, 1793050000, V.lp_policies())
+                base = WL.run(http, cfg, d, False, 1793050000, V.lp_policies(), cache_dir=os.path.join(d, "c"))  # baseline: seed, no rows
+            r1 = WL.run(http, cfg, d, False, 1793050000, V.lp_policies(), cache_dir=os.path.join(d, "c"))
             doc1 = json.load(open(os.path.join(d, "whale_ledger.json")))
-            r2 = WL.run(http, cfg, d, False, 1793053600, V.lp_policies())  # overlap: height-1 is re-read
+            r2 = WL.run(http, cfg, d, False, 1793053600, V.lp_policies(), cache_dir=os.path.join(d, "c"))  # overlap: height-1 is re-read
             doc2 = json.load(open(os.path.join(d, "whale_ledger.json")))
         self.assertEqual(base["rows"], 0)
         self.assertEqual(r1["rows"], r2["rows"])

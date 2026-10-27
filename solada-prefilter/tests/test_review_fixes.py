@@ -16,7 +16,7 @@ from test_whale_ledger import STAKE, UNITS, addr, full, fresh, kh  # noqa: E402
 from test_whale_ledger_fallback import bf_shape  # noqa: E402
 
 LP = V.lp_policies()
-WC = WL.wl_cfg()
+WC = dict(WL.wl_cfg(), _owner_pats=[__import__('re').compile('^zzOWNERzz$')])
 TOK = "bb" * 28 + b"TOK".hex()
 TOK2 = "ab" * 28 + b"TWO".hex()
 NOW = "2026-10-26T20:07:00Z"
@@ -74,6 +74,7 @@ class M1ResearchCannotStopWebhook(unittest.TestCase):
 class HttpBreakerAndDeadline(unittest.TestCase):
     def test_koios_trips_after_failures_and_skips_network(self):
         http = P.Http({})
+        http.deadline = time.time() + 100  # breaker is armed only in the research window
         for _ in range(3):
             http._fail("koios", "x")
         with mock.patch("urllib.request.urlopen", side_effect=AssertionError("network")):
@@ -84,6 +85,7 @@ class HttpBreakerAndDeadline(unittest.TestCase):
     def test_koios_429_trips_at_once(self):
         import urllib.error
         http = P.Http({"koios": 0})
+        http.deadline = time.time() + 100
         err = urllib.error.HTTPError("u", 429, "busy", {}, None)
         with mock.patch("urllib.request.urlopen", side_effect=err) as m:
             self.assertIsNone(http.req("koios", "https://api.koios.rest/api/v1/tip"))
@@ -311,7 +313,7 @@ class WhaleLedger(unittest.TestCase):
         for k, v in kw.items():
             setattr(FakeKL, k, v)
         with mock.patch.object(WL, "KoiosLedger", FakeKL):
-            return WL.run(P.Http({}), CFG, d, False, 1793050000, LP)
+            return WL.run(P.Http({}), CFG, d, False, 1793050000, LP, cache_dir=os.path.join(d, "c"))
 
     def tearDown(self):
         FakeKL.txs, FakeKL.tips, FakeKL.bal, FakeKL.spent_map = [], [99], (0, {}), {}
@@ -319,7 +321,7 @@ class WhaleLedger(unittest.TestCase):
     def test_m3_baseline_seeds_seen_so_the_tip_tx_is_not_reapplied(self):
         with tempfile.TemporaryDirectory() as d:
             self.go(d, txs=[TIP_TX], tips=[99], bal=(50_000_000, {}))
-            st = json.load(open(os.path.join(d, "whale_ledger_state.json")))
+            st = json.load(open(os.path.join(d, "c", "whale-ledger-state.json")))
             r = self.go(d, txs=[TIP_TX, NEW_TX], bal=(100_000_000, {}))
             doc = json.load(open(os.path.join(d, "whale_ledger.json")))
         self.assertIn(TIP_TX[0], st["seen"])
@@ -348,7 +350,7 @@ class WhaleLedger(unittest.TestCase):
         led = dict(fresh(), height=99, baseline_height=99,
                    orders={"o#0": {"ref_short": "o#0", "unit": "lovelace", "token": "ADA", "qty_raw": 1, "ada": 1, "status": "open"}})
         with tempfile.TemporaryDirectory() as d:
-            json.dump(led, open(os.path.join(d, "whale_ledger_state.json"), "w"))
+            os.makedirs(os.path.join(d, "c")); json.dump(led, open(os.path.join(d, "c", "whale-ledger-state.json"), "w"))
             r = self.go(d, txs=None, spent_map={"o#0": True}, bal=(10**12, {}))
             doc = json.load(open(os.path.join(d, "whale_ledger.json")))
         self.assertTrue(r["stale"] and doc["capped"])

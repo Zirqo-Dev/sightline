@@ -119,24 +119,24 @@ class FlagChain:
         return t[:n]
 
     def tx_utxos(self, hashes):
-        """{tx_hash: {'inputs': [(addr, lovelace, {unit: qty})], 'outputs': [...]}}. One Koios call per batch,
-        clamped to the public tier's 1 KB body limit (25 hashes = 1,716 B = HTTP 413; 14 fit)."""
+        """{tx_hash: {'inputs': [(addr, lovelace, {unit: qty})], 'outputs': [...]}}. Koios /tx_info (re-review 8: not the
+        deprecated /tx_utxos; spend inputs only, collateral/reference excluded; 404s logged), batches under 1 KB.
+        Blockfrost per-tx fallback skips collateral / reference inputs and collateral outputs too."""
         out = {}
-        for body in KT.batches(hashes, "_tx_hashes", 25):
+        for body in KT.batches(hashes, "_tx_hashes", 25, KT.TX_INFO_FLAGS):
             chunk = body["_tx_hashes"]
-            r = self.h.req("koios", f"{KOIOS}/tx_utxos", method="POST", body=body)
-            if r is None and self.bf_key:  # per-tx Blockfrost fallback
+            got = KT.tx_info(self.h, chunk, len(chunk))
+            if not got and self.bf_key:  # per-tx Blockfrost fallback
                 for hsh in chunk:
-                    x = self.h.req("blockfrost", f"{BF}/txs/{hsh}/utxos", headers={"project_id": self.bf_key})
+                    x = self.h.req("blockfrost", f"{BF}/txs/{hsh}/utxos", headers={"project_id": self.bf_key}, quiet404=False)
                     if x:
                         out[hsh] = {s: [(u["address"], int(next((a["quantity"] for a in u["amount"] if a["unit"] == "lovelace"), 0)),
-                                         {a["unit"]: int(a["quantity"]) for a in u["amount"] if a["unit"] != "lovelace"}) for u in x.get(s, [])]
+                                         {a["unit"]: int(a["quantity"]) for a in u["amount"] if a["unit"] != "lovelace"})
+                                        for u in x.get(s, []) if not u.get("collateral") and not u.get("reference")]
                                     for s in ("inputs", "outputs")}
                 continue
-            for tx in r or []:
-                out[tx["tx_hash"]] = {s: [(u.get("payment_addr", {}).get("bech32") or "", int(u.get("value") or 0),
-                                           {a["policy_id"] + a["asset_name"]: int(a["quantity"]) for a in (u.get("asset_list") or [])})
-                                          for u in tx.get(s, [])] for s in ("inputs", "outputs")}
+            for h, tx in got.items():
+                out[h] = {s: [(x["addr"], x["lovelace"], x["assets"]) for x in tx[s]] for s in ("inputs", "outputs")}
         return out
 
     def first_tx_height(self, stake):
@@ -311,7 +311,13 @@ def holder_concentration(dist, cfg):
         return None
     top = max(by_stake.items(), key=lambda x: x[1])
     return {"top_addr_pct": round(100 * top_addr / tot, 1), "top_cluster_pct": round(100 * top[1] / tot, 1),
-            "top_cluster": tag(top[0])}
+            "top_cluster": tag(top[0]), "basis": conc_basis(ex)}
+
+
+def conc_basis(ex):
+    """Identifies the exclusion set a concentration share was computed on, so a jump is only measured
+    between snapshots on the same basis (adding a reserve to exclude_tags must not read as a jump)."""
+    return "all" if not ex else "ex-" + hashlib.sha256(",".join(sorted(ex)).encode()).hexdigest()[:6]
 
 
 def metric_flags(ticker, cur, prev, cfg):
@@ -334,7 +340,8 @@ def metric_flags(ticker, cur, prev, cfg):
     c0, c1 = (prev.get("conc") or {}), (cur.get("conc") or {})
     if c1.get("top_cluster_pct", 0) >= cfg["top_cluster_pct"]:
         f.append({"kind": "holder_concentration", "ticker": ticker, **c1})
-    if c0 and c1 and c1["top_cluster_pct"] - c0.get("top_cluster_pct", 0) >= cfg["concentration_jump_pts"]:
+    same_basis = c0.get("basis", "all") == c1.get("basis", "all")
+    if c0 and c1 and same_basis and c1["top_cluster_pct"] - c0.get("top_cluster_pct", 0) >= cfg["concentration_jump_pts"]:
         f.append({"kind": "concentration_jump", "ticker": ticker, "from": c0.get("top_cluster_pct"), "to": c1["top_cluster_pct"]})
     return f
 

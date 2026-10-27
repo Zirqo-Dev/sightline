@@ -5,7 +5,7 @@
 - Batches are clamped so every POST body stays under the public tier's 1 KB limit (a 1,716 B body = HTTP 413).
 - 404s are not silent (quiet404=False): a missing endpoint shows up in the data-failure log.
 """
-import json, os
+import json, os, tempfile
 
 KOIOS = "https://api.koios.rest/api/v1"
 BODY_MAX = 1000  # public tier rejects bodies over 1 KB
@@ -56,15 +56,34 @@ def tx_info(http, hashes, n, budget_ok=lambda: True):
     return out
 
 
+TMP_TAG = ".tmp-"
+
+
 def write_json(path, obj, **kw):
-    """Atomic write: temp file in the same directory, then os.replace."""
-    d = os.path.dirname(path)
-    if d:
-        os.makedirs(d, exist_ok=True)
-    tmp = f"{path}.tmp-{os.getpid()}"
-    with open(tmp, "w") as f:
-        json.dump(obj, f, **kw)
-    os.replace(tmp, path)
+    """Atomic write: temp file in the same directory, then os.replace. A killed write leaves `<name>.tmp-*`, which
+    clean_tmp() removes at the start of the next run (so `git add -A` never commits one)."""
+    d = os.path.dirname(path) or "."
+    os.makedirs(d, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=d, prefix=os.path.basename(path) + TMP_TAG)
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(obj, f, **kw)
+        os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
+
+
+def clean_tmp(d):
+    """Remove leftover temp files of our own atomic writes (`*.json.tmp-*`) in d. Touches nothing else."""
+    n = 0
+    if d and os.path.isdir(d):
+        for f in os.listdir(d):
+            if ".json" + TMP_TAG in f:
+                os.remove(os.path.join(d, f))
+                n += 1
+    return n
 
 
 def read_json(path, default):

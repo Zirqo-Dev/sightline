@@ -28,7 +28,7 @@ import valuation as V
 KOIOS = "https://api.koios.rest/api/v1"
 BLOCKS_PER_HOUR = 180  # ~20 s blocks
 DEFAULTS = {"enabled": True, "min_ada": 5000, "min_pool_pct": 10, "window_h": 24, "keep_h": 72,
-            "max_units": 12, "max_txs_per_unit": 100, "utxo_batch": 10, "max_calls": 80}
+            "max_units": 12, "max_txs_per_unit": 100, "max_pages_per_unit": 4, "utxo_batch": 10, "max_calls": 80}
 
 
 def bm_cfg(cfg=None):
@@ -50,7 +50,9 @@ def iso(ts):
     return datetime.fromtimestamp(int(ts), timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-_POSIX = re.compile(r"\[\[:[a-z]+:\]\]|\[:[a-z]+:\]")
+# POSIX classes ([[:alnum:]]) and GNU word boundaries (\< \>) compile in Python but mean something else / never
+# match there, so the owner exclusion would fail open: treat them as unusable (re-review nice-to-have)
+_POSIX = re.compile(r"\[\[:[a-z]+:\]\]|\[:[a-z]+:\]|\\[<>]")
 
 
 def owner_patterns(env_text):
@@ -196,10 +198,10 @@ class KoiosMoves:
         r = self.h.req("koios", KOIOS + "/tip", quiet404=False)
         return (r[0]["block_height"], r[0]["block_time"]) if r else (None, None)
 
-    def asset_txs(self, unit, after, desc=False):
+    def asset_txs(self, unit, after, desc=False, offset=0):
         r = self.h.req("koios", f"{KOIOS}/asset_txs?_asset_policy={unit[:56]}&_asset_name={unit[56:]}"
                        f"&_after_block_height={after}&_history=true&order=block_height.{'desc' if desc else 'asc'}"
-                       f"&limit={self.bc['max_txs_per_unit']}", quiet404=False)
+                       f"&limit={self.bc['max_txs_per_unit']}&offset={int(offset)}", quiet404=False)
         if r is None:
             return None
         return sorted(((x["tx_hash"], x["block_height"], x.get("block_time")) for x in r), key=lambda t: t[1])
@@ -237,18 +239,37 @@ def run(http, cfg, meta, cache_dir, data_dir, dry_run, now_s, lp_pols, excluded,
     stats = {"units": len(units), "txs": 0, "capped": []}
     was_capped = set(cache["capped"])
     now_capped = []
+    coverage = {}
+    lim = bc["max_txs_per_unit"]
     for u in units:
+        tk = meta[u].get("ticker")
         if tip_h is None or km.budget_left() <= 1 or (deadline and __import__("time").time() >= deadline):
-            stats["capped"].append(meta[u].get("ticker"))
+            stats["capped"].append(tk)
             now_capped.append(u) if u in was_capped else None
+            coverage[tk] = {"read": 0, "complete": False, "skipped": "budget/deadline"}
             continue
         after = max(cache["height"].get(u, 0), tip_h - bc["window_h"] * BLOCKS_PER_HOUR)
-        desc = u in was_capped  # busy token: read newest-first back to the cached height so it catches up (S3)
-        txs = km.asset_txs(u, after, desc=desc)
-        if txs is None:
+        desc = u in was_capped  # busy token: read newest-first, paging back toward the cached height (S3)
+        txs, pages, complete = [], 0, False
+        while True:
+            page = km.asset_txs(u, after, desc=desc, offset=pages * lim)
+            if page is None:
+                break
+            txs += page
+            pages += 1
+            if len(page) < lim:
+                complete = True
+                break
+            # asc: one page per run (resumes next run); desc: keep paging back while the budget allows
+            if not desc or km.budget_left() <= 2 + (lim + bc["utxo_batch"] - 1) // bc["utxo_batch"] or \
+                    pages >= bc["max_pages_per_unit"] or (deadline and __import__("time").time() >= deadline):
+                break
+        if not txs and not complete:
+            coverage[tk] = {"read": 0, "complete": False, "skipped": "koios"}
             continue
+        txs = sorted({t[0]: t for t in txs}.values(), key=lambda t: t[1])
         ut = km.tx_utxos([t[0] for t in txs])
-        done_h = after
+        done_h, read = after, 0
         for hsh, hgt, bt in txs:
             if hsh not in ut:
                 if desc:
@@ -258,12 +279,18 @@ def run(http, cfg, meta, cache_dir, data_dir, dry_run, now_s, lp_pols, excluded,
                                  for l in legs_from_tx(u, hsh, bt, ut[hsh], lp_pols, excluded, meta.get(u), ex_tags))
             done_h = max(done_h, hgt)
             stats["txs"] += 1
-        full = len(txs) >= bc["max_txs_per_unit"]
-        if full or any(t[0] not in ut for t in txs):
-            stats["capped"].append(meta[u].get("ticker"))
+            read += 1
+        unread = sum(1 for t in txs if t[0] not in ut)
+        cov = {"read": read, "complete": complete and not unread, "pages": pages}
+        if not cov["complete"]:
+            stats["capped"].append(tk)
             now_capped.append(u)
-            # asc: partial blocks are re-read next run (deduped). desc: newest window read; the middle gap is skipped
+            if desc and txs:  # the block range below the oldest tx read was not reached this run: say how big it is
+                cov["gap_blocks"] = max(0, txs[0][1] - after - 1)
+            cov["unread_txs"] = unread
+            # asc: partial blocks are re-read next run (deduped). desc: newest pages read; the gap is reported
             done_h = max(after, done_h - 1)
+        coverage[tk] = cov
         cache["height"][u] = done_h
     cache["capped"] = now_capped
     seen, legs = set(), []
@@ -283,7 +310,7 @@ def run(http, cfg, meta, cache_dir, data_dir, dry_run, now_s, lp_pols, excluded,
         "thresholds": {"min_ada": bc["min_ada"], "min_pool_pct": bc["min_pool_pct"]},
         "note": "Research data for Snek. next_hop is phase 2 (null). ada = the mover's net ADA when it is the only token "
                 "against ADA in the tx (ada_basis tx), else qty x price (ada_basis price). LP = liquidity token.",
-        "moves": moves, "units_scanned": stats["units"], "txs_read": stats["txs"], "capped": stats["capped"],
+        "moves": moves, "units_scanned": stats["units"], "txs_read": stats["txs"], "capped": stats["capped"], "coverage": coverage,
         "koios_calls": http.calls.get("koios", 0) - km.start,
     })
     if not dry_run:
