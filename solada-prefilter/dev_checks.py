@@ -256,8 +256,8 @@ def serial_counts(launches, stake, now_ms, dc, this_unit=None):
     Includes this launch. A mint-found dev (launcherAddress has no stake) still counts `this_unit`.
     Launches with no liveAtMs are not counted. Other launches with no creator stake are not counted.
     """
-    if not stake:
-        return None, None
+    if not stake or launches is None:
+        return None, None  # no board: do not report serial 0 (that would read as "this dev launched nothing else")
     n3 = n7 = 0
     h3, h7 = float(dc["serial_3h_h"]) * 3_600_000, float(dc["serial_7d_h"]) * 3_600_000
     for l in launches or []:
@@ -614,21 +614,29 @@ def _launcher_stake(launch, ex):
     return stake
 
 
-def _remember(cache, unit, stake, live_ms, late, complete):
+def _remember(cache, unit, stake, live_ms, late, complete, ticker=None):
     if not stake:
         return
     prev = (cache.get("units") or {}).get(unit) or {}
-    cache.setdefault("units", {})[unit] = {
+    row = {
         "stake": stake, "live_at_ms": live_ms if live_ms is not None else prev.get("live_at_ms"),
         "late_rug": late if late is not None else prev.get("late_rug"),
         "complete": bool(complete) or bool(prev.get("complete")),
     }
+    name = ticker or prev.get("ticker")
+    if name:
+        row["ticker"] = str(name).upper()
+    cache.setdefault("units", {})[unit] = row
 
 
 def _scan(chain, item, ex, dc):
     """Read one unit. Stake keys stay in the returned dict for the caller; they are not a public field."""
     launch, unit = item.get("launch") or {}, item.get("unit") or ""
     stake = _launcher_stake(launch, ex)
+    if not stake:
+        ks = item.get("known_stake")
+        if isinstance(ks, str) and ks and not _hit(ks, "", ex):
+            stake = ks
     base = {"stake": stake, "skipped": None, "complete": False, "txs_read": 0, "unread_txs": 0,
             "saw_newest": False, "last_tx_s": None, "stats": None}
     if not unit or len(unit) < 56:
@@ -891,8 +899,126 @@ def _quiet_owner(sc, item, pats, stakes):
     return sc
 
 
+def cardano_top10(log):
+    """Snek's Cardano top 10 from the desk log (current row, else the newest history row that has one)."""
+    if not isinstance(log, dict):
+        return []
+    rows = log.get("cardano_top10")
+    if isinstance(rows, list) and rows:
+        return [r for r in rows if isinstance(r, dict)][:10]
+    hist = log.get("history")
+    if isinstance(hist, list):
+        for h in reversed(hist):
+            if isinstance(h, dict) and isinstance(h.get("cardano_top10"), list) and h["cardano_top10"]:
+                return [r for r in h["cardano_top10"] if isinstance(r, dict)][:10]
+    return []
+
+
+def _row_for(ticker, unit, live_ms=None, mcap=None, known_stake=None):
+    if not ticker or not isinstance(unit, str) or len(unit) < 56:
+        return None
+    row = {"ticker": str(ticker).upper(), "unit": unit,
+           "launch": {"ticker": ticker, "policyId": unit[:56], "assetName": unit[56:], "liveAtMs": live_ms},
+           "mcap_ada": mcap if isinstance(mcap, (int, float)) and not isinstance(mcap, bool) else None,
+           "vol_h24_ada": None}
+    if isinstance(known_stake, str) and known_stake:
+        row["known_stake"] = known_stake  # private; never copied onto the public row
+    return row
+
+
+def _ticker_for_unit(unit, prev_rows, units_by_ticker, cached):
+    prev = (prev_rows or {}).get(unit) or {}
+    if isinstance(prev, dict) and prev.get("ticker"):
+        return str(prev["ticker"]).upper()
+    if isinstance(cached, dict) and cached.get("ticker"):
+        return str(cached["ticker"]).upper()
+    if isinstance(units_by_ticker, dict):
+        for tk, u in units_by_ticker.items():
+            if u == unit:
+                return str(tk).upper()
+    return None
+
+
+def _rows_from_cache(cache, prev_rows, units_by_ticker):
+    units = cache.get("units") if isinstance(cache.get("units"), dict) else {}
+    rows = []
+    for unit, info in units.items():
+        if not isinstance(info, dict):
+            continue
+        tk = _ticker_for_unit(unit, prev_rows, units_by_ticker, info)
+        prev = (prev_rows or {}).get(unit) or {}
+        row = _row_for(tk, unit, info.get("live_at_ms"), prev.get("ath_mcap") if isinstance(prev, dict) else None,
+                       info.get("stake"))
+        if row:
+            rows.append(row)
+    return rows
+
+
+def _rows_from_prev(prev_rows):
+    """Public rows already written. Used when the private cache is gone so the same units re-baseline."""
+    rows = []
+    for unit, prev in (prev_rows or {}).items():
+        if not isinstance(prev, dict):
+            continue
+        row = _row_for(prev.get("ticker"), unit, None, prev.get("ath_mcap"))
+        if row:
+            rows.append(row)
+    return rows
+
+
+def _rows_from_top10(top10, units_by_ticker, prev_rows):
+    if not isinstance(top10, list):
+        return []
+    ordered = sorted((r for r in top10 if isinstance(r, dict) and r.get("ticker")),
+                     key=lambda r: r.get("rank") if isinstance(r.get("rank"), (int, float)) and not isinstance(r.get("rank"), bool) else 99)
+    rev = {}
+    if isinstance(units_by_ticker, dict):
+        for tk, u in units_by_ticker.items():
+            if isinstance(u, str):
+                rev[str(tk).upper()] = u
+    rows, seen = [], set()
+    for r in ordered[:10]:
+        tk = str(r["ticker"]).upper()
+        short = r.get("policy_short") if isinstance(r.get("policy_short"), str) else ""
+        unit = rev.get(tk)
+        if unit is None:
+            for u, prev in (prev_rows or {}).items():
+                if isinstance(prev, dict) and str(prev.get("ticker") or "").upper() == tk:
+                    unit = u
+                    break
+        if not isinstance(unit, str) or len(unit) < 56 or unit in seen:
+            continue
+        if short and not unit.startswith(short):
+            continue
+        seen.add(unit)
+        mcap = r.get("mcap_ada") if isinstance(r.get("mcap_ada"), (int, float)) and not isinstance(r.get("mcap_ada"), bool) else None
+        row = _row_for(tk, unit, None, mcap)
+        if row:
+            rows.append(row)
+    return rows
+
+
+def _fallback_rows(cache, prev_rows, top10, units_by_ticker):
+    """Units to check when the Solada board did not load.
+
+    Cached units first (they carry the creator stake). If that cache is gone, the units already
+    in dev_checks.json. If this job has never written one, Snek's top 10, resolved through
+    desk pulse / config asset ids. A policy_short that does not match the unit is skipped.
+    """
+    cached = _rows_from_cache(cache, prev_rows, units_by_ticker)
+    if cached:
+        return cached, "cache"
+    prev = _rows_from_prev(prev_rows)
+    if prev:
+        return prev, "previous"
+    top = _rows_from_top10(top10, units_by_ticker, prev_rows)
+    if top:
+        return top, "top10"
+    return [], None
+
+
 def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s, bf_key=None, baseline=False,
-        t_start=None, owner_env=None):
+        t_start=None, owner_env=None, top10=None, units_by_ticker=None):
     """Write dev_checks.json (unless dry_run). Returns (summary, triggers).
 
     `tracked` is a list of {ticker, unit, launch, mcap_ada, vol_h24_ada} for tracked Solada launches.
@@ -900,6 +1026,9 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
     hashes are written only to the private cache, and only when that directory is not the public data dir.
     Does not set http.deadline. Rows are keyed by unit (policy + asset name). A Koios 429 sets
     http.koios_pause_until and stops Koios inside this job; it does not trip the breaker.
+    When `launches` is empty the job still runs on cached units, the previous file, or Snek's top 10.
+    A missing sell cache re-baselines (no webhook). An empty board with none of those sources does not
+    wipe a good file.
     """
     dc = dc_cfg(cfg)
     if not dc.get("enabled", True):
@@ -914,9 +1043,6 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
     path = os.path.join(data_dir, "dev_checks.json")
     prev_doc = KT.read_json(path, {})
     prev_rows = {r.get("unit"): r for r in (prev_doc.get("entries") or []) if isinstance(r, dict) and r.get("unit")}
-    if not launches:
-        # an empty payload is a fetch failure (prefilter already logged it); do not wipe a good file or seed a baseline
-        return {"skipped": "launches unavailable", "wrote": False, "entries": len(prev_rows)}, []
     cpath = _private_cache(cache_dir, data_dir)
     cache = KT.read_json(cpath, {}) if cpath else {}
     if not isinstance(cache, dict):
@@ -924,6 +1050,14 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
     cache.setdefault("units", {})
     if not isinstance(cache["units"], dict):
         cache["units"] = {}
+    board, fallback = launches, None
+    if not launches:
+        # empty board is a fetch failure. Do not wipe the file, and do not treat the caller's
+        # (empty) tracked list as the board. Use units this job already knows, or Snek's top 10.
+        rows, fallback = _fallback_rows(cache, prev_rows, top10, units_by_ticker)
+        if not rows:
+            return {"skipped": "launches unavailable", "wrote": False, "entries": len(prev_rows)}, []
+        tracked, board = rows, None
     rows_in = [r for r in (tracked or []) if isinstance(r, dict) and r.get("ticker") and r.get("unit")]
     rows_in.sort(key=lambda r: r["ticker"])
     if len(rows_in) > 1:
@@ -954,12 +1088,13 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
             sc = _quiet_owner(scans[item["unit"]], item, pats, owner_stakes)
             scans[item["unit"]] = sc
             _remember(cache, item["unit"], sc.get("stake"), (item.get("launch") or {}).get("liveAtMs"),
-                      (sc.get("stats") or {}).get("late_rug") if sc.get("complete") else None, sc.get("complete"))
+                      (sc.get("stats") or {}).get("late_rug") if sc.get("complete") else None, sc.get("complete"),
+                      item.get("ticker"))
         # priors: other recent launches by a dev we already identified, only with calls left
         scanned_units = set(scans)
         stakes = {sc.get("stake") for sc in scans.values() if sc.get("stake")}
         priors = []
-        for l in launches:
+        for l in board or []:
             st = _launcher_stake(l, ex)
             if st and _hidden(pats, owner_stakes, st, l.get("launcherAddress") or ""):
                 st = None
@@ -988,7 +1123,8 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
                 scanned_units.add(item["unit"])
                 sc = _quiet_owner(sc, item, pats, owner_stakes)
                 _remember(cache, item["unit"], sc.get("stake"), (item.get("launch") or {}).get("liveAtMs"),
-                          (sc.get("stats") or {}).get("late_rug") if sc.get("complete") else None, sc.get("complete"))
+                          (sc.get("stats") or {}).get("late_rug") if sc.get("complete") else None, sc.get("complete"),
+                          item.get("ticker"))
         prior_unchecked = max(0, len(priors) - prior_done)
     finally:
         http.dev_checks = False
@@ -1009,7 +1145,7 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
                  if sc.get("stats") is not None and sc.get("stake") else [])
         by_hash = stats.get("sell_ada") or {}
         fresh_ada = round(sum(float(by_hash.get(h) or 0) for h in fresh), 2)
-        row = _entry(item, sc, prev, cache, launches, dc, now_s, now_ms, baseline, fresh, fresh_ada)
+        row = _entry(item, sc, prev, cache, board, dc, now_s, now_ms, baseline, fresh, fresh_ada)
         entries.append(row)
         trig = trigger_for(row)
         row.pop("_new_sell", None)
@@ -1039,4 +1175,6 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
                "complete": coverage["complete"], "prior_unchecked": prior_unchecked,
                "koios_calls": koios_calls, "blockfrost_calls": bf_calls, "blockfrost_fallbacks": chain.fallbacks,
                "basis": coverage["basis"], "wrote": not dry_run}
+    if fallback:
+        summary["fallback"] = fallback
     return summary, triggers

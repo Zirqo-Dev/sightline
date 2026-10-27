@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Solada pre-filter: zero-AI numeric screen for the Solada desk.
 
-Reads launches/market from solada.fun, pool depth from GeckoTerminal (DexScreener
-fallback), holders/flows from Blockfrost (Koios fallback), optional Solana holder
+Reads the Solada board from solada.fun (/api/coins; /api/launches and /api/market
+404 as of 2026-10-27), pool depth from GeckoTerminal (DexScreener fallback, then the
+coin's own curve or /api/solada/market for the platform token), holders/flows from
+Blockfrost (Koios fallback), optional Solana holder
 concentration via RPC. Applies thresholds parsed from solada/paper.json rules[]
 and ticket/log kill lines. POSTs a webhook on new triggers (deduped via state).
 
@@ -527,6 +529,165 @@ def _gt_pool(http, unit):
     return None
 
 
+def _num(v):
+    try:
+        if v is None or isinstance(v, bool):
+            return None
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def coin_to_launch(c):
+    """Map one /api/coins row onto the launch fields this job already reads.
+
+    The old /api/launches board is gone (404). Coins carry curve ADA, price, and
+    supply under different names. Curve addresses are not copied. launcherAddress
+    stays in memory for the dev-stake read and is never logged.
+    """
+    if not isinstance(c, dict) or c.get("hidden") or not c.get("id") or not c.get("ticker"):
+        return None
+    curve = c.get("curve") if isinstance(c.get("curve"), dict) else None
+    pool_doc = (curve or {}).get("pool") if isinstance((curve or {}).get("pool"), dict) else None
+    graduated = bool(curve and (curve.get("state") == "graduated" or pool_doc))
+    reserves = (curve or {}).get("reserves") if isinstance((curve or {}).get("reserves"), dict) else {}
+    out_curve = None
+    if curve is not None:
+        out_curve = {"graduated": graduated, "progressBps": curve.get("progressBps") or 0}
+        if not graduated:
+            ada = _num(curve.get("curveAda"))
+            if ada is not None:
+                out_curve["realLovelace"] = int(round(ada * 1e6))
+        price = _num(c.get("priceAda"))
+        if price is not None:
+            out_curve["priceAda"] = price
+        mcap = _num(c.get("marketCapAda"))
+        if mcap is not None:
+            out_curve["marketCapLovelace"] = int(round(mcap * 1e6))
+    launch = {
+        "id": c["id"], "ticker": c["ticker"],
+        "policyId": c.get("policyId") or "", "assetName": c.get("assetName") or "",
+        "liveAtMs": c.get("createdAtMs"), "launcherAddress": c.get("launcherAddress") or "",
+        "pumpMint": c.get("pumpMint"), "totalSupply": reserves.get("supply"),
+        "pool": {"dex": pool_doc.get("dex") or "graduated"} if graduated else None,
+        "curve": out_curve,
+        "priceAda": _num(c.get("priceAda")), "marketCapAda": _num(c.get("marketCapAda")),
+        "volume24hAda": _num(c.get("volume24hAda")), "holders": c.get("holders"),
+    }
+    return launch
+
+
+def market_from_coins(doc):
+    """adaUsd / atMs / per-id holders, in the old /api/market shape (adaUsdMicro, at, quotes)."""
+    if not isinstance(doc, dict):
+        return {}
+    ada = _num(doc.get("adaUsd"))
+    quotes = {}
+    for c in doc.get("coins") or []:
+        if isinstance(c, dict) and c.get("id"):
+            quotes[c["id"]] = {"holders": c.get("holders")}
+    at = doc.get("atMs") if doc.get("atMs") is not None else doc.get("at")
+    return {"adaUsdMicro": int(round(ada * 1_000_000)) if ada is not None else 0, "at": at, "quotes": quotes}
+
+
+def launches_from_payload(payload):
+    """A launch list, or None when this body is not a board.
+
+    Accepts the old list, a `{launches: [...]}` wrap, and `{coins: [...]}`.
+    """
+    if isinstance(payload, list):
+        return [x for x in payload if isinstance(x, dict) and x.get("id") and x.get("ticker")]
+    if isinstance(payload, dict) and isinstance(payload.get("launches"), list):
+        return launches_from_payload(payload["launches"])
+    if isinstance(payload, dict) and isinstance(payload.get("coins"), list):
+        return [x for x in (coin_to_launch(c) for c in payload["coins"]) if x]
+    return None
+
+
+def fetch_solada(http):
+    """(launches, market). /api/launches and /api/market 404; /api/coins is the board.
+
+    A 404 or an empty legacy list is not an empty board: the coins payload is tried next.
+    """
+    legacy = http.req("solada", SOLADA + "/launches")
+    rows = launches_from_payload(legacy)
+    if rows:
+        if isinstance(legacy, dict) and (legacy.get("adaUsd") is not None or legacy.get("coins")):
+            market = market_from_coins(legacy)
+        else:
+            raw = http.req("solada", SOLADA + "/market")
+            market = raw if isinstance(raw, dict) and not raw.get("coins") else {}
+        return rows, market, "launches"
+    doc = http.req("solada", SOLADA + "/coins")
+    rows = launches_from_payload(doc) or []
+    if rows:
+        return rows, market_from_coins(doc if isinstance(doc, dict) else {}), "coins"
+    return [], {}, "none"
+
+
+def solada_market_pool(http):
+    """Platform-token depth from /api/solada/market. That payload has no 24h volume.
+
+    GeckoTerminal 404s the SOLADA unit and DexScreener returns no Cardano pair, so this
+    is the read that still has ADA side, price, and mcap.
+    """
+    doc = http.req("solada", SOLADA + "/solada/market")
+    if not isinstance(doc, dict):
+        return None
+    liq, price, mcap, vol = _num(doc.get("liquidityAda")), _num(doc.get("priceAda")), _num(doc.get("marketCapAda")), _num(doc.get("volume24hAda"))
+    if liq is None and price is None and mcap is None:
+        return None
+    pool = {"ada_side": round(liq) if liq is not None else None,
+            "mcap_ada": round(mcap) if mcap is not None else None,
+            "price_ada": price, "basis": "solada-market"}
+    if vol is not None:
+        pool["vol_h24_ada"] = round(vol)
+    return pool
+
+
+def tracked_pool(http, unit, launch, ticker):
+    """Pool for a tracked name: GeckoTerminal, then the coin's curve, then the platform market for SOLADA."""
+    pool = gt_pool(http, unit) if unit else None
+    same = bool(launch) and bool(unit) and ((launch.get("policyId") or "") + (launch.get("assetName") or "")) == unit
+    cv = (launch.get("curve") or {}) if same else {}
+    if pool is None and cv and not cv.get("graduated") and cv.get("realLovelace"):
+        pool = {"ada_side": round(int(cv["realLovelace"]) / 1e6),
+                "mcap_ada": round(int(cv.get("marketCapLovelace") or 0) / 1e6) or None,
+                "price_ada": float(cv["priceAda"]) if cv.get("priceAda") is not None else None,
+                "basis": "solada-curve"}
+        vol = _num(launch.get("volume24hAda"))
+        if vol is not None:
+            pool["vol_h24_ada"] = round(vol)
+    if (pool is None or pool.get("ada_side") is None) and ticker == "SOLADA":
+        alt = solada_market_pool(http)
+        if alt and (pool is None or alt.get("ada_side") is not None):
+            if pool and pool.get("vol_h24_ada") is not None and alt.get("vol_h24_ada") is None:
+                alt = dict(alt, vol_h24_ada=pool["vol_h24_ada"])
+            pool = alt
+    if pool is None and same:
+        price, mcap, vol = _num(launch.get("priceAda")), _num(launch.get("marketCapAda")), _num(launch.get("volume24hAda"))
+        if any(v is not None for v in (price, mcap, vol)):
+            pool = {"ada_side": None, "mcap_ada": round(mcap) if mcap is not None else None,
+                    "price_ada": price, "vol_h24_ada": round(vol) if vol is not None else None,
+                    "basis": "solada-coins"}
+    return pool
+
+
+def pulse_units(pulse):
+    """ticker -> asset id from the newest pulse point that has one."""
+    out = {}
+    if not isinstance(pulse, dict):
+        return out
+    for p in pulse.get("points") or []:
+        if not isinstance(p, dict):
+            continue
+        tk = str(p.get("ticker") or "").upper()
+        aid = p.get("asset_id")
+        if tk and isinstance(aid, str) and len(aid) >= 56:
+            out[tk] = aid
+    return out
+
+
 def solana_concentration(http, rpc, mint, ignore):
     if not rpc or not mint:
         return None
@@ -663,11 +824,11 @@ def main():
     print(f"solada-prefilter {now_iso()} basis={chain.basis} solana={'on' if rpc else 'off'} dry_run={args.dry_run} baseline={baseline}")
     print(f"thresholds: holders>={th['min_holders']} ada_side>={th['min_ada_side']:.0f} (k {th['min_ada_side_k']:.0f}, y {th['min_ada_side_y']:.0f}); tracked={sorted(tracked)}; watch_keys={len(wkeys)}")
 
-    launches = http.req("solada", SOLADA + "/launches") or []
-    market = http.req("solada", SOLADA + "/market") or {}
+    launches, market, board_src = fetch_solada(http)
     quotes = market.get("quotes") or {}
     ada_usd = float(market.get("adaUsdMicro") or 0) / 1e6
     market_age_min = round((time.time() * 1000 - float(market["at"])) / 60000, 1) if market.get("at") else None
+    print(f"solada board: {len(launches)} via {board_src}")
     if not launches:
         http._fail("solada", "no launches")
 
@@ -702,6 +863,9 @@ def main():
         if pool is None and cv and not cv.get("graduated") and cv.get("realLovelace"):
             pool = {"ada_side": round(int(cv["realLovelace"]) / 1e6), "mcap_ada": round(int(cv.get("marketCapLovelace") or 0) / 1e6) or None,
                     "price_ada": float(cv.get("priceAda") or 0), "basis": "solada-curve"}
+            vol = _num(l.get("volume24hAda"))
+            if vol is not None:
+                pool["vol_h24_ada"] = round(vol)
             row["curve_pct"] = round(int(cv.get("progressBps") or 0) / 100, 1)
         row["ada_side"] = pool["ada_side"] if pool else None
         row["mcap_ada"] = pool["mcap_ada"] if pool else None
@@ -753,7 +917,7 @@ def main():
             if isinstance(prev_ks.get(tk), dict):  # keep its last row (marked stale) instead of dropping it
                 kill_status[tk] = {**prev_ks[tk], "changed_since_last": False, "stale": True}
             continue
-        pool = gt_pool(http, u)
+        pool = tracked_pool(http, u, l, tk)
         n, _ = chain.holders(u, cfg["max_holder_pages"])
         m = {"ada_side": pool["ada_side"] if pool else None, "mcap_ada": pool["mcap_ada"] if pool else None, "holders": n,
              "vol_h24_ada": pool.get("vol_h24_ada") if pool else None,
@@ -958,10 +1122,19 @@ def main():
     dev_summary = None
     if DC.dc_cfg(cfg).get("enabled", True):
         try:
+            try:
+                pulse_doc, _ = load_desk_json("solada/pulse.json", desk, args.repo)
+            except SystemExit:
+                pulse_doc = {}
+            units_by_ticker = pulse_units(pulse_doc)
+            for tk, t in tracked.items():
+                if t.get("asset_id"):
+                    units_by_ticker[tk] = t["asset_id"]
             dev_summary, dev_triggers = DC.run(
                 http, cfg, solada_tracked, launches, flagmod.watch_map(cfg.get("flags") or {}, wkeys),
                 args.data_dir, args.cache_dir, args.dry_run, time.time(), bf_key=bf_key, baseline=baseline,
-                t_start=t_start, owner_env=os.environ.get("PRIVACY_GUARD_PATTERNS", ""))
+                t_start=t_start, owner_env=os.environ.get("PRIVACY_GUARD_PATTERNS", ""),
+                top10=DC.cardano_top10(log), units_by_ticker=units_by_ticker)
             if not baseline:
                 triggers.extend(dev_triggers or [])
             print(f"dev checks: {json.dumps(dev_summary)}")
