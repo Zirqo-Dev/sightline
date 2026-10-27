@@ -1,4 +1,50 @@
-(async function () {
+(function () {
+  /* Tab label and order only. Route keys stay the desk id (#/desk/solada). #/desk/cardano is an alias. */
+  const NAV_LABEL = { solada: "CARDANO" };
+  const NAV_ORDER = ["solada", "solana", "nft"];
+  const DESK_ALIAS = { cardano: "solada" };
+
+  function canonDesk(id) {
+    return Object.prototype.hasOwnProperty.call(DESK_ALIAS, id) ? DESK_ALIAS[id] : id;
+  }
+  function orderedDesks(list) {
+    const rank = id => {
+      const i = NAV_ORDER.indexOf(id);
+      return i < 0 ? NAV_ORDER.length : i;
+    };
+    return list.slice().sort((a, b) => rank(a.id) - rank(b.id) || list.indexOf(a) - list.indexOf(b));
+  }
+  function navTabs(list) {
+    const tabs = [{ href: "#/", label: "HOME", key: "home" }];
+    for (const d of orderedDesks(list || [])) {
+      tabs.push({
+        href: "#/desk/" + d.id,
+        label: NAV_LABEL[d.id] || String(d.id).toUpperCase(),
+        key: d.id,
+        dot: true,
+        status: d.status
+      });
+    }
+    tabs.push({ href: "#/briefs", label: "BRIEFS", key: "briefs" });
+    return tabs;
+  }
+  function navMarkup(route, list) {
+    const id = canonDesk(route);
+    const a = (h, l, on, key) => `<a href="${h}" class="${on ? "on" : ""}" data-d="${S.esc(key)}">${l}</a>`;
+    return navTabs(list).map(t => a(
+      t.href,
+      (t.dot ? `<span class="dot ${t.status !== "active" ? "pending" : ""}"></span>` : "") + S.esc(t.label),
+      id === t.key,
+      t.key
+    )).join("");
+  }
+  S.canonDesk = canonDesk;
+  S.navTabs = navTabs;
+  S.navMarkup = navMarkup;
+
+  if (typeof document === "undefined" || !document.getElementById) return;
+
+  (async function () {
   const view = document.getElementById("view");
   const nav = document.getElementById("nav");
   const [desks] = await Promise.all([S.desks(), S.loadIcons()]);
@@ -39,11 +85,9 @@
   });
 
   function navHTML(route) {
-    document.body.dataset.desk = desks.some(d => d.id === route) ? route : route;
-    const a = (h, l, on) => `<a href="${h}" class="${on ? "on" : ""}" data-d="${S.esc(h.split("/").pop() || "home")}">${l}</a>`;
-    nav.innerHTML = a("#/", "HOME", route === "home")
-      + desks.map(d => a(`#/desk/${d.id}`, `<span class="dot ${d.status !== "active" ? "pending" : ""}"></span>${S.esc(d.id.toUpperCase())}`, route === d.id)).join("")
-      + a("#/briefs", "BRIEFS", route === "briefs");
+    const id = canonDesk(route);
+    document.body.dataset.desk = id;
+    nav.innerHTML = navMarkup(id, desks);
   }
 
   function runPending(id) {
@@ -146,8 +190,9 @@
   }
 
   async function deskPage(id) {
-    const d = desks.find(x => x.id === id);
-    navHTML(id);
+    const key = canonDesk(id);
+    const d = desks.find(x => x.id === key);
+    navHTML(key);
     if (!d) { document.title = "Sightline"; view.innerHTML = `<p class="muted">Unknown desk.</p>`; return; }
     document.title = "Sightline · " + d.name;
     const log = d.log ? await S.get(d.log) : null;
@@ -197,4 +242,5 @@
   setInterval(paintAges, 15000);
   window.addEventListener("hashchange", route);
   route();
+  })();
 })();
