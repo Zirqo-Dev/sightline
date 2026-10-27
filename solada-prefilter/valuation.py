@@ -236,7 +236,12 @@ def kill_status_entry(prev, text, values, lines, crossed, complete, now, desk_hi
         prev_set = set(prev.get("crossed") or ([prev["metric"]] if prev.get("hit") and prev.get("metric") else []))
     else:
         prev_set = set()
-    cur_set = set(crossed) if crossed else (prev_set if gap and hit else set())
+    if crossed:
+        # a previously crossed metric that is merely unread this run stays crossed (re-review should-fix 2): otherwise
+        # it drops out, "re-crosses" next run and an unchanged line is sent again
+        cur_set = set(crossed) | {m for m in prev_set if values.get(m) is None}
+    else:
+        cur_set = prev_set if gap and hit else set()
     metric = next((m for m in order if m in crossed), None) if hit and crossed else None
     if metric is None:
         metric = (prev or {}).get("metric") if hit and (prev or {}).get("metric") in lines else (order[0] if order else None)

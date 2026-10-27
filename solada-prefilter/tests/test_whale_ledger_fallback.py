@@ -71,8 +71,8 @@ def two_runs(koios_up, key):
     with mock.patch.object(P.Http, "req", fake(koios_up, seen)), tempfile.TemporaryDirectory() as d, \
             contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
         http = P.Http({})
-        base = WL.run(http, CFG, d, False, 1793050000, V.lp_policies(), bf_key=key)
-        r = WL.run(http, CFG, d, False, 1793050000, V.lp_policies(), bf_key=key)
+        base = WL.run(http, CFG, d, False, 1793050000, V.lp_policies(), bf_key=key, cache_dir=os.path.join(d, "c"))
+        r = WL.run(http, CFG, d, False, 1793050000, V.lp_policies(), bf_key=key, cache_dir=os.path.join(d, "c"))
         doc = json.load(open(os.path.join(d, "whale_ledger.json"))) if os.path.exists(os.path.join(d, "whale_ledger.json")) else None
     return base, r, doc, seen, out.getvalue()
 

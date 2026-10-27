@@ -114,52 +114,94 @@ def classify(tx, stake, ledger, lp_pols, wc):
     others_out = [u for u in tx["outputs"] if not _is_mine(u, stake)]
     script_io = any(_script(u["addr"]) for u in others_in + others_out)
 
+    pats = wc.get("_owner_pats")
+
     def cp_tag(us):
+        """Largest key-address counterparty's tag. Owner wallets (PRIVACY_GUARD_PATTERNS) are never tagged, and with no
+        usable owner patterns no counterparty is tagged at all (fail closed; re-review nice-to-have)."""
+        if not pats:
+            return None
         keys = [u for u in us if not _script(u["addr"])]
+        keys = [u for u in keys if not any(p.search(x) for p in pats
+                                           for x in (u["addr"], u.get("stake") or F.addr_info(u["addr"])[0] or ""))]
         if not keys:
             return None
         big = max(keys, key=lambda u: u["lovelace"])
         return tag(big.get("stake") or F.addr_info(big["addr"])[0] or big["addr"])
 
-    # 1) spends of tracked open orders -> replace (edit) / cancel / fill
+    # 1) spends of tracked open orders -> replace (edit) / moved / partial fill / cancel / fill
     consumed = [u for u in tx["inputs"] if u.get("ref") in orders and orders[u["ref"]]["status"] == "open"]
     handled, taken = set(), set()  # taken: output refs already explained (replacement orders)
     creds = _creds(tx, stake) if consumed else set()
+    # whale-signed: the whale spends one of its own key-address UTxOs here (an edit / cancel it made itself). A tx
+    # without one was built by a batcher or a protocol (re-review S8: never call that a whale "replace").
+    signed = any(_is_mine(x, stake) and not _script(x["addr"]) for x in tx["inputs"])
+    cons_refs = {x["ref"] for x in consumed}
+    other_script_in = any(_script(x["addr"]) for x in tx["inputs"] if x.get("ref") not in cons_refs and not _is_mine(x, stake))
+
+    def new_order(ref, x, o, q, **kw):
+        short = ref[:10] + ref[ref.index("#"):]
+        orders[ref] = {"ref_short": short, "unit": o["unit"], "token": o["token"], "qty_raw": q,
+                       "ada": round(x["lovelace"] / 1e6, 6), "status": "open", "opened_tx": ts, "opened_at": t, **kw}
+        return short
+
     for u in consumed:
         o = orders[u["ref"]]
         old_hash = u["ref"].split("#")[0]
-        # S8 / Snek (a): order edit or cancel-and-replace. The order's token (>= 99% of its qty, <= 101%) lands in a
-        # new script output that is the whale's (stake) or whose datum names the old order / the whale's creds.
-        # That is a moved position, not a fill (Oct 26 1M COCK: c8c1f5aee2#0 -> 6c16efecce#1, still open).
+        # S8 / Snek (a): the order's token lands in a new script output that is the whale's (stake) or whose datum
+        # names the old order / the whale's creds. Rules (re-review):
+        #  - whale-signed + same token (any qty) at a named output, or at any script output when no pool UTxO is spent
+        #    (datum-hash orders carry no inline datum) -> replaced (an edit; qty may change)
+        #  - not whale-signed + the full qty (100-101%) at a named output -> order_moved (batcher/protocol; paid_ada)
+        #  - not whale-signed + less at a named output -> partial fill, even a 1% one (remainder stays open)
         repl = None
         for i, x in enumerate(tx["outputs"]):
             ref = x.get("ref") or f"{tx['hash']}#{i}"
             if ref in taken or not _script(x["addr"]):
                 continue
-            if o["unit"] == "lovelace":
-                same = not x["assets"] and o["qty_raw"] * 0.99 <= x["lovelace"] <= o["qty_raw"] * 1.01
-            else:
-                same = o["qty_raw"] * 0.99 <= x["assets"].get(o["unit"], 0) <= o["qty_raw"] * 1.01
-            if same and (_is_mine(x, stake) or old_hash in x.get("datum", "") or any(c in x.get("datum", "") for c in creds)):
-                repl = (ref, x)
+            if o["unit"] == "lovelace" and x["assets"]:
+                continue
+            q = x["lovelace"] if o["unit"] == "lovelace" else x["assets"].get(o["unit"], 0)
+            if q <= 0:
+                continue
+            named = _is_mine(x, stake) or old_hash in x.get("datum", "") or any(c in x.get("datum", "") for c in creds)
+            whole = o["qty_raw"] <= q <= o["qty_raw"] * 1.01  # unsigned move: the full qty, nothing taken out
+            if signed and (named or (not x.get("datum") and not other_script_in)):
+                repl = ("replaced", ref, x, q)
+            elif not signed and named and whole:
+                repl = ("moved", ref, x, q)
+            elif not signed and named and q < o["qty_raw"] and o["unit"] != "lovelace":
+                repl = ("partial", ref, x, q)
+            if repl:
                 break
         if repl:
-            ref, x = repl
+            kind, ref, x, q = repl
             taken.add(ref)
-            new_short = ref[:10] + ref[ref.index("#"):]
-            o.update(status="replaced", closed_tx=ts, closed_at=t, replaced_by=new_short)
-            row("order_cancel", o["token"], o["qty_raw"], None, order_ref_short=o["ref_short"], order_status="replaced",
-                replaced_by=new_short)
-            q = x["lovelace"] if o["unit"] == "lovelace" else x["assets"][o["unit"]]
-            orders[ref] = {"ref_short": new_short, "unit": o["unit"], "token": o["token"], "qty_raw": q,
-                           "ada": round(x["lovelace"] / 1e6, 6), "status": "open", "opened_tx": ts, "opened_at": t,
-                           "replaces": o["ref_short"]}
-            row("order_open", o["token"], q, x["lovelace"] / 1e6, order_ref_short=new_short, order_status="open",
-                replaces=o["ref_short"])
+            if kind == "replaced":
+                short = new_order(ref, x, o, q, replaces=o["ref_short"])
+                o.update(status="replaced", closed_tx=ts, closed_at=t, replaced_by=short)
+                row("order_cancel", o["token"], o["qty_raw"], None, order_ref_short=o["ref_short"], order_status="replaced",
+                    replaced_by=short)
+                row("order_open", o["token"], q, x["lovelace"] / 1e6, order_ref_short=short, order_status="open",
+                    replaces=o["ref_short"])
+            elif kind == "moved":
+                paid = round(lov / 1e6, 6) if lov > 0 else 0.0
+                short = new_order(ref, x, o, q, moved_from=o["ref_short"])
+                o.update(status="moved", closed_tx=ts, closed_at=t, moved_to=short)
+                row("order_moved", o["token"], q, None, order_ref_short=o["ref_short"], order_status="moved",
+                    moved_to=short, paid_ada=paid)
+                handled.add("lovelace")  # the ADA paid to the whale is reported as paid_ada on this row
+            else:
+                short = new_order(ref, x, o, q, remainder_of=o["ref_short"])
+                o.update(status="partially_filled", closed_tx=ts, closed_at=t, remainder=short,
+                         filled_qty=o["qty_raw"] - q, filled_ada=round(lov / 1e6, 6))
+                row("order_fill", o["token"], o["qty_raw"] - q, lov / 1e6, order_ref_short=o["ref_short"],
+                    order_status="partial", remainder=short)
+                handled.add("lovelace")
             handled.add(o["unit"])
             continue
-        back = toks.get(o["unit"], 0) if o["unit"] != "lovelace" else None
         got = {k: v for k, v in toks.items() if v > 0 and k != o["unit"] and not V.lp_dex(k, lp_pols)}
+        back = toks.get(o["unit"], 0) if o["unit"] != "lovelace" else None
         if o.get("own_stake") and not got and (back is None and lov > -1_000_000 * 3 or
                                                 (back is not None and back > -o["qty_raw"] * 0.99)):
             # own-stake order contract: value never left the whale's balance; nothing swapped -> cancel
@@ -197,6 +239,7 @@ def classify(tx, stake, ledger, lp_pols, wc):
             handled.add("lovelace")
     lp_tx = any(V.lp_dex(u, lp_pols) for u in toks)
     rest = {k: v for k, v in toks.items() if k not in handled and not lp_tx}
+    signed_any = any(_is_mine(x, stake) and not _script(x["addr"]) for x in tx["inputs"])
     # 3) new orders: value parked at a script output while the whale gets nothing back
     if "lovelace" not in handled and not lp_tx:
         for i, u in enumerate(tx["outputs"]):
@@ -205,8 +248,8 @@ def classify(tx, stake, ledger, lp_pols, wc):
             if _is_mine(u, stake):
                 # S8: an order contract address that carries the whale's own stake part. Its value still counts in
                 # the whale's balance (Koios account_assets includes it), so no delta: open the order from the output.
-                if any(_script(x["addr"]) for x in others_in) or any(V.lp_dex(k, lp_pols) for k in u["assets"]):
-                    continue
+                if not signed_any or any(_script(x["addr"]) for x in others_in) or any(V.lp_dex(k, lp_pols) for k in u["assets"]):
+                    continue  # a third party paying into the whale-stake script is a transfer, not a whale order
                 ref = u.get("ref") or f"{tx['hash']}#{i}"
                 toks_here = {k: q for k, q in u["assets"].items() if q > 0}
                 if toks_here:
@@ -289,15 +332,34 @@ def public_doc(ledger, whale_tag, now_s, wc, extra):
     return F.assert_public(doc)
 
 
-def load(path, state_path=None):
-    """Private state: whale_ledger_state.json (split out of the public file); falls back to the legacy
-    `_state` block inside whale_ledger.json. A corrupt file is treated as missing."""
-    if state_path:
-        st = KT.read_json(state_path, {})
+def load(path, state_paths=()):
+    """Private state, first match wins: the Actions-cache file (never committed), then the #29-era
+    desk-data whale_ledger_state.json (read once for migration, never written again), then the legacy `_state`
+    block inside whale_ledger.json. Rows are not kept in state: they are read back from the public file.
+    A corrupt file is treated as missing. Returns (state or None, source)."""
+    pub = KT.read_json(path, {})
+    for sp, src in state_paths:
+        st = KT.read_json(sp, {}) if sp else {}
         if st:
-            return st
-    d = KT.read_json(path, {})
-    return d.get("_state") or None
+            st.setdefault("rows", pub.get("rows") or [])
+            return st, src
+    st = pub.get("_state")
+    return (st, "legacy") if st else (None, None)
+
+
+def _row_key(r):
+    return json.dumps(r, sort_keys=True)
+
+
+def dedupe_rows(rows):
+    """Drop exact duplicate rows (a replay from an older fallback state can re-emit rows already published)."""
+    seen, out = set(), []
+    for r in rows:
+        k = _row_key(r)
+        if k not in seen:
+            seen.add(k)
+            out.append(r)
+    return out
 
 
 def _seen_map(ledger):
@@ -455,8 +517,16 @@ class KoiosLedger:
         return out
 
 
-def run(http, cfg, data_dir, dry_run, now_s, lp_pols, bf_key=None, deadline=None):
+def run(http, cfg, data_dir, dry_run, now_s, lp_pols, bf_key=None, deadline=None, cache_dir=None, owner_env=None):
+    """cache_dir: private Actions cache dir; the ledger state (tx hashes, order refs, raw positions) lives there and is
+    never committed. owner_env: PRIVACY_GUARD_PATTERNS text; counterparties matching it are never tagged, and with no
+    usable patterns no counterparty is tagged at all."""
     wc = wl_cfg(cfg)
+    if owner_env is None:
+        owner_env = os.environ.get("PRIVACY_GUARD_PATTERNS", "")
+    import big_moves as BM
+    pats, bad = BM.owner_patterns(owner_env)
+    wc["_owner_pats"] = pats if pats and not bad else None
     stake = ((cfg.get("whale") or {}).get("stake") or "").strip()
     prefix = ((cfg.get("whale") or {}).get("stake_prefix") or "").strip()
     if not wc["enabled"] or not stake:
@@ -467,9 +537,10 @@ def run(http, cfg, data_dir, dry_run, now_s, lp_pols, bf_key=None, deadline=None
         bf_key = os.environ.get("BLOCKFROST_PROJECT_ID", "")
     kl = KoiosLedger(http, wc, bf_key)
     path = os.path.join(data_dir, "whale_ledger.json")
-    spath = os.path.join(data_dir, "whale_ledger_state.json")
-    ledger = load(path, spath)
-    extra = {"capped": False}
+    legacy_spath = os.path.join(data_dir, "whale_ledger_state.json")  # #29 wrote it to desk-data; read-only now
+    cpath = os.path.join(cache_dir, "whale-ledger-state.json") if cache_dir else None
+    ledger, src = load(path, [(cpath, "cache"), (legacy_spath, "desk-data-legacy")])
+    extra = {"capped": False, "state_source": src or "baseline", "counterparty_tags": bool(wc["_owner_pats"])}
     late = lambda: bool(deadline) and __import__("time").time() >= deadline  # noqa: E731
     if ledger is not None and ledger.get("baseline_height") is None and ledger.get("baseline_at"):
         # M3 legacy: a baseline written before this fix seeded no `seen`; every tx at <= that height is already in
@@ -513,8 +584,16 @@ def run(http, cfg, data_dir, dry_run, now_s, lp_pols, bf_key=None, deadline=None
             for r, sp in kl.spent(open_refs).items():
                 if sp and ledger["orders"][r]["status"] == "open":
                     ledger["orders"][r].update(status="closed_elsewhere", closed_at=iso(now_s))
-        if not extra["capped"] and kl.left() > 2 and not late():
-            bal = kl.balances(stake)
+        if not extra["capped"] and kl.left() > 4 and not late():
+            # reconcile race (re-review): a tx landing while balances are read makes a false drift. Read the tip on
+            # both sides; reconcile only when neither is past the height the ledger has applied.
+            t1 = kl.tip_height(stake)
+            bal = kl.balances(stake) if t1 is not None and t1 <= ledger["height"] else None
+            t2 = kl.tip_height(stake) if bal is not None else None
+            if bal is not None and (t2 is None or t2 > ledger["height"]):
+                bal = None
+            if bal is None:
+                extra["reconcile_skipped"] = "account tip moved past the applied height (or unreadable); next run"
             if bal is not None:
                 names = ledger["token_names"]
                 drift = {names.get(u, u[:12]) if u in names else token_name(u): bal[1].get(u, 0) - ledger["positions_raw"].get(u, 0)
@@ -522,7 +601,7 @@ def run(http, cfg, data_dir, dry_run, now_s, lp_pols, bf_key=None, deadline=None
                 extra["reconcile"] = {"ada_drift": round((bal[0] - ledger["lovelace"]) / 1e6, 6), "token_drift": drift,
                                       "ok": not drift and abs(bal[0] - ledger["lovelace"]) < 1_000_000}
     prune_seen(ledger)
-    ledger["rows"] = ledger.get("rows", [])[-wc["keep_rows"]:]
+    ledger["rows"] = dedupe_rows(ledger.get("rows", []))[-wc["keep_rows"]:]
     ledger.pop("_seen_set", None)
     extra["koios_calls"] = http.calls.get("koios", 0) - kl.start
     extra["blockfrost_fallbacks"] = kl.fallbacks
@@ -530,9 +609,12 @@ def run(http, cfg, data_dir, dry_run, now_s, lp_pols, bf_key=None, deadline=None
     extra["blockfrost_available"] = bool(kl.bf_key)
     extra["basis"] = ("mixed" if extra["koios_calls"] else "blockfrost") if extra["blockfrost_calls"] else "koios"
     doc = public_doc(ledger, tag(stake), now_s, wc, extra)
-    state = F.assert_public({k: v for k, v in ledger.items()})  # tx hashes, raw positions, order refs (no addresses)
+    # private state -> Actions cache only (tx hashes, raw positions, order refs; no addresses). Rows are not duplicated
+    # there: the public file holds them. Without a cache dir (local runs) nothing private is written at all.
+    state = F.assert_public({k: v for k, v in ledger.items() if k != "rows"})
     if not dry_run:
-        KT.write_json(spath, state, indent=1)
+        if cpath:
+            KT.write_json(cpath, state, indent=1)
         KT.write_json(path, doc, indent=1)
     return {k: doc.get(k) for k in ("capped", "koios_calls", "blockfrost_fallbacks", "blockfrost_calls", "ada_balance", "basis")} | {
         "rows": len(doc["rows"]), "open_orders": sum(1 for o in doc["orders"].values() if o["status"] == "open"),

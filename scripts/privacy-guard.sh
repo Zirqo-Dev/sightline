@@ -58,6 +58,35 @@ for a in "${allow[@]}"; do
     fi
   done
 done
+# Re-review M4: (1) every entry must be pinned to solada-prefilter/config.json whale.stake (the one public key it
+# exists for); (2) the owner's stake key is derived from any owner pattern that contains a full base address
+# (addr1q/r/s/t... with a stake part) and must not be allowlisted, so a secret listing only the owner's payment
+# address still protects the owner's stake key. Nothing is printed except a generic failure line.
+if [ ${#allow[@]} -gt 0 ]; then
+  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  pycode=$(cat <<'PYEOF'
+import json, os, re, sys
+src, allow = sys.argv[1], sys.argv[2:]
+sys.path.insert(0, src)
+try:
+    import flags as F
+    pinned = (json.load(open(os.path.join(src, "config.json"))).get("whale") or {}).get("stake")
+except Exception:
+    sys.stderr.write("PRIVACY GUARD FAILED: cannot read solada-prefilter/config.json to pin the allowlist\n"); sys.exit(1)
+if any(a != pinned for a in allow):
+    sys.stderr.write("PRIVACY GUARD FAILED: a privacy-public-keys.txt entry is not config.json whale.stake\n"); sys.exit(1)
+owner_stakes = set()
+for line in sys.stdin:
+    for m in re.findall(r"addr1[02-9ac-hj-np-z]{50,}", line):
+        st = F.addr_info(m)[0]
+        if st:
+            owner_stakes.add(st)
+if owner_stakes & set(allow):
+    sys.stderr.write("PRIVACY GUARD FAILED: an allowlisted key is the stake key of an owner address pattern\n"); sys.exit(1)
+PYEOF
+)
+  if ! printf '%s\n' "${patterns[@]:$n_generic}" | python3 -c "$pycode" "$here/../solada-prefilter" "${allow[@]}"; then exit 1; fi
+fi
 if [ ${#allow[@]} -gt 0 ] && [ ${#patterns[@]} -le "$n_generic" ]; then
   echo "::warning::privacy-guard: no owner patterns loaded; the public-key allowlist is NOT applied (fail closed)" >&2
   allow=()

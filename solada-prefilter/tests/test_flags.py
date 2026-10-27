@@ -100,10 +100,10 @@ class FlagTests(unittest.TestCase):
                 return {"quotes": {}}
             if "/asset_txs" in url:
                 return cabal_txs
-            if url.endswith("/tx_utxos"):
-                return [{"tx_hash": h, **{s: [{"payment_addr": {"bech32": a}, "value": str(l),
+            if url.endswith("/tx_info"):
+                return [{"tx_hash": h, **{s: [{"tx_hash": h, "tx_index": i, "payment_addr": {"bech32": a}, "value": str(l),
                          "asset_list": [{"policy_id": u[:56], "asset_name": u[56:], "quantity": str(q)} for u, q in m.items()]}
-                         for a, l, m in self.ut[h][s]] for s in ("inputs", "outputs")}} for h in body["_tx_hashes"]]
+                         for i, (a, l, m) in enumerate(self.ut[h][s])] for s in ("inputs", "outputs")}} for h in body["_tx_hashes"]]
             return None
         fake_req.run = 0
         with tempfile.TemporaryDirectory() as d, mock.patch.object(P.Http, "req", fake_req), \
