@@ -1,5 +1,5 @@
 {
- "at": "2026-10-27T02:10:55Z",
+ "at": "2026-10-27T04:12:34Z",
  "phase": 1,
  "window_h": 24,
  "keep_h": 72,
@@ -67,7 +67,7 @@
    "tx_short": "0715db82c0",
    "time": "2026-10-26T10:38:23Z",
    "window_ada": 4310.0,
-   "pool_pct": 17.2,
+   "pool_pct": 17.8,
    "lp": false,
    "unit_short": "c1b89ed48d",
    "ada_basis": "tx",
@@ -83,7 +83,7 @@
    "tx_short": "30b18c58e7",
    "time": "2026-10-26T10:40:19Z",
    "window_ada": 4310.0,
-   "pool_pct": 17.2,
+   "pool_pct": 17.8,
    "lp": false,
    "unit_short": "c1b89ed48d",
    "ada_basis": "tx",
@@ -99,7 +99,7 @@
    "tx_short": "68c9e10da2",
    "time": "2026-10-26T10:47:46Z",
    "window_ada": 4310.0,
-   "pool_pct": 17.2,
+   "pool_pct": 17.8,
    "lp": false,
    "unit_short": "c1b89ed48d",
    "ada_basis": "tx",
@@ -115,7 +115,7 @@
    "tx_short": "052cab5820",
    "time": "2026-10-26T10:50:21Z",
    "window_ada": 4310.0,
-   "pool_pct": 17.2,
+   "pool_pct": 17.8,
    "lp": false,
    "unit_short": "c1b89ed48d",
    "ada_basis": "tx",
@@ -131,7 +131,55 @@
    "tx_short": "7d0b98e6b3",
    "time": "2026-10-26T10:52:49Z",
    "window_ada": 4310.0,
-   "pool_pct": 17.2,
+   "pool_pct": 17.8,
+   "lp": false,
+   "unit_short": "c1b89ed48d",
+   "ada_basis": "tx",
+   "next_hop": null
+  },
+  {
+   "tag": "m-467c49cf",
+   "ticker": "CLOVE",
+   "direction": "in",
+   "ada": 2174.14,
+   "qty": 7354989.575666,
+   "qty_basis": "whole",
+   "tx_short": "54a0bd7d1a",
+   "time": "2026-10-26T14:23:02Z",
+   "window_ada": 2418.25,
+   "pool_pct": 10.0,
+   "lp": true,
+   "unit_short": "c1b89ed48d",
+   "ada_basis": "price",
+   "next_hop": null
+  },
+  {
+   "tag": "m-467c49cf",
+   "ticker": "CLOVE",
+   "direction": "in",
+   "ada": 56.05,
+   "qty": 145010.424334,
+   "qty_basis": "whole",
+   "tx_short": "2d20c63087",
+   "time": "2026-10-26T14:24:32Z",
+   "window_ada": 2418.25,
+   "pool_pct": 10.0,
+   "lp": false,
+   "unit_short": "c1b89ed48d",
+   "ada_basis": "tx",
+   "next_hop": null
+  },
+  {
+   "tag": "m-467c49cf",
+   "ticker": "CLOVE",
+   "direction": "in",
+   "ada": 188.05,
+   "qty": 500000.0,
+   "qty_basis": "whole",
+   "tx_short": "152c08bbbc",
+   "time": "2026-10-26T14:37:21Z",
+   "window_ada": 2418.25,
+   "pool_pct": 10.0,
    "lp": false,
    "unit_short": "c1b89ed48d",
    "ada_basis": "tx",
@@ -147,7 +195,7 @@
    "tx_short": "1b9f7e6fec",
    "time": "2026-10-26T15:20:41Z",
    "window_ada": 407.0,
-   "pool_pct": 10.8,
+   "pool_pct": 10.9,
    "lp": false,
    "unit_short": "00d6347365",
    "ada_basis": "tx",
@@ -155,72 +203,74 @@
   }
  ],
  "units_scanned": 12,
- "txs_read": 536,
+ "txs_read": 220,
  "capped": [
-  "HOWDY"
+  "COCK",
+  "BOLT"
  ],
  "coverage": {
   "CLOVE": {
-   "read": 131,
+   "read": 4,
    "complete": true,
-   "pages": 2
+   "pages": 1
   },
   "SER": {
-   "read": 84,
+   "read": 2,
+   "complete": true,
+   "pages": 1
+  },
+  "FEED": {
+   "read": 5,
+   "complete": true,
+   "pages": 1
+  },
+  "SHARKY": {
+   "read": 1,
+   "complete": true,
+   "pages": 1
+  },
+  "BEAST": {
+   "read": 1,
    "complete": true,
    "pages": 1
   },
   "HOWDY": {
+   "read": 0,
+   "complete": false,
+   "skipped": "koios"
+  },
+  "HIVE": {
+   "read": 1,
+   "complete": true,
+   "pages": 1
+  },
+  "GOLFY": {
+   "read": 1,
+   "complete": true,
+   "pages": 1
+  },
+  "DEXY": {
+   "read": 4,
+   "complete": true,
+   "pages": 1
+  },
+  "JUICE": {
+   "read": 1,
+   "complete": true,
+   "pages": 1
+  },
+  "COCK": {
    "read": 100,
    "complete": false,
    "pages": 1,
    "unread_txs": 0
   },
-  "FEED": {
-   "read": 37,
-   "complete": true,
-   "pages": 1
-  },
-  "SHARKY": {
-   "read": 48,
-   "complete": true,
-   "pages": 1
-  },
-  "BEAST": {
-   "read": 34,
-   "complete": true,
-   "pages": 1
-  },
-  "HIVE": {
-   "read": 10,
-   "complete": true,
-   "pages": 1
-  },
-  "GOLFY": {
-   "read": 19,
-   "complete": true,
-   "pages": 1
-  },
-  "DEXY": {
-   "read": 30,
-   "complete": true,
-   "pages": 1
-  },
-  "JUICE": {
-   "read": 15,
-   "complete": true,
-   "pages": 1
-  },
-  "HERO": {
-   "read": 28,
-   "complete": true,
-   "pages": 1
-  },
   "BOLT": {
-   "read": 0,
+   "read": 100,
    "complete": false,
-   "skipped": "koios"
+   "pages": 1,
+   "unread_txs": 0
   }
  },
- "koios_calls": 61
+ "koios_calls": 39
 }
