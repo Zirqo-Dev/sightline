@@ -1090,14 +1090,14 @@ class Review2(unittest.TestCase):
                    [utxo("script:pool", 2_000_000, {u: FX["mint_qty"]}, park),
                     utxo("dev", 3_000_000, {}, hx("cp") + "#0")],
                    [utxo("dev", 3_000_000 + FX["sell_lovelace"], {u: part}, hx("cf") + "#0"),
-                    utxo("script:pool", 2_000_000, {u: filled}, hx("cf") + "#1")])
+                    utxo("script:amm", 2_000_000, {u: filled}, hx("cf") + "#1")])
         done = DC.fold(u, txs + [fill], stake("dev"), set(), t0, dc())
         self.assertEqual(done["sold_qty"], filled)
         self.assertNotEqual(done["sold_qty"], FX["mint_qty"])
         self.assertEqual(done["sold_ada"], FX["sell_lovelace"] / 1e6)
-        prev = {"dev_sold_ada": 100, "late_rug": False}
-        self.assertFalse(DC._worth_firing(120, False, prev, dc()))
-        self.assertTrue(DC._worth_firing(130, False, prev, dc()))
+        prev = {"dev_sold_ada": 2500, "late_rug": True}
+        self.assertFalse(DC._worth_firing(10, False, prev, dc()))
+        self.assertTrue(DC._worth_firing(500, False, prev, dc()))
 
     def test_owner_address_pattern_hides_a_sibling_stake(self):
         sib = F.b32_encode("addr", bytes([0x01]) + kh("sib/p") + kh("dev"))
@@ -1144,6 +1144,97 @@ class Review2(unittest.TestCase):
             st = json.load(open(os.path.join(d, "state.json")))
         self.assertNotIn(key, st.get("fired") or {})
         self.assertNotIn("dev_sell", [t.get("kind") for t in summary.get("triggers") or []])
+
+
+def _busy_books(u, t0, extra=None):
+    """Mint, then a 2,500 ADA sell. `extra` is an optional later (hash, lovelace, qty) sell."""
+    rem = FX["mint_qty"] - FX["sell_qty"]
+    mint_h, old_h = hx("bm"), hx("old")
+    books = {u: [
+        leg(mint_h, t0, [], [utxo("dev", 2_000_000, {u: FX["mint_qty"]}, mint_h + "#0"),
+                             utxo("buyer", 2_000_000, {u: FX["buyer_qty"]}, mint_h + "#1")]),
+        leg(old_h, t0 + FX["late_after_s"],
+            [utxo("dev", 5_000_000, {u: FX["mint_qty"]}, mint_h + "#0")],
+            [utxo("dev", 5_000_000 + FX["sell_lovelace"], {u: rem}, old_h + "#0"),
+             utxo("script:pool", 2_000_000, {u: FX["sell_qty"]}, old_h + "#1")]),
+    ]}
+    if extra:
+        h, lov, qty = extra
+        books[u].append(leg(h, t0 + FX["late_after_s"] + 500,
+                            [utxo("dev", 5_000_000 + FX["sell_lovelace"], {u: rem}, old_h + "#0")],
+                            [utxo("dev", 5_000_000 + FX["sell_lovelace"] + lov, {u: rem - qty}, h + "#0"),
+                             utxo("script:pool", 2_000_000, {u: qty}, h + "#1")]))
+    return books
+
+
+class Review3(unittest.TestCase):
+    """A partial window must price unseen sell txs, not this read's sum minus the stored total."""
+
+    def _launch(self, u):
+        t0 = FX["launch_s"]
+        launch = {"id": "b", "ticker": "BUSY", "policyId": u[:56], "assetName": u[56:],
+                  "launcherAddress": addr("dev"), "liveAtMs": t0 * 1000}
+        tracked = [{"ticker": "BUSY", "unit": u, "launch": launch, "mcap_ada": 100, "vol_h24_ada": 1}]
+        full = {"dev_checks": {"budget_s": 30, "max_calls": 40, "max_bf_calls": 40}, "flags": {"exclude_tags": {}}}
+        partial = {"dev_checks": {"budget_s": 30, "max_calls": 40, "max_bf_calls": 40,
+                                  "max_txs_per_unit": 1, "max_pages_per_unit": 2},
+                   "flags": {"exclude_tags": {}}}
+        return t0, launch, tracked, full, partial
+
+    def test_partial_window_fires_a_fresh_sell_and_adds_it_to_the_stored_total(self):
+        u = unit("BUSY")
+        t0, launch, tracked, full, partial = self._launch(u)
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "cache"))
+            _, t1, doc, _ = run_dc(True, _busy_books(u, t0), [launch], tracked, d, cfg=full)
+            self.assertEqual(t1, [])
+            self.assertEqual(doc["entries"][0]["dev_sold_ada"], 2500.0)
+            _, t2, doc2, _ = run_dc(True, _busy_books(u, t0, (hx("new"), 500_000_000, 100_000)),
+                                   [launch], tracked, d, cfg=partial)
+            row = doc2["entries"][0]
+            self.assertEqual([t["kind"] for t in t2], ["dev_sell"])
+            self.assertTrue(row["changed_since_last"])
+            self.assertEqual(row["dev_sold_ada"], 3000.0)
+            self.assertTrue(row["coverage"]["partial"])
+            self.assertNotIn(hx("new"), json.dumps(doc2))
+
+    def test_fresh_dust_sell_under_25_ada_does_not_fire(self):
+        u = unit("DUST")
+        t0, launch, tracked, full, partial = self._launch(u)
+        tracked[0]["ticker"] = "DUST"
+        launch["ticker"] = "DUST"
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "cache"))
+            run_dc(True, _busy_books(u, t0), [launch], tracked, d, cfg=full)
+            _, t2, doc2, _ = run_dc(True, _busy_books(u, t0, (hx("dust"), 10_000_000, 1_000)),
+                                   [launch], tracked, d, cfg=partial)
+            row = doc2["entries"][0]
+            self.assertEqual(t2, [])
+            self.assertFalse(row["changed_since_last"])
+            self.assertEqual(row["dev_sold_ada"], 2510.0)
+
+    def test_partial_fill_remainder_relisted_at_the_order_script_is_not_sold(self):
+        u, t0 = unit("RELIST"), FX["launch_s"]
+        park = hx("ro") + "#1"
+        part = FX["mint_qty"] // 5
+        filled = FX["mint_qty"] - part
+        new_order = hx("rf") + "#1"
+        txs = [leg(hx("rm"), t0, [], [utxo("dev", 5_000_000, {u: FX["mint_qty"]}, hx("rm") + "#0")]),
+               leg(hx("ro"), t0 + 60,
+                   [utxo("dev", 5_000_000, {u: FX["mint_qty"]}, hx("rm") + "#0")],
+                   [utxo("dev", 3_000_000, {}, hx("ro") + "#0"),
+                    utxo("script:order", 2_000_000, {u: FX["mint_qty"]}, park)])]
+        fill = leg(hx("rf"), t0 + 120,
+                   [utxo("script:order", 2_000_000, {u: FX["mint_qty"]}, park),
+                    utxo("dev", 3_000_000, {}, hx("ro") + "#0")],
+                   [utxo("dev", 3_000_000 + FX["sell_lovelace"], {}, hx("rf") + "#0"),
+                    utxo("script:order", 2_000_000, {u: part}, new_order),
+                    utxo("script:amm", 2_000_000, {u: filled}, hx("rf") + "#2")])
+        stats = DC.fold(u, txs + [fill], stake("dev"), set(), t0, dc())
+        self.assertEqual(stats["sold_qty"], filled)
+        self.assertEqual(stats["pending_qty"], part)
+        self.assertEqual(stats["sold_ada"], FX["sell_lovelace"] / 1e6)
+        self.assertEqual(stats["sell_ada"].get(hx("rf")), FX["sell_lovelace"] / 1e6)
 
 
 class _Resp:

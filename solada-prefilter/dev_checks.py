@@ -53,7 +53,8 @@ NOTE = (
     "creator stake. A sell is token out and ADA in on the creator's own key in one tx, or ADA paid "
     "later for tokens parked at a script (a cancel is not a sell). late_rug needs the net drop and "
     "tokens actually sold, both at least rug_bag_pct of that stake's peak; a lock is not a sell. "
-    "min_sell_ada is a dust floor on the new sell. An incomplete read is partial and does not lower a stored sell."
+    "min_sell_ada is a dust floor on the ADA of sell txs not seen before. A partial read adds that "
+    "fresh ADA to the stored total and does not lower it. An incomplete read is marked partial."
 )
 
 
@@ -153,7 +154,7 @@ def fold(unit, ordered, dev, ex, launch_s, dc):
     bal, peak = {}, 0
     sold_ada, sold_qty = 0.0, 0
     first_sell_s, holders_at, late_sell = None, None, False
-    sell_hashes, pending = [], {}
+    sell_hashes, sell_ada, pending = [], {}, {}
     for tx in ordered:
         deltas, dev_qty, dev_lov = {}, 0, 0
         for side, sign in (("inputs", -1), ("outputs", 1)):
@@ -185,10 +186,10 @@ def fold(unit, ordered, dev, ex, launch_s, dc):
             if script and q and ref and not _hit(st, addr, ex):
                 script_outs.append((ref, q))
         spent = [u.get("ref") for u in (tx.get("inputs") or []) if u.get("ref") in pending]
-        is_sell, sell_q = False, 0
+        is_sell, sell_q, sell_lov = False, 0, 0.0
         if dev and dev_qty < 0 and dev_lov > 0:
-            is_sell, sell_q = True, -dev_qty
-            sold_ada += dev_lov / 1e6
+            is_sell, sell_q, sell_lov = True, -dev_qty, dev_lov / 1e6
+            sold_ada += sell_lov
         elif dev and dev_qty < 0 and script_outs:
             left = -dev_qty
             for ref, q in script_outs:
@@ -200,11 +201,25 @@ def fold(unit, ordered, dev, ex, launch_s, dc):
                     break
         elif dev and dev_lov > 0 and spent:
             parked = sum(pending.pop(ref, 0) for ref in spent)
-            returned = dev_qty if dev_qty > 0 else 0  # cancel or the unfilled change of a partial fill
-            filled = parked - returned
+            returned = dev_qty if dev_qty > 0 else 0  # cancel, or change paid back to the dev
+            order_addrs = set()
+            for u in tx.get("inputs") or []:
+                if u.get("ref") in spent:
+                    _st, script, addr = _who(u)
+                    if script and addr:
+                        order_addrs.add(addr)
+            relisted = 0
+            for u in tx.get("outputs") or []:
+                st, script, addr = _who(u)
+                ref, q = u.get("ref") or "", _qty(u, unit)
+                # unfilled tokens that go straight back into an order at the same script are not sold
+                if script and q and ref and addr in order_addrs and not _hit(st, addr, ex):
+                    pending[ref] = pending.get(ref, 0) + q
+                    relisted += q
+            filled = parked - returned - relisted
             if filled > 0:
-                is_sell, sell_q = True, filled
-                sold_ada += dev_lov / 1e6
+                is_sell, sell_q, sell_lov = True, filled, dev_lov / 1e6
+                sold_ada += sell_lov
         elif spent:
             for ref in spent:
                 pending.pop(ref, None)
@@ -213,6 +228,7 @@ def fold(unit, ordered, dev, ex, launch_s, dc):
         sold_qty += sell_q
         if tx.get("hash"):
             sell_hashes.append(tx["hash"])
+            sell_ada[tx["hash"]] = round(sell_ada.get(tx["hash"], 0.0) + sell_lov, 2)
         holders = sum(1 for q in bal.values() if q > 0)
         if first_sell_s is None:
             first_sell_s = tx.get("time")
@@ -230,7 +246,7 @@ def fold(unit, ordered, dev, ex, launch_s, dc):
     late = bool(late_sell and net >= bag and sold_pct >= bag and others >= int(dc["rug_min_other_holders"]))
     sharp = bool(peak and (net >= float(dc["rug_bag_pct"]) or pending_qty / peak * 100.0 >= float(dc["rug_bag_pct"])))
     return {"peak": peak, "sold_ada": round(sold_ada, 2), "sold_qty": sold_qty, "first_sell_s": first_sell_s,
-            "holders_at_sell": holders_at, "late_rug": late, "sell_hashes": sell_hashes,
+            "holders_at_sell": holders_at, "late_rug": late, "sell_hashes": sell_hashes, "sell_ada": sell_ada,
             "net_drop_pct": round(net, 2), "pending_qty": pending_qty, "sharp": sharp}
 
 
@@ -316,10 +332,13 @@ def _may_fire(prev, baseline):
     return True
 
 
-def _worth_firing(observed, late, prev, dc):
-    """A new sell hash fires when the new ADA (not the running total) is at least min_sell_ada, or late_rug flipped."""
-    prev_sold = float(prev.get("dev_sold_ada") or 0) if isinstance(prev, dict) else 0.0
-    if observed is not None and round(float(observed) - prev_sold, 2) >= float(dc["min_sell_ada"]):
+def _worth_firing(fresh_ada, late, prev, dc):
+    """Fire when the ADA on unseen sell txs is at least min_sell_ada, or late_rug flipped.
+
+    `fresh_ada` is the sum for hashes the private cache has not seen. It is not this read's total
+    and not that total minus the stored total: a partial window often misses the older sells.
+    """
+    if fresh_ada is not None and float(fresh_ada) >= float(dc["min_sell_ada"]):
         return True
     return late is True and (not isinstance(prev, dict) or prev.get("late_rug") is not True)
 
@@ -679,7 +698,7 @@ def _no_stake(row, stake, keep=False):
     return row
 
 
-def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline, new_hashes=()):
+def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline, new_hashes=(), fresh_ada=0.0):
     launch = item.get("launch") or {}
     unit = item.get("unit") or ""
     row = _blank(item.get("ticker"), _policy_short(unit), iso(now_s), unit)
@@ -725,6 +744,9 @@ def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline, new_h
                        "skipped": None, "unread_txs": scan.get("unread_txs") or 0}
     # only the same policy+asset continues a row. A ticker that changed token is a new baseline.
     same = prev if isinstance(prev, dict) and prev.get("unit") == unit else None
+    if not complete and isinstance(same, dict):
+        # this window can miss older sells, so add only the ADA on hashes not seen before
+        row["dev_sold_ada"] = round(float(same.get("dev_sold_ada") or 0) + float(fresh_ada or 0), 2)
     if not complete:
         _keep_sell(row, same, False)
     sharp = bool(stats.get("sharp"))
@@ -736,7 +758,7 @@ def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline, new_h
         risk = same.get("risk")
     row["risk"] = risk
     row["changed_since_last"] = bool(
-        _may_fire(same, baseline) and new_hashes and _worth_firing(observed, row["late_rug"], same, dc))
+        _may_fire(same, baseline) and new_hashes and _worth_firing(fresh_ada, row["late_rug"], same, dc))
     if new_hashes:
         row["_new_sell"] = new_hashes[-1]
     return _no_stake(row, stake)
@@ -865,7 +887,7 @@ def _quiet_owner(sc, item, pats, stakes):
     if st and _hidden(pats, stakes, st, addr):
         sc["stake"] = None
         if sc.get("stats"):
-            sc["stats"] = dict(sc["stats"], sell_hashes=[], sharp=False)
+            sc["stats"] = dict(sc["stats"], sell_hashes=[], sell_ada={}, sharp=False)
     return sc
 
 
@@ -981,10 +1003,13 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
             why = stop or ("budget" if item["unit"] not in {r["unit"] for r in rows_in[:limit]} else chain.stop_reason() or "budget")
             sc = {"stake": _launcher_stake(item.get("launch"), ex), "skipped": why, "stats": None}
         prev = prev_rows.get(item.get("unit"))
-        observed = ((sc.get("stats") or {}).get("sell_hashes") if sc.get("stats") else None)
+        stats = sc.get("stats") or {}
+        observed = stats.get("sell_hashes") if sc.get("stats") else None
         fresh = (_note_sells(cache, item["unit"], observed, prev, item.get("ticker"))
                  if sc.get("stats") is not None and sc.get("stake") else [])
-        row = _entry(item, sc, prev, cache, launches, dc, now_s, now_ms, baseline, fresh)
+        by_hash = stats.get("sell_ada") or {}
+        fresh_ada = round(sum(float(by_hash.get(h) or 0) for h in fresh), 2)
+        row = _entry(item, sc, prev, cache, launches, dc, now_s, now_ms, baseline, fresh, fresh_ada)
         entries.append(row)
         trig = trigger_for(row)
         row.pop("_new_sell", None)
