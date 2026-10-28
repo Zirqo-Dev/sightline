@@ -7,33 +7,9 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-28T17:00:37Z",
+ "generated_at": "2026-10-28T17:30:25Z",
  "cfg_version": "v1-v6.5",
- "open": [
-  {
-   "id": "S-20261028T1600-6EKmpump",
-   "ticker": "NVINU",
-   "mint": "6EKmRQYzAXh5t6t1XNe2chYqmdSHgd32uA7xki9upump",
-   "book": "S",
-   "status": "open",
-   "size": 0.5,
-   "opened_at": "2026-10-28T16:00:32Z",
-   "window_ends_at": "2026-10-28T18:00:32Z",
-   "entry": {
-    "px": 0.001490807631491715
-   },
-   "frac": 0.666667,
-   "last_mark": 0.0022440910334518252,
-   "thesis": "safety:too_fresh",
-   "result": {
-    "pnl": 0.077364475,
-    "pct": 50.53,
-    "unit": "SOL",
-    "net_pnl": 0.077364475,
-    "gross_pnl": 0.084214241
-   }
-  }
- ],
+ "open": [],
  "closed": [
   {
    "id": "F-20261028T1330-96AUWRAY",
@@ -463,6 +439,33 @@
     "gross_pct": -86.14
    },
    "thesis": "safety:too_fresh"
+  },
+  {
+   "id": "S-20261028T1600-6EKmpump",
+   "ticker": "NVINU",
+   "mint": "6EKmRQYzAXh5t6t1XNe2chYqmdSHgd32uA7xki9upump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "opened_at": "2026-10-28T16:00:32Z",
+   "closed_at": "2026-10-28T17:30:25Z",
+   "entry": {
+    "px": 0.001490807631491715
+   },
+   "exit": {
+    "px": 0.001518441447485026
+   },
+   "exit_reason": "trailing_stop",
+   "result": {
+    "pnl": 0.074206508,
+    "pct": 14.77,
+    "unit": "SOL",
+    "net_pnl": 0.074206508,
+    "net_pct": 14.77,
+    "gross_pnl": 0.090392954,
+    "gross_pct": 18.08
+   },
+   "thesis": "safety:too_fresh"
   }
  ],
  "books": {
@@ -486,14 +489,14 @@
    "realized_gross_pnl": -0.030990181
   },
   "S": {
-   "cash": 9.332185916,
-   "equity": 9.821931533,
-   "realized_pnl": -0.332807417,
-   "open": 1,
-   "closed": 2,
+   "cash": 9.664034616,
+   "equity": 9.664034616,
+   "realized_pnl": -0.335965384,
+   "open": 0,
+   "closed": 3,
    "fills_today": 3,
    "would_halt": [],
-   "realized_gross_pnl": -0.346491181
+   "realized_gross_pnl": -0.340312468
   }
  },
  "costs": {

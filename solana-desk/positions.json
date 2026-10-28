@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793206837,
+ "last_run_ts": 1793208625,
  "voids": [],
  "books": {
   "F": {
@@ -224,32 +224,11 @@
    "realized_gross": -0.030990180666529393
   },
   "S": {
-   "cash": 9.332185916114707,
-   "open": {
-    "S-20261028T1600-6EKmpump": {
-     "entry": 0.001490807631491715,
-     "peak": 0.0022440910334518252,
-     "steps": 1,
-     "liq0": 163.5723,
-     "opened": 1793203232,
-     "frac": 0.6666666666666667,
-     "last_mark": 0.0022440910334518252,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "6EKmRQYzAXh5t6t1XNe2chYqmdSHgd32uA7xki9upump",
-     "symbol": "NVINU",
-     "tokens": 335388677545,
-     "run_id": "20261028T1600",
-     "why": "safety:too_fresh",
-     "book": "S",
-     "pnl": 0.07736447488289439,
-     "exit_haircut": 0.023928085367788406,
-     "gross_pnl": 0.0842142413333333
-    }
-   },
+   "cash": 9.664034615545418,
+   "open": {},
    "fills_day": "2026-10-28",
    "fills_today": 3,
-   "realized_pnl": -0.3328074172186271,
+   "realized_pnl": -0.3359653844545831,
    "closed": [
     {
      "id": "S-20261028T1330-5Zjdpump",
@@ -278,11 +257,26 @@
      "pct": -86.9,
      "gross_pct": -86.14,
      "why_entered": "safety:too_fresh"
+    },
+    {
+     "id": "S-20261028T1600-6EKmpump",
+     "mint": "6EKmRQYzAXh5t6t1XNe2chYqmdSHgd32uA7xki9upump",
+     "symbol": "NVINU",
+     "opened": 1793203232,
+     "closed": 1793208625,
+     "entry": 0.001490807631491715,
+     "exit_px": 0.001518441447485026,
+     "why": "trailing_stop",
+     "pnl": 0.074206508,
+     "gross_pnl": 0.090392954,
+     "pct": 14.77,
+     "gross_pct": 18.08,
+     "why_entered": "safety:too_fresh"
     }
    ],
    "would_halt": [],
    "peak_equity": 10.043404528660002,
-   "realized_gross": -0.34649118066666673
+   "realized_gross": -0.3403124679989878
   }
  }
 }
