@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793224826,
+ "last_run_ts": 1793226623,
  "voids": [],
  "books": {
   "F": {
@@ -224,7 +224,7 @@
    "realized_gross": -0.030990180666529393
   },
   "S": {
-   "cash": 9.007205148010211,
+   "cash": 9.22323745047271,
    "open": {
     "S-20261028T1900-BLAypump": {
      "entry": 0.0016256825499667297,
@@ -233,7 +233,7 @@
      "liq0": 148.2672,
      "opened": 1793214029,
      "frac": 0.6666666666666667,
-     "last_mark": 0.0024253863656339765,
+     "last_mark": 0.002259064712006114,
      "stale": 0,
      "no_route_count": 0,
      "mint": "BLAytV5xTVEkYJYS1RoFR5Ypgm3JZ44CvVdZHTExpump",
@@ -246,38 +246,16 @@
      "gross_pnl": 0.097549048,
      "entry_haircut": 0.02746345431991389,
      "entry_cost": 0.5137417271599569,
-     "exit_haircut": 0.028125818841102226
-    },
-    "S-20261028T2030-ESvMpump": {
-     "entry": 0.0007623860747866213,
-     "peak": 0.0008420251513498821,
-     "steps": 0,
-     "liq0": 96.7477,
-     "opened": 1793219425,
-     "frac": 1.0,
-     "last_mark": 0.0008420251513498821,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "ESvM3LJuJD7d94nR2KRRfCSsKsgtUhbPe9u38z7vpump",
-     "symbol": "WORKR",
-     "tokens": 655835693405,
-     "run_id": "20261028T2030",
-     "why": "safety:too_fresh",
-     "book": "S",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
-     "entry_haircut": 0.021814520111234987,
-     "entry_cost": 0.5109172600556174,
-     "exit_haircut": 0.02760994412183785
+     "exit_haircut": 0.017742507958461745
     },
     "S-20261028T2100-dyw5pump": {
      "entry": 0.0043110598611640375,
-     "peak": 0.00914616862398209,
+     "peak": 0.012204281283256966,
      "steps": 2,
      "liq0": 257.1357,
      "opened": 1793221227,
      "frac": 0.3333333333333334,
-     "last_mark": 0.00914616862398209,
+     "last_mark": 0.012204281283256966,
      "stale": 0,
      "no_route_count": 0,
      "mint": "dyw5fDNv91eknniMG4tGCU1ZrzjuxbpsLiEzih6pump",
@@ -290,34 +268,12 @@
      "gross_pnl": 0.37385306,
      "entry_haircut": 0.020440792724637596,
      "entry_cost": 0.5102303963623187,
-     "exit_haircut": 0.023176956067482258
-    },
-    "S-20261028T2130-GVqSgFbh": {
-     "entry": 0.0009686259941276429,
-     "peak": 0.0010459697723877014,
-     "steps": 0,
-     "liq0": 112.2209,
-     "opened": 1793223022,
-     "frac": 1.0,
-     "last_mark": 0.0010459697723877014,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "GVqSxeKxwuRcReibS38ot18xeHT9EtmejXQCREqXgFbh",
-     "symbol": "ANTI",
-     "tokens": 516195108361,
-     "run_id": "20261028T2130",
-     "why": "safety:too_fresh",
-     "book": "S",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
-     "entry_haircut": 0.029894530838760692,
-     "entry_cost": 0.5149572654193803,
-     "exit_haircut": 0.027388939330741494
+     "exit_haircut": 0.015
     }
    },
    "fills_day": "2026-10-28",
    "fills_today": 13,
-   "realized_pnl": 0.5456509570459535,
+   "realized_pnl": -0.26419126596654424,
    "closed": [
     {
      "id": "S-20261028T1330-5Zjdpump",
@@ -451,11 +407,41 @@
      "pct": -10.12,
      "gross_pct": -5.1,
      "why_entered": "safety:too_old"
+    },
+    {
+     "id": "S-20261028T2030-ESvMpump",
+     "mint": "ESvM3LJuJD7d94nR2KRRfCSsKsgtUhbPe9u38z7vpump",
+     "symbol": "WORKR",
+     "opened": 1793219425,
+     "closed": 1793226623,
+     "entry": 0.0007623860747866213,
+     "exit_px": 2.1526859763763456e-05,
+     "why": "liquidity_pulled",
+     "pnl": -0.497126834,
+     "gross_pnl": -0.485881917,
+     "pct": -97.3,
+     "gross_pct": -97.18,
+     "why_entered": "safety:too_fresh"
+    },
+    {
+     "id": "S-20261028T2130-GVqSgFbh",
+     "mint": "GVqSxeKxwuRcReibS38ot18xeHT9EtmejXQCREqXgFbh",
+     "symbol": "ANTI",
+     "opened": 1793223022,
+     "closed": 1793226623,
+     "entry": 0.0009686259941276429,
+     "exit_px": 0.00040393077273057185,
+     "why": "hard_stop",
+     "pnl": -0.312715389,
+     "gross_pnl": -0.291492911,
+     "pct": -60.73,
+     "gross_pct": -58.3,
+     "why_entered": "safety:too_fresh"
     }
    ],
    "would_halt": [],
    "peak_equity": 10.89800187930826,
-   "realized_gross": 0.7434248236684402
+   "realized_gross": -0.03395000433155976
   }
  }
 }
