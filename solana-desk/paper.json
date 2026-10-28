@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-28T18:30:27Z",
+ "generated_at": "2026-10-28T19:00:29Z",
  "cfg_version": "v1-v6.5",
  "open": [
   {
@@ -23,54 +23,31 @@
     "px": 0.00029607201994493
    },
    "frac": 1.0,
-   "last_mark": 0.00026835232444910915,
+   "last_mark": 0.0002662358328894914,
    "thesis": "safety:top10_heavy",
    "result": {
     "pnl": 0.0,
-    "pct": -9.36,
+    "pct": -10.08,
     "unit": "SOL",
     "net_pnl": 0.0,
     "gross_pnl": 0.0
    }
   },
   {
-   "id": "S-20261028T1830-DTdnpump",
-   "ticker": "HOUND",
-   "mint": "DTdnYsQe2PDfrFhtXrXSRgJTxSjav8Z3exMxs3RWpump",
+   "id": "S-20261028T1900-BLAypump",
+   "ticker": "TRUMPKIN",
+   "mint": "BLAytV5xTVEkYJYS1RoFR5Ypgm3JZ44CvVdZHTExpump",
    "book": "S",
    "status": "open",
    "size": 0.5,
-   "opened_at": "2026-10-28T18:30:27Z",
-   "window_ends_at": "2026-10-28T20:30:27Z",
+   "opened_at": "2026-10-28T19:00:29Z",
+   "window_ends_at": "2026-10-28T21:00:29Z",
    "entry": {
-    "px": 0.00033680100646061163
+    "px": 0.0016256825499667297
    },
    "frac": 1.0,
-   "last_mark": 0.00033680100646061163,
+   "last_mark": 0.0016256825499667297,
    "thesis": "safety:too_fresh",
-   "result": {
-    "pnl": 0.0,
-    "pct": 0.0,
-    "unit": "SOL",
-    "net_pnl": 0.0,
-    "gross_pnl": 0.0
-   }
-  },
-  {
-   "id": "S-20261028T1830-AKnipump",
-   "ticker": "PENISINU",
-   "mint": "AKnipsE3JGnHR7yT7NTDcaBJw6KjQWhscAsDZRavpump",
-   "book": "S",
-   "status": "open",
-   "size": 0.5,
-   "opened_at": "2026-10-28T18:30:27Z",
-   "window_ends_at": "2026-10-28T20:30:27Z",
-   "entry": {
-    "px": 0.00015720814710843371
-   },
-   "frac": 1.0,
-   "last_mark": 0.00015720814710843371,
-   "thesis": "safety:top10_heavy",
    "result": {
     "pnl": 0.0,
     "pct": 0.0,
@@ -536,6 +513,60 @@
     "gross_pct": 18.08
    },
    "thesis": "safety:too_fresh"
+  },
+  {
+   "id": "S-20261028T1830-DTdnpump",
+   "ticker": "HOUND",
+   "mint": "DTdnYsQe2PDfrFhtXrXSRgJTxSjav8Z3exMxs3RWpump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "opened_at": "2026-10-28T18:30:27Z",
+   "closed_at": "2026-10-28T19:00:29Z",
+   "entry": {
+    "px": 0.00033680100646061163
+   },
+   "exit": {
+    "px": 0.00018406468491469454
+   },
+   "exit_reason": "hard_stop",
+   "result": {
+    "pnl": -0.246580789,
+    "pct": -47.97,
+    "unit": "SOL",
+    "net_pnl": -0.246580789,
+    "net_pct": -47.97,
+    "gross_pnl": -0.226745643,
+    "gross_pct": -45.35
+   },
+   "thesis": "safety:too_fresh"
+  },
+  {
+   "id": "S-20261028T1830-AKnipump",
+   "ticker": "PENISINU",
+   "mint": "AKnipsE3JGnHR7yT7NTDcaBJw6KjQWhscAsDZRavpump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "opened_at": "2026-10-28T18:30:27Z",
+   "closed_at": "2026-10-28T19:00:29Z",
+   "entry": {
+    "px": 0.00015720814710843371
+   },
+   "exit": {
+    "px": 0.00011472846111057364
+   },
+   "exit_reason": "hard_stop",
+   "result": {
+    "pnl": -0.154439976,
+    "pct": -30.16,
+    "unit": "SOL",
+    "net_pnl": -0.154439976,
+    "net_pct": -30.16,
+    "gross_pnl": -0.135106503,
+    "gross_pct": -27.02
+   },
+   "thesis": "safety:top10_heavy"
   }
  ],
  "books": {
@@ -559,14 +590,14 @@
    "realized_gross_pnl": -0.030990181
   },
   "S": {
-   "cash": 8.122883133,
-   "equity": 9.553012442,
-   "realized_pnl": -0.335965384,
-   "open": 3,
-   "closed": 3,
-   "fills_today": 6,
+   "cash": 8.234275489,
+   "equity": 9.167075554,
+   "realized_pnl": -0.73698615,
+   "open": 2,
+   "closed": 5,
+   "fills_today": 7,
    "would_halt": [],
-   "realized_gross_pnl": -0.340312468
+   "realized_gross_pnl": -0.702164614
   }
  },
  "costs": {

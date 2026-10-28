@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793212227,
+ "last_run_ts": 1793214029,
  "voids": [],
  "books": {
   "F": {
@@ -224,7 +224,7 @@
    "realized_gross": -0.030990180666529393
   },
   "S": {
-   "cash": 8.122883133216838,
+   "cash": 8.234275488724668,
    "open": {
     "S-20261028T1800-56xZpump": {
      "entry": 0.00029607201994493,
@@ -233,7 +233,7 @@
      "liq0": 53.9703,
      "opened": 1793210429,
      "frac": 1.0,
-     "last_mark": 0.00026835232444910915,
+     "last_mark": 0.0002662358328894914,
      "stale": 0,
      "no_route_count": 0,
      "mint": "56xZsxJkoEyVisFtDFcK9TQ3GxDUHLUGi1kyDnbNpump",
@@ -246,54 +246,33 @@
      "gross_pnl": 0.0,
      "entry_haircut": 0.029973268735820683,
      "entry_cost": 0.5149966343679103,
-     "exit_haircut": 0.017715117035913306
+     "exit_haircut": 0.0206693845524221
     },
-    "S-20261028T1830-DTdnpump": {
-     "entry": 0.00033680100646061163,
-     "peak": 0.00033680100646061163,
+    "S-20261028T1900-BLAypump": {
+     "entry": 0.0016256825499667297,
+     "peak": 0.0016256825499667297,
      "steps": 0,
-     "liq0": 61.7424,
-     "opened": 1793212227,
+     "liq0": 148.2672,
+     "opened": 1793214029,
      "frac": 1.0,
-     "last_mark": 0.00033680100646061163,
+     "last_mark": 0.0016256825499667297,
      "stale": 0,
      "no_route_count": 0,
-     "mint": "DTdnYsQe2PDfrFhtXrXSRgJTxSjav8Z3exMxs3RWpump",
-     "symbol": "HOUND",
-     "tokens": 1484556133767,
-     "run_id": "20261028T1830",
+     "mint": "BLAytV5xTVEkYJYS1RoFR5Ypgm3JZ44CvVdZHTExpump",
+     "symbol": "TRUMPKIN",
+     "tokens": 307563121724,
+     "run_id": "20261028T1900",
      "why": "safety:too_fresh",
      "book": "S",
      "pnl": 0.0,
      "gross_pnl": 0.0,
-     "entry_haircut": 0.028134834531902186,
-     "entry_cost": 0.514077417265951
-    },
-    "S-20261028T1830-AKnipump": {
-     "entry": 0.00015720814710843371,
-     "peak": 0.00015720814710843371,
-     "steps": 0,
-     "liq0": 30.1313,
-     "opened": 1793212227,
-     "frac": 1.0,
-     "last_mark": 0.00015720814710843371,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "AKnipsE3JGnHR7yT7NTDcaBJw6KjQWhscAsDZRavpump",
-     "symbol": "PENISINU",
-     "tokens": 3180496743945,
-     "run_id": "20261028T1830",
-     "why": "safety:top10_heavy",
-     "book": "S",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
-     "entry_haircut": 0.024134861389432702,
-     "entry_cost": 0.5120774306947163
+     "entry_haircut": 0.02746345431991389,
+     "entry_cost": 0.5137417271599569
     }
    },
    "fills_day": "2026-10-28",
-   "fills_today": 6,
-   "realized_pnl": -0.3359653844545831,
+   "fills_today": 7,
+   "realized_pnl": -0.7369861497474636,
    "closed": [
     {
      "id": "S-20261028T1330-5Zjdpump",
@@ -337,11 +316,41 @@
      "pct": 14.77,
      "gross_pct": 18.08,
      "why_entered": "safety:too_fresh"
+    },
+    {
+     "id": "S-20261028T1830-DTdnpump",
+     "mint": "DTdnYsQe2PDfrFhtXrXSRgJTxSjav8Z3exMxs3RWpump",
+     "symbol": "HOUND",
+     "opened": 1793212227,
+     "closed": 1793214029,
+     "entry": 0.00033680100646061163,
+     "exit_px": 0.00018406468491469454,
+     "why": "hard_stop",
+     "pnl": -0.246580789,
+     "gross_pnl": -0.226745643,
+     "pct": -47.97,
+     "gross_pct": -45.35,
+     "why_entered": "safety:too_fresh"
+    },
+    {
+     "id": "S-20261028T1830-AKnipump",
+     "mint": "AKnipsE3JGnHR7yT7NTDcaBJw6KjQWhscAsDZRavpump",
+     "symbol": "PENISINU",
+     "opened": 1793212227,
+     "closed": 1793214029,
+     "entry": 0.00015720814710843371,
+     "exit_px": 0.00011472846111057364,
+     "why": "hard_stop",
+     "pnl": -0.154439976,
+     "gross_pnl": -0.135106503,
+     "pct": -30.16,
+     "gross_pct": -27.02,
+     "why_entered": "safety:top10_heavy"
     }
    ],
    "would_halt": [],
    "peak_equity": 10.043404528660002,
-   "realized_gross": -0.3403124679989878
+   "realized_gross": -0.7021646139989879
   }
  }
 }
