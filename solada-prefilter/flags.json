@@ -1,55 +1,109 @@
 {
- "at": "2026-10-28T00:10:45Z",
+ "at": "2026-10-28T02:11:13Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "holders_down_mcap_up",
-   "ticker": "HOWDY",
-   "holders": [
-    55,
-    54
+   "kind": "watch_tags_early_buyers",
+   "ticker": "UNFAZED",
+   "tags": [
+    "uxz6fvju"
    ],
-   "mcap_ada": [
-    14821,
-    15717
+   "roles": [
+    "first_block_sniper"
    ],
-   "at": "2026-10-28T00:10:45Z"
+   "at": "2026-10-28T02:11:13Z"
+  },
+  {
+   "kind": "coordinated_buys",
+   "ticker": "UNFAZED",
+   "wallets": [
+    "w-65e77b7a",
+    "w-966b008d",
+    "w-c66abf4f",
+    "w-ca8a5d10",
+    "w-e87d53fa",
+    "w-f7844f67"
+   ],
+   "window_s": 120,
+   "at": "2026-10-28T02:11:13Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-ca8a5d10",
+   "launches": [
+    "BET",
+    "PINU",
+    "SLIP",
+    "UNFAZED"
+   ],
+   "at": "2026-10-28T02:11:13Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-e87d53fa",
+   "launches": [
+    "MCFA",
+    "PINU",
+    "SLIP",
+    "UNFAZED"
+   ],
+   "at": "2026-10-28T02:11:13Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-f7844f67",
+   "launches": [
+    "BREAD",
+    "MCFA",
+    "TCM",
+    "UNFAZED"
+   ],
+   "at": "2026-10-28T02:11:13Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "UNFAZED",
+   "wallet": "w-966b008d",
+   "tags": [],
+   "at": "2026-10-28T02:11:13Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "UNFAZED",
+   "wallet": "w-65e77b7a",
+   "tags": [],
+   "at": "2026-10-28T02:11:13Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 71.4,
+   "top_cluster_pct": 71.4,
+   "top_cluster": "w-13d53c47",
+   "basis": "ex-fe819d",
+   "at": "2026-10-28T02:11:13Z"
   },
   {
    "kind": "founder_whale_move",
-   "ticker": "NIGHTBRINGER",
-   "tag": "w-f3186187",
-   "delta": 11158478,
-   "new_position": true,
-   "ada_equiv": 251,
-   "value_basis": "ada_leg",
-   "at": "2026-10-28T00:10:45Z"
-  },
-  {
-   "kind": "founder_whale_move",
-   "ticker": "CRAWJU",
+   "ticker": "SNEK",
    "tag": "w-f3186187",
    "delta": -1000000,
    "decimals": 0,
    "qty": -1000000.0,
-   "ada_equiv": 554,
+   "ada_equiv": 3011,
    "value_basis": "ada_leg",
-   "pct": 12.5,
-   "at": "2026-10-28T00:10:45Z"
+   "pct": 2.0,
+   "at": "2026-10-28T02:11:13Z"
   },
   {
    "kind": "founder_whale_move",
-   "ticker": "ASCEND",
+   "ticker": "VAL",
    "tag": "w-f3186187",
-   "delta": 177712068,
-   "decimals": 6,
-   "qty": 177.7121,
-   "ada_equiv": 252,
-   "value_basis": "ada_leg",
-   "pct": 0.1,
-   "at": "2026-10-28T00:10:45Z"
+   "delta": 42707725,
+   "new_position": true,
+   "at": "2026-10-28T02:11:13Z"
   }
  ],
  "recent": [
@@ -1618,10 +1672,112 @@
    "value_basis": "ada_leg",
    "pct": 0.1,
    "at": "2026-10-28T00:10:45Z"
+  },
+  {
+   "kind": "watch_tags_early_buyers",
+   "ticker": "UNFAZED",
+   "tags": [
+    "uxz6fvju"
+   ],
+   "roles": [
+    "first_block_sniper"
+   ],
+   "at": "2026-10-28T02:11:13Z"
+  },
+  {
+   "kind": "coordinated_buys",
+   "ticker": "UNFAZED",
+   "wallets": [
+    "w-65e77b7a",
+    "w-966b008d",
+    "w-c66abf4f",
+    "w-ca8a5d10",
+    "w-e87d53fa",
+    "w-f7844f67"
+   ],
+   "window_s": 120,
+   "at": "2026-10-28T02:11:13Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-ca8a5d10",
+   "launches": [
+    "BET",
+    "PINU",
+    "SLIP",
+    "UNFAZED"
+   ],
+   "at": "2026-10-28T02:11:13Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-e87d53fa",
+   "launches": [
+    "MCFA",
+    "PINU",
+    "SLIP",
+    "UNFAZED"
+   ],
+   "at": "2026-10-28T02:11:13Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-f7844f67",
+   "launches": [
+    "BREAD",
+    "MCFA",
+    "TCM",
+    "UNFAZED"
+   ],
+   "at": "2026-10-28T02:11:13Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "UNFAZED",
+   "wallet": "w-966b008d",
+   "tags": [],
+   "at": "2026-10-28T02:11:13Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "UNFAZED",
+   "wallet": "w-65e77b7a",
+   "tags": [],
+   "at": "2026-10-28T02:11:13Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 71.4,
+   "top_cluster_pct": 71.4,
+   "top_cluster": "w-13d53c47",
+   "basis": "ex-fe819d",
+   "at": "2026-10-28T02:11:13Z"
+  },
+  {
+   "kind": "founder_whale_move",
+   "ticker": "SNEK",
+   "tag": "w-f3186187",
+   "delta": -1000000,
+   "decimals": 0,
+   "qty": -1000000.0,
+   "ada_equiv": 3011,
+   "value_basis": "ada_leg",
+   "pct": 2.0,
+   "at": "2026-10-28T02:11:13Z"
+  },
+  {
+   "kind": "founder_whale_move",
+   "ticker": "VAL",
+   "tag": "w-f3186187",
+   "delta": 42707725,
+   "new_position": true,
+   "at": "2026-10-28T02:11:13Z"
   }
  ],
  "api_calls": {
-  "koios": 1
+  "blockfrost": 2,
+  "koios": 12
  },
  "thresholds": {
   "enabled": true,

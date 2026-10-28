@@ -1,0 +1,104 @@
+{
+ "at": "2026-10-28T02:16:03Z",
+ "phase": 1,
+ "source": "snek_cardano_top10",
+ "note": "Research only, for Snek. Swaps are read at pool level only: the batcher signs the transaction, so the trader is not named until per-DEX order decoders exist. actor_tag is set on a liquidity add or pull when a key wallet moved the LP token, as a w- hash or a role label. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
+ "limits": [
+  "Koios: at most max_calls per run (default 36), on the shared pre-filter pace. One tip, then one asset_txs page per pool marker and tx_info batches kept under 1 KB.",
+  "Blockfrost runs only after a Koios read returns nothing, and only up to max_bf_calls (default 12). An empty BLOCKFROST_PROJECT_ID skips it.",
+  "Minswap V2 markers are the derived LP asset name. Sundae and Splash pools are recognized when a continuing pool UTxO is inside a transaction this job already read. Discovery of those pools rechecks the newest token transactions at most every discover_every_h.",
+  "The job stops at budget_s or the shared research deadline. A capped pool resumes next run. Nothing here changes desk rules, kill lines, or the webhook."
+ ],
+ "level": "pool",
+ "thresholds": {
+  "min_swap_ada": 5000,
+  "min_lp_ada": 1000,
+  "dump_window_h": 6,
+  "dump_ada": 5000,
+  "dump_reserve_pct": 8
+ },
+ "budget": {
+  "max_calls": 36,
+  "max_bf_calls": 12,
+  "budget_s": 50
+ },
+ "actor_tags": true,
+ "moves": [],
+ "pools": [],
+ "tokens": [
+  {
+   "ticker": "SOLADA",
+   "policy_short": "e7c77b27",
+   "rank": 6
+  },
+  {
+   "ticker": "COCK",
+   "policy_short": "49e42316",
+   "rank": 8
+  },
+  {
+   "ticker": "CLOVE",
+   "policy_short": "c1b89ed4",
+   "rank": 9
+  },
+  {
+   "ticker": "BOLT",
+   "policy_short": "14628c26",
+   "rank": 10
+  }
+ ],
+ "skipped": [
+  {
+   "ticker": "ASCEND",
+   "skipped": "unresolved"
+  },
+  {
+   "ticker": "NIGHT",
+   "skipped": "unresolved"
+  },
+  {
+   "ticker": "STRIKE",
+   "skipped": "unresolved"
+  },
+  {
+   "ticker": "SNEK",
+   "skipped": "unresolved"
+  },
+  {
+   "ticker": "MIN",
+   "skipped": "unresolved"
+  },
+  {
+   "ticker": "IAG",
+   "skipped": "unresolved"
+  }
+ ],
+ "coverage": {
+  "SOLADA": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
+  },
+  "COCK": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
+  },
+  "CLOVE": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
+  },
+  "BOLT": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
+  }
+ },
+ "capped": [],
+ "koios_calls": 0,
+ "blockfrost_calls": 0,
+ "blockfrost_fallbacks": 0,
+ "blockfrost_available": true,
+ "basis": "koios"
+}
