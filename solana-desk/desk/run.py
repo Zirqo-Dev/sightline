@@ -1,11 +1,12 @@
 """Scanner entry point (no AI, paper only). Usage:
     python -m desk.run --mode scan --data-dir PATH
 Mode "scan" (default) only checks leads and logs tasks; it never fills.
-Mode "fill" is refused until config.FROZEN is True (frozen Oct 26, 2026) AND the fill step exists (FILL_READY).
+Mode "fill" = scan + paper fill step (desk/fills.py); allowed only when config.FROZEN and FILL_READY.
+Mode "auto" (workflow default) = fill when allowed, else scan.
 Free public APIs only: DexScreener, RugCheck, Jupiter quote (optional free key in JUPITER_API_KEY).
 """
 import argparse, json, os, sys, time, urllib.request, urllib.error
-from . import config as C, skips, ledger
+from . import config as C, skips, ledger, fills
 
 SOL = "So11111111111111111111111111111111111111112"
 DEX = "https://api.dexscreener.com"
@@ -42,10 +43,12 @@ def best_pair(get, mint):
 QUOTE_GAP_S = 1.2   # keyed free tier 429s after ~11 back-to-back calls (measured 2026-10-25)
 RETRY_WAIT_S = 2.0
 
-def quote(get, mint, key, sleep=time.sleep):
+def quote(get, mint, key, sleep=time.sleep, input_mint=SOL, amount=None):
     """Returns quote dict; {} if Jupiter says there is no route; raises on other errors.
-    One retry on HTTP 429/5xx."""
-    q = f"?inputMint={SOL}&outputMint={mint}&amount={int(C.TICKET_SOL * 1e9)}&slippageBps=300"
+    One retry on HTTP 429/5xx. Default: buy quote for the ticket; fills use input_mint=mint to price a sell."""
+    out = SOL if input_mint != SOL else mint
+    amt = int(C.TICKET_SOL * 1e9) if amount is None else int(amount)
+    q = f"?inputMint={input_mint}&outputMint={out}&amount={amt}&slippageBps=300"
     url, hdr = (JUP_KEYED + q, {"x-api-key": key}) if key else (JUP_LITE + q, None)
     for attempt in (0, 1):
         try:
@@ -62,7 +65,7 @@ def quote(get, mint, key, sleep=time.sleep):
 
 ERR_NAMES = {"dex": "dexscreener", "rug": "rugcheck", "jup": "jupiter"}
 
-FILL_READY = False  # fill step not built yet; flips in the fill-step PR
+FILL_READY = True  # fill step built (desk/fills.py); paper only
 
 def mode_allowed(mode):
     return mode == "scan" or (mode == "fill" and C.FROZEN and FILL_READY)
@@ -90,7 +93,7 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None):
     ls = leads(get, C.LEADS_PER_RUN)
     if not ls: notes.append("no leads (DexScreener empty or unreachable)")
     if sleep is None: sleep = time.sleep if get is http_json else (lambda s: None)
-    st.setdefault("eligibility_skips", 0)
+    st.setdefault("eligibility_skips", 0); run_leads = []
     for i, mint in enumerate(m for m, _ in ls):
         src = ls[i][1]
         if i: sleep(QUOTE_GAP_S)  # pace Jupiter (and RugCheck) instead of bursting 12 calls
@@ -105,6 +108,7 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None):
         err = bool(errs)
         st["checks"] += 1; st["errors"] += int(err); st["data_failures"] += int(stype == "data")
         st["eligibility_skips"] += int(stype == "eligibility")
+        run_leads.append(dict(mint=mint, stype=stype, reason=reason, quote=q, pair=pair))
         ledger.task(data_dir, dict(time=int(now), run_id=run_id, agent="scanner", task="scan", mint=mint, book="",
                     result="pass" if stype is None else "skip", skip_type=stype or "", reason=reason or "",
                     source=src, check_delay_s=round(time.time() - t0, 2), cfg_version=C.CFG_VERSION, seed=seed,
@@ -112,22 +116,31 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None):
     st["runs"] += 1; st["slots"].append(run_id)
     st["run_times"].append(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)))
     with open(os.path.join(data_dir, "state.json"), "w") as f: json.dump(st, f, indent=1)
+    fill = None
+    if mode == "fill":
+        def sell_quote(m, amount): return quote(get, m, key, sleep, input_mint=m, amount=amount)
+        def liquidity(m):
+            p = best_pair(get, m); return ((p or {}).get("liquidity") or {}).get("quote")
+        fill = fills.step(data_dir, now, run_id, seed, run_leads, st, sell_quote, liquidity, sleep)
+        if fill["void"]: notes.append("new entries voided: " + ", ".join(fill["void"]))
     h = ledger.health(data_dir, st["runs"], RUNS_PER_DAY, st["checks"], st["errors"], st["data_failures"], day)
     h.update(eligibility_skips=st["eligibility_skips"], mode=mode, cfg_version=C.CFG_VERSION, frozen=C.FROZEN, last_run_utc=run_id, leads_this_run=len(ls),
              runner="github-actions" if os.environ.get("GITHUB_ACTIONS") else "local", notes=notes,
              run_times_utc=st["run_times"], max_gap_min=max_gap_min(st["run_times"]),
              trigger=os.environ.get("GITHUB_EVENT_NAME", "local"))
+    if fill: h.update(fill=fill)
     with open(os.path.join(data_dir, "health.json"), "w") as f: json.dump(h, f, indent=1)
     return h
 
 def main(argv=None):
-    a = argparse.ArgumentParser(); a.add_argument("--mode", choices=["scan", "fill"], default="scan")
+    a = argparse.ArgumentParser(); a.add_argument("--mode", choices=["scan", "fill", "auto"], default="scan")
     a.add_argument("--data-dir", default="desk-data-out"); o = a.parse_args(argv)
-    if not mode_allowed(o.mode):
+    mode = o.mode
+    if mode == "auto": mode = "fill" if mode_allowed("fill") else "scan"
+    if not mode_allowed(mode):
         print("fill mode refused: config not frozen or fill step not built yet"); return 2
-    if o.mode == "fill":
-        print("fill mode not implemented in this runner yet; scanning only")
-    h = scan(o.data_dir, key=os.environ.get("JUPITER_API_KEY") or None, mode="scan")
+    h = scan(o.data_dir, key=os.environ.get("JUPITER_API_KEY") or None, mode=mode)
+    print(f"mode={mode}")
     if h.get("duplicate"): print("slot already scanned; nothing to do"); return 0
     print(json.dumps({k: h.get(k) for k in ("day", "runs", "checks", "error_rate", "leads_this_run", "max_gap_min", "notes")}))
     return 0
