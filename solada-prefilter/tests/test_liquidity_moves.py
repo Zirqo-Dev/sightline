@@ -540,6 +540,7 @@ class ReviewFixes(unittest.TestCase):
                        owner_env=OWNER, deadline=0)
             cache = json.load(open(os.path.join(c, "liquidity-moves-cache.json")))
         self.assertEqual(cache["next"], 4)
+        self.assertTrue(cache["capped"])
 
     def test_owner_given_as_an_address_is_not_tagged(self):
         user = addr("own")
@@ -553,6 +554,76 @@ class ReviewFixes(unittest.TestCase):
         blob = json.dumps(doc)
         self.assertNotIn(user, blob)
         self.assertNotIn(st, blob)
+
+    def test_bad_pull_time_is_dropped_and_does_not_raise(self):
+        marker = LM.MINSWAP_V2_LP + LM.minswap_v2_lp_name(UNIT)
+        cleaned = LM._cache_public({"open_pulls": [
+            {"pool_key": "minswap_v2~aaaaaaaa", "time": "abc", "unit": UNIT},
+            {"pool_key": "minswap_v2~bbbbbbbb", "time": "1700000000", "unit": UNIT, "token": "MIN"},
+            {"pool_key": "", "time": 5},
+        ]})
+        self.assertEqual([p["time"] for p in cleaned["open_pulls"]], [1700000000])
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            json.dump({"open_pulls": [{"pool_key": "minswap_v2~aaaaaaaa", "time": "abc", "unit": UNIT}],
+                       "height": {marker: 1}, "units": {FX["ticker"]: UNIT}, "discovered_at": {UNIT: NOW}},
+                      open(os.path.join(c, "liquidity-moves-cache.json"), "w"))
+            summary = Run()._run([swap_tx()], d, c)[0]
+            cache = json.load(open(os.path.join(c, "liquidity-moves-cache.json")))
+        self.assertNotIn("error", summary)
+        self.assertFalse(any(p.get("time") == "abc" for p in cache["open_pulls"]))
+
+    def test_incomplete_newest_page_does_not_move_the_cursor(self):
+        marker = LM.MINSWAP_V2_LP + LM.minswap_v2_lp_name(UNIT)
+        recent = swap_tx()
+        recent["height"] = 999900
+        calls = []
+
+        def req(self_, src, url, method="GET", body=None, headers=None, quiet404=True):
+            self_.calls[src] = self_.calls.get(src, 0) + 1
+            calls.append(url)
+            if src == "koios":
+                return None
+            if url.endswith("/blocks/latest"):
+                return {"height": 1000000, "time": NOW}
+            if "/transactions?" in url:
+                return [{"tx_hash": recent["hash"], "block_height": recent["height"], "block_time": recent["time"]}]
+            if url.endswith("/utxos"):
+                def amt(u):
+                    rows = [{"unit": "lovelace", "quantity": str(u["lovelace"])}]
+                    rows += [{"unit": k, "quantity": str(q)} for k, q in u["assets"].items()]
+                    return {"address": u["addr"], "amount": rows}
+                return {"hash": recent["hash"], "inputs": [amt(u) for u in recent["inputs"]],
+                        "outputs": [amt(u) for u in recent["outputs"]]}
+            return None
+
+        http = P.Http({"koios": 0, "blockfrost": 0})
+        cfg = {"liquidity_moves": {"max_txs_per_pool": 1, "discover_every_h": 100000}}
+        with mock.patch.object(P.Http, "req", req), tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            json.dump({"height": {marker: 999500}, "discovered_at": {UNIT: NOW}, "units": {FX["ticker"]: UNIT}},
+                      open(os.path.join(c, "liquidity-moves-cache.json"), "w"))
+            LM.run(http, cfg, _top(), {FX["ticker"]: UNIT}, {UNIT: {"decimals": 6}}, V.lp_policies(),
+                   d, c, False, NOW, bf_key="k-bf", owner_env=OWNER)
+            cache = json.load(open(os.path.join(c, "liquidity-moves-cache.json")))
+            self.assertEqual(cache["height"].get(marker), 999500)
+            self.assertIn(recent["hash"], cache["seen"])
+            LM.run(http, cfg, _top(), {FX["ticker"]: UNIT}, {UNIT: {"decimals": 6}}, V.lp_policies(),
+                   d, c, False, NOW, bf_key="k-bf", owner_env=OWNER)
+            cache2 = json.load(open(os.path.join(c, "liquidity-moves-cache.json")))
+        self.assertEqual(cache2["height"].get(marker), 999500)
+
+    def test_merge_keeps_two_tokens_on_one_tx_and_owner_log_names_this_job(self):
+        a = {"time": "2026-10-28T00:00:00Z", "tx_short": "0123456789", "pool_key": "minswap_v2~aaaaaaaa",
+             "kind": "swap", "token": "MIN", "direction": "buy", "ada": 1}
+        b = dict(a, token="SNEK")
+        merged = LM.merge_moves([a], [b], NOW, 72)
+        self.assertEqual(sorted(r["token"] for r in merged), ["MIN", "SNEK"])
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            err = __import__("io").StringIO()
+            with mock.patch("sys.stderr", err):
+                Run()._run([swap_tx()], d, c, owner="")
+        text = err.getvalue()
+        self.assertIn("liquidity_moves: skipped: owner patterns unusable", text)
+        self.assertNotIn("dev_checks: skipped", text)
 
 
 class FileGuard(unittest.TestCase):

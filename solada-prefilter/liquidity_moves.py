@@ -334,8 +334,11 @@ def mark_dumps(events, open_pulls, bc, now_s):
     window = float(bc["dump_window_h"]) * 3600
     pulls = []
     for p in open_pulls or []:
-        if isinstance(p, dict) and p.get("pool_key") and now_s - int(p.get("time") or 0) <= window:
-            pulls.append(dict(p))
+        cleaned = _pull_state(p)
+        if not cleaned:
+            continue
+        if now_s - cleaned["time"] <= window:
+            pulls.append(cleaned)
     for ev in sorted(events, key=lambda e: (e.get("time") or 0, e.get("tx_short") or "")):
         if ev.get("kind") == "lp_remove":
             pulls.append(ev)
@@ -343,7 +346,7 @@ def mark_dumps(events, open_pulls, bc, now_s):
             for p in pulls:
                 if p.get("ahead_of_dump") or not _same_pool(p, ev):
                     continue
-                if not (int(p.get("time") or 0) < int(ev.get("time") or 0) <= int(p.get("time") or 0) + window):
+                if not (int(p.get("time") or 0) < int(ev.get("time") or 0) <= int(p["time"]) + window):
                     continue
                 ada = abs(float(ev.get("ada") or 0))
                 reserve = float(p.get("reserve_ada") or 0)
@@ -359,7 +362,7 @@ def mark_dumps(events, open_pulls, bc, now_s):
                             src["dump_tx_short"] = ev.get("tx_short")
                             src["dump_ada"] = round(ada, 2)
     flagged = [p for p in pulls if p.get("ahead_of_dump")]
-    waiting = [p for p in pulls if not p.get("ahead_of_dump") and now_s - int(p.get("time") or 0) <= window]
+    waiting = [p for p in pulls if not p.get("ahead_of_dump") and now_s - int(p["time"]) <= window]
     return waiting, flagged
 
 
@@ -513,7 +516,7 @@ class Reader:
             if after is not None and not newest and hgt is not None and int(hgt) < int(after):
                 continue
             out.append((t["tx_hash"], None if hgt is None else int(hgt), t.get("block_time")))
-        return out, len(out) < int(limit)
+        return out, len(out) < int(limit), bool(newest)
 
     def _bf_asset_txs(self, unit, after, limit, newest):
         count = min(100, max(int(limit), 1))
@@ -534,7 +537,7 @@ class Reader:
         complete = reached or len(b) < count
         if newest:
             complete = len(b) < count
-        return rows, complete
+        return rows, complete, True
 
     def utxos(self, hashes):
         """(found, absent). absent is hashes a provider list omitted.
@@ -700,7 +703,7 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
         bf_key = os.environ.get("BLOCKFROST_PROJECT_ID", "")
     if owner_env is None:
         owner_env = os.environ.get("PRIVACY_GUARD_PATTERNS", "")
-    loaded = DC._patterns(owner_env)
+    loaded = DC._patterns(owner_env, who="liquidity_moves")
     ex_tags = set((F.excluded_tags((cfg or {}).get("flags")) or {}))
     scripts, splash_pols = dex_tables(cfg)
     cpath = os.path.join(cache_dir, "liquidity-moves-cache.json") if cache_dir else None
@@ -782,12 +785,15 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
     merged = merge_moves(prev_moves, moves, now_s, bc["keep_h"])
     cache["open_pulls"] = [_pull_state(p) for p in waiting]
     cache["seen"] = seen_list[-int(bc["keep_seen"]):]
-    cache["capped"] = bool(capped)
     if keep_next:
+        # Tip or deadline skip: the rotation index only applies while capped stays true.
+        cache["capped"] = True
         cache["next"] = kept_next
     elif capped:
+        cache["capped"] = True
         cache["next"] = kept_next + 1
     else:
+        cache["capped"] = False
         cache["next"] = 0
     koios_calls = http.calls.get("koios", 0) - reader.start
     bf_calls = http.calls.get("blockfrost", 0) - reader.bf_start
@@ -851,12 +857,29 @@ def _safe_int(v, default=0):
 
 
 def _pull_state(p):
-    out = {}
-    for k in ("hash", "time", "pool_key", "tx_short", "reserve_ada", "ticker", "unit", "token"):
+    """One cached pull with an integer time, or None when the row cannot be used.
+
+    A time of 'abc' must be dropped here. mark_dumps reads that int every run, so leaving
+    the bad row in the cache makes every later run raise before it can rewrite the file.
+    """
+    if not isinstance(p, dict) or not p.get("pool_key"):
+        return None
+    raw = p.get("time")
+    if isinstance(raw, bool) or isinstance(raw, float) and not raw.is_integer():
+        return None
+    if isinstance(raw, str):
+        try:
+            raw = int(raw, 10)
+        except ValueError:
+            return None
+    elif isinstance(raw, float):
+        raw = int(raw)
+    if not isinstance(raw, int) or raw <= 0:
+        return None
+    out = {"time": raw, "pool_key": p.get("pool_key")}
+    for k in ("hash", "tx_short", "reserve_ada", "ticker", "unit", "token"):
         if k in p:
             out[k] = p.get(k)
-    if "time" in out:
-        out["time"] = _safe_int(out["time"])
     return out
 
 
@@ -909,7 +932,8 @@ def _cache_public(cache):
             if isinstance(k, str):
                 misses[k] = _safe_int(v)
     seen = [h for h in cache.get("seen") or [] if isinstance(h, str)][-4000:] if isinstance(cache.get("seen"), list) else []
-    pulls = [p for p in cache.get("open_pulls") or [] if isinstance(p, dict)] if isinstance(cache.get("open_pulls"), list) else []
+    raw_pulls = cache.get("open_pulls") if isinstance(cache.get("open_pulls"), list) else []
+    pulls = [row for row in (_pull_state(p) for p in raw_pulls) if row]
     return {
         "height": height, "markers": markers, "units": units, "seen": seen, "open_pulls": pulls,
         "discovered_at": discovered, "misses": misses,
@@ -924,6 +948,8 @@ def _scan_token(reader, row, cache, scripts, splash_pols, bc, lp_pols, watch, lo
     height = cache.setdefault("height", {})
     txs, complete = [], True
     tracked = {m["marker"] for m in markers}
+    # Newest-first page that never reaches the cursor must not move the cursor to that page.
+    hold_height = set()
     for m in markers:
         if reader.late() or reader.koios_left() <= 0:
             complete = False
@@ -932,11 +958,15 @@ def _scan_token(reader, row, cache, scripts, splash_pols, bc, lp_pols, watch, lo
         page = reader.asset_txs(m["marker"], after=after, limit=bc["max_txs_per_pool"], newest=False)
         if page is None:
             complete = False
+            hold_height.add(m["marker"])
             continue
-        rows, page_done = page
+        rows, page_done, newest_first = page
         txs.extend((h, hg, bt, m["marker"]) for h, hg, bt in rows)
         if not page_done or len(rows) >= int(bc["max_txs_per_pool"]):
             complete = False
+        # Newest-first and still above the cursor: leave height[marker] where it was.
+        if newest_first and not page_done:
+            hold_height.add(m["marker"])
     discovered = cache.setdefault("discovered_at", {})
     last = _safe_int(discovered.get(unit))
     extra = [m for m in ((cache.get("markers") or {}).get(unit) or [])
@@ -947,7 +977,7 @@ def _scan_token(reader, row, cache, scripts, splash_pols, bc, lp_pols, watch, lo
         if page is None:
             complete = False
         else:
-            rows, page_done = page
+            rows, page_done, _newest = page
             txs.extend((h, hg, bt, None) for h, hg, bt in rows)
             discovered[unit] = int(now_s)
             if not page_done or len(rows) >= int(bc["discover_txs"]):
@@ -969,7 +999,7 @@ def _scan_token(reader, row, cache, scripts, splash_pols, bc, lp_pols, watch, lo
     for h, hg, bt, src in ordered:
         if h in seen:
             read += 1
-            if hg is not None and src in tracked:
+            if hg is not None and src in tracked and src not in hold_height:
                 height[src] = max(_safe_int(height.get(src)), int(hg))
             continue
         if h not in found:
@@ -1000,8 +1030,8 @@ def _scan_token(reader, row, cache, scripts, splash_pols, bc, lp_pols, watch, lo
         seen.add(h)
         seen_list.append(h)
         read += 1
-        if hg is not None and src in tracked:
-            height[src] = max(int(height.get(src) or 0), int(hg))
+        if hg is not None and src in tracked and src not in hold_height:
+            height[src] = max(_safe_int(height.get(src)), int(hg))
     if len(misses) > 50:
         for old in list(misses)[:-50]:
             misses.pop(old, None)
