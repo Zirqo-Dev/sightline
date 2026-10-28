@@ -181,12 +181,16 @@ class Http:
             self.trip(src, f"{self.failures[src]} failures")
 
 
-# Chain work stops at run start + 720s. The process timeout is 780s (60s to flush JSON after
-# the cap). The workflow job is 20 minutes, so checkout, tests, cache, the privacy guard, and
-# the commit/push retries still fit after a full 780s process. Do not raise HARD_CAP_S without
-# raising that process timeout and timeout-minutes together: a job cancel during commit drops
-# state.json and the next run re-sends triggers. 720 is not a per-job budget.
+# Earlier slices stop at run start + 720s. The process timeout is 780s. The workflow job is
+# 20 minutes, so checkout, tests, cache, the privacy guard, and the commit/push retries still
+# fit after a full 780s process. Do not raise HARD_CAP_S without raising that process timeout
+# and timeout-minutes together: a job cancel during commit drops state.json and the next run
+# re-sends triggers. 720 is not a per-job budget.
 HARD_CAP_S = 720
+# liquidity_moves keeps budget_s even when an earlier slice arrives after this cap (one slow
+# Koios call can spend the 50s reserved in front of it). The late window stops here, 10s before
+# the 780s process kill, so vetoes and last-run.json still write.
+LATE_SLICE_END_S = 770
 # Doc-only. job_deadline and research_deadline do not read config research_budget_s.
 # That number is the sum of the whale + big_moves + liquidity reserves, for humans.
 SLICE_ORDER = ("dev_checks", "whale_ledger", "big_moves", "liquidity_moves")
@@ -198,7 +202,8 @@ def slice_budgets(cfg):
     dev_checks.budget_s is the dev-check wall clock (default 180). It does not raise Koios or
     Blockfrost call caps. big_moves.budget_s is the slice earlier jobs must leave, not a ceiling:
     big_moves may also use slack in front of the liquidity reserve. liquidity_moves.budget_s is reserved
-    at the end so a long dev check cannot take it.
+    at the end so a long dev check cannot take it, and the slice still gets that many seconds from
+    the moment it starts if the reserve was already spent.
     """
     specs = (
         ("dev_checks", DC.dc_cfg, 180),
@@ -220,10 +225,10 @@ def reserve_after(cfg, job):
 
 
 def research_deadline(cfg, t_start, now):
-    """Hard end of chain work: run start + 720s. Keeps the run inside the 780s process timeout.
+    """Hard end of the earlier slices: run start + 720s.
 
-    `cfg` and `now` are unused. research_budget_s is doc-only and is not read here.
-    Per-slice ends are job_deadline.
+    liquidity_moves may run until LATE_SLICE_END_S. `cfg` and `now` are unused.
+    research_budget_s is doc-only and is not read here. Per-slice ends are job_deadline.
     """
     del cfg, now
     return float(t_start) + HARD_CAP_S
@@ -234,11 +239,17 @@ def job_deadline(cfg, t_start, now, job):
 
     Shrinks from the front when the rules screen has already used the hard cap: dev_checks yields
     first, then whale_ledger. big_moves keeps its budget plus any slack before the liquidity reserve.
-    liquidity_moves keeps its own budget until the hard cap itself is inside that slice.
+    liquidity_moves does not take whatever is left of the hard cap. It gets its own budget_s from
+    this instant, including when an earlier slice overran and that reserve is already gone. The
+    window still stops at run start + LATE_SLICE_END_S.
     """
     now = float(now)
     start = now if t_start is None else float(t_start)
     end = start + HARD_CAP_S
+    if job == "liquidity_moves":
+        budget = max(0.0, slice_budgets(cfg)[job])
+        ceiling = start + LATE_SLICE_END_S
+        return now + min(budget, max(0.0, ceiling - now))
     room = end - now - reserve_after(cfg, job)
     if job == "big_moves":
         take = room
@@ -1404,8 +1415,9 @@ def main():
         except (SystemExit, Exception) as e:  # research must never stop the webhook/state (M1)
             http._fail("big_moves", type(e).__name__)
 
-    # ---- SPD-55 liquidity moves. Own reserved budget_s, after whale_ledger and big_moves, never past the
-    # hard cap. A failure here does not touch the webhook.
+    # ---- SPD-55 liquidity moves. Own budget_s from this instant, after whale_ledger and big_moves.
+    # Earlier slices still reserve that budget inside the hard cap. If they overran it, this slice
+    # keeps the window anyway, stopping at LATE_SLICE_END_S. A failure here does not touch the webhook.
     liquidity = None
     try:
         bc_lm = LM.lm_cfg(cfg)

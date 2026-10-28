@@ -89,8 +89,46 @@ class Budget(unittest.TestCase):
         self.assertEqual(P.job_deadline(CFG, t0, now, "whale_ledger"), now)
         self.assertEqual(P.job_deadline(CFG, t0, now, "big_moves"), now + 20)
         self.assertEqual(P.job_deadline(CFG, t0, now + 20, "liquidity_moves"), t0 + 720)
-        for job in P.SLICE_ORDER:
-            self.assertLessEqual(P.job_deadline(CFG, t0, t0 + 700, job), t0 + 720)
+        # 20s of the hard cap left. Front slices still stop at the cap. Liquidity keeps a full
+        # budget_s, which may run past 720 and still stops at the flush-safe end.
+        now = t0 + 700
+        for job in ("dev_checks", "whale_ledger", "big_moves"):
+            self.assertLessEqual(P.job_deadline(CFG, t0, now, job), t0 + 720)
+        self.assertEqual(P.job_deadline(CFG, t0, now, "liquidity_moves"), now + 50)
+        self.assertLessEqual(P.job_deadline(CFG, t0, now, "liquidity_moves"), t0 + P.LATE_SLICE_END_S)
+
+    def test_liquidity_keeps_its_window_after_the_hard_cap(self):
+        """A slow earlier slice can arrive here with the 50s reserve already spent.
+
+        The old deadline was `now` in that case, so every resolved token was
+        coverage.skipped budget with 0 Koios calls. The slice now gets budget_s
+        from this instant, and still stops 10s before the 780s process kill.
+        """
+        t0 = 10_000
+        late = t0 + P.HARD_CAP_S
+        self.assertEqual(P.job_deadline(CFG, t0, late, "dev_checks"), late)
+        self.assertEqual(P.job_deadline(CFG, t0, late, "whale_ledger"), late)
+        self.assertEqual(P.job_deadline(CFG, t0, late, "big_moves"), late)
+        self.assertEqual(P.job_deadline(CFG, t0, late, "liquidity_moves"), late + 50)
+        self.assertEqual(P.LATE_SLICE_END_S, 770)
+        self.assertLess(P.LATE_SLICE_END_S, 780)
+        # Inside the flush margin the window shrinks, and it never runs past the ceiling.
+        self.assertEqual(P.job_deadline(CFG, t0, t0 + 760, "liquidity_moves"), t0 + 770)
+        self.assertEqual(P.job_deadline(CFG, t0, t0 + 770, "liquidity_moves"), t0 + 770)
+        self.assertEqual(P.job_deadline(CFG, t0, t0 + 800, "liquidity_moves"), t0 + 800)
+        short = {"dev_checks": {"budget_s": 180}, "whale_ledger": {"budget_s": 90},
+                 "big_moves": {"budget_s": 150}, "liquidity_moves": {"budget_s": 10, "enabled": True}}
+        self.assertEqual(P.job_deadline(short, t0, late, "liquidity_moves"), late + 10)
+        off = {"liquidity_moves": {"enabled": False, "budget_s": 50}}
+        self.assertEqual(P.job_deadline(off, t0, late, "liquidity_moves"), late)
+        # On time, the reserved tail still ends at the hard cap. Koios pace stays under 100/10s.
+        self.assertEqual(P.job_deadline(CFG, t0, t0 + 720 - 50, "liquidity_moves"), t0 + 720)
+        pace = CFG["pace_seconds"]["koios"]
+        self.assertGreaterEqual(pace, 0.1)
+        self.assertLessEqual(10 / pace, 100)
+        per_run = (CFG["dev_checks"]["max_calls"] + CFG["whale_ledger"]["max_calls"]
+                   + CFG["big_moves"]["max_calls"] + CFG["liquidity_moves"]["max_calls"])
+        self.assertLessEqual(12 * per_run, 5000)
 
 
 class Derive(unittest.TestCase):
