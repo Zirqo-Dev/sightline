@@ -9,7 +9,7 @@
   },
   "headline": "Grumpy Walrus 2:10-4:10 PM ET: opened ~7.55M MEPE for ~1,148 ADA (new position in a swarm launch that already fails k/y; MEPE pool ADA side ~15.7k, price down ~18% in the last 15 min), sold 1M CRAWJU for ~504 ADA (about 14% of the bag, ~6M left), and added ASCEND +879 for ~1,161 ADA (~306.8k). No COCK, SNEK or NIGHT trades and no LP pulls in the payload; prefilter net ADA -2,721 (the three legs net about -1,805, so ~900 ADA is unreconciled). BOLT sank further below both kill lines (holders 257 under 265, mcap ~234k under 400k, down 25%+); SER sank further (side ~6.2k under 13k, holders 74 under 80). Both were already Pass. New swarm launch GM: 7 coordinated buyers in 120s, a 4-wallet fresh swarm, repeat early buyers, and 7 snipers already fully out; fails k/y. No open tickets; nothing passes k/y.",
   "levels": {
-    "CLOVE": "L2: mcap ~277.1k, 297 holders, side 25.3k; Suri low risk (dev locked, not a k pass)",
+    "CLOVE": "L2: mcap ~277.1k, 297 holders, side 25.3k; risk scanner: low risk (dev locked, not a k pass)",
     "BOLT": "L1 Pass: kill hit deeper, holders 257 under 265, mcap ~234.2k under 400k (25%+ below line), side ~24.0k (prefilter 4:10 PM Oct 28)",
     "SER": "L1 Pass: kill hit deeper, side ~6.2k under 13k (25%+ below line), 74 holders under 80, mcap ~17.8k (prefilter 4:10 PM Oct 28)",
     "VAMP": "L1 watch: curve 57%, 50 holders; top cluster is the curve reserve",
@@ -31,9 +31,9 @@
     "ASCEND": "L2 research: pool side ~1.16M, 24h 133 buys / 50 sells; Grumpy Walrus still accumulating (~305.8k)",
     "STRIKE": "L1: pool side ~1.24M, flat, 16 trades 24h",
     "SLIP": "L1 watch: new swarm launch; ten coordinated buyers in 120s, repeat early buyers, one sniper full exit; fails k/y",
-    "CHEESE": "L1 Pass: Suri RUG tag (dev sold 53 ADA after 5 min), side 11.2k, mcap 59.1k, 70 holders; Grumpy Walrus holds ~16.6M",
+    "CHEESE": "L1 Pass: risk scanner RUG tag (dev sold 53 ADA after 5 min), side 11.2k, mcap 59.1k, 70 holders; Grumpy Walrus holds ~16.6M",
     "SOLADA": "L1: market side ~211k, mcap ~1.67M, 492 holders; heavy single-wallet sells today",
-    "NOX": "L1 watch: Snek.fun launch 7:57 PM ET, curve ~30%, mcap ~29.4k ADA, 32 holders, Grumpy Walrus holds 1.12%; Suri yellow 60, no dev flags; fails k/y",
+    "NOX": "L1 watch: Snek.fun launch 7:57 PM ET, curve ~30%, mcap ~29.4k ADA, 32 holders, Grumpy Walrus holds 1.12%; risk score yellow 60, no dev flags; fails k/y",
     "FUKU": "L1 watch: new swarm launch; nine coordinated buyers in 120s, pool preseeder and whale-watch tag early; fails k/y",
     "MEPE": "L1 watch: swarm launch (13 coordinated buyers, identical buys, fresh swarm, sniper, preseeder); Grumpy Walrus opened ~7.55M for ~1,148 ADA 2:10-4:10 PM Oct 28; pool side ~15.7k; fails k/y",
     "MONKEY": "L1 watch: new swarm launch; ten coordinated buyers, pool preseeder, repeat early buyers; fails k/y",
@@ -128,7 +128,7 @@
     "Blockfrost mainnet",
     "Sightline prefilter (kill_status, big_moves, dev_checks, flags, whale_ledger)",
     "GeckoTerminal",
-    "Suri Radar feed",
+    "external risk scanner feed",
     "X public search"
   ],
   "followups": [
@@ -137,7 +137,7 @@
     "NOX: check at the next run whether Grumpy Walrus holds or sells into the curve, and whether holders grow past 50",
     "Resolve the seller behind m-b322eee8 (~12M SOLADA for ~19.4k ADA, 12:31-1:13 PM ET) and where the ADA went; check whether it is Grumpy Walrus side wallet that X posts allege",
     "Super Cardano says Solada trades run through Solada-controlled wallets and the setup changed this week; read its thread and judge custody risk",
-    "CHEESE: Suri RUG tag (dev sold 53 ADA); Grumpy Walrus holds ~16.6M; watch whether the whale exits",
+    "CHEESE: risk scanner RUG tag (dev sold 53 ADA); Grumpy Walrus holds ~16.6M; watch whether the whale exits",
     "Is the outside wallet that sent 850 + 969 ADA today a new funder or the same one seen this morning?",
     "ASCEND build passed 300k (~301.5k at 4:00 PM) and buying continued in 200-1,000 ADA clips; watch whether it slows or stops",
     "CHEESE: who launched it, and are the swarm keys (w-32877ab4, w-6f2dbebd) in its early buyers? Re-check pool depth and holders at 7 PM",
@@ -370,7 +370,7 @@
       ]
     },
     {
-      "pattern": "Big single-wallet SOLADA sells midday while ADA rotated into a fresh Solada graduate (CHEESE) that later drew a Suri RUG tag",
+      "pattern": "Big single-wallet SOLADA sells midday while ADA rotated into a fresh Solada graduate (CHEESE) that later drew a risk scanner RUG tag",
       "outcome": "pending (24h)",
       "evidence": [
         "SOLADA m-b322eee8 -19.4k Oct 27",
@@ -700,9 +700,9 @@
         "ADA_USD": 0.2053,
         "source": "Sightline prefilter 6:15 PM ET"
       },
-      "headline": "Grumpy Walrus woke up 7:30-8:07 PM ET after the 7 PM close: sold 1M CRAWJU for ~554 ADA at 7:30 (12.5% of its CRAWJU, 7M left), bought 177.7 ASCEND for 252 ADA at 7:55 (now ~303.6k), and at 8:07 opened a new NightBringer (NOX) position of ~11.16M (1.12% of 1B supply) for ~251 ADA, about 10 minutes after NOX minted on Snek.fun at 7:57 PM. Net ADA about +45 (matches the prefilter's ADA legs); controlled ADA ~259. NOX: curve ~30%, mcap ~29.4k ADA, 32 holders, Suri yellow (score 60) with no RUG, dev-sold or serial tags; fails k/y on holders and depth, so L1 watch only. HOWDY holders slipped 55 to 54 while mcap rose 14.8k to 15.7k ADA; it is already a kill-hit Pass. No open tickets; nothing passes k/y.",
+      "headline": "Grumpy Walrus woke up 7:30-8:07 PM ET after the 7 PM close: sold 1M CRAWJU for ~554 ADA at 7:30 (12.5% of its CRAWJU, 7M left), bought 177.7 ASCEND for 252 ADA at 7:55 (now ~303.6k), and at 8:07 opened a new NightBringer (NOX) position of ~11.16M (1.12% of 1B supply) for ~251 ADA, about 10 minutes after NOX minted on Snek.fun at 7:57 PM. Net ADA about +45 (matches the prefilter's ADA legs); controlled ADA ~259. NOX: curve ~30%, mcap ~29.4k ADA, 32 holders, risk score yellow (score 60) with no RUG, dev-sold or serial tags; fails k/y on holders and depth, so L1 watch only. HOWDY holders slipped 55 to 54 while mcap rose 14.8k to 15.7k ADA; it is already a kill-hit Pass. No open tickets; nothing passes k/y.",
       "levels": {
-        "CLOVE": "L2: mcap ~277.1k, 297 holders, side 25.3k; Suri low risk (dev locked, not a k pass)",
+        "CLOVE": "L2: mcap ~277.1k, 297 holders, side 25.3k; risk scanner: low risk (dev locked, not a k pass)",
         "BOLT": "L1 Pass: kill hit on both lines, mcap 324.8k under 400k, holders 262 under 265 (newly, prefilter 6:11 PM)",
         "SER": "L1 Pass: kill hit, side 8.5k under 13k, 79 holders under 80 (newly), mcap 33.8k",
         "VAMP": "L1 watch: curve 57%, 50 holders; top cluster is the curve reserve",
@@ -724,9 +724,9 @@
         "ASCEND": "L2 research: pool side ~1.17M (+~120k 24h), 143 buys / 44 sells; Grumpy Walrus accumulation",
         "STRIKE": "L1: pool side ~1.24M, flat, 16 trades 24h",
         "SLIP": "L1 watch: new swarm launch; ten coordinated buyers in 120s, repeat early buyers, one sniper full exit; fails k/y",
-        "CHEESE": "L1 Pass: Suri RUG tag (dev sold 53 ADA after 5 min), side 11.2k, mcap 59.1k, 70 holders; Grumpy Walrus holds ~16.6M",
+        "CHEESE": "L1 Pass: risk scanner RUG tag (dev sold 53 ADA after 5 min), side 11.2k, mcap 59.1k, 70 holders; Grumpy Walrus holds ~16.6M",
         "SOLADA": "L1: market side ~211k, mcap ~1.67M, 492 holders; heavy single-wallet sells today",
-        "NOX": "L1 watch: Snek.fun launch 7:57 PM ET, curve ~30%, mcap ~29.4k ADA, 32 holders, Grumpy Walrus holds 1.12%; Suri yellow 60, no dev flags; fails k/y"
+        "NOX": "L1 watch: Snek.fun launch 7:57 PM ET, curve ~30%, mcap ~29.4k ADA, 32 holders, Grumpy Walrus holds 1.12%; risk score yellow 60, no dev flags; fails k/y"
       },
       "kill_lines": {
         "DEXY": "pool ADA side under 13k, on-chain holders under 80, or the swarm keys exiting in one hour",
@@ -806,14 +806,14 @@
         "Blockfrost mainnet",
         "Sightline prefilter (kill_status, big_moves, dev_checks, flags, whale_ledger)",
         "GeckoTerminal",
-        "Suri Radar feed",
+        "external risk scanner feed",
         "X public search"
       ],
       "followups": [
         "NOX: check at the next run whether Grumpy Walrus holds or sells into the curve, and whether holders grow past 50",
         "Resolve the seller behind m-b322eee8 (~12M SOLADA for ~19.4k ADA, 12:31-1:13 PM ET) and where the ADA went; check whether it is Grumpy Walrus side wallet that X posts allege",
         "Super Cardano says Solada trades run through Solada-controlled wallets and the setup changed this week; read its thread and judge custody risk",
-        "CHEESE: Suri RUG tag (dev sold 53 ADA); Grumpy Walrus holds ~16.6M; watch whether the whale exits",
+        "CHEESE: risk scanner RUG tag (dev sold 53 ADA); Grumpy Walrus holds ~16.6M; watch whether the whale exits",
         "Is the outside wallet that sent 850 + 969 ADA today a new funder or the same one seen this morning?",
         "ASCEND build passed 300k (~301.5k at 4:00 PM) and buying continued in 200-1,000 ADA clips; watch whether it slows or stops",
         "CHEESE: who launched it, and are the swarm keys (w-32877ab4, w-6f2dbebd) in its early buyers? Re-check pool depth and holders at 7 PM",
@@ -1046,7 +1046,7 @@
           ]
         },
         {
-          "pattern": "Big single-wallet SOLADA sells midday while ADA rotated into a fresh Solada graduate (CHEESE) that later drew a Suri RUG tag",
+          "pattern": "Big single-wallet SOLADA sells midday while ADA rotated into a fresh Solada graduate (CHEESE) that later drew a risk scanner RUG tag",
           "outcome": "pending (24h)",
           "evidence": [
             "SOLADA m-b322eee8 -19.4k Oct 27",
@@ -1376,9 +1376,9 @@
         "ADA_USD": 0.2053,
         "source": "Sightline prefilter 6:15 PM ET"
       },
-      "headline": "Quiet close. ASCEND pool ADA side rose ~120k in 24h to ~1.17M (+19.7%, new ATH talk around its perps and prediction-market rollout) while STRIKE stayed flat; Grumpy Walrus made no trades after 6:05 PM and holds ~303.4k ASCEND, with its 1M COCK order still resting. Main rotation: big single-wallet SOLADA sells (~19.4k ADA by one mover at 12:31-1:13 PM ET, partly met by an ~11.3k buyer) while CHEESE took ~15k of new ADA. New dev flag: Suri tags CHEESE RUG (dev sold 53 ADA five minutes in), so CHEESE is an automatic Pass. Super Cardano dropped Solada from its tracker, saying trades run through Solada-controlled wallets. No open tickets; nothing passes rule k.",
+      "headline": "Quiet close. ASCEND pool ADA side rose ~120k in 24h to ~1.17M (+19.7%, new ATH talk around its perps and prediction-market rollout) while STRIKE stayed flat; Grumpy Walrus made no trades after 6:05 PM and holds ~303.4k ASCEND, with its 1M COCK order still resting. Main rotation: big single-wallet SOLADA sells (~19.4k ADA by one mover at 12:31-1:13 PM ET, partly met by an ~11.3k buyer) while CHEESE took ~15k of new ADA. New dev flag: risk scanner tags CHEESE RUG (dev sold 53 ADA five minutes in), so CHEESE is an automatic Pass. Super Cardano dropped Solada from its tracker, saying trades run through Solada-controlled wallets. No open tickets; nothing passes rule k.",
       "levels": {
-        "CLOVE": "L2: mcap ~277.1k, 297 holders, side 25.3k; Suri low risk (dev locked, not a k pass)",
+        "CLOVE": "L2: mcap ~277.1k, 297 holders, side 25.3k; risk scanner: low risk (dev locked, not a k pass)",
         "BOLT": "L1 Pass: kill hit on both lines, mcap 324.8k under 400k, holders 262 under 265 (newly, prefilter 6:11 PM)",
         "SER": "L1 Pass: kill hit, side 8.5k under 13k, 79 holders under 80 (newly), mcap 33.8k",
         "VAMP": "L1 watch: curve 57%, 50 holders; top cluster is the curve reserve",
@@ -1400,7 +1400,7 @@
         "ASCEND": "L2 research: pool side ~1.17M (+~120k 24h), 143 buys / 44 sells; Grumpy Walrus accumulation",
         "STRIKE": "L1: pool side ~1.24M, flat, 16 trades 24h",
         "SLIP": "L1 watch: new swarm launch; ten coordinated buyers in 120s, repeat early buyers, one sniper full exit; fails k/y",
-        "CHEESE": "L1 Pass: Suri RUG tag (dev sold 53 ADA after 5 min), side 11.2k, mcap 59.1k, 70 holders; Grumpy Walrus holds ~16.6M",
+        "CHEESE": "L1 Pass: risk scanner RUG tag (dev sold 53 ADA after 5 min), side 11.2k, mcap 59.1k, 70 holders; Grumpy Walrus holds ~16.6M",
         "SOLADA": "L1: market side ~211k, mcap ~1.67M, 492 holders; heavy single-wallet sells today"
       },
       "kill_lines": {
@@ -1455,7 +1455,7 @@
         "address": "w-f3186187",
         "net_flow_ada": 0,
         "summary": "No Grumpy Walrus transactions from 6:05 PM to 6:55 PM ET (on-chain trace). Day total per earlier runs: heavy ASCEND accumulation to ~303.4k, CHEESE ~16.6M built after its pool opened, SNEK vault loan, 4th and 5th COCK LP pulls, NIGHT/SNEK/CRAWJU sales. Ledger reconcile ok; ADA ~214.",
-        "line": "Idle since 6:05 PM; ASCEND ~303.4k, STRIKE untouched; 1M COCK order still resting; holds ~16.6M CHEESE (now Suri RUG-tagged).",
+        "line": "Idle since 6:05 PM; ASCEND ~303.4k, STRIKE untouched; 1M COCK order still resting; holds ~16.6M CHEESE (now risk scanner RUG-tagged).",
         "cock_order": "1M COCK still resting in a DEX order script (ledger shows 1 open order at 6:11 PM ET)"
       },
       "paper_actions": [
@@ -1478,13 +1478,13 @@
         "Blockfrost mainnet",
         "Sightline prefilter (kill_status, big_moves, dev_checks, flags, whale_ledger)",
         "GeckoTerminal",
-        "Suri Radar feed",
+        "external risk scanner feed",
         "X public search"
       ],
       "followups": [
         "Resolve the seller behind m-b322eee8 (~12M SOLADA for ~19.4k ADA, 12:31-1:13 PM ET) and where the ADA went; check whether it is Grumpy Walrus side wallet that X posts allege",
         "Super Cardano says Solada trades run through Solada-controlled wallets and the setup changed this week; read its thread and judge custody risk",
-        "CHEESE: Suri RUG tag (dev sold 53 ADA); Grumpy Walrus holds ~16.6M; watch whether the whale exits",
+        "CHEESE: risk scanner RUG tag (dev sold 53 ADA); Grumpy Walrus holds ~16.6M; watch whether the whale exits",
         "Is the outside wallet that sent 850 + 969 ADA today a new funder or the same one seen this morning?",
         "ASCEND build passed 300k (~301.5k at 4:00 PM) and buying continued in 200-1,000 ADA clips; watch whether it slows or stops",
         "CHEESE: who launched it, and are the swarm keys (w-32877ab4, w-6f2dbebd) in its early buyers? Re-check pool depth and holders at 7 PM",
@@ -1533,7 +1533,7 @@
             "prefix": "w-f3186187",
             "codename": "Grumpy Walrus",
             "role": "Grumpy Walrus; holds ~5.5% COCK, ~4.5% SOLADA, ~5.5% SER, 270.9k ASCEND",
-            "latest": "Oct 27 7 PM: idle since 6:05 PM; ASCEND ~303.4k; ~16.6M CHEESE (Suri RUG-tagged); ADA ~214; 1M COCK order resting."
+            "latest": "Oct 27 7 PM: idle since 6:05 PM; ASCEND ~303.4k; ~16.6M CHEESE (risk scanner RUG-tagged); ADA ~214; 1M COCK order resting."
           },
           {
             "label": "COCK supply wallet",
@@ -1717,7 +1717,7 @@
           ]
         },
         {
-          "pattern": "Big single-wallet SOLADA sells midday while ADA rotated into a fresh Solada graduate (CHEESE) that later drew a Suri RUG tag",
+          "pattern": "Big single-wallet SOLADA sells midday while ADA rotated into a fresh Solada graduate (CHEESE) that later drew a risk scanner RUG tag",
           "outcome": "pending (24h)",
           "evidence": [
             "SOLADA m-b322eee8 -19.4k Oct 27",
@@ -1897,8 +1897,8 @@
         }
       },
       "learned_or_changed": [
-        "dev_checks.json at 6:10 PM ET had 16 rows, all partial (13 skipped on deadline, 0 complete), so Suri was the fallback; Suri caught a RUG tag on CHEESE that dev_checks did not cover. Keeping Grumpy Walrus focus because it bought ~16.6M CHEESE right before that tag.",
-        "Suri Radar has no entry for ASCEND or STRIKE (not launchpad coins); Suri BOLT and VAMP rows are different coins on other launchpads, so I matched by unit, not ticker."
+        "dev_checks.json at 6:10 PM ET had 16 rows, all partial (13 skipped on deadline, 0 complete), so the risk scanner was the fallback; risk scanner caught a RUG tag on CHEESE that dev_checks did not cover. Keeping Grumpy Walrus focus because it bought ~16.6M CHEESE right before that tag.",
+        "The external risk scanner has no entry for ASCEND or STRIKE (not launchpad coins); risk-scanner BOLT and VAMP rows are different coins on other launchpads, so I matched by unit, not ticker."
       ],
       "liquidity_flows": {
         "window": "24h",
@@ -2038,19 +2038,19 @@
           }
         ]
       },
-      "suri": {
+      "risk_check": {
         "CHEESE": {
           "risk": "High risk",
           "tags": [
             "RUG",
             "Dev sold"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "CLOVE": {
           "risk": "Low risk",
           "tags": [],
-          "source": "suri"
+          "source": "scanner"
         },
         "BOLT": {
           "risk": null,
@@ -2062,21 +2062,21 @@
           "tags": [
             "New dev"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "EVIL": {
           "risk": "Caution",
           "tags": [
             "Dev locked"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "HOWDY": {
           "risk": "Low risk",
           "tags": [
             "Dev locked"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "BET": {
           "risk": "High risk",
@@ -2084,7 +2084,7 @@
             "Dead",
             "Dev locked"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "BEAST": {
           "risk": "caution",
@@ -2096,14 +2096,14 @@
           "tags": [
             "not listed"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "STRIKE": {
           "risk": null,
           "tags": [
             "not listed"
           ],
-          "source": "suri"
+          "source": "scanner"
         }
       }
     },
@@ -2263,7 +2263,7 @@
             "prefix": "w-f3186187",
             "codename": "Grumpy Walrus",
             "role": "Grumpy Walrus; holds ~5.5% COCK, ~4.5% SOLADA, ~5.5% SER, 270.9k ASCEND",
-            "latest": "Oct 27 7 PM: idle since 6:05 PM; ASCEND ~303.4k; ~16.6M CHEESE (Suri RUG-tagged); ADA ~214; 1M COCK order resting."
+            "latest": "Oct 27 7 PM: idle since 6:05 PM; ASCEND ~303.4k; ~16.6M CHEESE (risk scanner RUG-tagged); ADA ~214; 1M COCK order resting."
           },
           {
             "label": "COCK supply wallet",
@@ -17789,9 +17789,9 @@
         "ADA_USD": 0.2053,
         "source": "Sightline prefilter 6:15 PM ET"
       },
-      "headline": "Grumpy Walrus sold 1M SNEK for ~3,011 ADA at 8:19 PM ET (a Minswap market order, not a vault loan) and from 9:22 to 10:02 PM ET built a new ~42.7M Valhalla (VAL) position, 4.27% of the 1B supply, for ~1,268 ADA in seven buys starting 3 minutes after VAL minted at 9:19 PM ET. VAL is a Solada launch (Cardano-side native token); the curve still holds ~67% of supply with ~2.2k ADA in it, and there are 31 holder addresses. Suri has no rating for this VAL; a same-name 'valhalla' on Snek.fun (different policy) is tagged RUG and Dev sold, so don't confuse them. Net ADA about +1,491. UNFAZED (Solada) showed a six-wallet coordinated buy, a tagged first-block sniper, three repeat early buyers and two sniper full exits; Suri red 30. CORE shows one cluster holding 71.4%. Nothing passes k/y; no open tickets.",
+      "headline": "Grumpy Walrus sold 1M SNEK for ~3,011 ADA at 8:19 PM ET (a Minswap market order, not a vault loan) and from 9:22 to 10:02 PM ET built a new ~42.7M Valhalla (VAL) position, 4.27% of the 1B supply, for ~1,268 ADA in seven buys starting 3 minutes after VAL minted at 9:19 PM ET. VAL is a Solada launch (Cardano-side native token); the curve still holds ~67% of supply with ~2.2k ADA in it, and there are 31 holder addresses. The risk scanner has no rating for this VAL; a same-name 'valhalla' on Snek.fun (different policy) is tagged RUG and Dev sold, so don't confuse them. Net ADA about +1,491. UNFAZED (Solada) showed a six-wallet coordinated buy, a tagged first-block sniper, three repeat early buyers and two sniper full exits; risk score red 30. CORE shows one cluster holding 71.4%. Nothing passes k/y; no open tickets.",
       "levels": {
-        "CLOVE": "L2: mcap ~277.1k, 297 holders, side 25.3k; Suri low risk (dev locked, not a k pass)",
+        "CLOVE": "L2: mcap ~277.1k, 297 holders, side 25.3k; risk scanner: low risk (dev locked, not a k pass)",
         "BOLT": "L1 Pass: kill hit on both lines, mcap 324.8k under 400k, holders 262 under 265 (newly, prefilter 6:11 PM)",
         "SER": "L1 Pass: kill hit, side 8.5k under 13k, 79 holders under 80 (newly), mcap 33.8k",
         "VAMP": "L1 watch: curve 57%, 50 holders; top cluster is the curve reserve",
@@ -17813,9 +17813,9 @@
         "ASCEND": "L2 research: pool side ~1.17M (+~120k 24h), 143 buys / 44 sells; Grumpy Walrus accumulation",
         "STRIKE": "L1: pool side ~1.24M, flat, 16 trades 24h",
         "SLIP": "L1 watch: new swarm launch; ten coordinated buyers in 120s, repeat early buyers, one sniper full exit; fails k/y",
-        "CHEESE": "L1 Pass: Suri RUG tag (dev sold 53 ADA after 5 min), side 11.2k, mcap 59.1k, 70 holders; Grumpy Walrus holds ~16.6M",
+        "CHEESE": "L1 Pass: risk scanner RUG tag (dev sold 53 ADA after 5 min), side 11.2k, mcap 59.1k, 70 holders; Grumpy Walrus holds ~16.6M",
         "SOLADA": "L1: market side ~211k, mcap ~1.67M, 492 holders; heavy single-wallet sells today",
-        "NOX": "L1 watch: Snek.fun launch 7:57 PM ET, curve ~30%, mcap ~29.4k ADA, 32 holders, Grumpy Walrus holds 1.12%; Suri yellow 60, no dev flags; fails k/y"
+        "NOX": "L1 watch: Snek.fun launch 7:57 PM ET, curve ~30%, mcap ~29.4k ADA, 32 holders, Grumpy Walrus holds 1.12%; risk score yellow 60, no dev flags; fails k/y"
       },
       "kill_lines": {
         "DEXY": "pool ADA side under 13k, on-chain holders under 80, or the swarm keys exiting in one hour",
@@ -17896,14 +17896,14 @@
         "Blockfrost mainnet",
         "Sightline prefilter (kill_status, big_moves, dev_checks, flags, whale_ledger)",
         "GeckoTerminal",
-        "Suri Radar feed",
+        "external risk scanner feed",
         "X public search"
       ],
       "followups": [
         "NOX: check at the next run whether Grumpy Walrus holds or sells into the curve, and whether holders grow past 50",
         "Resolve the seller behind m-b322eee8 (~12M SOLADA for ~19.4k ADA, 12:31-1:13 PM ET) and where the ADA went; check whether it is Grumpy Walrus side wallet that X posts allege",
         "Super Cardano says Solada trades run through Solada-controlled wallets and the setup changed this week; read its thread and judge custody risk",
-        "CHEESE: Suri RUG tag (dev sold 53 ADA); Grumpy Walrus holds ~16.6M; watch whether the whale exits",
+        "CHEESE: risk scanner RUG tag (dev sold 53 ADA); Grumpy Walrus holds ~16.6M; watch whether the whale exits",
         "Is the outside wallet that sent 850 + 969 ADA today a new funder or the same one seen this morning?",
         "ASCEND build passed 300k (~301.5k at 4:00 PM) and buying continued in 200-1,000 ADA clips; watch whether it slows or stops",
         "CHEESE: who launched it, and are the swarm keys (w-32877ab4, w-6f2dbebd) in its early buyers? Re-check pool depth and holders at 7 PM",
@@ -18136,7 +18136,7 @@
           ]
         },
         {
-          "pattern": "Big single-wallet SOLADA sells midday while ADA rotated into a fresh Solada graduate (CHEESE) that later drew a Suri RUG tag",
+          "pattern": "Big single-wallet SOLADA sells midday while ADA rotated into a fresh Solada graduate (CHEESE) that later drew a risk scanner RUG tag",
           "outcome": "pending (24h)",
           "evidence": [
             "SOLADA m-b322eee8 -19.4k Oct 27",
@@ -18457,19 +18457,19 @@
           }
         ]
       },
-      "suri": {
+      "risk_check": {
         "CHEESE": {
           "risk": "High risk",
           "tags": [
             "RUG",
             "Dev sold"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "CLOVE": {
           "risk": "Low risk",
           "tags": [],
-          "source": "suri"
+          "source": "scanner"
         },
         "BOLT": {
           "risk": null,
@@ -18481,21 +18481,21 @@
           "tags": [
             "New dev"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "EVIL": {
           "risk": "Caution",
           "tags": [
             "Dev locked"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "HOWDY": {
           "risk": "Low risk",
           "tags": [
             "Dev locked"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "BET": {
           "risk": "High risk",
@@ -18503,7 +18503,7 @@
             "Dead",
             "Dev locked"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "BEAST": {
           "risk": "caution",
@@ -18515,30 +18515,30 @@
           "tags": [
             "not listed"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "STRIKE": {
           "risk": null,
           "tags": [
             "not listed"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "NOX": {
           "risk": "yellow (score 60)",
           "tags": [],
-          "source": "suri"
+          "source": "scanner"
         },
         "VAL": {
           "risk": null,
           "tags": [],
-          "source": "suri",
-          "note": "No Suri rating for the Solada VAL (policy 74aee0dceb); Snek.fun copycat 'valhalla' (policy 79fdb06021) is RUG + Dev sold."
+          "source": "scanner",
+          "note": "No risk score for the Solada VAL (policy 74aee0dceb); Snek.fun copycat 'valhalla' (policy 79fdb06021) is RUG + Dev sold."
         },
         "UNFAZED": {
           "risk": "red 30",
           "tags": [],
-          "source": "suri"
+          "source": "scanner"
         }
       }
     },
@@ -18553,7 +18553,7 @@
       },
       "headline": "Grumpy Walrus overnight (10:27 PM-8:10 AM ET): sold 15k NIGHT for ~3,073 ADA at 10:55 PM (NIGHT kill line hit again), sold 1M SNEK for ~2,970 ADA in six split fills at 12:47-12:48 AM (market sale, not a vault), and pulled COCK/ADA LP a 6th time at 12:48 AM (1M LP tokens burned for ~467 ADA + 84.4k COCK, about half the size of earlier pulls; COCK kill hit). It added ASCEND +2,212 (~305.8k) for ~3,077 ADA in four buys, the last 2,002 ADA at 8:10 AM, and kept clipping VAL (+5.6M, ~48.3M) for ~610 ADA through a Solada router; 2,000 ADA went out to an outside wallet at 12:49 AM. Net ADA ~+833. COCK pool ADA side ~164k (line 150k); ASCEND side ~1.16M. New launches FUKU, MEPE and MONKEY show coordinated buys, a pool preseeder, a first-block sniper, identical-size buys and repeat early buyers; all fail k/y. No open tickets; nothing passes k/y.",
       "levels": {
-        "CLOVE": "L2: mcap ~277.1k, 297 holders, side 25.3k; Suri low risk (dev locked, not a k pass)",
+        "CLOVE": "L2: mcap ~277.1k, 297 holders, side 25.3k; risk scanner: low risk (dev locked, not a k pass)",
         "BOLT": "L1 Pass: kill hit on both lines, mcap 324.8k under 400k, holders 262 under 265 (newly, prefilter 6:11 PM)",
         "SER": "L1 Pass: kill hit, side 8.5k under 13k, 79 holders under 80 (newly), mcap 33.8k",
         "VAMP": "L1 watch: curve 57%, 50 holders; top cluster is the curve reserve",
@@ -18575,9 +18575,9 @@
         "ASCEND": "L2 research: pool side ~1.16M, 24h 133 buys / 50 sells; Grumpy Walrus still accumulating (~305.8k)",
         "STRIKE": "L1: pool side ~1.24M, flat, 16 trades 24h",
         "SLIP": "L1 watch: new swarm launch; ten coordinated buyers in 120s, repeat early buyers, one sniper full exit; fails k/y",
-        "CHEESE": "L1 Pass: Suri RUG tag (dev sold 53 ADA after 5 min), side 11.2k, mcap 59.1k, 70 holders; Grumpy Walrus holds ~16.6M",
+        "CHEESE": "L1 Pass: risk scanner RUG tag (dev sold 53 ADA after 5 min), side 11.2k, mcap 59.1k, 70 holders; Grumpy Walrus holds ~16.6M",
         "SOLADA": "L1: market side ~211k, mcap ~1.67M, 492 holders; heavy single-wallet sells today",
-        "NOX": "L1 watch: Snek.fun launch 7:57 PM ET, curve ~30%, mcap ~29.4k ADA, 32 holders, Grumpy Walrus holds 1.12%; Suri yellow 60, no dev flags; fails k/y",
+        "NOX": "L1 watch: Snek.fun launch 7:57 PM ET, curve ~30%, mcap ~29.4k ADA, 32 holders, Grumpy Walrus holds 1.12%; risk score yellow 60, no dev flags; fails k/y",
         "FUKU": "L1 watch: new swarm launch; nine coordinated buyers in 120s, pool preseeder and whale-watch tag early; fails k/y",
         "MEPE": "L1 watch: new swarm launch; 13 coordinated buyers, identical 374.36 ADA buys, fresh-wallet swarm, first-block sniper and preseeder; fails k/y",
         "MONKEY": "L1 watch: new swarm launch; ten coordinated buyers, pool preseeder, repeat early buyers; fails k/y"
@@ -18664,14 +18664,14 @@
         "Blockfrost mainnet",
         "Sightline prefilter (kill_status, big_moves, dev_checks, flags, whale_ledger)",
         "GeckoTerminal",
-        "Suri Radar feed",
+        "external risk scanner feed",
         "X public search"
       ],
       "followups": [
         "NOX: check at the next run whether Grumpy Walrus holds or sells into the curve, and whether holders grow past 50",
         "Resolve the seller behind m-b322eee8 (~12M SOLADA for ~19.4k ADA, 12:31-1:13 PM ET) and where the ADA went; check whether it is Grumpy Walrus side wallet that X posts allege",
         "Super Cardano says Solada trades run through Solada-controlled wallets and the setup changed this week; read its thread and judge custody risk",
-        "CHEESE: Suri RUG tag (dev sold 53 ADA); Grumpy Walrus holds ~16.6M; watch whether the whale exits",
+        "CHEESE: risk scanner RUG tag (dev sold 53 ADA); Grumpy Walrus holds ~16.6M; watch whether the whale exits",
         "Is the outside wallet that sent 850 + 969 ADA today a new funder or the same one seen this morning?",
         "ASCEND build passed 300k (~301.5k at 4:00 PM) and buying continued in 200-1,000 ADA clips; watch whether it slows or stops",
         "CHEESE: who launched it, and are the swarm keys (w-32877ab4, w-6f2dbebd) in its early buyers? Re-check pool depth and holders at 7 PM",
@@ -18904,7 +18904,7 @@
           ]
         },
         {
-          "pattern": "Big single-wallet SOLADA sells midday while ADA rotated into a fresh Solada graduate (CHEESE) that later drew a Suri RUG tag",
+          "pattern": "Big single-wallet SOLADA sells midday while ADA rotated into a fresh Solada graduate (CHEESE) that later drew a risk scanner RUG tag",
           "outcome": "pending (24h)",
           "evidence": [
             "SOLADA m-b322eee8 -19.4k Oct 27",
@@ -19225,19 +19225,19 @@
           }
         ]
       },
-      "suri": {
+      "risk_check": {
         "CHEESE": {
           "risk": "High risk",
           "tags": [
             "RUG",
             "Dev sold"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "CLOVE": {
           "risk": "Low risk",
           "tags": [],
-          "source": "suri"
+          "source": "scanner"
         },
         "BOLT": {
           "risk": null,
@@ -19249,21 +19249,21 @@
           "tags": [
             "New dev"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "EVIL": {
           "risk": "Caution",
           "tags": [
             "Dev locked"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "HOWDY": {
           "risk": "Low risk",
           "tags": [
             "Dev locked"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "BET": {
           "risk": "High risk",
@@ -19271,7 +19271,7 @@
             "Dead",
             "Dev locked"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "BEAST": {
           "risk": "caution",
@@ -19283,30 +19283,30 @@
           "tags": [
             "not listed"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "STRIKE": {
           "risk": null,
           "tags": [
             "not listed"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "NOX": {
           "risk": "yellow (score 60)",
           "tags": [],
-          "source": "suri"
+          "source": "scanner"
         },
         "VAL": {
           "risk": null,
           "tags": [],
-          "source": "suri",
-          "note": "No Suri rating for the Solada VAL (policy 74aee0dceb); Snek.fun copycat 'valhalla' (policy 79fdb06021) is RUG + Dev sold."
+          "source": "scanner",
+          "note": "No risk score for the Solada VAL (policy 74aee0dceb); Snek.fun copycat 'valhalla' (policy 79fdb06021) is RUG + Dev sold."
         },
         "UNFAZED": {
           "risk": "red 30",
           "tags": [],
-          "source": "suri"
+          "source": "scanner"
         }
       }
     },
@@ -19321,7 +19321,7 @@
       },
       "headline": "Grumpy Walrus 8:15-10:11 AM ET stayed a small buyer: ASCEND +123.9 (~305.9k) for ~173 ADA in two buys (9:05, 9:59 AM), eight more VAL router clips (+~1.97M units) for ~204 ADA, and a 12.1k COCK buy for 71 ADA. No sells, no LP pulls, no outside transfers; net ADA about -449. The prefilter's ASCEND +1,570.6 / -2,451 ADA re-counts the 8:10 AM 2,002 ADA buy already logged last run. COCK pool ADA side ~165k (line 150k); ASCEND side ~1.16M. New swarm launches CNFTIO and MEOW show 12- and 13-wallet coordinated buys, fresh-wallet swarms, the tagged pool preseeder and first-block sniper, many repeat early buyers and sniper full exits; both fail k/y. No open tickets; nothing passes k/y.",
       "levels": {
-        "CLOVE": "L2: mcap ~277.1k, 297 holders, side 25.3k; Suri low risk (dev locked, not a k pass)",
+        "CLOVE": "L2: mcap ~277.1k, 297 holders, side 25.3k; risk scanner: low risk (dev locked, not a k pass)",
         "BOLT": "L1 Pass: kill hit on both lines, mcap 324.8k under 400k, holders 262 under 265 (newly, prefilter 6:11 PM)",
         "SER": "L1 Pass: kill hit, side 8.5k under 13k, 79 holders under 80 (newly), mcap 33.8k",
         "VAMP": "L1 watch: curve 57%, 50 holders; top cluster is the curve reserve",
@@ -19343,9 +19343,9 @@
         "ASCEND": "L2 research: pool side ~1.16M, 24h 133 buys / 50 sells; Grumpy Walrus still accumulating (~305.8k)",
         "STRIKE": "L1: pool side ~1.24M, flat, 16 trades 24h",
         "SLIP": "L1 watch: new swarm launch; ten coordinated buyers in 120s, repeat early buyers, one sniper full exit; fails k/y",
-        "CHEESE": "L1 Pass: Suri RUG tag (dev sold 53 ADA after 5 min), side 11.2k, mcap 59.1k, 70 holders; Grumpy Walrus holds ~16.6M",
+        "CHEESE": "L1 Pass: risk scanner RUG tag (dev sold 53 ADA after 5 min), side 11.2k, mcap 59.1k, 70 holders; Grumpy Walrus holds ~16.6M",
         "SOLADA": "L1: market side ~211k, mcap ~1.67M, 492 holders; heavy single-wallet sells today",
-        "NOX": "L1 watch: Snek.fun launch 7:57 PM ET, curve ~30%, mcap ~29.4k ADA, 32 holders, Grumpy Walrus holds 1.12%; Suri yellow 60, no dev flags; fails k/y",
+        "NOX": "L1 watch: Snek.fun launch 7:57 PM ET, curve ~30%, mcap ~29.4k ADA, 32 holders, Grumpy Walrus holds 1.12%; risk score yellow 60, no dev flags; fails k/y",
         "FUKU": "L1 watch: new swarm launch; nine coordinated buyers in 120s, pool preseeder and whale-watch tag early; fails k/y",
         "MEPE": "L1 watch: new swarm launch; 13 coordinated buyers, identical 374.36 ADA buys, fresh-wallet swarm, first-block sniper and preseeder; fails k/y",
         "MONKEY": "L1 watch: new swarm launch; ten coordinated buyers, pool preseeder, repeat early buyers; fails k/y",
@@ -19436,7 +19436,7 @@
         "Blockfrost mainnet",
         "Sightline prefilter (kill_status, big_moves, dev_checks, flags, whale_ledger)",
         "GeckoTerminal",
-        "Suri Radar feed",
+        "external risk scanner feed",
         "X public search"
       ],
       "followups": [
@@ -19445,7 +19445,7 @@
         "NOX: check at the next run whether Grumpy Walrus holds or sells into the curve, and whether holders grow past 50",
         "Resolve the seller behind m-b322eee8 (~12M SOLADA for ~19.4k ADA, 12:31-1:13 PM ET) and where the ADA went; check whether it is Grumpy Walrus side wallet that X posts allege",
         "Super Cardano says Solada trades run through Solada-controlled wallets and the setup changed this week; read its thread and judge custody risk",
-        "CHEESE: Suri RUG tag (dev sold 53 ADA); Grumpy Walrus holds ~16.6M; watch whether the whale exits",
+        "CHEESE: risk scanner RUG tag (dev sold 53 ADA); Grumpy Walrus holds ~16.6M; watch whether the whale exits",
         "Is the outside wallet that sent 850 + 969 ADA today a new funder or the same one seen this morning?",
         "ASCEND build passed 300k (~301.5k at 4:00 PM) and buying continued in 200-1,000 ADA clips; watch whether it slows or stops",
         "CHEESE: who launched it, and are the swarm keys (w-32877ab4, w-6f2dbebd) in its early buyers? Re-check pool depth and holders at 7 PM",
@@ -19678,7 +19678,7 @@
           ]
         },
         {
-          "pattern": "Big single-wallet SOLADA sells midday while ADA rotated into a fresh Solada graduate (CHEESE) that later drew a Suri RUG tag",
+          "pattern": "Big single-wallet SOLADA sells midday while ADA rotated into a fresh Solada graduate (CHEESE) that later drew a risk scanner RUG tag",
           "outcome": "pending (24h)",
           "evidence": [
             "SOLADA m-b322eee8 -19.4k Oct 27",
@@ -19998,19 +19998,19 @@
           }
         ]
       },
-      "suri": {
+      "risk_check": {
         "CHEESE": {
           "risk": "High risk",
           "tags": [
             "RUG",
             "Dev sold"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "CLOVE": {
           "risk": "Low risk",
           "tags": [],
-          "source": "suri"
+          "source": "scanner"
         },
         "BOLT": {
           "risk": null,
@@ -20022,21 +20022,21 @@
           "tags": [
             "New dev"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "EVIL": {
           "risk": "Caution",
           "tags": [
             "Dev locked"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "HOWDY": {
           "risk": "Low risk",
           "tags": [
             "Dev locked"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "BET": {
           "risk": "High risk",
@@ -20044,7 +20044,7 @@
             "Dead",
             "Dev locked"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "BEAST": {
           "risk": "caution",
@@ -20056,30 +20056,30 @@
           "tags": [
             "not listed"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "STRIKE": {
           "risk": null,
           "tags": [
             "not listed"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "NOX": {
           "risk": "yellow (score 60)",
           "tags": [],
-          "source": "suri"
+          "source": "scanner"
         },
         "VAL": {
           "risk": null,
           "tags": [],
-          "source": "suri",
-          "note": "No Suri rating for the Solada VAL (policy 74aee0dceb); Snek.fun copycat 'valhalla' (policy 79fdb06021) is RUG + Dev sold."
+          "source": "scanner",
+          "note": "No risk score for the Solada VAL (policy 74aee0dceb); Snek.fun copycat 'valhalla' (policy 79fdb06021) is RUG + Dev sold."
         },
         "UNFAZED": {
           "risk": "red 30",
           "tags": [],
-          "source": "suri"
+          "source": "scanner"
         }
       }
     },
@@ -20094,7 +20094,7 @@
       },
       "headline": "Grumpy Walrus 10:14 AM-2:10 PM ET: sold 1M SNEK for ~2,998 ADA at 2:05 PM in split market fills (not a vault; third 1M SNEK sale in ~26h), and kept clipping VAL through the Solada router (14 clips 10:3x-11:40 AM, +~1.95M units for ~357 ADA). No ASCEND, COCK or NIGHT trades, no LP pulls, no outside transfers; net ADA ~+2,667 (prefilter's +2,998 is the SNEK leg only). SHARKY newly crossed holders 48 under 50 (side ~7.1k, mcap ~23.2k ADA), already L1 Pass. New swarm launch COOKED shows 13 coordinated buyers in 120s, an 8-wallet fresh swarm, the tagged pool preseeder, repeat early buyers and 11 sniper full exits; fails k/y. No open tickets; nothing passes k/y.",
       "levels": {
-        "CLOVE": "L2: mcap ~277.1k, 297 holders, side 25.3k; Suri low risk (dev locked, not a k pass)",
+        "CLOVE": "L2: mcap ~277.1k, 297 holders, side 25.3k; risk scanner: low risk (dev locked, not a k pass)",
         "BOLT": "L1 Pass: kill hit on both lines, mcap 324.8k under 400k, holders 262 under 265 (newly, prefilter 6:11 PM)",
         "SER": "L1 Pass: kill hit, side 8.5k under 13k, 79 holders under 80 (newly), mcap 33.8k",
         "VAMP": "L1 watch: curve 57%, 50 holders; top cluster is the curve reserve",
@@ -20116,9 +20116,9 @@
         "ASCEND": "L2 research: pool side ~1.16M, 24h 133 buys / 50 sells; Grumpy Walrus still accumulating (~305.8k)",
         "STRIKE": "L1: pool side ~1.24M, flat, 16 trades 24h",
         "SLIP": "L1 watch: new swarm launch; ten coordinated buyers in 120s, repeat early buyers, one sniper full exit; fails k/y",
-        "CHEESE": "L1 Pass: Suri RUG tag (dev sold 53 ADA after 5 min), side 11.2k, mcap 59.1k, 70 holders; Grumpy Walrus holds ~16.6M",
+        "CHEESE": "L1 Pass: risk scanner RUG tag (dev sold 53 ADA after 5 min), side 11.2k, mcap 59.1k, 70 holders; Grumpy Walrus holds ~16.6M",
         "SOLADA": "L1: market side ~211k, mcap ~1.67M, 492 holders; heavy single-wallet sells today",
-        "NOX": "L1 watch: Snek.fun launch 7:57 PM ET, curve ~30%, mcap ~29.4k ADA, 32 holders, Grumpy Walrus holds 1.12%; Suri yellow 60, no dev flags; fails k/y",
+        "NOX": "L1 watch: Snek.fun launch 7:57 PM ET, curve ~30%, mcap ~29.4k ADA, 32 holders, Grumpy Walrus holds 1.12%; risk score yellow 60, no dev flags; fails k/y",
         "FUKU": "L1 watch: new swarm launch; nine coordinated buyers in 120s, pool preseeder and whale-watch tag early; fails k/y",
         "MEPE": "L1 watch: new swarm launch; 13 coordinated buyers, identical 374.36 ADA buys, fresh-wallet swarm, first-block sniper and preseeder; fails k/y",
         "MONKEY": "L1 watch: new swarm launch; ten coordinated buyers, pool preseeder, repeat early buyers; fails k/y",
@@ -20209,7 +20209,7 @@
         "Blockfrost mainnet",
         "Sightline prefilter (kill_status, big_moves, dev_checks, flags, whale_ledger)",
         "GeckoTerminal",
-        "Suri Radar feed",
+        "external risk scanner feed",
         "X public search"
       ],
       "followups": [
@@ -20218,7 +20218,7 @@
         "NOX: check at the next run whether Grumpy Walrus holds or sells into the curve, and whether holders grow past 50",
         "Resolve the seller behind m-b322eee8 (~12M SOLADA for ~19.4k ADA, 12:31-1:13 PM ET) and where the ADA went; check whether it is Grumpy Walrus side wallet that X posts allege",
         "Super Cardano says Solada trades run through Solada-controlled wallets and the setup changed this week; read its thread and judge custody risk",
-        "CHEESE: Suri RUG tag (dev sold 53 ADA); Grumpy Walrus holds ~16.6M; watch whether the whale exits",
+        "CHEESE: risk scanner RUG tag (dev sold 53 ADA); Grumpy Walrus holds ~16.6M; watch whether the whale exits",
         "Is the outside wallet that sent 850 + 969 ADA today a new funder or the same one seen this morning?",
         "ASCEND build passed 300k (~301.5k at 4:00 PM) and buying continued in 200-1,000 ADA clips; watch whether it slows or stops",
         "CHEESE: who launched it, and are the swarm keys (w-32877ab4, w-6f2dbebd) in its early buyers? Re-check pool depth and holders at 7 PM",
@@ -20451,7 +20451,7 @@
           ]
         },
         {
-          "pattern": "Big single-wallet SOLADA sells midday while ADA rotated into a fresh Solada graduate (CHEESE) that later drew a Suri RUG tag",
+          "pattern": "Big single-wallet SOLADA sells midday while ADA rotated into a fresh Solada graduate (CHEESE) that later drew a risk scanner RUG tag",
           "outcome": "pending (24h)",
           "evidence": [
             "SOLADA m-b322eee8 -19.4k Oct 27",
@@ -20771,19 +20771,19 @@
           }
         ]
       },
-      "suri": {
+      "risk_check": {
         "CHEESE": {
           "risk": "High risk",
           "tags": [
             "RUG",
             "Dev sold"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "CLOVE": {
           "risk": "Low risk",
           "tags": [],
-          "source": "suri"
+          "source": "scanner"
         },
         "BOLT": {
           "risk": null,
@@ -20795,21 +20795,21 @@
           "tags": [
             "New dev"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "EVIL": {
           "risk": "Caution",
           "tags": [
             "Dev locked"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "HOWDY": {
           "risk": "Low risk",
           "tags": [
             "Dev locked"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "BET": {
           "risk": "High risk",
@@ -20817,7 +20817,7 @@
             "Dead",
             "Dev locked"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "BEAST": {
           "risk": "caution",
@@ -20829,47 +20829,47 @@
           "tags": [
             "not listed"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "STRIKE": {
           "risk": null,
           "tags": [
             "not listed"
           ],
-          "source": "suri"
+          "source": "scanner"
         },
         "NOX": {
           "risk": "yellow (score 60)",
           "tags": [],
-          "source": "suri"
+          "source": "scanner"
         },
         "VAL": {
           "risk": null,
           "tags": [],
-          "source": "suri",
-          "note": "No Suri rating for the Solada VAL (policy 74aee0dceb); Snek.fun copycat 'valhalla' (policy 79fdb06021) is RUG + Dev sold."
+          "source": "scanner",
+          "note": "No risk score for the Solada VAL (policy 74aee0dceb); Snek.fun copycat 'valhalla' (policy 79fdb06021) is RUG + Dev sold."
         },
         "UNFAZED": {
           "risk": "red 30",
           "tags": [],
-          "source": "suri"
+          "source": "scanner"
         }
       }
     }
   ],
-  "suri": {
+  "risk_check": {
     "CHEESE": {
       "risk": "High risk",
       "tags": [
         "RUG",
         "Dev sold"
       ],
-      "source": "suri"
+      "source": "scanner"
     },
     "CLOVE": {
       "risk": "Low risk",
       "tags": [],
-      "source": "suri"
+      "source": "scanner"
     },
     "BOLT": {
       "risk": null,
@@ -20881,21 +20881,21 @@
       "tags": [
         "New dev"
       ],
-      "source": "suri"
+      "source": "scanner"
     },
     "EVIL": {
       "risk": "Caution",
       "tags": [
         "Dev locked"
       ],
-      "source": "suri"
+      "source": "scanner"
     },
     "HOWDY": {
       "risk": "Low risk",
       "tags": [
         "Dev locked"
       ],
-      "source": "suri"
+      "source": "scanner"
     },
     "BET": {
       "risk": "High risk",
@@ -20903,7 +20903,7 @@
         "Dead",
         "Dev locked"
       ],
-      "source": "suri"
+      "source": "scanner"
     },
     "BEAST": {
       "risk": "caution",
@@ -20915,30 +20915,30 @@
       "tags": [
         "not listed"
       ],
-      "source": "suri"
+      "source": "scanner"
     },
     "STRIKE": {
       "risk": null,
       "tags": [
         "not listed"
       ],
-      "source": "suri"
+      "source": "scanner"
     },
     "NOX": {
       "risk": "yellow (score 60)",
       "tags": [],
-      "source": "suri"
+      "source": "scanner"
     },
     "VAL": {
       "risk": null,
       "tags": [],
-      "source": "suri",
-      "note": "No Suri rating for the Solada VAL (policy 74aee0dceb); Snek.fun copycat 'valhalla' (policy 79fdb06021) is RUG + Dev sold."
+      "source": "scanner",
+      "note": "No risk score for the Solada VAL (policy 74aee0dceb); Snek.fun copycat 'valhalla' (policy 79fdb06021) is RUG + Dev sold."
     },
     "UNFAZED": {
       "risk": "red 30",
       "tags": [],
-      "source": "suri"
+      "source": "scanner"
     }
   }
 }
