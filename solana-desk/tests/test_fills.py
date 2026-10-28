@@ -10,13 +10,16 @@ def lead(i, stype=None, reason=None, out=TOK, liq=100.0):
                 pair={"liquidity": {"quote": liq}, "baseToken": {"symbol": f"T{i}"}})
 
 class Market:
-    """Fake Jupiter sell quotes: ratio[mint] = mark/entry; 'noroute' / 'err' statuses."""
-    def __init__(self): self.ratio = {}; self.status = {}; self.liq = {}
+    """Fake Jupiter sell quotes: ratio[mint] = mark/entry; 'noroute' / 'err' statuses.
+    impact[mint] is an optional Jupiter priceImpactPct fraction string."""
+    def __init__(self): self.ratio = {}; self.status = {}; self.liq = {}; self.impact = {}
     def sell(self, m, amount):
         st = self.status.get(m)
         if st == "err": raise RuntimeError("timeout")
         if st == "noroute": return {}
-        return {"outAmount": str(int(amount * 0.5 * self.ratio.get(m, 1.0))), "routePlan": [1]}
+        q = {"outAmount": str(int(amount * 0.5 * self.ratio.get(m, 1.0))), "routePlan": [1]}
+        if m in self.impact: q["priceImpactPct"] = self.impact[m]
+        return q
     def liquidity(self, m): return self.liq.get(m, 100.0)
 
 def trades(d):
@@ -39,7 +42,9 @@ class Fills(unittest.TestCase):
         self.assertAlmostEqual(pos["entry"], C.TICKET_SOL * 1e9 / TOK)
         buys = [t for t in trades(self.d) if t["action"] == "buy"]
         self.assertTrue(all(float(t["sol"]) == C.TICKET_SOL for t in buys))
-        self.assertAlmostEqual(s["books"]["F"]["cash"], C.START_BALANCE_SOL - fills.basis())
+        cost, h = fills.entry_cost(100.0, lead(1)["quote"])
+        self.assertAlmostEqual(h, 0.02)  # 150 bps + half of the 1% quoted impact
+        self.assertAlmostEqual(s["books"]["F"]["cash"], C.START_BALANCE_SOL - cost)
         self.assertEqual(r["opened"], 3)
 
     def test_no_r_without_f_and_excluded_safety(self):
@@ -116,7 +121,10 @@ class Fills(unittest.TestCase):
         self.assertEqual(self._sells(), [])
         self.step(T0 + 1800 * 3)
         s = self._sells()[-1]; self.assertEqual(s["why"], "no_route_3x")
-        self.assertAlmostEqual(float(s["pnl"]), -fills.basis(), places=6)
+        cost, _ = fills.entry_cost(100.0, lead(1)["quote"])
+        self.assertAlmostEqual(float(s["pnl"]), -cost, places=6)
+        self.assertAlmostEqual(float(s["gross_pnl"]), -C.TICKET_SOL, places=6)
+        self.assertAlmostEqual(float(s["net_pnl"]), float(s["pnl"]), places=9)
 
     def test_persistence_across_runs(self):
         m = self._one()
@@ -162,6 +170,127 @@ class Fills(unittest.TestCase):
         self._one()
         blob = open(os.path.join(self.d, "paper.json")).read() + open(os.path.join(self.d, "positions.json")).read()
         for bad in ("wallet", "owner", "privateKey", "secret", "signature"): self.assertNotIn(bad, blob)
+
+class CostHaircut(unittest.TestCase):
+    """Slippage+MEV haircut is PnL accounting. Exit triggers still use the raw quote price."""
+    def setUp(self): self.d = tempfile.mkdtemp(); self.mk = Market(); self.st = dict(checks=12, data_failures=0)
+    def step(self, now, leads=(), st=None, run_id=None):
+        return fills.step(self.d, now, run_id or f"R{now}", now // 60, list(leads), st or self.st, self.mk.sell, self.mk.liquidity)
+    def _one(self): self.step(T0, [lead(1)]); return M(1)
+    def _sells(self): return [t for t in trades(self.d) if t["action"] == "sell" and t["book"] == "F"]
+
+    def test_freeze_kill_and_exit_numbers_unchanged(self):
+        self.assertTrue(C.FROZEN); self.assertEqual(C.CFG_VERSION, "v1-v6.5")
+        self.assertEqual(C.TICKET_SOL, 0.5)
+        self.assertEqual(C.EXIT["hard_stop"], -0.25)
+        self.assertEqual(C.EXIT["ladder"], [(0.40, 1/3), (1.00, 1/3)])
+        self.assertEqual(C.EXIT["trail"], 0.25)
+        self.assertEqual(C.EXIT["time_stop_min"], 120)
+        self.assertEqual(C.SESSION_LOSS_HALT_PCT, 0.30)
+        self.assertEqual(C.EARLY_STOP_EXP, -0.15)
+        self.assertEqual(C.MIN_F_CLOSES, 20)
+        self.assertEqual(C.DATA_FAIL_VOID, 0.10)
+        self.assertEqual(C.OUTAGE_VOID_H, 2)
+        self.assertEqual(C.COST["network_fee_sol"], 0.00001)
+        self.assertEqual(C.COST["legacy_haircut_per_side"], 0.005)
+        self.assertEqual(C.COST["base_bps"], 150)
+        self.assertEqual(C.COST["max_bps"], 300)
+        self.assertEqual(C.COST["haircut_per_side"], C.COST["base_bps"] / 10000)
+
+    def test_haircut_scales_with_liquidity_and_impact_then_caps(self):
+        self.assertAlmostEqual(fills.haircut_frac(100, 0), 0.015)          # reference: 150 bps
+        self.assertAlmostEqual(fills.haircut_frac(100, 100), 0.020)        # + half of 1% impact
+        self.assertAlmostEqual(fills.haircut_frac(10, 0), 0.0225)           # 10 SOL floor, scale cap 1.5
+        self.assertAlmostEqual(fills.haircut_frac(10, 300), 0.030)          # 225 + 150 -> capped at 300 bps
+        self.assertAlmostEqual(fills.haircut_frac(25, 300), 0.030)          # 150 + half of 3% == the window
+        self.assertAlmostEqual(fills.haircut_frac(None, None), 0.015)       # missing data: base only
+        self.assertAlmostEqual(fills.haircut_frac(0, None), 0.015)
+        self.assertIsNone(fills.impact_bps({}))
+        self.assertIsNone(fills.impact_bps({"priceImpactPct": "nan"}))
+        self.assertAlmostEqual(fills.impact_bps({"priceImpactPct": "0.01"}), 100)
+        self.assertAlmostEqual(fills.liq_scale(float("nan")), 1.0)
+        self.assertAlmostEqual(fills.haircut_frac(float("nan"), None), 0.015)
+
+    def test_both_sides_on_the_fill_gross_and_net(self):
+        m = self._one()
+        buy = [t for t in trades(self.d) if t["action"] == "buy" and t["book"] == "F"][-1]
+        self.assertAlmostEqual(float(buy["sol"]), C.TICKET_SOL)
+        self.assertAlmostEqual(float(buy["entry_haircut_pct"]), 2.0, places=4)
+        self.assertEqual(buy["pnl"], ""); self.assertEqual(buy["gross_pnl"], ""); self.assertEqual(buy["net_pnl"], "")
+        self.mk.ratio[m] = 1.0
+        self.step(T0 + 120 * 60)
+        s = self._sells()[-1]
+        self.assertEqual(s["why"], "time_stop")
+        self.assertAlmostEqual(float(s["gross_pnl"]), 0.0, places=6)
+        self.assertAlmostEqual(float(s["entry_haircut_pct"]), 2.0, places=4)
+        self.assertAlmostEqual(float(s["exit_haircut_pct"]), 1.5, places=4)
+        cost, _ = fills.entry_cost(100.0, lead(1)["quote"])
+        pro = C.TICKET_SOL * (1 - 0.015) - C.COST["network_fee_sol"]
+        self.assertAlmostEqual(float(s["net_pnl"]), pro - cost, places=6)
+        self.assertAlmostEqual(float(s["pnl"]), float(s["net_pnl"]), places=9)
+        self.assertLess(float(s["net_pnl"]), float(s["gross_pnl"]))
+        paper = json.load(open(os.path.join(self.d, "paper.json")))
+        closed = [t for t in paper["closed"] if t["book"] == "F"][0]
+        self.assertEqual(closed["result"]["pnl"], closed["result"]["net_pnl"])
+        self.assertLess(closed["result"]["net_pnl"], closed["result"]["gross_pnl"])
+        self.assertEqual(paper["books"]["F"]["realized_pnl"], closed["result"]["net_pnl"])
+        self.assertEqual(paper["books"]["F"]["realized_gross_pnl"], closed["result"]["gross_pnl"])
+        self.assertEqual(paper["costs"]["base_bps"], 150)
+        self.assertIn("Assumption, not a measured constant", paper["costs"]["note"])
+
+    def test_thin_pool_and_impact_raise_the_recorded_haircut(self):
+        deep = lead(1, liq=100.0); deep["quote"] = dict(deep["quote"], priceImpactPct="0")
+        thin = lead(2, liq=10.0); thin["quote"] = dict(thin["quote"], priceImpactPct="0.03")
+        self.step(T0, [deep, thin])
+        buys = {t["symbol"]: t for t in trades(self.d) if t["action"] == "buy" and t["book"] == "F"}
+        self.assertAlmostEqual(float(buys["T1"]["haircut_pct"]), 1.5, places=4)
+        self.assertAlmostEqual(float(buys["T2"]["haircut_pct"]), 3.0, places=4)
+        m = M(1); self.mk.liq[m] = 10.0; self.mk.impact[m] = "0.03"; self.mk.ratio[m] = 1.0
+        self.step(T0 + 120 * 60)
+        s = [t for t in self._sells() if t["symbol"] == "T1"][-1]
+        self.assertAlmostEqual(float(s["entry_haircut_pct"]), 1.5, places=4)
+        self.assertAlmostEqual(float(s["exit_haircut_pct"]), 3.0, places=4)
+
+    def test_price_stop_ignores_the_haircut(self):
+        """A mark inside the -25% price stop stays open even when net-of-cost is past -25% of the ticket."""
+        m = self._one(); self.mk.ratio[m] = 0.76; self.step(T0 + 1800)
+        self.assertEqual(self._sells(), [])
+        self.assertEqual(len(json.load(open(os.path.join(self.d, "positions.json")))["books"]["F"]["open"]), 1)
+        paper = json.load(open(os.path.join(self.d, "paper.json")))
+        self.assertLess(paper["books"]["F"]["equity"] - C.START_BALANCE_SOL, C.EXIT["hard_stop"] * C.TICKET_SOL)
+
+    def test_legacy_row_and_position_keep_old_numbers(self):
+        import csv
+        from desk import ledger
+        p = os.path.join(self.d, "trades.csv")
+        old = ledger.TRADE_COLS[:16]
+        with open(p, "w", newline="") as f:
+            w = csv.writer(f); w.writerow(old)
+            w.writerow(["1", "F", "EXIT", "MintOld", "OLD", "sell", "1", "0.4", "0.4", "1", "1e-05", "0.5", "hard_stop", "-0.1", "0", "0"])
+        old_cost = fills.legacy_entry_cost()
+        mint = M(1)
+        pos = dict(entry=0.5, peak=0.5, steps=0, liq0=100.0, opened=T0, frac=1.0, last_mark=0.5, stale=0,
+                   no_route_count=0, mint=mint, symbol="T1", tokens=TOK, pnl=0.0)
+        book = dict(cash=C.START_BALANCE_SOL - old_cost, open={"F-old": pos}, fills_day="x", fills_today=1,
+                    realized_pnl=0.0, closed=[], would_halt=[], peak_equity=C.START_BALANCE_SOL)
+        json.dump(dict(cfg_version=C.CFG_VERSION, last_run_ts=T0, voids=[], books={"F": book}), open(os.path.join(self.d, "positions.json"), "w"))
+        self.mk.ratio[mint] = 1.0
+        self.step(T0 + 120 * 60)
+        rows = list(csv.DictReader(open(p)))
+        self.assertEqual(list(rows[0].keys()), ledger.TRADE_COLS)
+        self.assertEqual((rows[0]["pnl"], rows[0]["gross_pnl"], rows[0]["net_pnl"]), ("-0.1", "", ""))
+        s = self._sells()[-1]
+        pro = C.TICKET_SOL * (1 - 0.015) - C.COST["network_fee_sol"]
+        self.assertAlmostEqual(float(s["net_pnl"]), pro - old_cost, places=6)
+        self.assertAlmostEqual(float(s["gross_pnl"]), 0.0, places=6)
+        self.assertAlmostEqual(float(s["entry_haircut_pct"]), 0.5, places=4)
+        b = json.load(open(os.path.join(self.d, "positions.json")))["books"]["F"]
+        self.assertAlmostEqual(b["cash"], C.START_BALANCE_SOL - old_cost + pro, places=6)
+        legacy = fills.ticket("F-old", dict(mint="m" * 32, symbol="OLD", book="F", opened=T0, closed=T0 + 1,
+                                            entry=0.5, exit_px=0.3, why="hard_stop", pnl=-0.2, pct=-40.0), closed=True)
+        self.assertEqual(legacy["result"]["pnl"], -0.2)
+        self.assertEqual(legacy["result"]["net_pnl"], -0.2)
+        self.assertNotIn("gross_pnl", legacy["result"])
 
 class RunFill(unittest.TestCase):
     def test_scan_fill_end_to_end_offline(self):

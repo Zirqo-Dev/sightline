@@ -4,6 +4,16 @@ A **paper-only** trading desk for Solana tokens. It never holds keys, never sign
 transactions, and never touches a wallet: every "trade" is a simulated entry/exit
 recorded in a ledger with a fixed 0.5 SOL paper ticket.
 
+Paper fills are marked at the Jupiter quote. That quote already includes its price impact.
+Each side then pays a configurable slippage and sandwich-MEV haircut (`desk/config.py`
+`COST`, documented there as an assumption: nothing in the Jito sandwich study or the
+Helius MEV report is the bps for this ticket) plus the network fee. The default is
+**150 bps per side** on a pool of at least 25 SOL, rising toward **300 bps** (the quote's
+slippage window) when the pool is thinner or the quoted impact is higher. `trades.csv`
+and `paper.json` record gross and net PnL. `pnl` stays the net figure, so older rows
+still read. Skip, exit, kill, void, and the v6.5 freeze are unchanged; exits still use
+the raw quote price.
+
 - `desk/` — config, skip rules (`skips.py`), books F/R/S (`books.py`), exits, ledger, report.
 - `tests/` — unittest suite run against redacted fixtures (third-party holder wallets replaced with placeholders).
 - `docs/` — design plan v6.5 (`solana-paper-desk-plan-v6.5.md`; v6.4/v6.5 changes and the Oct 26 config freeze in CHANGELOG.md).
