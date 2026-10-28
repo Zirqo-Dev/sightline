@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-28T21:30:22Z",
+ "generated_at": "2026-10-28T22:00:26Z",
  "cfg_version": "v1-v6.5",
  "open": [
   {
@@ -23,37 +23,14 @@
     "px": 0.0016256825499667297
    },
    "frac": 0.666667,
-   "last_mark": 0.0025771852605635313,
+   "last_mark": 0.0024253863656339765,
    "thesis": "safety:too_fresh",
    "result": {
     "pnl": 0.085603417,
-    "pct": 58.53,
+    "pct": 49.19,
     "unit": "SOL",
     "net_pnl": 0.085603417,
     "gross_pnl": 0.097549048
-   }
-  },
-  {
-   "id": "S-20261028T1930-BGcmpump",
-   "ticker": "PELF",
-   "mint": "BGcmzUjj995eWAFxBhN4w4BatbJQnDDA73Bkop9Epump",
-   "book": "S",
-   "status": "open",
-   "size": 0.5,
-   "opened_at": "2026-10-28T19:30:25Z",
-   "window_ends_at": "2026-10-28T21:30:25Z",
-   "entry": {
-    "px": 0.0006304767035195106
-   },
-   "frac": 1.0,
-   "last_mark": 0.0005975847931617078,
-   "thesis": "safety:too_old",
-   "result": {
-    "pnl": 0.0,
-    "pct": -5.22,
-    "unit": "SOL",
-    "net_pnl": 0.0,
-    "gross_pnl": 0.0
    }
   },
   {
@@ -69,11 +46,11 @@
     "px": 0.0007623860747866213
    },
    "frac": 1.0,
-   "last_mark": 0.00058299969618135,
+   "last_mark": 0.0008420251513498821,
    "thesis": "safety:too_fresh",
    "result": {
     "pnl": 0.0,
-    "pct": -23.53,
+    "pct": 10.45,
     "unit": "SOL",
     "net_pnl": 0.0,
     "gross_pnl": 0.0
@@ -91,15 +68,15 @@
    "entry": {
     "px": 0.0043110598611640375
    },
-   "frac": 1.0,
-   "last_mark": 0.005924068498669898,
+   "frac": 0.333333,
+   "last_mark": 0.00914616862398209,
    "thesis": "safety:too_fresh",
    "result": {
-    "pnl": 0.0,
-    "pct": 37.42,
+    "pnl": 0.350622368,
+    "pct": 112.16,
     "unit": "SOL",
-    "net_pnl": 0.0,
-    "gross_pnl": 0.0
+    "net_pnl": 0.350622368,
+    "gross_pnl": 0.37385306
    }
   },
   {
@@ -115,11 +92,11 @@
     "px": 0.0009686259941276429
    },
    "frac": 1.0,
-   "last_mark": 0.0009686259941276429,
+   "last_mark": 0.0010459697723877014,
    "thesis": "safety:too_fresh",
    "result": {
     "pnl": 0.0,
-    "pct": 0.0,
+    "pct": 7.98,
     "unit": "SOL",
     "net_pnl": 0.0,
     "gross_pnl": 0.0
@@ -717,6 +694,33 @@
     "gross_pct": -25.01
    },
    "thesis": "safety:top10_heavy"
+  },
+  {
+   "id": "S-20261028T1930-BGcmpump",
+   "ticker": "PELF",
+   "mint": "BGcmzUjj995eWAFxBhN4w4BatbJQnDDA73Bkop9Epump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "opened_at": "2026-10-28T19:30:25Z",
+   "closed_at": "2026-10-28T22:00:26Z",
+   "entry": {
+    "px": 0.0006304767035195106
+   },
+   "exit": {
+    "px": 0.0005983174852703088
+   },
+   "exit_reason": "time_stop",
+   "result": {
+    "pnl": -0.051848109,
+    "pct": -10.12,
+    "unit": "SOL",
+    "net_pnl": -0.051848109,
+    "net_pct": -10.12,
+    "gross_pnl": -0.025503891,
+    "gross_pct": -5.1
+   },
+   "thesis": "safety:too_old"
   }
  ],
  "books": {
@@ -740,14 +744,14 @@
    "realized_gross_pnl": -0.030990181
   },
   "S": {
-   "cash": 7.856177957,
-   "equity": 10.37175984,
-   "realized_pnl": 0.246876698,
-   "open": 5,
-   "closed": 8,
+   "cash": 9.007205148,
+   "equity": 10.898001879,
+   "realized_pnl": 0.545650957,
+   "open": 4,
+   "closed": 9,
    "fills_today": 13,
    "would_halt": [],
-   "realized_gross_pnl": 0.395075655
+   "realized_gross_pnl": 0.743424824
   }
  },
  "costs": {

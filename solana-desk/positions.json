@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793223022,
+ "last_run_ts": 1793224826,
  "voids": [],
  "books": {
   "F": {
@@ -224,7 +224,7 @@
    "realized_gross": -0.030990180666529393
   },
   "S": {
-   "cash": 7.856177956916686,
+   "cash": 9.007205148010211,
    "open": {
     "S-20261028T1900-BLAypump": {
      "entry": 0.0016256825499667297,
@@ -233,7 +233,7 @@
      "liq0": 148.2672,
      "opened": 1793214029,
      "frac": 0.6666666666666667,
-     "last_mark": 0.0025771852605635313,
+     "last_mark": 0.0024253863656339765,
      "stale": 0,
      "no_route_count": 0,
      "mint": "BLAytV5xTVEkYJYS1RoFR5Ypgm3JZ44CvVdZHTExpump",
@@ -246,38 +246,16 @@
      "gross_pnl": 0.097549048,
      "entry_haircut": 0.02746345431991389,
      "entry_cost": 0.5137417271599569,
-     "exit_haircut": 0.027837310646412938
-    },
-    "S-20261028T1930-BGcmpump": {
-     "entry": 0.0006304767035195106,
-     "peak": 0.0006304767035195106,
-     "steps": 0,
-     "liq0": 33.9343,
-     "opened": 1793215825,
-     "frac": 1.0,
-     "last_mark": 0.0005975847931617078,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "BGcmzUjj995eWAFxBhN4w4BatbJQnDDA73Bkop9Epump",
-     "symbol": "PELF",
-     "tokens": 793050714180,
-     "run_id": "20261028T1930",
-     "why": "safety:too_old",
-     "book": "S",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
-     "entry_haircut": 0.024178668538506667,
-     "entry_cost": 0.5120993342692532,
-     "exit_haircut": 0.022273499346934744
+     "exit_haircut": 0.028125818841102226
     },
     "S-20261028T2030-ESvMpump": {
      "entry": 0.0007623860747866213,
-     "peak": 0.0007623860747866213,
+     "peak": 0.0008420251513498821,
      "steps": 0,
      "liq0": 96.7477,
      "opened": 1793219425,
      "frac": 1.0,
-     "last_mark": 0.00058299969618135,
+     "last_mark": 0.0008420251513498821,
      "stale": 0,
      "no_route_count": 0,
      "mint": "ESvM3LJuJD7d94nR2KRRfCSsKsgtUhbPe9u38z7vpump",
@@ -290,16 +268,16 @@
      "gross_pnl": 0.0,
      "entry_haircut": 0.021814520111234987,
      "entry_cost": 0.5109172600556174,
-     "exit_haircut": 0.01919638679754489
+     "exit_haircut": 0.02760994412183785
     },
     "S-20261028T2100-dyw5pump": {
      "entry": 0.0043110598611640375,
-     "peak": 0.005924068498669898,
-     "steps": 0,
+     "peak": 0.00914616862398209,
+     "steps": 2,
      "liq0": 257.1357,
      "opened": 1793221227,
-     "frac": 1.0,
-     "last_mark": 0.005924068498669898,
+     "frac": 0.3333333333333334,
+     "last_mark": 0.00914616862398209,
      "stale": 0,
      "no_route_count": 0,
      "mint": "dyw5fDNv91eknniMG4tGCU1ZrzjuxbpsLiEzih6pump",
@@ -308,20 +286,20 @@
      "run_id": "20261028T2100",
      "why": "safety:too_fresh",
      "book": "S",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
+     "pnl": 0.35062236778864625,
+     "gross_pnl": 0.37385306,
      "entry_haircut": 0.020440792724637596,
      "entry_cost": 0.5102303963623187,
-     "exit_haircut": 0.023343694498342876
+     "exit_haircut": 0.023176956067482258
     },
     "S-20261028T2130-GVqSgFbh": {
      "entry": 0.0009686259941276429,
-     "peak": 0.0009686259941276429,
+     "peak": 0.0010459697723877014,
      "steps": 0,
      "liq0": 112.2209,
      "opened": 1793223022,
      "frac": 1.0,
-     "last_mark": 0.0009686259941276429,
+     "last_mark": 0.0010459697723877014,
      "stale": 0,
      "no_route_count": 0,
      "mint": "GVqSxeKxwuRcReibS38ot18xeHT9EtmejXQCREqXgFbh",
@@ -333,12 +311,13 @@
      "pnl": 0.0,
      "gross_pnl": 0.0,
      "entry_haircut": 0.029894530838760692,
-     "entry_cost": 0.5149572654193803
+     "entry_cost": 0.5149572654193803,
+     "exit_haircut": 0.027388939330741494
     }
    },
    "fills_day": "2026-10-28",
    "fills_today": 13,
-   "realized_pnl": 0.24687669779656052,
+   "realized_pnl": 0.5456509570459535,
    "closed": [
     {
      "id": "S-20261028T1330-5Zjdpump",
@@ -457,11 +436,26 @@
      "pct": -28.17,
      "gross_pct": -25.01,
      "why_entered": "safety:top10_heavy"
+    },
+    {
+     "id": "S-20261028T1930-BGcmpump",
+     "mint": "BGcmzUjj995eWAFxBhN4w4BatbJQnDDA73Bkop9Epump",
+     "symbol": "PELF",
+     "opened": 1793215825,
+     "closed": 1793224826,
+     "entry": 0.0006304767035195106,
+     "exit_px": 0.0005983174852703088,
+     "why": "time_stop",
+     "pnl": -0.051848109,
+     "gross_pnl": -0.025503891,
+     "pct": -10.12,
+     "gross_pct": -5.1,
+     "why_entered": "safety:too_old"
     }
    ],
    "would_halt": [],
-   "peak_equity": 10.695520074893473,
-   "realized_gross": 0.3950756546684402
+   "peak_equity": 10.89800187930826,
+   "realized_gross": 0.7434248236684402
   }
  }
 }
