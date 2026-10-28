@@ -7,32 +7,9 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-28T20:00:28Z",
+ "generated_at": "2026-10-28T20:30:25Z",
  "cfg_version": "v1-v6.5",
  "open": [
-  {
-   "id": "S-20261028T1800-56xZpump",
-   "ticker": "SI",
-   "mint": "56xZsxJkoEyVisFtDFcK9TQ3GxDUHLUGi1kyDnbNpump",
-   "book": "S",
-   "status": "open",
-   "size": 0.5,
-   "opened_at": "2026-10-28T18:00:29Z",
-   "window_ends_at": "2026-10-28T20:00:29Z",
-   "entry": {
-    "px": 0.00029607201994493
-   },
-   "frac": 1.0,
-   "last_mark": 0.00026595546571377246,
-   "thesis": "safety:top10_heavy",
-   "result": {
-    "pnl": 0.0,
-    "pct": -10.17,
-    "unit": "SOL",
-    "net_pnl": 0.0,
-    "gross_pnl": 0.0
-   }
-  },
   {
    "id": "S-20261028T1900-BLAypump",
    "ticker": "TRUMPKIN",
@@ -46,37 +23,14 @@
     "px": 0.0016256825499667297
    },
    "frac": 1.0,
-   "last_mark": 0.001930043753856459,
+   "last_mark": 0.0019316947417809985,
    "thesis": "safety:too_fresh",
    "result": {
     "pnl": 0.0,
-    "pct": 18.72,
+    "pct": 18.82,
     "unit": "SOL",
     "net_pnl": 0.0,
     "gross_pnl": 0.0
-   }
-  },
-  {
-   "id": "S-20261028T1930-AHtLXhot",
-   "ticker": "CLUTCH",
-   "mint": "AHtLsp84S3ThHeNgcqg1jXaE9M6FSXKW8oj7WjYkXhot",
-   "book": "S",
-   "status": "open",
-   "size": 0.5,
-   "opened_at": "2026-10-28T19:30:25Z",
-   "window_ends_at": "2026-10-28T21:30:25Z",
-   "entry": {
-    "px": 0.0013022292882669797
-   },
-   "frac": 0.333333,
-   "last_mark": 0.005403795656669812,
-   "thesis": "safety:dev_holds",
-   "result": {
-    "pnl": 1.004152236,
-    "pct": 314.96,
-    "unit": "SOL",
-    "net_pnl": 1.004152236,
-    "gross_pnl": 1.049883305
    }
   },
   {
@@ -103,20 +57,20 @@
    }
   },
   {
-   "id": "S-20261028T2000-2RyCpump",
-   "ticker": "ANSEM",
-   "mint": "2RyCCRenDtquADusNUfwFpvTaDkam82imh46SL2mpump",
+   "id": "S-20261028T2030-ESvMpump",
+   "ticker": "WORKR",
+   "mint": "ESvM3LJuJD7d94nR2KRRfCSsKsgtUhbPe9u38z7vpump",
    "book": "S",
    "status": "open",
    "size": 0.5,
-   "opened_at": "2026-10-28T20:00:28Z",
-   "window_ends_at": "2026-10-28T22:00:28Z",
+   "opened_at": "2026-10-28T20:30:25Z",
+   "window_ends_at": "2026-10-28T22:30:25Z",
    "entry": {
-    "px": 0.0005425227040957472
+    "px": 0.0007623860747866213
    },
    "frac": 1.0,
-   "last_mark": 0.0005425227040957472,
-   "thesis": "safety:top10_heavy",
+   "last_mark": 0.0007623860747866213,
+   "thesis": "safety:too_fresh",
    "result": {
     "pnl": 0.0,
     "pct": 0.0,
@@ -636,6 +590,87 @@
     "gross_pct": -27.02
    },
    "thesis": "safety:top10_heavy"
+  },
+  {
+   "id": "S-20261028T1800-56xZpump",
+   "ticker": "SI",
+   "mint": "56xZsxJkoEyVisFtDFcK9TQ3GxDUHLUGi1kyDnbNpump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "opened_at": "2026-10-28T18:00:29Z",
+   "closed_at": "2026-10-28T20:30:25Z",
+   "entry": {
+    "px": 0.00029607201994493
+   },
+   "exit": {
+    "px": 0.00026595546571377246
+   },
+   "exit_reason": "time_stop",
+   "result": {
+    "pnl": -0.075519974,
+    "pct": -14.66,
+    "unit": "SOL",
+    "net_pnl": -0.075519974,
+    "net_pct": -14.66,
+    "gross_pnl": -0.050860183,
+    "gross_pct": -10.17
+   },
+   "thesis": "safety:top10_heavy"
+  },
+  {
+   "id": "S-20261028T1930-AHtLXhot",
+   "ticker": "CLUTCH",
+   "mint": "AHtLsp84S3ThHeNgcqg1jXaE9M6FSXKW8oj7WjYkXhot",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "opened_at": "2026-10-28T19:30:25Z",
+   "closed_at": "2026-10-28T20:30:25Z",
+   "entry": {
+    "px": 0.0013022292882669797
+   },
+   "exit": {
+    "px": 0.002284592129290279
+   },
+   "exit_reason": "trailing_stop",
+   "result": {
+    "pnl": 1.117780423,
+    "pct": 217.93,
+    "unit": "SOL",
+    "net_pnl": 1.117780423,
+    "net_pct": 217.93,
+    "gross_pnl": 1.175611656,
+    "gross_pct": 235.12
+   },
+   "thesis": "safety:dev_holds"
+  },
+  {
+   "id": "S-20261028T2000-2RyCpump",
+   "ticker": "ANSEM",
+   "mint": "2RyCCRenDtquADusNUfwFpvTaDkam82imh46SL2mpump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "opened_at": "2026-10-28T20:00:28Z",
+   "closed_at": "2026-10-28T20:30:25Z",
+   "entry": {
+    "px": 0.0005425227040957472
+   },
+   "exit": {
+    "px": 0.00040682665191587604
+   },
+   "exit_reason": "hard_stop",
+   "result": {
+    "pnl": -0.144001019,
+    "pct": -28.17,
+    "unit": "SOL",
+    "net_pnl": -0.144001019,
+    "net_pct": -28.17,
+    "gross_pnl": -0.125060252,
+    "gross_pct": -25.01
+   },
+   "thesis": "safety:top10_heavy"
   }
  ],
  "books": {
@@ -659,14 +694,14 @@
    "realized_gross_pnl": -0.030990181
   },
   "S": {
-   "cash": 8.044183911,
-   "equity": 10.695520075,
-   "realized_pnl": 0.267166086,
-   "open": 5,
-   "closed": 5,
-   "fills_today": 10,
+   "cash": 8.624514959,
+   "equity": 10.156941123,
+   "realized_pnl": 0.16127328,
+   "open": 3,
+   "closed": 8,
+   "fills_today": 11,
    "would_halt": [],
-   "realized_gross_pnl": 0.347718691
+   "realized_gross_pnl": 0.297526607
   }
  },
  "costs": {
