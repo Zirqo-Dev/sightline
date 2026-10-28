@@ -1,5 +1,5 @@
 {
- "at": "2026-10-28T12:18:35Z",
+ "at": "2026-10-28T14:18:35Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -28,20 +28,20 @@
  "actor_tags": true,
  "moves": [
   {
-   "time": "2026-10-25T12:36:30Z",
-   "tx_short": "f0d4df1da1",
+   "time": "2026-10-25T15:08:52Z",
+   "tx_short": "41fd2a29e3",
    "kind": "swap",
    "ticker": "NIGHT",
    "token": "NIGHT",
    "policy_short": "0691b2fe",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~8d92b947",
-   "direction": "buy",
-   "ada": 54139.11,
+   "direction": "sell",
+   "ada": 6015.57,
    "ada_basis": "ada_leg",
-   "qty": 293876748924,
+   "qty": 33390529427,
    "qty_basis": "raw",
-   "reserve_ada_after": 3582951.86,
+   "reserve_ada_after": 3523965.47,
    "lp": false,
    "actor_tag": null,
    "ahead_of_dump": false,
@@ -50,8 +50,8 @@
    "level": "pool"
   },
   {
-   "time": "2026-10-25T12:36:30Z",
-   "tx_short": "fd60fd9d1b",
+   "time": "2026-10-25T15:10:18Z",
+   "tx_short": "b13b16e4ef",
    "kind": "swap",
    "ticker": "NIGHT",
    "token": "NIGHT",
@@ -59,11 +59,11 @@
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~8d92b947",
    "direction": "sell",
-   "ada": 51066.8,
+   "ada": 8454.72,
    "ada_basis": "ada_leg",
-   "qty": 278870367687,
+   "qty": 47244086563,
    "qty_basis": "raw",
-   "reserve_ada_after": 3530365.74,
+   "reserve_ada_after": 3515510.75,
    "lp": false,
    "actor_tag": null,
    "ahead_of_dump": false,
@@ -114,6 +114,72 @@
    "dump_tx_short": null,
    "dump_ada": null,
    "level": "pool"
+  },
+  {
+   "time": "2026-10-26T10:54:22Z",
+   "tx_short": "fe38012b60",
+   "kind": "swap",
+   "ticker": "STRIKE",
+   "token": "STRIKE",
+   "policy_short": "f13ac4d6",
+   "dex": "minswap_v2",
+   "pool_key": "minswap_v2~b4f379d0",
+   "direction": "buy",
+   "ada": 6088.1,
+   "ada_basis": "ada_leg",
+   "qty": 2652984143,
+   "qty_basis": "raw",
+   "reserve_ada_after": 1230545.03,
+   "lp": false,
+   "actor_tag": null,
+   "ahead_of_dump": false,
+   "dump_tx_short": null,
+   "dump_ada": null,
+   "level": "pool"
+  },
+  {
+   "time": "2026-10-26T16:16:31Z",
+   "tx_short": "e88c0ddf28",
+   "kind": "swap",
+   "ticker": "STRIKE",
+   "token": "STRIKE",
+   "policy_short": "f13ac4d6",
+   "dex": "minswap_v2",
+   "pool_key": "minswap_v2~b4f379d0",
+   "direction": "sell",
+   "ada": 7564.11,
+   "ada_basis": "ada_leg",
+   "qty": 3363813588,
+   "qty_basis": "raw",
+   "reserve_ada_after": 1223575.54,
+   "lp": false,
+   "actor_tag": null,
+   "ahead_of_dump": false,
+   "dump_tx_short": null,
+   "dump_ada": null,
+   "level": "pool"
+  },
+  {
+   "time": "2026-10-26T20:00:04Z",
+   "tx_short": "b8a88700c6",
+   "kind": "swap",
+   "ticker": "STRIKE",
+   "token": "STRIKE",
+   "policy_short": "f13ac4d6",
+   "dex": "minswap_v2",
+   "pool_key": "minswap_v2~b4f379d0",
+   "direction": "buy",
+   "ada": 7695.25,
+   "ada_basis": "ada_leg",
+   "qty": 3359298549,
+   "qty_basis": "raw",
+   "reserve_ada_after": 1230355.93,
+   "lp": false,
+   "actor_tag": null,
+   "ahead_of_dump": false,
+   "dump_tx_short": null,
+   "dump_ada": null,
+   "level": "pool"
   }
  ],
  "pools": [
@@ -125,7 +191,8 @@
    "pool_key": "minswap_v2~c9d8143f",
    "reserve_ada": 1166490.54,
    "reserve_qty": 851565152156,
-   "asof": "2026-10-28T12:11:24Z"
+   "asof": "2026-10-28T12:11:24Z",
+   "stale": true
   },
   {
    "ticker": "NIGHT",
@@ -133,23 +200,37 @@
    "policy_short": "0691b2fe",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~8d92b947",
-   "reserve_ada": 3531725.23,
-   "reserve_qty": 19491610727183,
-   "asof": "2026-10-25T12:51:05Z"
+   "reserve_ada": 3529527.19,
+   "reserve_qty": 19504812434053,
+   "asof": "2026-10-25T15:56:20Z"
+  },
+  {
+   "ticker": "STRIKE",
+   "token": "STRIKE",
+   "policy_short": "f13ac4d6",
+   "dex": "minswap_v2",
+   "pool_key": "minswap_v2~b4f379d0",
+   "reserve_ada": 1226518.56,
+   "reserve_qty": 541474942860,
+   "asof": "2026-10-28T14:18:36Z"
+  },
+  {
+   "ticker": "STRIKE",
+   "token": "STRIKE",
+   "policy_short": "f13ac4d6",
+   "dex": "sundaeswap_v3",
+   "pool_key": "sundaeswap_v3~968b2e79",
+   "reserve_ada": 673019.43,
+   "reserve_qty": 296482728664,
+   "asof": "2026-10-28T14:18:13Z"
   }
  ],
  "tokens": [
   {
-   "ticker": "ASCEND",
-   "policy_short": "eb7a93eb",
-   "rank": 1,
-   "unit_source": "static"
-  },
-  {
    "ticker": "NIGHT",
    "policy_short": "0691b2fe",
    "rank": 2,
-   "unit_source": "static"
+   "unit_source": "cache"
   },
   {
    "ticker": "STRIKE",
@@ -198,24 +279,25 @@
    "policy_short": "14628c26",
    "rank": 10,
    "unit_source": "listed"
+  },
+  {
+   "ticker": "ASCEND",
+   "policy_short": "eb7a93eb",
+   "rank": 1,
+   "unit_source": "cache"
   }
  ],
  "skipped": [],
  "coverage": {
-  "ASCEND": {
-   "read": 27,
-   "complete": false,
-   "pools": 1
-  },
   "NIGHT": {
-   "read": 27,
+   "read": 15,
    "complete": false,
    "pools": 1
   },
   "STRIKE": {
-   "read": 0,
+   "read": 27,
    "complete": false,
-   "skipped": "budget"
+   "pools": 2
   },
   "SNEK": {
    "read": 0,
@@ -251,10 +333,14 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "ASCEND": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "ASCEND",
   "NIGHT",
   "STRIKE",
   "SNEK",
@@ -263,9 +349,10 @@
   "IAG",
   "COCK",
   "CLOVE",
-  "BOLT"
+  "BOLT",
+  "ASCEND"
  ],
- "koios_calls": 11,
+ "koios_calls": 9,
  "blockfrost_calls": 0,
  "blockfrost_fallbacks": 0,
  "blockfrost_available": true,
