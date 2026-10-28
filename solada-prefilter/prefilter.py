@@ -181,9 +181,14 @@ class Http:
             self.trip(src, f"{self.failures[src]} failures")
 
 
-# Chain work stops at run start + 720s. The step timeout is 780s and the workflow is 15 minutes,
-# which still leaves the commit and fits the 2h cadence. 720 is not a per-job budget.
+# Chain work stops at run start + 720s. The process timeout is 780s (60s to flush JSON after
+# the cap). The workflow job is 20 minutes, so checkout, tests, cache, the privacy guard, and
+# the commit/push retries still fit after a full 780s process. Do not raise HARD_CAP_S without
+# raising that process timeout and timeout-minutes together: a job cancel during commit drops
+# state.json and the next run re-sends triggers. 720 is not a per-job budget.
 HARD_CAP_S = 720
+# Doc-only. job_deadline and research_deadline do not read config research_budget_s.
+# That number is the sum of the whale + big_moves + liquidity reserves, for humans.
 SLICE_ORDER = ("dev_checks", "whale_ledger", "big_moves", "liquidity_moves")
 
 
@@ -217,8 +222,8 @@ def reserve_after(cfg, job):
 def research_deadline(cfg, t_start, now):
     """Hard end of chain work: run start + 720s. Keeps the run inside the 780s process timeout.
 
-    `cfg` and `now` are unused. Per-slice ends are job_deadline. The old now+research_budget_s
-    window is the reserved whale + big_moves + liquidity sum (config research_budget_s), not this cap.
+    `cfg` and `now` are unused. research_budget_s is doc-only and is not read here.
+    Per-slice ends are job_deadline.
     """
     del cfg, now
     return float(t_start) + HARD_CAP_S

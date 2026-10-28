@@ -2,7 +2,7 @@
 
 Offline. No secrets, no network. Wallet tags in this file are synthetic.
 """
-import json, os, shutil, subprocess, sys, tempfile, unittest
+import json, os, shutil, subprocess, sys, tempfile, time, unittest
 from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -34,7 +34,7 @@ def _dev(ticker="RUG", **kw):
 def _move(kind="lp_remove", **kw):
     row = {
         "kind": kind, "ticker": "RUG", "policy_short": "abcdef01",
-        "actor_tag": "w-89abcdef", "lp": False,
+        "actor_tag": "w-89abcdef", "lp": False, "ahead_of_dump": True,
     }
     row.update(kw)
     return {"moves": [row]}
@@ -107,6 +107,9 @@ class Derive(unittest.TestCase):
         self.assertEqual([v["code"] for v in late["tokens"][0]["vetoes"]], ["dev_sold"])
         week = _derive(_dev(serial_7d=3), {"moves": []})
         self.assertEqual([v["code"] for v in week["tokens"][0]["vetoes"]], ["serial_launcher"])
+        # prior_rugs alone is a serial_launcher. Dropping that clause fails this.
+        rugs = _derive(_dev(prior_rugs=1, dev_sold_ada=0, serial_3h=0, serial_7d=0), {"moves": []})
+        self.assertEqual([v["code"] for v in rugs["tokens"][0]["vetoes"]], ["serial_launcher"])
 
     def test_role_tag_is_kept_and_owner_prefix_and_key_are_not(self):
         doc = _derive(_dev(dev_tag="repeat_launcher", dev_sold_ada=40), {"moves": []})
@@ -135,8 +138,45 @@ class Derive(unittest.TestCase):
     def test_lp_token_rows_and_swaps_are_not_vetoes(self):
         doc = _derive({"entries": []}, _move(ticker="LP", lp=True, kind="lp_remove"))
         self.assertEqual(doc["tokens"], [])
+        # lp true with a project ticker still must not veto. Removing the lp skip fails this.
+        doc = _derive({"entries": []}, _move(lp=True, ahead_of_dump=True, actor_tag="repeat_launcher"))
+        self.assertEqual(doc["tokens"], [])
         doc = _derive({"entries": []}, _move(kind="swap"))
         self.assertEqual(doc["tokens"], [])
+
+    def test_third_party_pull_is_not_a_veto_but_a_dev_or_dump_is(self):
+        third = _derive(_dev(dev_sold_ada=0), _move(ahead_of_dump=False, actor_tag="w-89abcdef"))
+        self.assertEqual(third["tokens"], [])
+        dumped = _derive(_dev(dev_sold_ada=0), _move(ahead_of_dump=True, actor_tag="w-89abcdef"))
+        self.assertEqual([v["code"] for v in dumped["tokens"][0]["vetoes"]], ["lp_pulled"])
+        role = _derive(_dev(dev_sold_ada=0), _move(ahead_of_dump=False, actor_tag="repeat_launcher"))
+        self.assertEqual(role["tokens"][0]["vetoes"][0]["evidence"], {"actor_tag": "repeat_launcher"})
+        dev = _derive(_dev(dev_tag="w-0123abcd", dev_sold_ada=0),
+                      _move(ahead_of_dump=False, actor_tag="w-0123abcd"))
+        self.assertEqual([v["code"] for v in dev["tokens"][0]["vetoes"]], ["lp_pulled"])
+        self.assertEqual(dev["tokens"][0]["vetoes"][0]["evidence"], {"actor_tag": "w-0123abcd"})
+
+    def test_two_units_under_one_policy_stay_separate(self):
+        policy = "ab" * 6
+        u1 = policy + "cd" * 22 + "1111"
+        u2 = policy + "cd" * 22 + "2222"
+        self.assertEqual(u1[:12], u2[:12])
+        self.assertNotEqual(u1, u2)
+        dev = {"entries": [
+            {"ticker": "ONE", "policy_short": u1[:12], "unit": u1, "dev_tag": "w-0123abcd",
+             "dev_sold_ada": 100, "late_rug": False, "serial_3h": 0, "serial_7d": 0, "prior_rugs": 0},
+            {"ticker": "TWO", "policy_short": u2[:12], "unit": u2, "dev_tag": "w-89abcdef",
+             "dev_sold_ada": 100, "late_rug": False, "serial_3h": 0, "serial_7d": 0, "prior_rugs": 0},
+        ], "thresholds": {"min_sell_ada": 25}}
+        doc = _derive(dev, {"moves": []})
+        self.assertEqual(sorted(r["unit"] for r in doc["tokens"]), sorted((u1, u2)))
+        # A liquidity row with no unit may still join on the policy prefix.
+        joined = _derive(
+            {"entries": [dev["entries"][0]], "thresholds": dev["thresholds"]},
+            _move(policy_short=u1[:8], ahead_of_dump=True))
+        self.assertEqual(len(joined["tokens"]), 1)
+        self.assertEqual(joined["tokens"][0]["unit"], u1)
+        self.assertIn("lp_pulled", [v["code"] for v in joined["tokens"][0]["vetoes"]])
 
     def test_schema_rejects_an_extra_evidence_field(self):
         doc = _derive(_dev(dev_sold_ada=100), {"moves": []})
@@ -160,20 +200,64 @@ class Derive(unittest.TestCase):
 
 
 class FailSoft(unittest.TestCase):
-    def test_corrupt_inputs_do_not_raise_and_dry_run_does_not_write(self):
+    def test_corrupt_input_keeps_the_previous_file(self):
+        now = 1_700_000_000
         with tempfile.TemporaryDirectory() as d:
-            open(os.path.join(d, "dev_checks.json"), "w").write("{")
-            summary = V.run(d, CFG, False, owner_env=OWNER, now_s=1_700_000_000)
-            self.assertTrue(summary["wrote"])
-            self.assertEqual(summary["buy_signal"], False)
-            self.assertFalse(os.path.exists(os.path.join(d, "vetoes-dry-run.json")))
-            V.run(d, CFG, True, owner_env=OWNER, now_s=1_700_000_000)
-            doc = json.load(open(os.path.join(d, "vetoes.json")))
-            self.assertEqual(doc["tokens"], [])
-            os.remove(os.path.join(d, "vetoes.json"))
-            blocked = V.run(d, {"vetoes": {"enabled": False}}, False, owner_env=OWNER)
+            prev = {"schema_version": 1, "tokens": [{"ticker": "KEEP"}]}
+            with open(os.path.join(d, "vetoes.json"), "w") as f:
+                json.dump(prev, f)
+            with open(os.path.join(d, "dev_checks.json"), "w") as f:
+                f.write("{")
+            summary = V.run(d, CFG, False, owner_env=OWNER, now_s=now)
+            self.assertFalse(summary["wrote"])
+            self.assertEqual(summary.get("reason"), "corrupt")
+            self.assertEqual(json.load(open(os.path.join(d, "vetoes.json"))), prev)
+            blocked = V.run(d, {"vetoes": {"enabled": False}}, False, owner_env=OWNER, now_s=now)
             self.assertFalse(blocked["wrote"])
-            self.assertFalse(os.path.exists(os.path.join(d, "vetoes.json")))
+            self.assertEqual(json.load(open(os.path.join(d, "vetoes.json"))), prev)
+
+    def test_stale_source_is_not_stamped_as_today(self):
+        now = 1_700_000_000
+        entry = {"ticker": "RUG", "policy_short": "abcdef012345", "unit": UNIT, "dev_tag": "w-0123abcd",
+                 "dev_sold_ada": 100, "late_rug": False, "serial_3h": 0, "serial_7d": 0, "prior_rugs": 0}
+
+        def write_dev(d, at):
+            with open(os.path.join(d, "dev_checks.json"), "w") as f:
+                json.dump({"at": at, "entries": [entry], "thresholds": {"min_sell_ada": 25}}, f)
+
+        with tempfile.TemporaryDirectory() as d:
+            write_dev(d, V.DC.iso(now - 9 * 86400))
+            summary = V.run(d, CFG, False, owner_env=OWNER, now_s=now)
+            doc = json.load(open(os.path.join(d, "vetoes.json")))
+            self.assertEqual(summary["stale"], ["dev_checks"])
+            self.assertEqual(doc["tokens"], [])
+            self.assertEqual(doc["at"], V.DC.iso(now))
+            write_dev(d, V.DC.iso(now - 3600))
+            V.run(d, CFG, False, owner_env=OWNER, now_s=now)
+            doc = json.load(open(os.path.join(d, "vetoes.json")))
+            self.assertEqual(doc["stale"], [])
+            self.assertIn("dev_sold", [v["code"] for v in doc["tokens"][0]["vetoes"]])
+            cfg = json.loads(json.dumps(CFG))
+            cfg["vetoes"]["max_age_h"] = 1
+            write_dev(d, V.DC.iso(now - 3 * 3600))
+            V.run(d, cfg, False, owner_env=OWNER, now_s=now)
+            doc = json.load(open(os.path.join(d, "vetoes.json")))
+            self.assertEqual(doc["stale"], ["dev_checks"])
+            self.assertEqual(doc["tokens"], [])
+
+    def test_a_build_failure_is_swallowed_and_keeps_the_file(self):
+        now = 1_700_000_000
+        with tempfile.TemporaryDirectory() as d:
+            prev = {"kept": True}
+            with open(os.path.join(d, "vetoes.json"), "w") as f:
+                json.dump(prev, f)
+            with open(os.path.join(d, "dev_checks.json"), "w") as f:
+                json.dump({"at": V.DC.iso(now), "entries": []}, f)
+            with mock.patch.object(V, "build", side_effect=SystemExit("no")):
+                out = V.run(d, CFG, False, owner_env=OWNER, now_s=now)
+            self.assertEqual(out["error"], "SystemExit")
+            self.assertFalse(out["wrote"])
+            self.assertEqual(json.load(open(os.path.join(d, "vetoes.json"))), prev)
 
     def test_a_veto_crash_does_not_stop_the_prefilter(self):
         sent = []
@@ -206,7 +290,10 @@ class FailSoft(unittest.TestCase):
 
         def dc_run(*a, **k):
             order.append("dev")
-            self.assertIn("deadline", k)
+            # Omitting deadline, or passing None, lets dev_checks run without the shared cap.
+            self.assertIsInstance(k.get("deadline"), (int, float))
+            self.assertGreater(k["deadline"], time.time() - 1)
+            self.assertLessEqual(k["deadline"], time.time() + P.HARD_CAP_S)
             return {"entries": 1}, [{"key": "devsell:U:1", "kind": "dev_sell", "name": "QUIET",
                                     "metrics": {"dev_tag": "w-abcdef01", "dev_sold_ada": 30,
                                                 "changed_since_last": True, "late_rug": False}}]
@@ -225,6 +312,35 @@ class FailSoft(unittest.TestCase):
         self.assertEqual(order[2][0], "webhook")
         self.assertEqual(order[2][1], ["dev_sell"])
         self.assertNotIn("leaked", order)
+        src = open(os.path.join(SRC, "prefilter.py")).read()
+        self.assertIn('deadline=job_deadline(cfg, t_start, time.time(), "dev_checks")', src)
+
+    def test_research_budget_s_is_doc_only(self):
+        self.assertIn("Doc-only", CFG["_research_budget_note"])
+        other = json.loads(json.dumps(CFG))
+        other["research_budget_s"] = 10
+        self.assertEqual(P.research_deadline(CFG, 1000, 1100), P.research_deadline(other, 1000, 1100))
+        self.assertEqual(P.job_deadline(CFG, 1000, 1000, "whale_ledger"),
+                         P.job_deadline(other, 1000, 1000, "whale_ledger"))
+
+    def test_schema_rejects_a_raw_stake_prefix(self):
+        import jsonschema
+        schema = json.load(open(os.path.join(ROOT, "schema", "solada-vetoes.schema.json")))
+        enum = schema["$defs"]["tag"]["anyOf"][1]["enum"]
+        self.assertEqual(sorted(enum), sorted(V.DC.known_roles(CFG)))
+        validator = jsonschema.Draft202012Validator(schema)
+        doc = json.load(open(os.path.join(HERE, "fixtures", "vetoes.json")))
+        self.assertEqual(list(validator.iter_errors(doc)), [])
+        doc["tokens"][0]["vetoes"][0]["evidence"]["dev_tag"] = "uynnk0mezk"
+        self.assertTrue(list(validator.iter_errors(doc)))
+
+    def test_validate_desks_checks_vetoes(self):
+        script = open(os.path.join(ROOT, "scripts", "validate-desks.py")).read()
+        self.assertIn("solada-prefilter/tests/fixtures/vetoes.json", script)
+        r = subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "validate-desks.py")],
+                           cwd=ROOT, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("ok solada-prefilter/tests/fixtures/vetoes.json (solada-vetoes)", r.stdout)
 
 
 class FileGuard(unittest.TestCase):

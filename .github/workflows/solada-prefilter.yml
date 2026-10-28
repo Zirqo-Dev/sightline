@@ -13,6 +13,9 @@ name: Solada prefilter
 # budget_s (180; Koios 36 / Blockfrost 50 unchanged) and yields if the run-start+720s
 # cap cannot also hold whale_ledger (90), big_moves (150 reserved) and liquidity_moves (50).
 # vetoes.json is derived from those files afterwards. Research only, never a buy signal.
+# Job budget is 20 min. The scan process is killed at 780s (chain cap 720s + 60s to flush
+# JSON). The remaining ~420s is checkout, setup, tests, cache, the privacy guard, and the
+# commit/push retries. Cancelling during that commit would drop state.json and re-send triggers.
 
 on:
   workflow_dispatch:
@@ -36,7 +39,7 @@ concurrency:
 jobs:
   prefilter:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Check out main (code + rules)
         uses: actions/checkout@v4
@@ -88,6 +91,8 @@ jobs:
           [ -z "$BLOCKFROST_PROJECT_ID" ] && echo "::warning::BLOCKFROST_PROJECT_ID not set; using Koios"
           [ -z "$SOLADA_WEBHOOK_URL" ] && echo "::warning::SOLADA_WEBHOOK_URL not set; triggers are logged, not sent"
           flag=""; [ "$DRY_RUN" = "true" ] && flag="--dry-run"
+          # 780s = chain hard cap 720s + 60s to flush JSON. The 20 min job then still has
+          # room for cache save, the privacy guard, and the push retries below.
           timeout 780 python3 solada-prefilter/prefilter.py --repo . --data-dir "$GITHUB_WORKSPACE/data/solada-prefilter" --desk-data "$GITHUB_WORKSPACE/data" $flag
       - name: Save private whale snapshot
         if: always() && github.event.inputs.ping != 'true'

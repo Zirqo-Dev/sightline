@@ -18,6 +18,10 @@
       "maxItems": 2,
       "items": {"enum": ["dev_checks", "liquidity_moves"]}
     },
+    "stale": {
+      "type": "array",
+      "items": {"enum": ["dev_checks", "liquidity_moves"]}
+    },
     "tokens": {
       "type": "array",
       "items": {"$ref": "#/$defs/token"}
@@ -25,8 +29,13 @@
   },
   "$defs": {
     "tag": {
-      "type": "string",
-      "pattern": "^(w-[0-9a-f]{8}|[a-z][a-z0-9_]{1,40})$"
+      "anyOf": [
+        {"type": "string", "pattern": "^w-[0-9a-f]{8}$"},
+        {"type": "string", "enum": [
+          "first_block_sniper", "flip_pair", "founder_whale", "pool_preseeder",
+          "repeat_launcher", "swarm_launcher", "watch", "wojaks_dumper", "wojaks_whale"
+        ]}
+      ]
     },
     "token": {
       "type": "object",

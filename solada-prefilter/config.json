@@ -233,9 +233,10 @@
     "keep_seen": 4000
   },
   "vetoes": {
-    "_note": "SPD-65 research vetoes (vetoes.py). Derived from dev_checks.json and liquidity_moves.json after those jobs, no chain calls. Never a buy signal, never a webhook, never a desk rule or kill line. Codes use the existing dev_checks floors and liquidity lp_remove rows. Evidence is tags only. enabled can turn the file off; it does not change those floors.",
-    "enabled": true
+    "_note": "SPD-65 research vetoes (vetoes.py). Derived from dev_checks.json and liquidity_moves.json after those jobs, no chain calls. Never a buy signal, never a webhook, never a desk rule or kill line. lp_pulled counts only ahead_of_dump or a dev/role actor_tag. max_age_h (5, about two 2h runs) drops a source whose at is older than that; a corrupt source keeps the previous vetoes.json. Evidence is tags only. enabled can turn the file off. None of this changes desk floors.",
+    "enabled": true,
+    "max_age_h": 5
   },
-  "_research_budget_note": "Sum of the reserved whale_ledger + big_moves + liquidity_moves slices (90+150+50). Not a separate timer. dev_checks.budget_s (180) sits outside this sum and runs after the primary webhook. big_moves may also use slack before the liquidity reserve. Chain calls stop at run start + 720s so the 780s process timeout and the 15 minute workflow still fit the 2h cadence.",
+  "_research_budget_note": "Doc-only. Not read by job_deadline or research_deadline. Sum of the reserved whale_ledger + big_moves + liquidity_moves slices (90+150+50). dev_checks.budget_s (180) sits outside this sum and runs after the primary webhook. big_moves may also use slack before the liquidity reserve. Chain calls stop at run start + 720s. The process is killed at 780s and the workflow job is 20 minutes, leaving about 420s for checkout, tests, cache, the privacy guard, and the commit/push retries.",
   "research_budget_s": 290
 }
