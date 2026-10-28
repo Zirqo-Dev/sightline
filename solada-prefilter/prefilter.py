@@ -1417,7 +1417,9 @@ def main():
 
     # ---- SPD-55 liquidity moves. Own budget_s from this instant, after whale_ledger and big_moves.
     # Earlier slices still reserve that budget inside the hard cap. If they overran it, this slice
-    # keeps the window anyway, stopping at LATE_SLICE_END_S. A failure here does not touch the webhook.
+    # keeps the window anyway, stopping at LATE_SLICE_END_S. Tokens are least-recently-checked
+    # first, so a short window still covers the top 10 over later runs. The window and the Koios
+    # cap are not raised. A failure here does not touch the webhook.
     liquidity = None
     try:
         bc_lm = LM.lm_cfg(cfg)

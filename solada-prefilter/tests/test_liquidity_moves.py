@@ -1018,5 +1018,154 @@ class Top10Names(unittest.TestCase):
         self.assertTrue(all(v.get("skipped") == "tip" for v in doc["coverage"].values()))
 
 
+class TokenRotation(unittest.TestCase):
+    """A short slice reads two of the top 10. Later runs read the ones it skipped.
+
+    The clock advances 10s per Koios call and the deadline is 25s after the start, so the
+    tip plus two marker reads fit and the other eight are skipped: budget. max_calls stays 36.
+    """
+
+    CFG = {"liquidity_moves": {"discover_every_h": 10 ** 9, "max_calls": 36, "max_bf_calls": 12}}
+
+    def _marker(self, ticker):
+        unit = LM.known_units()[ticker]
+        return LM.MINSWAP_V2_LP + LM.minswap_v2_lp_name(unit)
+
+    def _read(self, urls):
+        got = []
+        for src in DESK_TOP10:
+            marker = self._marker(src["ticker"])
+            if any(f"_asset_policy={marker[:56]}" in u and f"_asset_name={marker[56:]}" in u for u in urls):
+                got.append(src["ticker"])
+        return got
+
+    def _run_slice(self, d, c, now_s, start=1_000_000.0, span=25):
+        asked = []
+        clock = {"t": float(start)}
+
+        def req(self_, src, url, method="GET", body=None, headers=None, quiet404=True):
+            self_.calls[src] = self_.calls.get(src, 0) + 1
+            clock["t"] += 10
+            if "/asset_txs" in url:
+                asked.append(url)
+            if url.endswith("/tip"):
+                return [{"block_height": 1000, "block_time": now_s}]
+            if "/asset_txs" in url:
+                return []
+            return None
+
+        http = P.Http({"koios": 0, "blockfrost": 0})
+        with mock.patch.object(LM.time, "time", lambda: clock["t"]), mock.patch.object(P.Http, "req", req):
+            summary = LM.run(
+                http, self.CFG, DESK_TOP10, {}, {}, V.lp_policies(), d, c, False, now_s,
+                deadline=start + span, owner_env=OWNER)
+        return summary, asked
+
+    def test_order_is_least_recent_then_rank(self):
+        rows = [
+            {"ticker": "NIGHT", "rank": 2},
+            {"ticker": "ASCEND", "rank": 1},
+            {"ticker": "STRIKE", "rank": 3},
+            {"ticker": "ODD", "rank": True},
+        ]
+        self.assertEqual(
+            [r["ticker"] for r in LM.order_least_recent(rows, {})],
+            ["ASCEND", "NIGHT", "STRIKE", "ODD"])
+        self.assertEqual(
+            [r["ticker"] for r in LM.order_least_recent(rows, {"NIGHT": 10, "ASCEND": 50, "STRIKE": 50})],
+            ["ODD", "NIGHT", "ASCEND", "STRIKE"])
+        cleaned = LM._cache_public({
+            "last_checked": {"night": "1793100000", "bad": "abc", "STRIKE": 0, "x": [], "snek": True, "MIN": 5.0},
+        })
+        self.assertEqual(cleaned["last_checked"], {"NIGHT": 1793100000, "MIN": 5})
+        stamped = LM.stamp_checked({}, ["NIGHT"], ["NIGHT", "STRIKE"], NOW + 0.9)
+        self.assertEqual(stamped, {"NIGHT": NOW})
+        skipped = LM.stamp_checked({"last_checked": {"NIGHT": NOW}}, [], ["NIGHT", "STRIKE"], NOW + 7200.4)
+        self.assertEqual(skipped, {"NIGHT": NOW})
+
+    def test_short_slice_covers_the_top_10_across_runs(self):
+        names = [r["ticker"] for r in DESK_TOP10]
+        units = LM.known_units()
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            for i in range(5):
+                now = NOW + i * 7200
+                summary, asked = self._run_slice(d, c, now)
+                self.assertEqual(self._read(asked), names[i * 2:i * 2 + 2], i)
+                self.assertLessEqual(summary["koios_calls"], 36)
+                self.assertGreater(summary["koios_calls"], 0)
+                with open(os.path.join(d, "liquidity_moves.json")) as f:
+                    doc = json.load(f)
+                with open(os.path.join(c, "liquidity-moves-cache.json")) as f:
+                    cache = json.load(f)
+                self.assertEqual([t["ticker"] for t in doc["tokens"]], names)
+                self.assertEqual(doc["budget"]["max_calls"], 36)
+                self.assertEqual(doc["budget"]["budget_s"], 50)
+                self.assertEqual(doc["thresholds"]["ahead_of_dump"], dict(LM.AHEAD_OF_DUMP))
+                by = {t["ticker"]: t["last_checked"] for t in doc["tokens"]}
+                for j, tk in enumerate(names):
+                    if j < (i + 1) * 2:
+                        stamped = NOW + (j // 2) * 7200
+                        self.assertEqual(by[tk], LM.iso(stamped))
+                        self.assertEqual(cache["last_checked"][tk], stamped)
+                    else:
+                        self.assertIsNone(by[tk])
+                        self.assertNotIn(tk, cache["last_checked"])
+                    if j >= i * 2 + 2:
+                        self.assertEqual(doc["coverage"][tk], {"read": 0, "complete": False, "skipped": "budget"})
+                    elif j >= i * 2:
+                        # The second token can finish its page as the deadline passes, so complete
+                        # may be false. It was still read: no budget skip, and last_checked moved.
+                        self.assertNotEqual(doc["coverage"][tk].get("skipped"), "budget")
+                text = json.dumps(doc)
+                self.assertNotIn("stake1", text)
+                self.assertNotIn("addr1", text)
+                for unit in units.values():
+                    self.assertNotIn(unit, text)
+                F.assert_public(doc)
+            summary, asked = self._run_slice(d, c, NOW + 5 * 7200)
+            self.assertEqual(self._read(asked), names[:2])
+            self.assertLessEqual(summary["koios_calls"], 36)
+            # A deadline that is already past reads nobody and does not move the stamps.
+            http = P.Http({"koios": 0})
+            with mock.patch.object(P.Http, "req", lambda *a, **k: (_ for _ in ()).throw(AssertionError("called"))):
+                skipped = LM.run(
+                    http, self.CFG, DESK_TOP10, {}, {}, V.lp_policies(), d, c, False, NOW + 99_999,
+                    deadline=time.time() - 5, owner_env=OWNER)
+            with open(os.path.join(d, "liquidity_moves.json")) as f:
+                missed = json.load(f)
+            with open(os.path.join(c, "liquidity-moves-cache.json")) as f:
+                cache = json.load(f)
+        self.assertEqual(skipped["koios_calls"], 0)
+        self.assertEqual(missed["tokens"][0]["last_checked"], LM.iso(NOW + 5 * 7200))
+        self.assertEqual(cache["last_checked"]["ASCEND"], NOW + 5 * 7200)
+        self.assertEqual(cache["last_checked"]["STRIKE"], NOW + 7200)
+        for src in DESK_TOP10:
+            self.assertEqual(missed["coverage"][src["ticker"]], {"read": 0, "complete": False, "skipped": "budget"})
+        self.assertNotIn("stake1", json.dumps(missed))
+        self.assertNotIn("addr1", json.dumps(missed))
+
+    def test_legacy_cursor_does_not_override_last_checked(self):
+        """next used to rotate by one. A stored index must not jump ahead of never-checked tokens."""
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            with open(os.path.join(c, "liquidity-moves-cache.json"), "w") as f:
+                json.dump({"last_checked": {"ASCEND": NOW, "NIGHT": NOW}, "next": 5, "capped": True}, f)
+            summary, asked = self._run_slice(d, c, NOW + 7200)
+            with open(os.path.join(d, "liquidity_moves.json")) as f:
+                doc = json.load(f)
+            with open(os.path.join(c, "liquidity-moves-cache.json")) as f:
+                cache = json.load(f)
+        self.assertEqual(self._read(asked), ["STRIKE", "SNEK"])
+        self.assertLessEqual(summary["koios_calls"], 36)
+        by = {t["ticker"]: t["last_checked"] for t in doc["tokens"]}
+        self.assertEqual(by["ASCEND"], LM.iso(NOW))
+        self.assertEqual(by["STRIKE"], LM.iso(NOW + 7200))
+        self.assertEqual(by["SNEK"], LM.iso(NOW + 7200))
+        self.assertIsNone(by["MIN"])
+        self.assertEqual(cache["last_checked"]["ASCEND"], NOW)
+        self.assertEqual(cache["last_checked"]["STRIKE"], NOW + 7200)
+        self.assertNotIn(LM.known_units()["SNEK"], json.dumps(doc))
+        self.assertNotIn("stake1", json.dumps(doc))
+
+
 if __name__ == "__main__":
     unittest.main()
