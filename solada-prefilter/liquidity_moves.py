@@ -20,8 +20,9 @@ marker asset_txs plus tx_info batches under 1 KB. Blockfrost is used only when a
 returns nothing, and only up to max_bf_calls (default 12). The job stops at its own budget_s,
 measured from when the slice starts, and at the run's late-slice end, whichever is sooner.
 Tokens are scanned least-recently-checked first. The private cache stores each ticker's
-last_checked time. A budget skip does not stamp that token, so later runs cover the rest of
-the top 10. budget_s and the Koios cap stay where they are.
+last_checked time. That time moves only after a successful read. A budget skip, or a token
+opened before any page comes back, keeps its previous stamp, so later runs cover it first.
+budget_s and the Koios cap stay where they are.
 """
 import hashlib, os, time
 from datetime import datetime, timezone
@@ -83,7 +84,7 @@ LIMITS = [
     "Blockfrost runs only after a Koios read returns nothing, and only up to max_bf_calls (default 12). An empty BLOCKFROST_PROJECT_ID skips it.",
     "Minswap V2 markers are the derived LP asset name. Sundae and Splash pools are recognized when a continuing pool UTxO is inside a transaction this job already read. Discovery of those pools rechecks the newest token transactions at most every discover_every_h.",
     "The job gets budget_s from the moment it starts (default 50s), and still stops before the process kill. A capped pool resumes next run. Nothing here changes desk rules, kill lines, or the webhook.",
-    "Tokens are scanned least-recently-checked first. The private cache stores each ticker's last_checked time. A token skipped for budget is not stamped, so the next run reads it before tokens this run already read. budget_s and max_calls do not change. tokens[].last_checked is that time in UTC, or null.",
+    "Tokens are scanned least-recently-checked first. The private cache stores each ticker's last_checked time. That time is set only after a successful read. A token skipped for budget, or opened before any page comes back, keeps its previous stamp, so the next run reads it first. budget_s and max_calls do not change. tokens[].last_checked is that time in UTC, or null.",
 ]
 
 
@@ -679,8 +680,10 @@ def _unix(v):
 
 
 def stamp_checked(cache, checked, tickers, now_s):
-    """Record last_checked for tokens this run started. A budget skip is left alone.
+    """Record last_checked for tokens that received a successful read.
 
+    `checked` is tickers whose Koios or Blockfrost page came back this run. A budget
+    skip, or a token the slice opened and then did not read, keeps its previous stamp.
     Keys that are not in this run's top 10 are dropped. The map is ticker to unix time.
     """
     prev = cache.get("last_checked") if isinstance(cache, dict) and isinstance(cache.get("last_checked"), dict) else {}
@@ -1006,14 +1009,17 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
             coverage[tk] = {"read": 0, "complete": False, "skipped": "budget"}
             capped.append(tk)
             continue
-        checked.append(tk)
         try:
-            evs, cov, new_markers = _scan_token(
+            evs, cov, new_markers, served = _scan_token(
                 reader, row, cache, scripts, splash_pols, bc, lp_pols or V.lp_policies(cfg), watch, loaded, ex_tags,
                 names, seen, seen_list, window_after, now_s)
         except (SystemExit, Exception) as e:
             coverage[tk] = {"read": 0, "complete": False, "skipped": type(e).__name__}
             continue
+        # Run 40742102339 stamped STRIKE after the deadline passed with 0 txs read.
+        # A page that came back counts, including an empty one. No page does not.
+        if served:
+            checked.append(tk)
         events.extend(evs)
         coverage[tk] = cov
         if not cov.get("complete", True):
@@ -1240,7 +1246,7 @@ def _scan_token(reader, row, cache, scripts, splash_pols, bc, lp_pols, watch, lo
     unit = row["unit"]
     markers = _markers_for(unit, (cache.get("markers") or {}).get(unit))
     height = cache.setdefault("height", {})
-    txs, complete = [], True
+    txs, complete, served = [], True, False
     tracked = {m["marker"] for m in markers}
     # Newest-first page that never reaches the cursor must not move the cursor to that page.
     hold_height = set()
@@ -1254,6 +1260,7 @@ def _scan_token(reader, row, cache, scripts, splash_pols, bc, lp_pols, watch, lo
             complete = False
             hold_height.add(m["marker"])
             continue
+        served = True
         rows, page_done, newest_first = page
         txs.extend((h, hg, bt, m["marker"]) for h, hg, bt in rows)
         if not page_done or len(rows) >= int(bc["max_txs_per_pool"]):
@@ -1271,6 +1278,7 @@ def _scan_token(reader, row, cache, scripts, splash_pols, bc, lp_pols, watch, lo
         if page is None:
             complete = False
         else:
+            served = True
             rows, page_done, _newest = page
             txs.extend((h, hg, bt, None) for h, hg, bt in rows)
             discovered[unit] = int(now_s)
@@ -1329,4 +1337,4 @@ def _scan_token(reader, row, cache, scripts, splash_pols, bc, lp_pols, watch, lo
     if len(misses) > 50:
         for old in list(misses)[:-50]:
             misses.pop(old, None)
-    return evs, {"read": read, "complete": complete and not reader.late(), "pools": len({e["pool_key"] for e in evs})}, new_markers
+    return evs, {"read": read, "complete": complete and not reader.late(), "pools": len({e["pool_key"] for e in evs})}, new_markers, served
