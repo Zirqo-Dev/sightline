@@ -1,0 +1,14 @@
+{
+  "_note": "SPD-47 fixture. Oct 26 re-fire shape: SER and EVIL were already hit, nothing moved, but kill_reported had no entry so kill_decide saw them as newly crossed. Numbers are test values, not desk lines.",
+  "prev_kill_status": {
+    "SER": {"line": 5000.0, "metric": "ada_side", "value": 4100, "hit": true, "first_hit_at": "2026-10-25T20:08:00Z", "changed_since_last": true},
+    "EVIL": {"line": 120.0, "metric": "holders", "value": 88, "hit": true, "first_hit_at": "2026-10-25T22:08:00Z", "changed_since_last": false}
+  },
+  "tracked": {
+    "SER": {"kill": {"ada_side_below": 5000}, "text": "ADA side < 5000", "source": "log.kill_lines"},
+    "EVIL": {"kill": {"holders_below": 120}, "text": "holders < 120", "source": "paper.open"}
+  },
+  "run": {"SER": {"ada_side": 4090, "holders": 300}, "EVIL": {"ada_side": 9000, "holders": 87}},
+  "paper": {"rules": [], "open": [{"ticker": "EVIL", "asset_id": null, "kill_line": {"holders_below": 120, "text": "holders < 120"}}]},
+  "log": {"kill_lines": {"SER": "ADA side < 5000", "OLDX": "hit: holders < 80"}}
+}

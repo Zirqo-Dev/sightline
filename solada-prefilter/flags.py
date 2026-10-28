@@ -14,6 +14,7 @@ full address or stake key.
 import hashlib, json, os, re, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import valuation as V  # noqa: E402
+import koios_tx as KT  # noqa: E402
 
 KOIOS = "https://api.koios.rest/api/v1"
 BF = "https://cardano-mainnet.blockfrost.io/api/v0"
@@ -118,22 +119,24 @@ class FlagChain:
         return t[:n]
 
     def tx_utxos(self, hashes):
-        """{tx_hash: {'inputs': [(addr, lovelace, {unit: qty})], 'outputs': [...]}}. 1 Koios call per 25 txs."""
+        """{tx_hash: {'inputs': [(addr, lovelace, {unit: qty})], 'outputs': [...]}}. Koios /tx_info (re-review 8: not the
+        deprecated /tx_utxos; spend inputs only, collateral/reference excluded; 404s logged), batches under 1 KB.
+        Blockfrost per-tx fallback skips collateral / reference inputs and collateral outputs too."""
         out = {}
-        for i in range(0, len(hashes), 25):
-            r = self.h.req("koios", f"{KOIOS}/tx_utxos", method="POST", body={"_tx_hashes": hashes[i:i + 25]})
-            if r is None and self.bf_key:  # per-tx Blockfrost fallback
-                for hsh in hashes[i:i + 25]:
-                    x = self.h.req("blockfrost", f"{BF}/txs/{hsh}/utxos", headers={"project_id": self.bf_key})
+        for body in KT.batches(hashes, "_tx_hashes", 25, KT.TX_INFO_FLAGS):
+            chunk = body["_tx_hashes"]
+            got = KT.tx_info(self.h, chunk, len(chunk))
+            if not got and self.bf_key:  # per-tx Blockfrost fallback
+                for hsh in chunk:
+                    x = self.h.req("blockfrost", f"{BF}/txs/{hsh}/utxos", headers={"project_id": self.bf_key}, quiet404=False)
                     if x:
                         out[hsh] = {s: [(u["address"], int(next((a["quantity"] for a in u["amount"] if a["unit"] == "lovelace"), 0)),
-                                         {a["unit"]: int(a["quantity"]) for a in u["amount"] if a["unit"] != "lovelace"}) for u in x.get(s, [])]
+                                         {a["unit"]: int(a["quantity"]) for a in u["amount"] if a["unit"] != "lovelace"})
+                                        for u in x.get(s, []) if not u.get("collateral") and not u.get("reference")]
                                     for s in ("inputs", "outputs")}
                 continue
-            for tx in r or []:
-                out[tx["tx_hash"]] = {s: [(u.get("payment_addr", {}).get("bech32") or "", int(u.get("value") or 0),
-                                           {a["policy_id"] + a["asset_name"]: int(a["quantity"]) for a in (u.get("asset_list") or [])})
-                                          for u in tx.get(s, [])] for s in ("inputs", "outputs")}
+            for h, tx in got.items():
+                out[h] = {s: [(x["addr"], x["lovelace"], x["assets"]) for x in tx[s]] for s in ("inputs", "outputs")}
         return out
 
     def first_tx_height(self, stake):
@@ -200,14 +203,35 @@ def buyers_from_txs(unit, txs, utxos, decimals=None, price_ada=None, lp_pols=Non
     return rows
 
 
+def excluded_tags(cfg):
+    """Tags excluded from holder/cluster flags (config flags.exclude_tags, e.g. Solada's curve reserve). Matched on
+    both the stake tag and the address tag, so a reserve without a stake key is covered too."""
+    return {str(t).strip() for t in ((cfg or {}).get("exclude_tags") or {}) if str(t).strip()}
+
+
 def match_tags(stake, watch):
-    """Snek prefix tags that this stake key starts with. watch = {prefix: role}."""
-    return [p for p in watch if stake.startswith("stake1" + p)]
+    """Snek prefix tags that this stake key starts with. watch = {prefix: role}.
+
+    Non-string keys are skipped. `"stake1" + p` would raise TypeError and the
+    dev-checks run would be dropped for the whole payload.
+    """
+    if not isinstance(stake, str) or not stake or not watch:
+        return []
+    hits = []
+    for p in watch:
+        if not isinstance(p, str) or not p:
+            continue
+        if stake.startswith("stake1" + p):
+            hits.append(p)
+    return hits
 
 
 def analyze_launch(ticker, unit, buyers, watch, cfg, live_at_s=None, first_heights=None, launcher_stake=None):
     """Return list of flags for one launch from its early buyers. No I/O."""
     f, first_heights = [], first_heights or {}
+    ex = excluded_tags(cfg)
+    if ex:  # a configured protocol wallet (curve reserve) is not a buyer cluster
+        buyers = [b for b in buyers if tag(b["stake"]) not in ex and not any(tag(a) in ex for a in b.get("addrs") or ())]
     early = buyers[: cfg["first_x_buyers"]]
     stakes = []
     for b in early:
@@ -280,12 +304,17 @@ def analyze_launch(ticker, unit, buyers, watch, cfg, live_at_s=None, first_heigh
 
 
 def holder_concentration(dist, cfg):
-    """dist = [(addr, qty)]. Top holder and top stake-cluster share, script (pool) addresses excluded."""
+    """dist = [(addr, qty)]. Top holder and top stake-cluster share, script (pool) addresses excluded, and so are
+    holders whose stake tag or address tag is in flags.exclude_tags (e.g. the Solada curve reserve w-f46e5a31):
+    they are left out of the total too, so the shares are of the circulating (non-reserve) supply."""
     by_stake, tot = {}, 0
     top_addr = 0
+    ex = excluded_tags(cfg)
     for addr, q in dist:
         stake, script = addr_info(addr)
         if script or q <= 0:
+            continue
+        if ex and (tag(addr) in ex or (stake and tag(stake) in ex)):
             continue
         tot += q
         top_addr = max(top_addr, q)
@@ -294,22 +323,44 @@ def holder_concentration(dist, cfg):
         return None
     top = max(by_stake.items(), key=lambda x: x[1])
     return {"top_addr_pct": round(100 * top_addr / tot, 1), "top_cluster_pct": round(100 * top[1] / tot, 1),
-            "top_cluster": tag(top[0])}
+            "top_cluster": tag(top[0]), "basis": conc_basis(ex)}
+
+
+def conc_basis(ex):
+    """Identifies the exclusion set a concentration share was computed on, so a jump is only measured
+    between snapshots on the same basis (adding a reserve to exclude_tags must not read as a jump)."""
+    return "all" if not ex else "ex-" + hashlib.sha256(",".join(sorted(ex)).encode()).hexdigest()[:6]
+
+
+def _same_metric_basis(prev, cur, key):
+    """True when both sides are untagged, or both carry the same basis tag.
+
+    A tagged reading is not compared with an untagged or differently tagged one.
+    """
+    b0, b1 = prev.get(key), cur.get(key)
+    if not b0 and not b1:
+        return True
+    return bool(b0) and b0 == b1
 
 
 def metric_flags(ticker, cur, prev, cfg):
-    """Flags from public per-name metric history (ada_side, holders, mcap_ada, vol_h24_ada, conc). No I/O."""
+    """Flags from public per-name metric history (ada_side, holders, mcap_ada, vol_h24_ada, conc). No I/O.
+
+    ADA side and mcap are compared across runs only when both readings share a basis.
+    """
     f = []
     if not prev:
         return f
     a0, a1 = prev.get("ada_side"), cur.get("ada_side")
     h0, h1 = prev.get("holders"), cur.get("holders")
     m0, m1 = prev.get("mcap_ada"), cur.get("mcap_ada")
-    if a0 and a1 is not None and 100 * (a0 - a1) / a0 >= cfg["ada_side_drop_pct"]:
+    ada_ok = _same_metric_basis(prev, cur, "ada_basis")
+    mcap_ok = _same_metric_basis(prev, cur, "mcap_basis")
+    if ada_ok and a0 and a1 is not None and 100 * (a0 - a1) / a0 >= cfg["ada_side_drop_pct"]:
         f.append({"kind": "ada_side_drop", "ticker": ticker, "from": a0, "to": a1})
-    if h0 and h1 is not None and m0 and m1 and h1 < h0 and m1 > m0:
+    if mcap_ok and h0 and h1 is not None and m0 and m1 and h1 < h0 and m1 > m0:
         f.append({"kind": "holders_down_mcap_up", "ticker": ticker, "holders": [h0, h1], "mcap_ada": [m0, m1]})
-    if h0 and h1 and a0 and a1 and h1 >= cfg["holder_doubling_ratio"] * h0 and a1 > a0:
+    if ada_ok and h0 and h1 and a0 and a1 and h1 >= cfg["holder_doubling_ratio"] * h0 and a1 > a0:
         f.append({"kind": "holders_doubled_ada_up", "ticker": ticker, "positive": True, "holders": [h0, h1], "ada_side": [a0, a1]})
     v = cur.get("vol_h24_ada")
     if v and a1 and v / a1 >= cfg["wash_vol_to_ada_side"] and h0 is not None and h1 is not None and h1 <= h0:
@@ -317,7 +368,8 @@ def metric_flags(ticker, cur, prev, cfg):
     c0, c1 = (prev.get("conc") or {}), (cur.get("conc") or {})
     if c1.get("top_cluster_pct", 0) >= cfg["top_cluster_pct"]:
         f.append({"kind": "holder_concentration", "ticker": ticker, **c1})
-    if c0 and c1 and c1["top_cluster_pct"] - c0.get("top_cluster_pct", 0) >= cfg["concentration_jump_pts"]:
+    same_basis = c0.get("basis", "all") == c1.get("basis", "all")
+    if c0 and c1 and same_basis and c1["top_cluster_pct"] - c0.get("top_cluster_pct", 0) >= cfg["concentration_jump_pts"]:
         f.append({"kind": "concentration_jump", "ticker": ticker, "from": c0.get("top_cluster_pct"), "to": c1["top_cluster_pct"]})
     return f
 
@@ -466,7 +518,7 @@ def run_flags(http, bf_key, cfg, launches, new_ids, rows, dists, watch, whale_su
     hist = state.setdefault("flag_metrics", {})
     for r in rows:
         tk = r["ticker"]
-        cur = {k: r.get(k) for k in ("ada_side", "holders", "mcap_ada", "vol_h24_ada")}
+        cur = {k: r.get(k) for k in ("ada_side", "holders", "mcap_ada", "vol_h24_ada", "ada_basis", "mcap_basis")}
         u = r.get("unit")
         if u and u in dists:
             cur["conc"] = holder_concentration(dists[u], fc)

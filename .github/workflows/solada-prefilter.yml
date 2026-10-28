@@ -1,13 +1,23 @@
 name: Solada prefilter
 
 # Zero-AI numeric pre-filter for the Solada desk (solada-prefilter/prefilter.py).
-# Primary trigger: cron-job.org -> workflow_dispatch (GitHub's schedule has not
-# fired reliably for this repo). The schedule below is only a backup.
+# Only trigger: cron-job.org -> workflow_dispatch (job "Solada pre-filter", every 2h at :07).
+# No GitHub schedule: its delayed, off-slot runs (e.g. Oct 25 8:26 PM, Oct 26 3:52 AM and 11:15 AM ET)
+# doubled up on the dispatch runs and sent extra webhooks.
 # Reads rules from main; writes state/results ONLY to desk-data:solada-prefilter/
 # with pull --rebase retries and no force-push. Never touches main data files.
 # Flag-only cabal/whale signals go to desk-data:solada-prefilter/flags.json; their
 # private working data (full stake keys, sniper positions) rides in the same Actions
 # cache as the whale snapshot (flags-cache.json) and is never committed.
+# The primary webhook fires before dev_checks. dev_checks.json then gets its own
+# budget_s (180; Koios 36 / Blockfrost 50 unchanged) and yields if the run-start+720s
+# cap cannot also hold whale_ledger (90), big_moves (150 reserved) and liquidity_moves (50).
+# liquidity_moves still gets that 50s from the moment it starts if an earlier slice overran
+# the reserve, and stops by run start + 770s. vetoes.json is derived afterwards. Research
+# only, never a buy signal.
+# Job budget is 20 min. The scan process is killed at 780s. The remaining time is checkout,
+# setup, tests, cache, the privacy guard, and the commit/push retries. Cancelling during
+# that commit would drop state.json and re-send triggers.
 
 on:
   workflow_dispatch:
@@ -20,8 +30,6 @@ on:
         description: "true = skip the scan and only POST a test payload to the webhook"
         required: false
         default: "false"
-  schedule:
-    - cron: "17 */2 * * *"
 
 permissions:
   contents: write
@@ -33,7 +41,7 @@ concurrency:
 jobs:
   prefilter:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Check out main (code + rules)
         uses: actions/checkout@v4
@@ -57,6 +65,9 @@ jobs:
         if: github.event.inputs.ping != 'true'
         with:
           python-version: "3.12"
+      - name: Install jsonschema
+        if: github.event.inputs.ping != 'true'
+        run: pip install --quiet "jsonschema>=4.18"
       - name: Offline flag tests (no network, no secrets)
         if: github.event.inputs.ping != 'true'
         working-directory: code
@@ -78,11 +89,16 @@ jobs:
           SOLADA_WEBHOOK_KEY: ${{ secrets.SOLADA_WEBHOOK_KEY }}
           PREFILTER_CACHE_DIR: ${{ runner.temp }}/prefilter-cache
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          # existing secret (no new one): big_moves.py drops owner wallets matching these patterns in memory, never printed
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
         working-directory: code
         run: |
           [ -z "$BLOCKFROST_PROJECT_ID" ] && echo "::warning::BLOCKFROST_PROJECT_ID not set; using Koios"
           [ -z "$SOLADA_WEBHOOK_URL" ] && echo "::warning::SOLADA_WEBHOOK_URL not set; triggers are logged, not sent"
           flag=""; [ "$DRY_RUN" = "true" ] && flag="--dry-run"
+          # 780s process kill. Earlier slices stop at 720s. A late liquidity slice may run
+          # until 770s, leaving ~10s to flush JSON. The 20 min job then still has room
+          # for cache save, the privacy guard, and the push retries below.
           timeout 780 python3 solada-prefilter/prefilter.py --repo . --data-dir "$GITHUB_WORKSPACE/data/solada-prefilter" --desk-data "$GITHUB_WORKSPACE/data" $flag
       - name: Save private whale snapshot
         if: always() && github.event.inputs.ping != 'true'

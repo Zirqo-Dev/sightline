@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Solada pre-filter: zero-AI numeric screen for the Solada desk.
 
-Reads launches/market from solada.fun, pool depth from GeckoTerminal (DexScreener
-fallback), holders/flows from Blockfrost (Koios fallback), optional Solana holder
+Reads the Solada board from solada.fun (/api/coins; /api/launches and /api/market
+404 as of 2026-10-27), pool depth from GeckoTerminal (DexScreener fallback, then the
+coin's own curve or /api/solada/market for the platform token), holders/flows from
+Blockfrost (Koios fallback), optional Solana holder
 concentration via RPC. Applies thresholds parsed from solada/paper.json rules[]
 and ticket/log kill lines. POSTs a webhook on new triggers (deduped via state).
 
@@ -13,6 +15,11 @@ import argparse, json, os, re, sys, time, hashlib, urllib.request, urllib.error
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import flags as flagmod  # noqa: E402  flag-only signals, never triggers
 import valuation as V  # noqa: E402  LP detection, raw-unit valuation, kill dedupe
+import big_moves as BM  # noqa: E402  SPD-43 big-move detector (research rows, never triggers)
+import whale_ledger as WL  # noqa: E402  SPD-44 founder whale ledger (research rows, never triggers)
+import dev_checks as DC  # noqa: E402  phase-1 dev sells / serial / drawdown (own budget; may add a dev_sell trigger)
+import liquidity_moves as LM  # noqa: E402  SPD-55 pool reserves (research rows, never triggers)
+import vetoes as vetoes_mod  # noqa: E402  SPD-65 research vetoes from those files (never a buy signal)
 from datetime import datetime, timezone
 
 UA = "sightline-solada-prefilter/1.0"
@@ -29,8 +36,34 @@ def now_iso():
 
 
 class Http:
-    def __init__(self, pace):
+    def __init__(self, pace, backoff=None):
         self.pace, self.last, self.failures, self.calls = pace, {}, {}, {}
+        self.backoff = backoff or {}  # src -> [seconds, ...]: extra 429 retries (Retry-After honoured, capped)
+        self.sleep = time.sleep
+        # circuit breaker: a tripped source returns None at once for the rest of the run
+        # (Koios blocks an IP ~60 s after a 429, so retrying after 3 s only burns the run)
+        self.tripped, self.trip_after, self.research_failures = {}, {"koios": 3}, {}
+        self.deadline = None  # unix time; after it, calls in deadline_srcs return None (research sections)
+        self.deadline_srcs = ("koios", "blockfrost")
+        self.allow_blocked = False  # whale-ledger baseline fallback sets this so the other provider still runs
+        self.last_fail = {}  # src -> {"status": http code or "deadline"/"skipped"/exc name, "why": short text}
+        self.dev_checks = False  # while set, a Koios 429 does not trip the breaker (dev checks falls back instead)
+        self.koios_pause_until = 0  # unix time; research skips Koios until then after a dev-checks 429
+
+    def blocked(self, src):
+        if src in self.tripped:
+            return True
+        # a dev-checks 429 pauses Koios until koios_pause_until, then it resumes (not a whole-run trip)
+        if src == "koios" and time.time() < (getattr(self, "koios_pause_until", 0) or 0):
+            return True
+        if self.deadline is not None and src in self.deadline_srcs and time.time() >= self.deadline:
+            return True
+        return False
+
+    def trip(self, src, why):
+        if src not in self.tripped:
+            self.tripped[src] = why
+            print(f"  circuit breaker [{src}]: {why}; skipped for the rest of this run", file=sys.stderr)
 
     def _wait(self, src):
         gap = self.pace.get(src, 0.3)
@@ -47,7 +80,19 @@ class Http:
         if body is not None:
             data = json.dumps(body).encode()
             h["Content-Type"] = "application/json"
-        for attempt in (0, 1):
+        waits = self.backoff.get(src) or [3]
+        if self.blocked(src) and not self.allow_blocked:
+            self.calls[src + "_skipped"] = self.calls.get(src + "_skipped", 0) + 1
+            self._remember_block(src)
+            return None
+        for attempt in range(len(waits) + 1):
+            # A caller (dev-checks Blockfrost) can count a retry against its cap.
+            # Absent retry_ok, retries stay as they were.
+            if attempt and getattr(self, "retry_ok", None) is not None and not self.retry_ok():
+                return None
+            if self.blocked(src) and not self.allow_blocked:
+                self._remember_block(src)
+                return None
             self._wait(src)
             self.calls[src] = self.calls.get(src, 0) + 1
             try:
@@ -57,17 +102,35 @@ class Http:
                     return json.loads(raw) if raw else {}
             except urllib.error.HTTPError as e:
                 if e.code == 404 and quiet404:
+                    self.last_fail[src] = {"status": 404, "why": "http 404"}
                     return None
-                if (e.code == 429 or e.code >= 500) and attempt == 0:
-                    time.sleep(3 if e.code == 429 else 1.5)
+                if e.code == 429 and src == "koios" and self.dev_checks and self.deadline is None:
+                    # first 429 during dev checks: no retry and no breaker. Blockfrost can still run.
+                    # research (below) skips Koios until koios_pause_until so the 240s window is not spent here.
+                    self.koios_pause_until = time.time() + 60
+                    self._fail(src, "http 429", 429)
+                    return None
+                if e.code == 429 and src == "koios" and self.deadline is not None:
+                    self._fail(src, "http 429", 429)
+                    self.trip(src, "429 (public tier blocks the IP ~60 s)")
+                    return None
+                if e.code == 429 and attempt < len(waits):
+                    ra = (e.headers.get("Retry-After") if getattr(e, "headers", None) else None) or ""
+                    w = waits[attempt]
+                    if ra.strip().isdigit():
+                        w = min(max(w, int(ra.strip())), 60)
+                    self.sleep(w)
                     continue
-                self._fail(src, f"http {e.code}")
+                if e.code >= 500 and attempt == 0:
+                    self.sleep(1.5)
+                    continue
+                self._fail(src, f"http {e.code}", e.code)
                 return None
-            except Exception as e:  # network / json
+            except Exception as e:  # network / json; type name only (the message can contain the URL)
                 if attempt == 0:
                     time.sleep(1.5)
                     continue
-                self._fail(src, type(e).__name__)
+                self._fail(src, type(e).__name__, type(e).__name__)
                 return None
 
     def post_webhook(self, url, body, headers=None):
@@ -99,9 +162,118 @@ class Http:
                 return False
         return False
 
-    def _fail(self, src, why):
+    def _remember_block(self, src):
+        """Keep the earlier HTTP status (a 429 that tripped the breaker). A pure deadline/breaker skip has no code."""
+        self.last_fail.setdefault(src, {"status": "skipped" if src in self.tripped else "deadline",
+                                        "why": self.tripped.get(src, "deadline")})
+
+    def _fail(self, src, why, status=None):
         self.failures[src] = self.failures.get(src, 0) + 1
+        self.last_fail[src] = {"status": why if status is None else status, "why": why}
         print(f"  data failure [{src}]: {why}", file=sys.stderr)
+        # the breaker is armed only inside the research window (deadline set): rules-screen and kill-line reads
+        # keep their normal retries even after a Koios failure (re-review should-fix 1)
+        if self.deadline is None:
+            return
+        self.research_failures[src] = self.research_failures.get(src, 0) + 1
+        n = self.trip_after.get(src)
+        if n and self.research_failures[src] >= n:
+            self.trip(src, f"{self.failures[src]} failures")
+
+
+# Earlier slices stop at run start + 720s. The process timeout is 780s. The workflow job is
+# 20 minutes, so checkout, tests, cache, the privacy guard, and the commit/push retries still
+# fit after a full 780s process. Do not raise HARD_CAP_S without raising that process timeout
+# and timeout-minutes together: a job cancel during commit drops state.json and the next run
+# re-sends triggers. 720 is not a per-job budget.
+HARD_CAP_S = 720
+# liquidity_moves keeps budget_s even when an earlier slice arrives after this cap (one slow
+# Koios call can spend the 50s reserved in front of it). The late window stops here, 10s before
+# the 780s process kill, so vetoes and last-run.json still write.
+LATE_SLICE_END_S = 770
+# Doc-only. job_deadline and research_deadline do not read config research_budget_s.
+# That number is the sum of the whale + big_moves + liquidity reserves, for humans.
+SLICE_ORDER = ("dev_checks", "whale_ledger", "big_moves", "liquidity_moves")
+
+
+def slice_budgets(cfg):
+    """Configured seconds for each post-webhook slice. A disabled job reserves nothing.
+
+    dev_checks.budget_s is the dev-check wall clock (default 180). It does not raise Koios or
+    Blockfrost call caps. big_moves.budget_s is the slice earlier jobs must leave, not a ceiling:
+    big_moves may also use slack in front of the liquidity reserve. liquidity_moves.budget_s is reserved
+    at the end so a long dev check cannot take it, and the slice still gets that many seconds from
+    the moment it starts if the reserve was already spent.
+    """
+    specs = (
+        ("dev_checks", DC.dc_cfg, 180),
+        ("whale_ledger", WL.wl_cfg, 90),
+        ("big_moves", BM.bm_cfg, 150),
+        ("liquidity_moves", LM.lm_cfg, 50),
+    )
+    out = {}
+    for name, fn, default in specs:
+        block = fn(cfg)
+        out[name] = float(block.get("budget_s", default)) if block.get("enabled", True) else 0.0
+    return out
+
+
+def reserve_after(cfg, job):
+    budgets = slice_budgets(cfg)
+    idx = SLICE_ORDER.index(job)
+    return sum(budgets[name] for name in SLICE_ORDER[idx + 1:])
+
+
+def research_deadline(cfg, t_start, now):
+    """Hard end of the earlier slices: run start + 720s.
+
+    liquidity_moves may run until LATE_SLICE_END_S. `cfg` and `now` are unused.
+    research_budget_s is doc-only and is not read here. Per-slice ends are job_deadline.
+    """
+    del cfg, now
+    return float(t_start) + HARD_CAP_S
+
+
+def job_deadline(cfg, t_start, now, job):
+    """Wall-clock end for one slice, reserving the full budgets of the slices after it.
+
+    Shrinks from the front when the rules screen has already used the hard cap: dev_checks yields
+    first, then whale_ledger. big_moves keeps its budget plus any slack before the liquidity reserve.
+    liquidity_moves does not take whatever is left of the hard cap. It gets its own budget_s from
+    this instant, including when an earlier slice overran and that reserve is already gone. The
+    window still stops at run start + LATE_SLICE_END_S.
+    """
+    now = float(now)
+    start = now if t_start is None else float(t_start)
+    end = start + HARD_CAP_S
+    if job == "liquidity_moves":
+        budget = max(0.0, slice_budgets(cfg)[job])
+        ceiling = start + LATE_SLICE_END_S
+        return now + min(budget, max(0.0, ceiling - now))
+    room = end - now - reserve_after(cfg, job)
+    if job == "big_moves":
+        take = room
+    else:
+        take = min(slice_budgets(cfg)[job], room)
+    if take < 0:
+        take = 0.0
+    return now + take
+
+
+def note_koios_pause(http):
+    """A dev-checks 429 already set koios_pause_until. blocked('koios') is true until that time, then Koios resumes.
+
+    Do not trip the breaker: a trip would skip Koios for the rest of the run, including big_moves after the ~60s block.
+    """
+    until = getattr(http, "koios_pause_until", 0) or 0
+    if until > time.time():
+        print("  koios: paused ~60s after a dev-checks 429; resumes when that window ends", file=sys.stderr)
+
+
+def write_json(path, obj, **kw):
+    """Atomic JSON write: temp file in the same dir, then os.replace (a killed run never leaves half a file)."""
+    import koios_tx as _KT
+    _KT.write_json(path, obj, **kw)
 
 
 # ---------------------------------------------------------------- thresholds
@@ -167,7 +339,9 @@ def tracked_names(paper, log):
         if isinstance(text, str):
             kl = parse_kill_text(text)
             if kl:
-                out[tk.upper()] = {"kill": kl, "text": text, "source": "log.kill_lines"}
+                # "hit: ..." = Snek already recorded this kill line as hit; the webhook must not report it again
+                out[tk.upper()] = {"kill": kl, "text": text, "source": "log.kill_lines",
+                                   "desk_hit": text.strip().lower().startswith("hit")}
     for t in paper.get("open", []):
         kl = t.get("kill_line") or {}
         nums = {k: v for k, v in kl.items() if isinstance(v, (int, float)) and k.endswith("_below")}
@@ -373,9 +547,26 @@ class Chain:
         return s
 
 
+GT_MAX_429 = 3
+
+
 def gt_pool(http, unit):
-    """(ada_side, mcap_ada, price_ada, basis) from GeckoTerminal, else DexScreener."""
-    r = http.req("geckoterminal", f"{GT}/networks/cardano/tokens/{unit}/pools?page=1")
+    """(ada_side, mcap_ada, price_ada, basis) from GeckoTerminal, else DexScreener. Cached per unit per run;
+    after GT_MAX_429 rate-limited lookups GeckoTerminal is skipped for the rest of the run."""
+    cache = http.__dict__.setdefault("_gt_cache", {})
+    if unit in cache:
+        return cache[unit]
+    cache[unit] = _gt_pool(http, unit)
+    return cache[unit]
+
+
+def _gt_pool(http, unit):
+    r = None
+    if (http.failures.get("geckoterminal") or 0) < GT_MAX_429:
+        r = http.req("geckoterminal", f"{GT}/networks/cardano/tokens/{unit}/pools?page=1")
+    elif not http.__dict__.get("_gt_skip_logged"):
+        http._gt_skip_logged = True
+        print(f"geckoterminal: {GT_MAX_429}+ failed lookups this run; using DexScreener for the rest")
     pools = (r or {}).get("data") or []
     if pools:
         best = max(pools, key=lambda p: float(p["attributes"].get("reserve_in_usd") or 0))
@@ -402,6 +593,218 @@ def gt_pool(http, unit):
         pn = float(best.get("priceNative") or 0)
         return {"ada_side": round(q), "mcap_ada": None, "price_ada": pn, "dex": best.get("dexId"), "basis": "dexscreener"}
     return None
+
+
+def _num(v):
+    try:
+        if v is None or isinstance(v, bool):
+            return None
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def coin_to_launch(c):
+    """Map one /api/coins row onto the launch fields this job already reads.
+
+    The old /api/launches board is gone (404). Coins carry curve ADA, price, and
+    supply under different names. Curve addresses are not copied. launcherAddress
+    stays in memory for the dev-stake read and is never logged.
+    """
+    if not isinstance(c, dict):
+        return None
+    raw_tk = c.get("ticker")
+    if c.get("hidden") or not c.get("id") or raw_tk is None or raw_tk == "":
+        return None
+    ticker = str(raw_tk).strip()
+    if not ticker:
+        return None
+    curve = c.get("curve") if isinstance(c.get("curve"), dict) else None
+    raw_pool = (curve or {}).get("pool")
+    pool_doc = raw_pool if isinstance(raw_pool, dict) else None
+    graduated = bool(curve and (curve.get("state") == "graduated" or pool_doc))
+    reserves = (curve or {}).get("reserves") if isinstance((curve or {}).get("reserves"), dict) else {}
+    out_curve = None
+    if curve is not None:
+        pb = _num(curve.get("progressBps"))
+        out_curve = {"graduated": graduated, "progressBps": int(pb) if pb is not None and pb == int(pb) else (pb or 0)}
+        if not graduated:
+            ada = _num(curve.get("curveAda"))
+            # missing curve ADA is unknown, not a pool of 0
+            if ada is not None and ada > 0:
+                out_curve["realLovelace"] = int(round(ada * 1e6))
+        price = _num(c.get("priceAda"))
+        if price is not None:
+            out_curve["priceAda"] = price
+        mcap = _num(c.get("marketCapAda"))
+        if mcap is not None:
+            out_curve["marketCapLovelace"] = int(round(mcap * 1e6))
+    holders = _num(c.get("holders"))
+    if holders is not None and holders == int(holders):
+        holders = int(holders)
+    live = _num(c.get("createdAtMs"))
+    if live is not None and live == int(live):
+        live = int(live)
+    supply = _num(reserves.get("supply"))
+    launch = {
+        "id": c["id"], "ticker": ticker,
+        "policyId": c.get("policyId") or "", "assetName": c.get("assetName") or "",
+        "liveAtMs": live, "launcherAddress": c.get("launcherAddress") or "",
+        "pumpMint": c.get("pumpMint"), "totalSupply": supply,
+        "pool": {"dex": (pool_doc or {}).get("dex") or "graduated"} if graduated else None,
+        "curve": out_curve,
+        "priceAda": _num(c.get("priceAda")), "marketCapAda": _num(c.get("marketCapAda")),
+        "volume24hAda": _num(c.get("volume24hAda")), "holders": holders,
+    }
+    return launch
+
+
+def market_from_coins(doc):
+    """adaUsd / atMs / per-id holders, in the old /api/market shape (adaUsdMicro, at, quotes)."""
+    if not isinstance(doc, dict):
+        return {}
+    ada = _num(doc.get("adaUsd"))
+    quotes = {}
+    for c in doc.get("coins") or []:
+        if isinstance(c, dict) and c.get("id"):
+            quotes[c["id"]] = {"holders": _num(c.get("holders"))}
+    at = doc.get("atMs") if doc.get("atMs") is not None else doc.get("at")
+    return {"adaUsdMicro": int(round(ada * 1_000_000)) if ada is not None else 0, "at": at, "quotes": quotes}
+
+
+def launches_from_payload(payload):
+    """A launch list, or None when this body is not a board.
+
+    Accepts the old list, a `{launches: [...]}` wrap, and `{coins: [...]}`.
+    """
+    if isinstance(payload, list):
+        return [x for x in payload if isinstance(x, dict) and x.get("id") and x.get("ticker")]
+    if isinstance(payload, dict) and isinstance(payload.get("launches"), list):
+        return launches_from_payload(payload["launches"])
+    if isinstance(payload, dict) and isinstance(payload.get("coins"), list):
+        out = []
+        for c in payload["coins"]:
+            try:
+                row = coin_to_launch(c)
+            except Exception:
+                continue  # one odd coin must not drop the rest of the board
+            if row:
+                out.append(row)
+        return out
+    return None
+
+
+def fetch_solada(http):
+    """(launches, market). /api/launches and /api/market 404; /api/coins is the board.
+
+    A 404 or an empty legacy list is not an empty board: the coins payload is tried next.
+    """
+    legacy = http.req("solada", SOLADA + "/launches")
+    rows = launches_from_payload(legacy)
+    if rows:
+        if isinstance(legacy, dict) and (legacy.get("adaUsd") is not None or legacy.get("coins")):
+            market = market_from_coins(legacy)
+        else:
+            raw = http.req("solada", SOLADA + "/market")
+            market = raw if isinstance(raw, dict) and not raw.get("coins") else {}
+        return rows, market, "launches"
+    doc = http.req("solada", SOLADA + "/coins")
+    rows = launches_from_payload(doc) or []
+    if rows:
+        return rows, market_from_coins(doc if isinstance(doc, dict) else {}), "coins"
+    return [], {}, "none"
+
+
+def solada_market_pool(http):
+    """Platform-token depth from /api/solada/market. That payload has no 24h volume.
+
+    GeckoTerminal 404s the SOLADA unit and DexScreener returns no Cardano pair, so this
+    is the read that still has ADA side, price, and mcap.
+    """
+    doc = http.req("solada", SOLADA + "/solada/market")
+    if not isinstance(doc, dict):
+        return None
+    liq, price, mcap, vol = _num(doc.get("liquidityAda")), _num(doc.get("priceAda")), _num(doc.get("marketCapAda")), _num(doc.get("volume24hAda"))
+    if liq is None and price is None and mcap is None:
+        return None
+    pool = {"ada_side": round(liq) if liq is not None else None,
+            "mcap_ada": round(mcap) if mcap is not None else None,
+            "price_ada": price, "basis": "solada-market"}
+    if vol is not None:
+        pool["vol_h24_ada"] = round(vol)
+    return pool
+
+
+# Desk kill lines were written against a pool quote. Curve ADA, coin mcap and the
+# platform-market liquidity figure are different bases and must not cross those lines.
+POOL_LINE_BASES = ("geckoterminal", "dexscreener")
+
+
+def _for_kill(metric, value, basis, prev_metrics):
+    """Value compared with a kill line. Holders have no basis.
+
+    mcap and ADA side count only on a pool-quote basis, and only when that basis matches
+    the one already stored for the metric. A different basis is unknown: it does not cross
+    and it is not a recovery. The line numbers themselves are not changed.
+    """
+    if value is None or metric == "holders":
+        return value
+    if basis not in POOL_LINE_BASES:
+        return None
+    prev_b = ((prev_metrics or {}).get(metric) or {}).get("basis") if isinstance(prev_metrics, dict) else None
+    if prev_b and prev_b != basis:
+        return None
+    return value
+
+
+def tracked_pool(http, unit, launch, ticker):
+    """Pool for a tracked name: GeckoTerminal, then the coin's curve, then the platform market for SOLADA."""
+    pool = gt_pool(http, unit) if unit else None
+    same = bool(launch) and bool(unit) and ((launch.get("policyId") or "") + (launch.get("assetName") or "")) == unit
+    cv = (launch.get("curve") or {}) if same else {}
+    if pool is None and cv and not cv.get("graduated") and cv.get("realLovelace"):
+        pool = {"ada_side": round(int(cv["realLovelace"]) / 1e6),
+                "mcap_ada": round(int(cv.get("marketCapLovelace") or 0) / 1e6) or None,
+                "price_ada": float(cv["priceAda"]) if cv.get("priceAda") is not None else None,
+                "basis": "solada-curve"}
+        vol = _num(launch.get("volume24hAda"))
+        if vol is not None:
+            pool["vol_h24_ada"] = round(vol)
+    if (pool is None or pool.get("ada_side") is None) and ticker == "SOLADA":
+        alt = solada_market_pool(http)
+        if alt and (pool is None or alt.get("ada_side") is not None):
+            if pool and pool.get("vol_h24_ada") is not None and alt.get("vol_h24_ada") is None:
+                alt = dict(alt, vol_h24_ada=pool["vol_h24_ada"])
+            pool = alt
+    if pool is None and same:
+        price, mcap, vol = _num(launch.get("priceAda")), _num(launch.get("marketCapAda")), _num(launch.get("volume24hAda"))
+        if any(v is not None for v in (price, mcap, vol)):
+            pool = {"ada_side": None, "mcap_ada": round(mcap) if mcap is not None else None,
+                    "price_ada": price, "vol_h24_ada": round(vol) if vol is not None else None,
+                    "basis": "solada-coins"}
+    return pool
+
+
+def pulse_units(pulse):
+    """ticker -> asset id from the newest pulse point that has one.
+
+    Points are ordered by `t`. The last row in the file is not assumed to be the newest.
+    """
+    out = {}
+    if not isinstance(pulse, dict):
+        return out
+    points = [p for p in (pulse.get("points") or []) if isinstance(p, dict)]
+
+    def _when(p):
+        n = _num(p.get("t"))
+        return n if n is not None else float("-inf")
+
+    for p in sorted(points, key=_when):
+        tk = str(p.get("ticker") or "").upper()
+        aid = p.get("asset_id")
+        if tk and isinstance(aid, str) and len(aid) >= 56:
+            out[tk] = aid
+    return out
 
 
 def solana_concentration(http, rpc, mint, ignore):
@@ -491,6 +894,9 @@ def main():
     ap.add_argument("--ping", action="store_true", help="skip the scan; POST one test payload to the webhook and exit")
     ap.add_argument("--dry-run", action="store_true", help="never POST the webhook")
     args = ap.parse_args()
+    t_start = time.time()
+    import koios_tx as _KT
+    _KT.clean_tmp(args.data_dir)  # leftovers of a killed write never get committed by `git add -A`
     if args.ping:
         return ping()
 
@@ -518,8 +924,17 @@ def main():
         else:
             state["kill_reported"][_tk] = _e
     kc = V.kill_cfg(cfg)
+    ks_path = os.path.join(args.data_dir, "kill_status.json")
+    try:
+        prev_ks = {k: v for k, v in (json.load(open(ks_path)) or {}).items() if isinstance(v, dict)}
+    except (OSError, ValueError):
+        prev_ks = {}
+    kill_status = {}
 
-    http = Http(cfg["pace_seconds"])
+    gtc = cfg.get("geckoterminal") or {}
+    http = Http(cfg["pace_seconds"], {"geckoterminal": gtc.get("retry_backoff_seconds") or [6, 15]})
+    global GT_MAX_429
+    GT_MAX_429 = int(gtc.get("max_429_failures", GT_MAX_429))
     bf_key = os.environ.get("BLOCKFROST_PROJECT_ID", "").strip()
     rpc = os.environ.get("SOLANA_RPC_URL", "").strip()
     if not rpc and os.environ.get("HELIUS_API_KEY", "").strip():
@@ -528,18 +943,18 @@ def main():
     print(f"solada-prefilter {now_iso()} basis={chain.basis} solana={'on' if rpc else 'off'} dry_run={args.dry_run} baseline={baseline}")
     print(f"thresholds: holders>={th['min_holders']} ada_side>={th['min_ada_side']:.0f} (k {th['min_ada_side_k']:.0f}, y {th['min_ada_side_y']:.0f}); tracked={sorted(tracked)}; watch_keys={len(wkeys)}")
 
-    launches = http.req("solada", SOLADA + "/launches") or []
-    market = http.req("solada", SOLADA + "/market") or {}
+    launches, market, board_src = fetch_solada(http)
     quotes = market.get("quotes") or {}
     ada_usd = float(market.get("adaUsdMicro") or 0) / 1e6
     market_age_min = round((time.time() * 1000 - float(market["at"])) / 60000, 1) if market.get("at") else None
+    print(f"solada board: {len(launches)} via {board_src}")
     if not launches:
         http._fail("solada", "no launches")
 
     now_ms = time.time() * 1000
     seen = set(state["seen_launches"])
     new_ids = [l["id"] for l in launches if l["id"] not in seen]
-    triggers, results = [], []
+    triggers, results, solada_tracked = [], [], []
 
     def graduated(l):
         return bool(l.get("pool")) or bool((l.get("curve") or {}).get("graduated"))
@@ -567,7 +982,11 @@ def main():
         if pool is None and cv and not cv.get("graduated") and cv.get("realLovelace"):
             pool = {"ada_side": round(int(cv["realLovelace"]) / 1e6), "mcap_ada": round(int(cv.get("marketCapLovelace") or 0) / 1e6) or None,
                     "price_ada": float(cv.get("priceAda") or 0), "basis": "solada-curve"}
-            row["curve_pct"] = round(int(cv.get("progressBps") or 0) / 100, 1)
+            vol = _num(l.get("volume24hAda"))
+            if vol is not None:
+                pool["vol_h24_ada"] = round(vol)
+            pb = _num(cv.get("progressBps"))
+            row["curve_pct"] = round((int(pb) if pb is not None else 0) / 100, 1)
         row["ada_side"] = pool["ada_side"] if pool else None
         row["mcap_ada"] = pool["mcap_ada"] if pool else None
         row["pool_basis"] = pool["basis"] if pool else None
@@ -576,6 +995,8 @@ def main():
         row["decimals"] = 6 if l.get("curve") else None  # Solada curve launches mint 6-decimal supply
         if row["mcap_ada"] is None and pool and pool.get("price_ada"):
             row["mcap_ada"] = round(pool["price_ada"] * supply_whole(l)) or None
+        row["ada_basis"] = row["pool_basis"] if row.get("ada_side") is not None else None
+        row["mcap_basis"] = row["pool_basis"] if row.get("mcap_ada") is not None else None
         # only spend holder calls when depth already passes (k and y both need depth)
         if row["ada_side"] is not None and row["ada_side"] >= th["min_ada_side"] and holder_budget > 0:
             holder_budget -= 1
@@ -602,7 +1023,12 @@ def main():
     # ---- tracked names vs kill lines
     by_ticker = {}
     for l in launches:
-        by_ticker.setdefault(l["ticker"].upper(), []).append(l)
+        name = l.get("ticker")
+        if not isinstance(name, str):
+            name = str(name) if name is not None else ""
+        name = name.strip()
+        if name:
+            by_ticker.setdefault(name.upper(), []).append(l)
     for tk, t in sorted(tracked.items()):
         opts = by_ticker.get(tk, [])
         l = None
@@ -611,31 +1037,66 @@ def main():
         if t.get("asset_id"):
             l = next((x for x in opts if unit_of(x) == t["asset_id"]), None)
         if l is None and opts:
-            l = max(opts, key=lambda x: (graduated(x), (quotes.get(x["id"]) or {}).get("holders") or 0))
+            l = max(opts, key=lambda x: (graduated(x), _num((quotes.get(x["id"]) or {}).get("holders")) or 0))
         u = t.get("asset_id") or (unit_of(l) if l else None)
         if not u:
             http._fail("match", f"no unit for tracked {tk}")
+            if isinstance(prev_ks.get(tk), dict):  # keep its last row (marked stale) instead of dropping it
+                kill_status[tk] = {**prev_ks[tk], "changed_since_last": False, "stale": True}
             continue
-        pool = gt_pool(http, u)
+        pool = tracked_pool(http, u, l, tk)
         n, _ = chain.holders(u, cfg["max_holder_pages"])
         m = {"ada_side": pool["ada_side"] if pool else None, "mcap_ada": pool["mcap_ada"] if pool else None, "holders": n,
-             "vol_h24_ada": pool.get("vol_h24_ada") if pool else None}
+             "vol_h24_ada": pool.get("vol_h24_ada") if pool else None,
+             # re-review S2: tracked names carry price + decimals so big moves can value transfers / multi-token legs
+             "price_ada": pool.get("price_ada") if pool else None,
+             "decimals": 6 if (l is not None and l.get("curve") and unit_of(l) == u) else chain.decimals(u),
+             "pool_basis": pool.get("basis") if pool else None}
         if m["mcap_ada"] is None and pool and pool.get("price_ada") and l is not None and unit_of(l) == u:
             m["mcap_ada"] = round(pool["price_ada"] * supply_whole(l)) or None
+        m["ada_basis"] = m["pool_basis"] if m["ada_side"] is not None else None
+        m["mcap_basis"] = m["pool_basis"] if m["mcap_ada"] is not None else None
         k = t["kill"]
         # label -> (metric field, kill key); an unknown (None) value never crosses a line
         km = {"ada_side": ("ada_side", "ada_side_below"), "holders": ("holders", "holders_below"), "mcap": ("mcap_ada", "mcap_ada_below")}
         lines = {lb: float(k[kk]) for lb, (f, kk) in km.items() if kk in k}
-        values = {lb: m[km[lb][0]] for lb in lines}
+        prev_rep = state["kill_reported"].get(tk)
+        prev_mets = ((V.migrate_kill_entry(prev_rep) or {}).get("metrics") if prev_rep else {}) or {}
+        bases = {"ada_side": m.get("ada_basis"), "mcap": m.get("mcap_basis")}
+        values = {lb: _for_kill(lb, m[km[lb][0]], bases.get(lb), prev_mets) for lb in lines}
         crossed_m = {lb: (values[lb], lines[lb]) for lb in lines if values[lb] is not None and values[lb] < lines[lb]}
         crossed = [f"{lb} {values[lb]} < {lines[lb]:.0f}" for lb in ("ada_side", "holders", "mcap") if lb in crossed_m]
         # complete = every metric this kill line checks was actually read (a data gap is not a recovery)
         complete = all(v is not None for v in values.values())
+        prev_hit = state["kill_status"].get(tk)
         if crossed or complete:
             state["kill_status"][tk] = bool(crossed)
         results.append({"ticker": tk, "tracked": True, "unit": u, **m, "crossed": crossed, "kill": k})
+        if l is not None and u and unit_of(l) == u:
+            solada_tracked.append({"ticker": tk, "unit": u, "launch": l, "mcap_ada": m.get("mcap_ada"),
+                                   "mcap_basis": m.get("mcap_basis"), "vol_h24_ada": m.get("vol_h24_ada")})
         fire, entry, reasons = V.kill_decide(state["kill_reported"].get(tk), crossed_m, values, lines, complete, kc)
-        if fire:
+        if fire and isinstance(entry, dict):
+            for metric, info in (entry.get("metrics") or {}).items():
+                if isinstance(info, dict) and metric in ("ada_side", "mcap") and not info.get("basis"):
+                    b = bases.get(metric)
+                    if b:
+                        info["basis"] = b
+        ks = V.kill_status_entry(prev_ks.get(tk), t.get("text", ""), values, lines, crossed_m, complete, now_iso(),
+                                 desk_hit=bool(t.get("desk_hit")), prev_hit=prev_hit,
+                                 prev_hit_at=(state["kill_reported"].get(tk) or {}).get("at"),
+                                 deeper=fire and any("deeper" in r for r in reasons))
+        kill_status[tk] = ks
+        if fire and not ks["changed_since_last"] and not t.get("desk_hit"):
+            # SPD-47: nothing moved since the last run (same hit state, metric and line) -> never re-fire
+            print(f"kill line {tk}: unchanged since last run; not sent")
+            fire = False
+            entry = {**entry, "at": now_iso()}
+        if fire and t.get("desk_hit"):
+            # already hit on the desk (log.kill_lines "hit: ..."): record as reported, never send
+            state["kill_reported"][tk] = {**entry, "at": now_iso(), "desk_hit": True}
+            print(f"kill line {tk}: already hit on the desk; recorded, not sent")
+        elif fire:
             sig = V.kill_signature(crossed_m)  # ticker + crossed metric names
             vh = hashlib.sha256(json.dumps(sorted(crossed_m.items())).encode()).hexdigest()[:8]
             triggers.append({"key": f"kill:{tk}:{sig}:{vh}", "kind": "kill_line", "name": tk, "kill_sig": sig,
@@ -650,6 +1111,13 @@ def main():
     wcfg = cfg["whale"]
     lp_pols = V.lp_policies(cfg)
     unit_decimals = {unit_of(l): 6 for l in launches if l.get("curve") and unit_of(l)}
+    def _curve_pct(l):
+        pb = _num((l.get("curve") or {}).get("progressBps"))
+        return round((int(pb) if pb is not None else 0) / 100, 1)
+
+    unit_curve = {unit_of(l): _curve_pct(l)
+                  for l in launches if unit_of(l) and l.get("curve") and not graduated(l)}
+    dust = V.dust_cfg(wcfg)
     whale_summary = None
     addr = chain.handle_address(wcfg["handle_policy"], wcfg["handle"])
     stake = chain.stake_of(addr) if addr else None
@@ -672,8 +1140,12 @@ def main():
                 txs = chain.account_txs_after(stake, prev_height, wcfg.get("max_ada_leg_txs", 50))
                 if txs:
                     tip_height = max(h for _, h in txs)
+                    if len(txs) >= wcfg.get("max_ada_leg_txs", 50):
+                        # window was capped: start the next window at the account tip so it never re-counts
+                        # these txs (value_ada's qty check keeps this run's partial legs from overstating)
+                        tip_height = chain.account_tip_height(stake) or tip_height
                     ut = flagmod.FlagChain(http, bf_key).tx_utxos([t for t, _ in txs])
-                    legs = V.ada_leg_by_unit(stake, ut, flagmod.addr_info, lp_pols)
+                    legs = V.ada_leg_detail(stake, ut, flagmod.addr_info, lp_pols)
                 elif txs is not None:
                     tip_height = prev_height
             moves, lp_moves = [], []
@@ -692,23 +1164,30 @@ def main():
                     continue
                 nm = ascii_name(u[56:]).upper()
                 mv = {"asset": nm or u[:12], "delta": b - a}
-                if a > 0:
-                    mv["pct"] = round(100 * abs(b - a) / a, 1)
                 if a == 0 and b > 0:
                     mv["new_position"] = True
+                if u in unit_curve:
+                    mv["curve_pct"] = unit_curve[u]
                 price, dec = None, unit_decimals.get(u)
-                if u not in legs and prices_left > 0:
+                if dec is None and dec_left > 0:  # always: the payload shows whole tokens, never raw units
+                    dec_left -= 1
+                    dec = chain.decimals(u)
+                leg = legs.get(u) or {}
+                if not leg and prices_left > 0:
                     prices_left -= 1
                     p = gt_pool(http, u)
                     price = p.get("price_ada") if p else None
-                    if price and dec is None and dec_left > 0:
-                        dec_left -= 1
-                        dec = chain.decimals(u)
-                val, basis = V.value_ada(b - a, legs.get(u), dec, price)
+                val, basis = V.value_ada(b - a, leg.get("ada"), dec, price, leg.get("qty"))
+                if dec is not None:
+                    mv["decimals"] = dec
+                    mv["qty"] = round((b - a) / 10 ** dec, 4)
                 if val is not None:
                     mv["ada_equiv"], mv["value_basis"] = round(val), basis
-                    if dec is not None:
-                        mv["decimals"] = dec
+                if a > 0:
+                    if V.is_dust(b - a, dec, val, dust):
+                        mv["dust"] = True  # % of position is meaningless for dust (config whale.dust)
+                    else:
+                        mv["pct"] = round(100 * abs(b - a) / a, 1)
                 fire = (mv.get("ada_equiv", 0) >= wcfg["min_ada_equiv"] or mv.get("pct", 0) >= wcfg["min_position_pct"]
                         or mv.get("new_position") or any(x in nm for x in wcfg["always_tickers"]))
                 if fire:
@@ -761,73 +1240,227 @@ def main():
                 flagmod.watch_map(cfg["flags"], wkeys), whale_summary, state, args.cache_dir, baseline, args.dry_run, now_iso,
                 unit_value={r["unit"]: {"price_ada": r.get("price_ada"), "decimals": r.get("decimals")} for r in results if r.get("unit")},
                 lp_pols=lp_pols)
-        except SystemExit:
-            raise
-        except Exception as e:  # flags must never break the rules screen
+        except (SystemExit, Exception) as e:  # flags must never break the rules screen or the webhook
             http._fail("flags", type(e).__name__)
     fpath = os.path.join(args.data_dir, "flags.json" if not args.dry_run else "flags-dry-run.json")
     prev_doc = json.load(open(os.path.join(args.data_dir, "flags.json"))) if os.path.exists(os.path.join(args.data_dir, "flags.json")) else {}
-    flags_doc = flagmod.assert_public({
+    flags_doc = {
         "at": now_iso(), "flag_only": True,
         "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
         "baseline": baseline, "new": new_flags, "recent": ((prev_doc.get("recent") or []) + new_flags)[-300:],
         "api_calls": flag_calls,
         "thresholds": {k: v for k, v in cfg["flags"].items() if not k.startswith("_") and k != "snek_prefix_tags"},
-    })
-    json.dump(flags_doc, open(fpath, "w"), indent=1)
+    }
+    try:  # re-review 7: a privacy assert here must not stop the webhook / state (same class as M1); flags.json is skipped
+        flagmod.assert_public(flags_doc)
+        write_json(fpath, flags_doc, indent=1)
+    except (SystemExit, Exception) as e:
+        http._fail("flags", f"flags.json not written ({type(e).__name__})")
+        new_flags = []
     print(f"flags: {len(new_flags)} new ({', '.join(sorted({f['kind'] for f in new_flags})) or 'none'}); calls {json.dumps(flag_calls)}")
 
-    # ---- dedupe + webhook
-    # pending triggers (webhook failed on an earlier run) are retried first; a newer trigger with the same
-    # key, or a newer kill trigger for the same ticker, supersedes the queued one
-    new_keys = {t["key"] for t in triggers}
-    new_kill = {t["name"] for t in triggers if t["kind"] == "kill_line"}
-    pending = [t for t in state["pending_triggers"] if t.get("key") and t["key"] not in state["fired"] and t["key"] not in new_keys
-               and not (t.get("kind") == "kill_line" and t.get("name") in new_kill)]
-    fresh = pending + [t for t in triggers if t["key"] not in state["fired"]]
+    # ---- primary webhook BEFORE the dev_checks budget. A kill line, launch, or whale move is not held
+    # for the 180s scan. Pending triggers from a failed earlier post are retried here. Vetoes are never
+    # included: they are not buy signals. dev_sell, if the scan finds one, is a separate post afterwards.
     NOPUB = ("key", "kill_sig", "kill_entry")
-    if baseline:
-        print(f"baseline run: {len(fresh)} would-be trigger(s) recorded, not sent")
-    payload = {"reason": "threshold", "names": sorted({t["name"] for t in fresh}),
-               "metrics": {"at": now_iso(), "triggers": [{k: v for k, v in t.items() if k not in NOPUB} for t in fresh]}}
-    if new_flags:  # ride along only; a payload is sent only when a threshold trigger is fresh
-        payload["metrics"]["flags"] = new_flags[:40]
-    sent = False
-    url, key = os.environ.get("SOLADA_WEBHOOK_URL", "").strip(), os.environ.get("SOLADA_WEBHOOK_KEY", "").strip()
-    if fresh and not baseline:
-        if args.dry_run:
-            print("dry-run: webhook not sent")
-        elif not url:
-            print("SOLADA_WEBHOOK_URL not set: skipping webhook")
-        else:
-            hdr = {"Authorization": f"Bearer {key}"} if key else {}
-            hdr["Idempotency-Key"] = idempotency_key(cfg, [t["key"] for t in fresh])
-            sent = http.post_webhook(url, payload, hdr)
-            print(f"webhook {'sent' if sent else 'FAILED (queued for retry next run)'}")
-    if sent or baseline or (fresh and args.dry_run is False and not url):
-        for t in fresh:
-            state["fired"][t["key"]] = now_iso()
-            if t["kind"] == "kill_line":
-                state["kill_reported"][t["name"]] = {**(t.get("kill_entry") or {}), "at": now_iso()}
-        state["pending_triggers"] = []
-    elif fresh and not args.dry_run:
-        state["pending_triggers"] = fresh[-200:]  # retried next run; whale snapshot / seen_launches may advance safely
-    state["seen_launches"] = sorted({l["id"] for l in launches} | seen)
-    # keep fired map bounded
-    if len(state["fired"]) > 2000:
-        state["fired"] = dict(sorted(state["fired"].items(), key=lambda x: x[1])[-2000:])
+    fresh_all, sent_any, flags_attached = [], False, False
 
-    summary = {
-        "at": now_iso(), "basis": chain.basis, "dry_run": args.dry_run, "baseline": baseline,
-        "launches": len(launches), "new_launches": 0 if baseline else len(new_ids), "candidates": len(cands),
-        "passed_k_y": [r["ticker"] for r in passed], "thresholds": {k: v for k, v in th.items() if k != "source"},
-        "market_age_min": market_age_min, "ada_usd": ada_usd, "whale": {k: v for k, v in (whale_summary or {}).items()},
-        "first_block_hits": fb_hits, "triggers": [{k: v for k, v in t.items() if k not in NOPUB} for t in fresh],
-        "webhook_sent": sent, "flags_new": len(new_flags), "data_failures": http.failures, "api_calls": http.calls, "results": results,
-    }
+    def settle(batch, retry_pending=True):
+        nonlocal sent_any, flags_attached
+        batch = [t for t in (batch or []) if isinstance(t, dict) and t.get("key")]
+        new_keys = {t["key"] for t in batch}
+        new_kill = {t["name"] for t in batch if t.get("kind") == "kill_line"}
+        # A failed post stays pending for the next run. The dev_sell post does not retry it in this same run.
+        pending = []
+        if retry_pending:
+            pending = [t for t in state["pending_triggers"] if t.get("key") and t["key"] not in state["fired"] and t["key"] not in new_keys
+                       and not (t.get("kind") == "kill_line" and t.get("name") in new_kill)]
+        fresh = pending + [t for t in batch if t["key"] not in state["fired"]]
+        fresh_all.extend(fresh)
+        if baseline:
+            print(f"baseline run: {len(fresh)} would-be trigger(s) recorded, not sent")
+        payload = {"reason": "threshold", "names": sorted({t["name"] for t in fresh}),
+                   "metrics": {"at": now_iso(), "triggers": [{k: v for k, v in t.items() if k not in NOPUB} for t in fresh]}}
+        if new_flags and not flags_attached:
+            payload["metrics"]["flags"] = new_flags[:40]
+        sent = False
+        url = os.environ.get("SOLADA_WEBHOOK_URL", "").strip()
+        key = os.environ.get("SOLADA_WEBHOOK_KEY", "").strip()
+        if fresh and not baseline:
+            if args.dry_run:
+                print("dry-run: webhook not sent")
+            elif not url:
+                print("SOLADA_WEBHOOK_URL not set: skipping webhook")
+            else:
+                hdr = {"Authorization": f"Bearer {key}"} if key else {}
+                hdr["Idempotency-Key"] = idempotency_key(cfg, [t["key"] for t in fresh])
+                sent = http.post_webhook(url, payload, hdr)
+                print(f"webhook {'sent' if sent else 'FAILED (queued for retry next run)'}")
+                if sent:
+                    flags_attached = True
+        if sent or baseline or (fresh and args.dry_run is False and not url):
+            for t in fresh:
+                state["fired"][t["key"]] = now_iso()
+                if t.get("kind") == "kill_line":
+                    state["kill_reported"][t["name"]] = {**(t.get("kill_entry") or {}), "at": now_iso()}
+            done = {t["key"] for t in fresh}
+            if retry_pending:
+                state["pending_triggers"] = []
+            else:
+                state["pending_triggers"] = [t for t in state["pending_triggers"] if t.get("key") not in done]
+        elif fresh and not args.dry_run:
+            if retry_pending:
+                state["pending_triggers"] = fresh[-200:]
+            else:
+                have = {t.get("key") for t in state["pending_triggers"]}
+                state["pending_triggers"] = (list(state["pending_triggers"]) + [t for t in fresh if t["key"] not in have])[-200:]
+        if sent:
+            sent_any = True
+        return fresh
+
+    def trim_fired():
+        if len(state["fired"]) > 2000:
+            state["fired"] = dict(sorted(state["fired"].items(), key=lambda x: x[1])[-2000:])
+
+    settle(triggers)
+    state["seen_launches"] = sorted({l["id"] for l in launches} | seen)
+    trim_fired()
     if not args.dry_run:
-        json.dump(state, open(state_path, "w"), indent=1, sort_keys=True)
-    json.dump(summary, open(os.path.join(args.data_dir, "last-run.json" if not args.dry_run else "dry-run.json"), "w"), indent=1)
+        write_json(state_path, state, indent=1, sort_keys=True)
+        # SPD-47: per-ticker kill-line status for Snek (desk-data only; lines from paper.json + log.json kill_lines)
+        write_json(ks_path, kill_status, indent=1, sort_keys=True)
+
+    # ---- phase-1 dev checks. Own wall-clock budget, AFTER the primary webhook, so that post does not
+    # wait on budget_s. Does not set http.deadline (a Koios 429 here must not trip the breaker).
+    # The deadline leaves the whale / big_moves / liquidity reserves inside run start + 720s.
+    # Errors are swallowed: a failure here must not undo the webhook, state.json or kill_status.json.
+    dev_summary = None
+    dev_triggers = []
+    if DC.dc_cfg(cfg).get("enabled", True):
+        try:
+            try:
+                pulse_doc, _ = load_desk_json("solada/pulse.json", desk, args.repo)
+            except SystemExit:
+                pulse_doc = {}
+            units_by_ticker = pulse_units(pulse_doc)
+            for tk, t in tracked.items():
+                if t.get("asset_id"):
+                    units_by_ticker[tk] = t["asset_id"]
+            dev_summary, dev_triggers = DC.run(
+                http, cfg, solada_tracked, launches, flagmod.watch_map(cfg.get("flags") or {}, wkeys),
+                args.data_dir, args.cache_dir, args.dry_run, time.time(), bf_key=bf_key, baseline=baseline,
+                t_start=t_start, owner_env=os.environ.get("PRIVACY_GUARD_PATTERNS", ""),
+                top10=DC.cardano_top10(log), units_by_ticker=units_by_ticker,
+                deadline=job_deadline(cfg, t_start, time.time(), "dev_checks"))
+            print(f"dev checks: {json.dumps(dev_summary)}")
+        except (SystemExit, Exception) as e:
+            http._fail("dev_checks", type(e).__name__)
+            dev_triggers = []
+    if not baseline:
+        settle(dev_triggers, retry_pending=False)
+    trim_fired()
+    if not args.dry_run:
+        write_json(state_path, state, indent=1, sort_keys=True)
+
+    seen_keys = set()
+    fresh = []
+    for t in fresh_all:
+        if t["key"] in seen_keys:
+            continue
+        seen_keys.add(t["key"])
+        fresh.append(t)
+
+    # ---- research sections (SPD-43/44/55): after the webhook and state writes, each with its own slice,
+    # so a slow Koios or a research bug can never cost the webhook, state.json or kill_status.json (M1)
+    def build_summary(big_moves, whale_ledger, liquidity=None, veto_summary=None):
+        return {
+            "at": now_iso(), "basis": chain.basis, "dry_run": args.dry_run, "baseline": baseline,
+            "launches": len(launches), "new_launches": 0 if baseline else len(new_ids), "candidates": len(cands),
+            "passed_k_y": [r["ticker"] for r in passed], "thresholds": {k: v for k, v in th.items() if k != "source"},
+            "market_age_min": market_age_min, "ada_usd": ada_usd, "whale": {k: v for k, v in (whale_summary or {}).items()},
+            "first_block_hits": fb_hits, "triggers": [{k: v for k, v in t.items() if k not in NOPUB} for t in fresh],
+            "webhook_sent": sent_any, "flags_new": len(new_flags), "dev_checks": dev_summary,
+            "big_moves": big_moves, "whale_ledger": whale_ledger, "liquidity_moves": liquidity,
+            "vetoes": veto_summary,
+            "data_failures": http.failures, "api_calls": http.calls, "results": results,
+        }
+
+    summary_path = os.path.join(args.data_dir, "last-run.json" if not args.dry_run else "dry-run.json")
+    write_json(summary_path, build_summary(None, None), indent=1)  # written before research too (nice-to-have)
+    note_koios_pause(http)  # a 429 during dev checks: Koios stays paused ~60s, then resumes for research
+    # ---- SPD-44 founder whale ledger first, for at most whale_ledger.budget_s, so big_moves cannot skip it.
+    http.deadline = job_deadline(cfg, t_start, time.time(), "whale_ledger")
+    whale_ledger = None
+    if WL.wl_cfg(cfg)["enabled"]:
+        try:
+            whale_ledger = WL.run(http, cfg, args.data_dir, args.dry_run, time.time(), lp_pols, deadline=http.deadline,
+                                  cache_dir=args.cache_dir, owner_env=os.environ.get("PRIVACY_GUARD_PATTERNS", ""))
+            print(f"whale ledger: {json.dumps(whale_ledger)}")
+        except (SystemExit, Exception) as e:  # research must never stop the webhook/state (M1)
+            http._fail("whale_ledger", type(e).__name__)
+
+    # ---- SPD-43 big moves. Reserved slice, plus any slack before the liquidity reserve. Never a trigger.
+    http.deadline = job_deadline(cfg, t_start, time.time(), "big_moves")
+    big_moves = None
+    if BM.bm_cfg(cfg)["enabled"]:
+        meta = {}
+        for r in results:
+            if r.get("unit") and r["unit"] not in meta:
+                meta[r["unit"]] = {"ticker": r.get("ticker"), "ada_side": r.get("ada_side"), "decimals": r.get("decimals"),
+                                   "price_ada": r.get("price_ada")}
+        try:
+            big_moves, _ = BM.run(http, cfg, meta, args.cache_dir, args.data_dir, args.dry_run, time.time(), lp_pols,
+                                  os.environ.get("PRIVACY_GUARD_PATTERNS", ""), deadline=http.deadline)
+            print(f"big moves: {json.dumps(big_moves)}")
+        except (SystemExit, Exception) as e:  # research must never stop the webhook/state (M1)
+            http._fail("big_moves", type(e).__name__)
+
+    # ---- SPD-55 liquidity moves. Own budget_s from this instant, after whale_ledger and big_moves.
+    # Earlier slices still reserve that budget inside the hard cap. If they overran it, this slice
+    # keeps the window anyway, stopping at LATE_SLICE_END_S. A failure here does not touch the webhook.
+    liquidity = None
+    try:
+        bc_lm = LM.lm_cfg(cfg)
+        if bc_lm.get("enabled", True):
+            http.deadline = job_deadline(cfg, t_start, time.time(), "liquidity_moves")
+            units_by_ticker = {}
+            try:
+                pulse_doc, _ = load_desk_json("solada/pulse.json", desk, args.repo)
+                units_by_ticker = pulse_units(pulse_doc)
+            except SystemExit:
+                units_by_ticker = {}
+            for tk, t in tracked.items():
+                if t.get("asset_id"):
+                    units_by_ticker[str(tk).upper()] = t["asset_id"]
+            for tk, u in (cfg.get("units") or {}).items():
+                if isinstance(tk, str) and not tk.startswith("_") and isinstance(u, str):
+                    units_by_ticker.setdefault(tk.upper(), u)
+            meta_dec = {}
+            for r in results:
+                if r.get("unit"):
+                    meta_dec[str(r["unit"]).lower()] = {"decimals": r.get("decimals"), "price_ada": r.get("price_ada")}
+            liquidity = LM.run(
+                http, cfg, DC.cardano_top10(log), units_by_ticker, meta_dec, lp_pols,
+                args.data_dir, args.cache_dir, args.dry_run, time.time(), bf_key=bf_key, deadline=http.deadline,
+                owner_env=os.environ.get("PRIVACY_GUARD_PATTERNS", ""),
+                watch=flagmod.watch_map(cfg.get("flags") or {}, wkeys))
+            print(f"liquidity moves: {json.dumps(liquidity)}")
+    except (SystemExit, Exception) as e:
+        http._fail("liquidity_moves", type(e).__name__)
+
+    http.deadline = None
+
+    # ---- SPD-65 vetoes. Local read of the two files above. No chain calls, no webhook, fail-soft.
+    veto_summary = None
+    try:
+        veto_summary = vetoes_mod.run(
+            args.data_dir, cfg, args.dry_run, owner_env=os.environ.get("PRIVACY_GUARD_PATTERNS", ""), now_s=time.time())
+        print(f"vetoes: {json.dumps(veto_summary)}")
+    except (SystemExit, Exception) as e:
+        http._fail("vetoes", type(e).__name__)
+
+    summary = build_summary(big_moves, whale_ledger, liquidity, veto_summary)
+    write_json(summary_path, summary, indent=1)
     print(f"whale: {json.dumps(summary['whale'])[:300]}")
     print(json.dumps({k: summary[k] for k in ("launches", "new_launches", "candidates", "passed_k_y", "first_block_hits", "data_failures", "api_calls")}))
     for t in fresh:

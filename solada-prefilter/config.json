@@ -23,6 +23,9 @@
   "whale": {
     "handle": "cockwhale",
     "handle_policy": "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a",
+    "stake": "stake1uylu74g0f466kj7s7ptmy40sn7cwdt3zvnswccmhxkujmtq0zqllm",
+    "stake_prefix": "uylu74g0",
+    "_stake_note": "Public third-party key of $cockwhale (founder whale), not the owner's. Listed in scripts/privacy-public-keys.txt so the privacy guard allows this exact value; output carries only its tag.",
     "min_ada_equiv": 2000,
     "min_position_pct": 10,
     "always_tickers": [
@@ -31,7 +34,12 @@
     ],
     "max_price_lookups": 15,
     "max_ada_leg_txs": 50,
-    "max_decimals_lookups": 15
+    "max_decimals_lookups": 15,
+    "dust": {
+      "_note": "A whale move's % of position is reported (and can trigger) only when the move is worth >= pct_min_ada ADA and >= pct_min_qty whole tokens; smaller moves are marked dust (e.g. 0.75 STRIKE = 6.4% of a 12-token leftover).",
+      "pct_min_ada": 25,
+      "pct_min_qty": 1
+    }
   },
   "solana": {
     "ignore_owners": [
@@ -40,7 +48,7 @@
     "max_lookups": 10
   },
   "pace_seconds": {
-    "geckoterminal": 2.2,
+    "geckoterminal": 3.0,
     "dexscreener": 0.5,
     "blockfrost": 0.12,
     "koios": 0.6,
@@ -140,6 +148,99 @@
       "watch": [
         "uy3gz02eqt"
       ]
+    },
+    "_exclude_tags_note": "Tags (w-xxxxxxxx = sha256 of the stake key or address) left out of holder_concentration / concentration_jump and the early-buyer cluster flags: protocol wallets, not holders. w-f46e5a31 = Solada curve reserve (Snek, Oct 26). Map tag -> label.",
+    "exclude_tags": {
+      "w-f46e5a31": "solada_curve_reserve"
     }
-  }
+  },
+  "geckoterminal": {
+    "_note": "Free API is ~30 calls/min per IP, shared with other jobs on the runner. 429s retry with backoff (Retry-After honoured, capped); after max_429_failures failed lookups GT is skipped for the rest of the run (DexScreener fallback). Lookups are cached per unit within a run.",
+    "retry_backoff_seconds": [
+      6,
+      15
+    ],
+    "max_429_failures": 3
+  },
+  "big_moves": {
+    "_note": "SPD-43 big-move detector (big_moves.py). Research rows only: never triggers, never the webhook. Free Koios public tier (5k req/day, 100 req/10s): max_calls per run, utxo_batch hashes per POST (1 KB body limit). budget_s is the slice earlier jobs must leave for this one. The job may also use slack before the liquidity reserve. max_calls stays 80.",
+    "enabled": true,
+    "budget_s": 150,
+    "min_ada": 5000,
+    "min_pool_pct": 10,
+    "window_h": 24,
+    "keep_h": 72,
+    "max_units": 12,
+    "max_txs_per_unit": 100,
+    "utxo_batch": 13,
+    "max_calls": 80
+  },
+  "whale_ledger": {
+    "_note": "SPD-44 founder whale ledger (whale_ledger.py). Research only, never triggers or the webhook. Free Koios public tier: max_calls per run, utxo_batch hashes per POST, max_txs per run (backlog resumes next run). budget_s is the slice it runs first inside the shared research deadline, so big_moves cannot exhaust that deadline before the ledger (PR #31).",
+    "enabled": true,
+    "budget_s": 90,
+    "max_txs": 100,
+    "utxo_batch": 13,
+    "max_calls": 60,
+    "max_bf_calls": 120,
+    "keep_rows": 3000,
+    "keep_seen": 20000,
+    "order_min_ada": 10,
+    "min_ada_row": 1.0
+  },
+  "dev_checks": {
+    "_note": "Phase 1 dev checks (dev_checks.py). budget_s is configurable (180). max_calls stays 36 and max_bf_calls stays 50: Koios first, Blockfrost fallback via the existing BLOCKFROST_PROJECT_ID, pace under 10/s. The primary webhook fires before this budget. The scan runs after that post and yields first if run start + 720s cannot also hold the whale, big_moves and liquidity reserves. A Koios 429 stops Koios here and pauses it for ~60s, then Koios resumes; the breaker is not tripped. On a Koios outage each scanned row gets about 8 Blockfrost calls (newest transactions first). Rows that do not fit that floor are marked budget and picked up on a later run. A new dev sell (unseen sell tx, changed_since_last) on a tracked token may add one dev_sell trigger, posted after the scan and independent of whether every row finished. Unchanged state does not re-fire. Rows are keyed by policy + asset name. min_sell_ada is a dust floor. Curve reserve stays in flags.exclude_tags and is left out of holder and seller logic. dev_buy_ada, dev_locked_pct and unlock_date are phase 2 (always null). LP pulls are liquidity_moves.py.",
+    "enabled": true,
+    "budget_s": 180,
+    "max_calls": 36,
+    "max_bf_calls": 50,
+    "max_txs_per_unit": 25,
+    "max_pages_per_unit": 2,
+    "utxo_batch": 13,
+    "max_launches": 8,
+    "bf_per_unit": 8,
+    "max_prior": 3,
+    "rug_bag_pct": 80,
+    "late_min_minutes": 30,
+    "rug_min_other_holders": 1,
+    "min_sell_ada": 25.0,
+    "inactive_h": 24,
+    "serial_3h_h": 3,
+    "serial_7d_h": 168,
+    "serial_caution_3h": 2,
+    "serial_caution_7d": 3,
+    "drawdown_caution_pct": 80
+  },
+  "liquidity_moves": {
+    "_note": "SPD-55 pool reserves for Snek cardano_top10 (liquidity_moves.py). Research only: no webhook, no desk rule, no kill line. Runs after whale_ledger and big_moves. budget_s (50) is reserved inside the run-start + 720s cap, and the slice also gets that many seconds from the moment it starts if an earlier slice already spent the reserve. A late window stops at run start + 770s (10s before the 780s process kill). Koios max_calls 36 per run (1 tip + one asset_txs page per pool marker + tx_info batches under 1 KB). Blockfrost only when a Koios read fails, max_bf_calls 12. min_swap_ada / min_lp_ada are event floors. ahead_of_dump is the Balanced block below.",
+    "enabled": true,
+    "budget_s": 50,
+    "max_calls": 36,
+    "max_bf_calls": 12,
+    "utxo_batch": 10,
+    "max_tokens": 10,
+    "max_txs_per_pool": 15,
+    "discover_txs": 12,
+    "discover_every_h": 24,
+    "min_swap_ada": 5000,
+    "min_lp_ada": 1000,
+    "min_pool_ada": 500,
+    "ahead_of_dump": {
+      "_note": "Balanced floors. A pull counts only at or above pull_reserve_pct of the pool reserve (ADA before the pull) and pull_min_ada. ahead_of_dump is set only when sells from that same party (same w- hash or same dev/role tag) inside window_h total at least sell_of_pull_pct of the pulled ADA.",
+      "pull_reserve_pct": 20,
+      "pull_min_ada": 2000,
+      "sell_of_pull_pct": 25,
+      "window_h": 6
+    },
+    "keep_h": 72,
+    "keep_rows": 400,
+    "keep_seen": 4000
+  },
+  "vetoes": {
+    "_note": "SPD-65 research vetoes (vetoes.py). Derived from dev_checks.json and liquidity_moves.json after those jobs, no chain calls. Never a buy signal, never a webhook, never a desk rule or kill line. lp_pulled counts a Balanced ahead_of_dump (liquidity_moves.ahead_of_dump) or a dev/role actor_tag. A loose ahead_of_dump flag does not count. max_age_h (5, about two 2h runs) drops a source whose at is older than that; a corrupt source keeps the previous vetoes.json. Evidence is tags only. enabled can turn the file off. None of this changes desk floors.",
+    "enabled": true,
+    "max_age_h": 5
+  },
+  "_research_budget_note": "Doc-only. Not read by job_deadline or research_deadline. Sum of the reserved whale_ledger + big_moves + liquidity_moves slices (90+150+50). dev_checks.budget_s (180) sits outside this sum and runs after the primary webhook. big_moves may also use slack before the liquidity reserve. dev_checks, whale_ledger and big_moves stop at run start + 720s. liquidity_moves keeps its own budget_s from the moment it starts and stops by run start + 770s. The process is killed at 780s and the workflow job is 20 minutes, leaving about 420s for checkout, tests, cache, the privacy guard, and the commit/push retries.",
+  "research_budget_s": 290
 }

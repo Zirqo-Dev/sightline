@@ -7,7 +7,7 @@ from jsonschema import Draft202012Validator
 ROOT=os.path.join(os.path.dirname(os.path.abspath(__file__)),"..")
 SCHEMA=os.path.abspath(os.path.join(ROOT,"schema"))
 os.chdir(sys.argv[1] if len(sys.argv)>1 else ROOT)
-S={k:Draft202012Validator(json.load(open(f"{SCHEMA}/{k}.schema.json"))) for k in("paper-book","run-log","brief","pulse")}
+S={k:Draft202012Validator(json.load(open(f"{SCHEMA}/{k}.schema.json"))) for k in("paper-book","run-log","brief","pulse","solada-vetoes")}
 for v in S.values(): v.check_schema(v.schema)
 jobs=[]
 for d in json.load(open("desks.json"))["desks"]:
@@ -23,6 +23,8 @@ for d in json.load(open("desks.json"))["desks"]:
         jobs+= [(f,"pulse") for f in sorted(glob.glob(os.path.join(arch,"pulse-*.json")))]
 for fix in ("scripts/fixtures/pulse-example.json", "scripts/fixtures/pulse-factors.json"):
     if os.path.exists(fix): jobs.append((fix,"pulse"))
+for fix in ("solada-prefilter/vetoes.json", "solada-prefilter/tests/fixtures/vetoes.json"):
+    if os.path.exists(fix): jobs.append((fix,"solada-vetoes"))
 bad=0
 for f,k in jobs:
     if not os.path.exists(f): print(f"MISSING {f}"); bad+=1; continue

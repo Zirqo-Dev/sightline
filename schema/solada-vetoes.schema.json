@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zirqo-dev.github.io/sightline/schema/solada-vetoes.schema.json",
+  "title": "Solada prefilter research vetoes",
+  "description": "Zero-AI hard vetoes for the Cardano desk. Research only. buy_signal is always false. Evidence values are wallet tags only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "at", "desk", "note", "buy_signal", "sources", "tokens"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "desk": {"const": "solada"},
+    "note": {"type": "string", "minLength": 1},
+    "buy_signal": {"const": false},
+    "sources": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {"enum": ["dev_checks", "liquidity_moves"]}
+    },
+    "stale": {
+      "type": "array",
+      "items": {"enum": ["dev_checks", "liquidity_moves"]}
+    },
+    "tokens": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/token"}
+    }
+  },
+  "$defs": {
+    "tag": {
+      "anyOf": [
+        {"type": "string", "pattern": "^w-[0-9a-f]{8}$"},
+        {"type": "string", "enum": [
+          "first_block_sniper", "flip_pair", "founder_whale", "pool_preseeder",
+          "repeat_launcher", "swarm_launcher", "watch", "wojaks_dumper", "wojaks_whale"
+        ]}
+      ]
+    },
+    "token": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ticker", "vetoes"],
+      "properties": {
+        "ticker": {"type": "string", "pattern": "^[A-Z0-9][A-Z0-9._-]{0,31}$"},
+        "policy_short": {"type": "string", "pattern": "^[0-9a-f]{8,56}$"},
+        "unit": {"type": "string", "pattern": "^[0-9a-f]{56,200}$"},
+        "vetoes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/veto"}
+        }
+      }
+    },
+    "veto": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "evidence"],
+      "properties": {
+        "code": {"enum": ["dev_sold", "serial_launcher", "lp_pulled"]},
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "dev_tag": {"$ref": "#/$defs/tag"},
+            "actor_tag": {"$ref": "#/$defs/tag"}
+          }
+        }
+      }
+    }
+  }
+}

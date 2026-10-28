@@ -4,6 +4,11 @@
 #   --root DIR: scan the git checkout at DIR (e.g. a desk-data worktree) with this script's rules.
 # Extra private patterns (one ERE per line): env PRIVACY_GUARD_PATTERNS and/or gitignored .privacy-patterns
 set -u
+# Resolve this script's directory before any cd. In --root mode the workflow
+# runs `bash main/scripts/privacy-guard.sh --root desk-data`; cd "$2" first
+# makes that relative path miss, so privacy-public-keys.txt never loads
+# (cd: main/scripts: No such file or directory).
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ "${1:-}" = "--root" ]; then
   [ -d "${2:-}" ] || { echo "privacy-guard: --root needs a directory" >&2; exit 2; }
   cd "$2" || exit 2; shift 2; root_mode=1
@@ -24,6 +29,7 @@ patterns=(
   'Bousky holds'
   'Bousky wallet'
 )
+n_generic=${#patterns[@]}  # patterns above are generic; any added below are owner-specific
 # Owner-specific wallet patterns come ONLY from the PRIVACY_GUARD_PATTERNS secret (one ERE per line)
 # or a gitignored .privacy-patterns file. They are never printed: matches report a pattern number only.
 if [ -n "${PRIVACY_GUARD_PATTERNS:-}" ]; then
@@ -35,11 +41,92 @@ if [ -f .privacy-patterns ]; then
   while IFS= read -r p; do case "$p" in ''|'#'*) ;; *) patterns+=("$p");; esac; done < .privacy-patterns
 fi
 
+# Exact public third-party keys (scripts/privacy-public-keys.txt next to this script) are masked before the
+# generic checks, so e.g. a founder whale's key in config can be published. Owner patterns still apply to them.
+# Hardened (review M4): every entry must be one full stake key (^stake1 + 53 bech32 chars, nothing else); masking
+# is OFF when no owner patterns are loaded (an allowlist must never be checked against an empty owner list); only
+# whole tokens are masked (a longer id containing the key is not hidden); and only in the files listed in
+# mask_files (the key lives in solada-prefilter/config.json; anywhere else it is still a failure).
+allow_file="$script_dir/privacy-public-keys.txt"
+mask_files=("solada-prefilter/config.json")
+allow=()
+if [ -f "$allow_file" ]; then
+  while IFS= read -r a; do a="${a%$'\r'}"; case "$a" in ''|'#'*) ;; *) allow+=("$a");; esac; done < "$allow_file"
+fi
+for a in "${allow[@]}"; do
+  if ! printf '%s\n' "$a" | grep -qxE -- 'stake1[02-9ac-hj-np-z]{53}'; then
+    echo "PRIVACY GUARD FAILED: an entry in privacy-public-keys.txt is not exactly one full stake key" >&2; exit 1
+  fi
+  for p in "${patterns[@]:$n_generic}"; do
+    if printf '%s\n' "$a" | grep -qE -- "$p"; then
+      echo "PRIVACY GUARD FAILED: an entry in privacy-public-keys.txt matches an owner pattern" >&2; exit 1
+    fi
+  done
+done
+# Re-review M4: (1) every entry must be pinned to solada-prefilter/config.json whale.stake (the one public key it
+# exists for); (2) the owner's stake key is derived from any owner pattern that contains a full base address
+# (addr1q/r/s/t... with a stake part) and must not be allowlisted, so a secret listing only the owner's payment
+# address still protects the owner's stake key. Nothing is printed except a generic failure line.
+if [ ${#allow[@]} -gt 0 ]; then
+  here="$script_dir"
+  pycode=$(cat <<'PYEOF'
+import json, os, re, sys
+src, allow = sys.argv[1], sys.argv[2:]
+sys.path.insert(0, src)
+try:
+    import flags as F
+    pinned = (json.load(open(os.path.join(src, "config.json"))).get("whale") or {}).get("stake")
+except Exception:
+    sys.stderr.write("PRIVACY GUARD FAILED: cannot read solada-prefilter/config.json to pin the allowlist\n"); sys.exit(1)
+if any(a != pinned for a in allow):
+    sys.stderr.write("PRIVACY GUARD FAILED: a privacy-public-keys.txt entry is not config.json whale.stake\n"); sys.exit(1)
+owner_stakes = set()
+for line in sys.stdin:
+    for m in re.findall(r"addr1[02-9ac-hj-np-z]{50,}", line):
+        st = F.addr_info(m)[0]
+        if st:
+            owner_stakes.add(st)
+if owner_stakes & set(allow):
+    sys.stderr.write("PRIVACY GUARD FAILED: an allowlisted key is the stake key of an owner address pattern\n"); sys.exit(1)
+PYEOF
+)
+  if ! printf '%s\n' "${patterns[@]:$n_generic}" | python3 -c "$pycode" "$here/../solada-prefilter" "${allow[@]}"; then exit 1; fi
+fi
+if [ ${#allow[@]} -gt 0 ] && [ ${#patterns[@]} -le "$n_generic" ]; then
+  echo "::warning::privacy-guard: no owner patterns loaded; the public-key allowlist is NOT applied (fail closed)" >&2
+  allow=()
+fi
+mask() {  # stdin -> stdout with allowlisted exact values (whole tokens only) replaced
+  if [ ${#allow[@]} -eq 0 ]; then cat; return; fi
+  python3 -c 'import re, sys
+al=[re.compile(r"(?<![0-9a-z_])" + re.escape(a) + r"(?![0-9a-z_])") for a in sys.argv[1:]]
+for line in sys.stdin:
+    for r in al: line=r.sub("<public-key>", line)
+    sys.stdout.write(line)' "${allow[@]}"
+}
+maskable() { local m; for m in "${mask_files[@]}"; do [ "$1" = "$m" ] && return 0; done; return 1; }
+
 if [ $# -gt 0 ]; then
   files=("$@")
 else
   mapfile -t files < <(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null)
   [ ${#files[@]} -eq 0 ] && mapfile -t files < <(git ls-files)
+fi
+
+# desk-data publishes solada-prefilter/dev_checks.json, liquidity_moves.json and vetoes.json.
+# In --root mode (desk-data-guard and the prefilter push) those files are always
+# part of the scan, even if the caller passed a list that left them out. Pattern
+# and allowlist handling below is unchanged; none of these files are in mask_files, so an
+# allowlisted key here still fails.
+if [ -n "${root_mode:-}" ]; then
+  for need in solada-prefilter/dev_checks.json solada-prefilter/liquidity_moves.json solada-prefilter/vetoes.json; do
+    [ -f "$need" ] || continue
+    have=0
+    for f in "${files[@]}"; do
+      [ "$f" = "$need" ] && have=1 && break
+    done
+    [ "$have" -eq 0 ] && files+=("$need")
+  done
 fi
 
 if [ -n "${root_mode:-}" ] && [ ${#files[@]} -eq 0 ]; then
@@ -49,14 +136,140 @@ self="scripts/privacy-guard.sh"
 fail=0
 for f in "${files[@]}"; do
   [ -f "$f" ] || continue
-  case "$f" in "$self"|PRIVACY.md|.privacy-patterns|.github/workflows/privacy-guard.yml|.github/workflows/desk-data-guard.yml) continue;; esac
-  for p in "${patterns[@]}"; do
-    if hits=$(grep -nEI -- "$p" "$f" 2>/dev/null); then
+  case "$f" in "$self"|PRIVACY.md|.privacy-patterns|.github/workflows/privacy-guard.yml|.github/workflows/desk-data-guard.yml|scripts/privacy-public-keys.txt) continue;; esac
+  grep -qI . "$f" 2>/dev/null || continue  # binary / empty
+  for i in "${!patterns[@]}"; do
+    p="${patterns[$i]}"
+    if [ "$i" -lt "$n_generic" ] && maskable "$f"; then hits=$(mask < "$f" | grep -nEI -- "$p"); else hits=$(grep -nEI -- "$p" "$f" 2>/dev/null); fi
+    if [ -n "$hits" ]; then
       n=$(printf '%s\n' "$hits" | wc -l)
       echo "PRIVACY GUARD: $f: $n line(s) match a private pattern (#$(( $(printf '%s\n' "${patterns[@]}" | grep -nFx -- "$p" | head -1 | cut -d: -f1) )) ): lines $(printf '%s\n' "$hits" | cut -d: -f1 | head -10 | paste -sd, -)" >&2
       fail=1
     fi
   done
+  # dev_tag must be a w- hash or a role label from config. A watch-list prefix is not a tag.
+  # Entry indexes only: the value itself is never printed. Allowlist masking is not applied.
+  if [ "$f" = "solada-prefilter/dev_checks.json" ] || [ "$(basename "$f")" = "dev_checks.json" -a "$(basename "$(dirname "$f")")" = "solada-prefilter" ]; then
+    if ! python3 -c '
+import json, os, re, sys
+path, cfg_path = sys.argv[1], sys.argv[2]
+try:
+    cfg = json.load(open(cfg_path))
+    doc = json.load(open(path))
+except Exception:
+    sys.stderr.write("PRIVACY GUARD FAILED: cannot read dev_checks.json\n")
+    sys.exit(1)
+roles = set()
+tags = ((cfg.get("flags") or {}).get("snek_prefix_tags") or {})
+role_re = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
+for k in tags:
+    if isinstance(k, str) and not k.startswith("_") and role_re.fullmatch(k):
+        roles.add(k)
+ok = re.compile(r"^w-[0-9a-f]{8}$")
+bad = []
+for i, e in enumerate(doc.get("entries") or []):
+    if not isinstance(e, dict) or "dev_tag" not in e:
+        continue
+    tag = e.get("dev_tag")
+    if tag is None or (isinstance(tag, str) and (ok.fullmatch(tag) or tag in roles)):
+        continue
+    bad.append(str(i))
+if bad:
+    sys.stderr.write("PRIVACY GUARD: %s: dev_tag is not a role label or w- hash (entries %s)\n" % (path, ",".join(bad[:10])))
+    sys.exit(1)
+' "$f" "$script_dir/../solada-prefilter/config.json"; then
+      fail=1
+    fi
+  fi
+  # actor_tag must be a w- hash or a role label from config. A prefix, address, or stake key is not a tag.
+  # Entry indexes only: the value itself is never printed. Allowlist masking is not applied.
+  if [ "$f" = "solada-prefilter/liquidity_moves.json" ] || [ "$(basename "$f")" = "liquidity_moves.json" -a "$(basename "$(dirname "$f")")" = "solada-prefilter" ]; then
+    if ! python3 -c '
+import json, os, re, sys
+path, cfg_path = sys.argv[1], sys.argv[2]
+try:
+    cfg = json.load(open(cfg_path))
+    doc = json.load(open(path))
+except Exception:
+    sys.stderr.write("PRIVACY GUARD FAILED: cannot read liquidity_moves.json\n")
+    sys.exit(1)
+roles = set()
+tags = ((cfg.get("flags") or {}).get("snek_prefix_tags") or {})
+role_re = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
+for k in tags:
+    if isinstance(k, str) and not k.startswith("_") and role_re.fullmatch(k):
+        roles.add(k)
+ok = re.compile(r"^w-[0-9a-f]{8}$")
+bad = []
+rows = []
+for key in ("moves", "pools"):
+    block = doc.get(key)
+    if isinstance(block, list):
+        rows.extend(block)
+for i, e in enumerate(rows):
+    if not isinstance(e, dict) or "actor_tag" not in e:
+        continue
+    tag = e.get("actor_tag")
+    if tag is None or (isinstance(tag, str) and (ok.fullmatch(tag) or tag in roles)):
+        continue
+    bad.append(str(i))
+if bad:
+    sys.stderr.write("PRIVACY GUARD: %s: actor_tag is not a role label or w- hash (entries %s)\n" % (path, ",".join(bad[:10])))
+    sys.exit(1)
+' "$f" "$script_dir/../solada-prefilter/config.json"; then
+      fail=1
+    fi
+  fi
+  # Veto evidence is tags only: dev_tag and actor_tag, each a w- hash or a role label.
+  # Indexes only: the value itself is never printed. Allowlist masking is not applied.
+  if [ "$f" = "solada-prefilter/vetoes.json" ] || [ "$(basename "$f")" = "vetoes.json" -a "$(basename "$(dirname "$f")")" = "solada-prefilter" ]; then
+    if ! python3 -c '
+import json, re, sys
+path, cfg_path = sys.argv[1], sys.argv[2]
+try:
+    cfg = json.load(open(cfg_path))
+    doc = json.load(open(path))
+except Exception:
+    sys.stderr.write("PRIVACY GUARD FAILED: cannot read vetoes.json\n")
+    sys.exit(1)
+roles = set()
+tags = ((cfg.get("flags") or {}).get("snek_prefix_tags") or {})
+role_re = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
+for k in tags:
+    if isinstance(k, str) and not k.startswith("_") and role_re.fullmatch(k):
+        roles.add(k)
+ok = re.compile(r"^w-[0-9a-f]{8}$")
+bad = []
+tokens = doc.get("tokens") if isinstance(doc, dict) else None
+if not isinstance(tokens, list):
+    sys.stderr.write("PRIVACY GUARD FAILED: vetoes.json has no tokens list\n")
+    sys.exit(1)
+for i, tok in enumerate(tokens):
+    if not isinstance(tok, dict):
+        bad.append(str(i))
+        continue
+    for v in tok.get("vetoes") or []:
+        if not isinstance(v, dict):
+            bad.append(str(i))
+            continue
+        if not isinstance(v.get("evidence"), dict):
+            bad.append(str(i))
+            continue
+        ev = v["evidence"]
+        if set(ev) - {"dev_tag", "actor_tag"}:
+            bad.append(str(i))
+            continue
+        for tag in ev.values():
+            if tag is None or (isinstance(tag, str) and (ok.fullmatch(tag) or tag in roles)):
+                continue
+            bad.append(str(i))
+if bad:
+    sys.stderr.write("PRIVACY GUARD: %s: veto evidence is not a role label or w- hash (tokens %s)\n" % (path, ",".join(bad[:10])))
+    sys.exit(1)
+' "$f" "$script_dir/../solada-prefilter/config.json"; then
+      fail=1
+    fi
+  fi
 done
 if [ $fail -ne 0 ]; then
   echo "PRIVACY GUARD FAILED: owner wallet data must not be committed. See PRIVACY.md." >&2

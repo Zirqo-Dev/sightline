@@ -40,6 +40,8 @@ for (const rel of jsFiles()) {
   if (rel === "dashboard/pages.js" || rel === "dashboard/core.js") continue;
   vm.runInNewContext(fs.readFileSync(path.join(root, rel), "utf8"), sandbox);
 }
+// pages.js installs nav helpers and returns when there is no document (this sandbox).
+vm.runInNewContext(fs.readFileSync(path.join(root, "dashboard/pages.js"), "utf8"), sandbox);
 const S = sandbox.S;
 assert(S && typeof S.score === "function" && typeof S.killDistance === "function", "dashboard core did not load");
 
@@ -392,7 +394,7 @@ assert(!changed.some(b => (b.json.open || []).some(t => t.ticker === "CATE" || t
 
 /* Desk data is read from the desk-data branch (raw.githubusercontent), main's copy is the fallback. */
 for (const p of ["solada/log.json", "nft/log.json", "solada/pulse.json", "nft/pulse.json", "solada/paper.json",
-  "solada/pumpfun/paper.json", "nft/paper.json", "solada/briefs/2026-10-19.json", "nft/site/intel.json"]) {
+  "solada/pumpfun/paper.json", "nft/paper.json", "solada/briefs/2026-10-19.json", "nft/site/intel.json", "solada/forensics/panel.json"]) {
   assert(S.isDeskData(p), p + " should be read from desk-data");
   assert(S.deskDataUrl(p).startsWith("https://raw.githubusercontent.com/Zirqo-Dev/sightline/desk-data/" + p + "?ts="), p + " desk-data url");
 }
@@ -507,6 +509,38 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(pages.includes("healthLine(health)") && pages.includes("scan only"), "home card uses health.json");
   const build = fs.readFileSync(path.join(root, "scripts/build-site.py"), "utf8");
   assert(build.includes("def bust(") && build.includes("?v="), "build adds cache-busting asset versions");
+}
+
+// Top nav: label and order only. solada route, theme key, status dots, and desk title stay.
+{
+  assert(typeof S.navTabs === "function" && typeof S.navMarkup === "function" && typeof S.canonDesk === "function", "nav helpers installed");
+  const idx = load("desks.json");
+  const solada = idx.desks.find(d => d.id === "solada");
+  assert(solada && solada.name === "Snek Sentinel: Solada/Cardano", "solada desk title is unchanged");
+  assert(solada.log === "solada/log.json" && solada.briefs === "solada/briefs/" && solada.pulse === "solada/pulse.json", "solada data paths unchanged");
+  assert(idx.desks.map(d => d.id).join(",") === "solada,nft,solana", "desks.json order is unchanged");
+  const live = idx.desks.map(d => ({ id: d.id, status: d.status }));
+  const html = S.navMarkup("solada", live);
+  const labels = [...html.matchAll(/>(?:<span class="dot[^"]*"><\/span>)?([^<]+)<\/a>/g)].map(m => m[1]);
+  assert(labels.join(",") === "HOME,CARDANO,SOLANA,NFT,BRIEFS", "nav labels and order, got " + labels.join(","));
+  assert(html.includes('href="#/desk/solada"') && html.includes('data-d="solada"'), "CARDANO tab keeps the solada route and theme key");
+  assert(html.includes('href="#/desk/solada" class="on" data-d="solada"><span class="dot "></span>CARDANO'), "active solada tab is CARDANO with a live dot");
+  assert(!html.includes(">SOLADA<") && !html.includes("#/desk/cardano"), "nav does not rename the route");
+  assert(S.canonDesk("cardano") === "solada" && S.canonDesk("solada") === "solada", "cardano alias resolves to solada");
+  assert(S.canonDesk("nft") === "nft" && S.canonDesk("solana") === "solana" && S.canonDesk("home") === "home" && S.canonDesk("briefs") === "briefs", "other routes unchanged");
+  assert(S.navMarkup("cardano", live).includes('href="#/desk/solada" class="on"'), "cardano alias highlights the CARDANO tab");
+  assert(S.navMarkup("home", live).includes('href="#/" class="on" data-d="home">HOME'), "home tab highlights");
+  assert(S.navMarkup("briefs", live).includes('href="#/briefs" class="on" data-d="briefs">BRIEFS'), "briefs tab highlights");
+  const pending = S.navMarkup("home", [{ id: "solada", status: "paused" }, { id: "nft", status: "active" }, { id: "solana", status: "active" }]);
+  assert(pending.includes('data-d="solada"><span class="dot pending"></span>CARDANO'), "status dot still follows desk status");
+  assert(pending.includes('data-d="solana"><span class="dot "></span>SOLANA') && pending.includes('data-d="nft"><span class="dot "></span>NFT'), "active desks keep the live dot");
+  const extra = S.navTabs([{ id: "nft", status: "active" }, { id: "zeta", status: "active" }, { id: "solada", status: "active" }, { id: "solana", status: "active" }]);
+  assert(extra.map(t => t.label).join(",") === "HOME,CARDANO,SOLANA,NFT,ZETA,BRIEFS", "unknown desks stay after the fixed order, got " + extra.map(t => t.label).join(","));
+  assert(extra.map(t => t.href).join(",") === "#/,#/desk/solada,#/desk/solana,#/desk/nft,#/desk/zeta,#/briefs", "hrefs stay on desk ids");
+  const pages = fs.readFileSync(path.join(root, "dashboard/pages.js"), "utf8");
+  assert(pages.includes("canonDesk(id)") && pages.includes("navMarkup(id, desks)"), "desk page resolves aliases before render");
+  const css = fs.readFileSync(path.join(root, "dashboard/app.css"), "utf8");
+  assert(css.includes('body[data-desk="solada"]') && css.includes('nav a[data-d="solada"]') && css.includes("#0033AD"), "Cardano-blue theme stays keyed to solada");
 }
 
 console.log("smoke-dashboard: OK");

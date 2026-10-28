@@ -36,12 +36,13 @@ def lp_dex(unit, pols):
     return pols.get((unit or "")[:56].lower())
 
 
-def ada_leg_by_unit(stake, utxos, addr_info, pols=None):
-    """{unit: ada} from the wallet's own net lovelace in txs that moved exactly one (non-LP) token.
+def ada_leg_detail(stake, utxos, addr_info, pols=None):
+    """{unit: {"ada": ada, "qty": raw}} from the wallet's own net lovelace in txs that moved exactly one (non-LP) token.
 
     utxos = {tx: {'inputs': [(addr, lovelace, {unit: qty})], 'outputs': [...]}}.
     A tx counts only when token and ADA move in opposite directions (a swap leg).
-    Txs that touch LP tokens (liquidity add/remove) are skipped."""
+    Txs that touch LP tokens (liquidity add/remove) are skipped. qty is the raw token amount those
+    legs paid for, so callers can tell when the tx window does not match the snapshot delta."""
     pols = pols or {}
     out = {}
     for tx in utxos.values():
@@ -58,22 +59,62 @@ def ada_leg_by_unit(stake, utxos, addr_info, pols=None):
             continue
         (u, q), = moved.items()
         if lov and (q > 0) != (lov > 0):
-            out[u] = round(out.get(u, 0) + abs(lov) / 1e6, 6)
+            e = out.setdefault(u, {"ada": 0.0, "qty": 0})
+            e["ada"] = round(e["ada"] + abs(lov) / 1e6, 6)
+            e["qty"] += abs(q)
     return out
+
+
+def ada_leg_by_unit(stake, utxos, addr_info, pols=None):
+    """{unit: ada} (see ada_leg_detail)."""
+    return {u: e["ada"] for u, e in ada_leg_detail(stake, utxos, addr_info, pols).items()}
 
 
 def whole_units(raw, decimals):
     return abs(raw) / (10 ** decimals) if decimals is not None else None
 
 
-def value_ada(raw_delta, ada_leg=None, decimals=None, price_ada=None):
-    """(ada_value, basis) for a raw-unit move, or (None, None) when it cannot be sized safely."""
+LEG_MATCH_PCT = 5.0  # the ADA leg is used as-is only when its token qty matches the delta this closely
+
+
+def value_ada(raw_delta, ada_leg=None, decimals=None, price_ada=None, leg_qty=None):
+    """(ada_value, basis) for a raw-unit move, or (None, None) when it cannot be sized safely.
+
+    With leg_qty (raw tokens the ADA legs paid for): when it matches |raw_delta| within LEG_MATCH_PCT the
+    leg is the value ("ada_leg"); otherwise the tx window and the snapshot delta disagree (older txs in the
+    window, token-for-token swaps, transfers), so the delta is valued at the legs' ADA-per-token rate
+    ("ada_leg_rate"). Never more ADA than the legs' own price implies for the tokens that actually moved."""
+    if ada_leg and leg_qty:
+        d = abs(raw_delta)
+        if abs(leg_qty - d) <= d * LEG_MATCH_PCT / 100.0:
+            return round(ada_leg, 2), "ada_leg"
+        return round(ada_leg * d / leg_qty, 2), "ada_leg_rate"
     if ada_leg:
         return round(ada_leg, 2), "ada_leg"
     w = whole_units(raw_delta, decimals)
     if w is not None and price_ada:
         return round(w * price_ada, 2), "decimals_x_price"
     return None, None
+
+
+DUST_DEFAULTS = {"pct_min_ada": 25.0, "pct_min_qty": 1.0}
+
+
+def dust_cfg(wcfg=None):
+    out = dict(DUST_DEFAULTS)
+    out.update({k: v for k, v in ((wcfg or {}).get("dust") or {}).items() if not k.startswith("_")})
+    return out
+
+
+def is_dust(raw_delta, decimals=None, ada_value=None, dc=None):
+    """True when a move is too small for its position % to mean anything (e.g. 0.75 STRIKE = 6.4% of a
+    12-token leftover). Dust = known ADA value under pct_min_ada, or whole-token size under pct_min_qty.
+    With neither value nor decimals known the move is not called dust."""
+    dc = dc or DUST_DEFAULTS
+    if ada_value is not None and ada_value < dc["pct_min_ada"]:
+        return True
+    w = whole_units(raw_delta, decimals)
+    return w is not None and w < dc["pct_min_qty"]
 
 
 def kill_signature(crossed):
@@ -164,3 +205,66 @@ def kill_decide(entry, crossed, values, lines, complete, kc):
     if entry["recover_streak"] >= kc["recover_runs"]:
         return False, None, ["recovered"]
     return False, entry, []
+
+
+KILL_METRIC_ORDER = ("ada_side", "holders", "mcap")
+
+
+def kill_status_entry(prev, text, values, lines, crossed, complete, now, desk_hit=False, prev_hit=None, deeper=False,
+                      prev_hit_at=None):
+    """One ticker's kill_status.json row (SPD-47): {line, metric, value, hit, first_hit_at, changed_since_last, crossed}.
+
+    prev: last run's row for this ticker (or None). values/lines/crossed as in kill_decide.
+    metric/value/line: the first crossed metric when hit, else the first metric the kill line checks.
+    crossed: every metric currently below its line (sorted). A data gap (not complete and nothing crossed) keeps the
+    previous hit state and crossed set, is not a change, and is marked data_gap.
+    changed_since_last: hit flipped, the crossed set GAINED a metric (a second metric crossing is news even when the
+    first one was already hit), the hit metric changed, or its line changed. Old rows without `crossed` fall back to
+    {prev.metric}. deeper=True (kill_decide re-fire: refire_deeper_pct%+ past the last REPORTED value) also counts.
+    Small value drift is NOT a change. prev_hit seeds hit when there is no previous row (state.json kill_status);
+    prev_hit_at (kill_reported.at) seeds first_hit_at for a line that was already hit before this file existed."""
+    prev = prev if isinstance(prev, dict) else None
+    order = [m for m in KILL_METRIC_ORDER if m in lines] + sorted(m for m in lines if m not in KILL_METRIC_ORDER)
+    gap = not crossed and not complete
+    if crossed:
+        hit = True
+    elif complete:
+        hit = False
+    else:
+        hit = bool(prev.get("hit")) if prev else bool(prev_hit)
+    if prev is not None:
+        prev_set = set(prev.get("crossed") or ([prev["metric"]] if prev.get("hit") and prev.get("metric") else []))
+    else:
+        prev_set = set()
+    if crossed:
+        # a previously crossed metric that is merely unread this run stays crossed (re-review should-fix 2): otherwise
+        # it drops out, "re-crosses" next run and an unchanged line is sent again
+        cur_set = set(crossed) | {m for m in prev_set if values.get(m) is None}
+    else:
+        cur_set = prev_set if gap and hit else set()
+    metric = next((m for m in order if m in crossed), None) if hit and crossed else None
+    if metric is None:
+        metric = (prev or {}).get("metric") if hit and (prev or {}).get("metric") in lines else (order[0] if order else None)
+    value = values.get(metric) if metric else None
+    line = lines.get(metric) if metric else None
+    if prev is not None:
+        was_hit = bool(prev.get("hit"))
+        changed = (hit != was_hit) or (hit and (deeper or bool(cur_set - prev_set) or prev.get("metric") != metric
+                                                 or prev.get("line") != line))
+    else:
+        was_hit = bool(prev_hit)
+        changed = (hit != was_hit) or (hit and deeper)
+    if hit:
+        first = prev.get("first_hit_at") if was_hit and prev else None
+        if not first and was_hit and prev_hit_at:
+            first = prev_hit_at  # hit before this file existed: keep the original time, not the deploy time
+        first = first or (now if (changed or not prev) else None)
+    else:
+        first = None
+    row = {"line": line, "metric": metric, "value": value, "hit": hit, "first_hit_at": first,
+           "changed_since_last": bool(changed), "crossed": sorted(cur_set), "text": text}
+    if gap:
+        row["data_gap"] = True
+    if desk_hit:
+        row["desk_hit"] = True
+    return row
