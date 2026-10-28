@@ -20,6 +20,8 @@ Bots write daily briefs as `<desk>/briefs/YYYY-MM-DD.json` only. They do not mai
 
 `solada/forensics/` is experimental Solana research (`sol_forensics`), not a paper book, run log, brief, or pulse. It is not listed in `desks.json` and this check does not validate it. The privacy guard still scans it. Flag codes in those reports are hypotheses, not pulse signals.
 
+`solada-prefilter/vetoes.json` is research output on the desk-data branch (`schema/solada-vetoes.schema.json`). It is not a paper book. CI validates the fixture, and desk-data-guard validates the file when the branch has one. `buy_signal` is false. Evidence values are wallet tags only.
+
 ## Paper book
 - **required:** `schema_version` (= 2), `desk`, `book` (book id, e.g. "solada", "pumpfun"), `open[]`, `closed[]`, `rules[]`
 - optional: `chain`, `unit` (what `size`/`pnl` are in, e.g. "ADA" or "ADA-equivalent"), `ticket_size`, `disclaimer`, `default_window_hours`, `levels{}`, `summaries[]` (each `at`, `type`, `note`, plus anything else)

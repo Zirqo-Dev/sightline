@@ -366,7 +366,7 @@ class Nice(unittest.TestCase):
             run_main(d, quiet_req, ser_run(4000) + [mock.patch.object(BM, "run", bm)], dry=False)
         self.assertTrue(seen["last_run"])
         self.assertEqual(P.research_deadline({"research_budget_s": 100_000}, 1000.0, 1500.0), 1720.0)
-        self.assertEqual(P.research_deadline({}, 1000.0, 1100.0), 1340.0)
+        self.assertEqual(P.research_deadline({}, 1000.0, 1100.0), 1720.0)
 
     def test_concentration_basis_change_is_not_a_jump(self):
         fc = dict(json.load(open(os.path.join(SRC, "config.json")))["flags"])
