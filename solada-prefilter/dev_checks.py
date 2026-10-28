@@ -10,8 +10,8 @@ flags.py uses. Never a raw prefix, address, or stake key. Rows and trigger keys 
 token (policy + asset name): a ticker that changes token is a new baseline.
 
 Phase 1 is dev sells / late rugs, serial-launcher counts, and drawdown / inactivity.
-dev_buy_ada, dev_locked_pct and unlock_date are always null. LP pulls are phase 2, with
-dev lock, dev buy class, and social checks.
+dev_buy_ada, dev_locked_pct and unlock_date are always null. LP pulls are liquidity_moves.py
+(SPD-55), not this file. Dev lock, dev buy class, and social checks stay phase 2.
 
 A sell is one transaction whose creator key UTxOs lose this token and gain ADA, or a
 later tx that pays the dev ADA for tokens they had parked at a script without returning

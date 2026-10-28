@@ -18,6 +18,7 @@ import valuation as V  # noqa: E402  LP detection, raw-unit valuation, kill dedu
 import big_moves as BM  # noqa: E402  SPD-43 big-move detector (research rows, never triggers)
 import whale_ledger as WL  # noqa: E402  SPD-44 founder whale ledger (research rows, never triggers)
 import dev_checks as DC  # noqa: E402  phase-1 dev sells / serial / drawdown (own budget; may add a dev_sell trigger)
+import liquidity_moves as LM  # noqa: E402  SPD-55 pool reserves (research rows, never triggers)
 from datetime import datetime, timezone
 
 UA = "sightline-solada-prefilter/1.0"
@@ -1269,7 +1270,7 @@ def main():
 
     # ---- research sections (SPD-43/44): run AFTER the webhook and state writes, with a time budget, so a slow
     # Koios or a research bug can never cost the webhook, state.json or kill_status.json (M1)
-    def build_summary(big_moves, whale_ledger):
+    def build_summary(big_moves, whale_ledger, liquidity=None):
         return {
             "at": now_iso(), "basis": chain.basis, "dry_run": args.dry_run, "baseline": baseline,
             "launches": len(launches), "new_launches": 0 if baseline else len(new_ids), "candidates": len(cands),
@@ -1277,7 +1278,8 @@ def main():
             "market_age_min": market_age_min, "ada_usd": ada_usd, "whale": {k: v for k, v in (whale_summary or {}).items()},
             "first_block_hits": fb_hits, "triggers": [{k: v for k, v in t.items() if k not in NOPUB} for t in fresh],
             "webhook_sent": sent, "flags_new": len(new_flags), "dev_checks": dev_summary,
-            "big_moves": big_moves, "whale_ledger": whale_ledger, "data_failures": http.failures, "api_calls": http.calls, "results": results,
+            "big_moves": big_moves, "whale_ledger": whale_ledger, "liquidity_moves": liquidity,
+            "data_failures": http.failures, "api_calls": http.calls, "results": results,
         }
 
     summary_path = os.path.join(args.data_dir, "last-run.json" if not args.dry_run else "dry-run.json")
@@ -1312,9 +1314,41 @@ def main():
         except (SystemExit, Exception) as e:  # research must never stop the webhook/state (M1)
             http._fail("big_moves", type(e).__name__)
 
+    # ---- SPD-55 liquidity moves use only the time left in the same shared deadline, after whale_ledger
+    # and big_moves, so this job cannot take their budgets. A failure here does not touch the webhook.
+    liq_budget = float(LM.lm_cfg(cfg).get("budget_s", 50))
+    http.deadline = min(shared_end, time.time() + max(0.0, liq_budget))
+    liquidity = None
+    if LM.lm_cfg(cfg).get("enabled", True):
+        try:
+            units_by_ticker = {}
+            try:
+                pulse_doc, _ = load_desk_json("solada/pulse.json", desk, args.repo)
+                units_by_ticker = pulse_units(pulse_doc)
+            except SystemExit:
+                units_by_ticker = {}
+            for tk, t in tracked.items():
+                if t.get("asset_id"):
+                    units_by_ticker[str(tk).upper()] = t["asset_id"]
+            for tk, u in (cfg.get("units") or {}).items():
+                if isinstance(tk, str) and not tk.startswith("_") and isinstance(u, str):
+                    units_by_ticker.setdefault(tk.upper(), u)
+            meta_dec = {}
+            for r in results:
+                if r.get("unit"):
+                    meta_dec[str(r["unit"]).lower()] = {"decimals": r.get("decimals"), "price_ada": r.get("price_ada")}
+            liquidity = LM.run(
+                http, cfg, DC.cardano_top10(log), units_by_ticker, meta_dec, lp_pols,
+                args.data_dir, args.cache_dir, args.dry_run, time.time(), bf_key=bf_key, deadline=http.deadline,
+                owner_env=os.environ.get("PRIVACY_GUARD_PATTERNS", ""),
+                watch=flagmod.watch_map(cfg.get("flags") or {}, wkeys))
+            print(f"liquidity moves: {json.dumps(liquidity)}")
+        except (SystemExit, Exception) as e:
+            http._fail("liquidity_moves", type(e).__name__)
+
     http.deadline = None
 
-    summary = build_summary(big_moves, whale_ledger)
+    summary = build_summary(big_moves, whale_ledger, liquidity)
     write_json(summary_path, summary, indent=1)
     print(f"whale: {json.dumps(summary['whale'])[:300]}")
     print(json.dumps({k: summary[k] for k in ("launches", "new_launches", "candidates", "passed_k_y", "first_block_hits", "data_failures", "api_calls")}))
