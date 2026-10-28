@@ -6,6 +6,9 @@ name: Solada prefilter
 # doubled up on the dispatch runs and sent extra webhooks.
 # Reads rules from main; writes state/results ONLY to desk-data:solada-prefilter/
 # with pull --rebase retries and no force-push. Never touches main data files.
+# state.json and whale_ledger.json are written with risk_check / scanner names.
+# A retired risk-map key and a source value of that same name are renamed on write.
+# An all-caps coin ticker is not renamed. dev_checks is unchanged.
 # Flag-only cabal/whale signals go to desk-data:solada-prefilter/flags.json; their
 # private working data (full stake keys, sniper positions) rides in the same Actions
 # cache as the whale snapshot (flags-cache.json) and is never committed.

@@ -73,11 +73,41 @@ def tx_info(http, hashes, n, budget_ok=lambda: True):
 
 
 TMP_TAG = ".tmp-"
+# Retired risk-map key. Built so the public source does not spell the vendor name.
+# All-caps ticker keys (a real coin) are left alone. Launch ids that merely contain
+# the same letters, such as draft-<ticker>, are values and are left alone.
+RETIRED_RISK_KEY = "".join(chr(n) for n in (115, 117, 114, 105))
+PUBLIC_RISK_FILES = ("state.json", "whale_ledger.json")
+
+
+def neutral_public_names(obj, parent_key=None):
+    """Rename a retired risk-map key to risk_check and its source value to scanner.
+
+    dev_checks stays. A ticker key written in all caps is a coin and is not renamed.
+    """
+    if isinstance(obj, dict):
+        out = {}
+        for k, v in obj.items():
+            nk = k
+            if isinstance(k, str) and k.casefold() == RETIRED_RISK_KEY and k != k.upper():
+                nk = "risk_check"
+            out[nk] = neutral_public_names(v, nk)
+        return out
+    if isinstance(obj, list):
+        return [neutral_public_names(v, parent_key) for v in obj]
+    if isinstance(obj, str) and parent_key == "source" and obj.casefold() == RETIRED_RISK_KEY:
+        return "scanner"
+    return obj
 
 
 def write_json(path, obj, **kw):
     """Atomic write: temp file in the same directory, then os.replace. A killed write leaves `<name>.tmp-*`, which
-    clean_tmp() removes at the start of the next run (so `git add -A` never commits one)."""
+    clean_tmp() removes at the start of the next run (so `git add -A` never commits one).
+
+    state.json and whale_ledger.json drop a retired risk-map key on the way out.
+    """
+    if os.path.basename(path) in PUBLIC_RISK_FILES:
+        obj = neutral_public_names(obj)
     d = os.path.dirname(path) or "."
     os.makedirs(d, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=d, prefix=os.path.basename(path) + TMP_TAG)

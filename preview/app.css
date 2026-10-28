@@ -264,21 +264,21 @@ button.chip[data-chain].on{background:var(--chain);color:#041018}
 }
 
 /* Cardano visuals. Accent stays the desk blue; motion is decorative. */
-.suri{display:inline-flex;align-items:center;gap:6px;margin:0 6px 6px 0;padding:3px 8px;border-radius:var(--radius-pill);border:1px solid var(--line);font:700 10px/1.4 var(--mono);letter-spacing:.03em}
-.suri.s-low{color:#c8ffe6;border-color:rgba(62,224,162,.55);background:rgba(62,224,162,.12);box-shadow:0 0 14px rgba(62,224,162,.28)}
-.suri.s-mid{color:#ffe3ad;border-color:rgba(255,176,32,.55);background:rgba(255,176,32,.12);box-shadow:0 0 14px rgba(255,176,32,.28)}
-.suri.s-high{color:#ffc6d0;border-color:rgba(255,93,115,.65);background:rgba(255,93,115,.14);box-shadow:0 0 16px rgba(255,93,115,.4)}
-.suri.s-none{color:var(--dim);background:rgba(255,255,255,.03)}
+.risk-score{display:inline-flex;align-items:center;gap:6px;margin:0 6px 6px 0;padding:3px 8px;border-radius:var(--radius-pill);border:1px solid var(--line);font:700 10px/1.4 var(--mono);letter-spacing:.03em}
+.risk-score.s-low{color:#c8ffe6;border-color:rgba(62,224,162,.55);background:rgba(62,224,162,.12);box-shadow:0 0 14px rgba(62,224,162,.28)}
+.risk-score.s-mid{color:#ffe3ad;border-color:rgba(255,176,32,.55);background:rgba(255,176,32,.12);box-shadow:0 0 14px rgba(255,176,32,.28)}
+.risk-score.s-high{color:#ffc6d0;border-color:rgba(255,93,115,.65);background:rgba(255,93,115,.14);box-shadow:0 0 16px rgba(255,93,115,.4)}
+.risk-score.s-none{color:var(--dim);background:rgba(255,255,255,.03)}
 .depth-list{display:flex;flex-direction:column;gap:8px}
 .depth-row{display:grid;grid-template-columns:minmax(108px,168px) 1fr auto;gap:8px;align-items:center}
 .depth-name{display:flex;align-items:center;gap:6px;min-width:0}
 .depth-name .nm,.depth-name b{font:700 12px/1.2 var(--mono);color:var(--text)}
-.suri-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--mute)}
-.suri-dot.s-low{background:#3ee0a2;box-shadow:0 0 8px #3ee0a2}
-.suri-dot.s-mid{background:#ffb020;box-shadow:0 0 8px #ffb020}
-.suri-dot.s-high{background:#ff5d73;box-shadow:0 0 8px #ff5d73}
+.risk-dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--mute)}
+.risk-dot.s-low{background:#3ee0a2;box-shadow:0 0 8px #3ee0a2}
+.risk-dot.s-mid{background:#ffb020;box-shadow:0 0 8px #ffb020}
+.risk-dot.s-high{background:#ff5d73;box-shadow:0 0 8px #ff5d73}
 .core-badge{display:inline-flex;align-items:center;padding:1px 6px;border-radius:4px;font:800 9px/1.5 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:#041018;background:var(--grad)}
-.suri-legend,.flag-legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 8px;color:var(--dim);font:600 10px/1.4 var(--mono)}
+.risk-legend,.flag-legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 8px;color:var(--dim);font:600 10px/1.4 var(--mono)}
 .hint-tip{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;margin-left:6px;border-radius:50%;border:1px solid rgba(var(--accent-rgb),.55);color:var(--accent);font:700 9px/1 var(--mono);cursor:help;vertical-align:1px}
 .depth-track{height:10px;border-radius:var(--radius-pill);background:rgba(255,255,255,.05);overflow:hidden}
 .depth-track i{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,var(--accent2),var(--accent));box-shadow:0 0 12px rgba(var(--accent-rgb),.75);animation:barGrow .7s ease both}

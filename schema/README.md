@@ -33,6 +33,7 @@ Bots write daily briefs as `<desk>/briefs/YYYY-MM-DD.json` only. They do not mai
 ## Run log
 - **required:** `schema_version` (= 2), `desk`, `asof`, `headline`
 - usual: `levels{ticker: verdict}`, `kill_lines`, `paper_actions`, `rules_added`, `followups[]`, `sources`, `history[]` (past runs, same shape; each needs `asof`; keep about the last 20)
+- optional: `risk_check` `{ticker: {risk, tags, source, note}}`. `risk` is a string or null. `source` is `scanner` or `dev_checks`. A retired top-level map with the same shape is still accepted. A coin ticker is not that map.
 
 ## Daily brief
 - **required:** `schema_version` (= 2), `desk`, `date` (YYYY-MM-DD), `headline`

@@ -15,6 +15,19 @@
     "rules_added": {},
     "followups": {"type": "array"},
     "sources": {},
+    "risk_check": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "risk": {"type": ["string", "null"]},
+          "tags": {"type": "array", "items": {"type": "string"}},
+          "source": {"type": "string"},
+          "note": {"type": "string"}
+        }
+      }
+    },
     "history": {"type": "array", "items": {"type": "object", "required": ["asof"], "additionalProperties": true}}
   },
   "additionalProperties": true
