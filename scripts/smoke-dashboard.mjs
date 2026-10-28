@@ -578,7 +578,7 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
     log: {
       founder_whale: { handle: "$cockwhale", address: "w-f3186187", stake_prefix: "uylu74g0", net_flow_ada: 12, summary: "the founder sold SNEK founder_pct", line: "ASCEND flat " + "B".repeat(44), cock_order: "order " + addr + " " + stake },
       whale_watch: { wallets: [{ tag: "w-f3186187", codename: "Grumpy Walrus", prefix: stake, label: "$cockwhale", latest: "pool " + addr }] },
-      suri: { SNEK: { risk: "High risk", tags: ["Dev sold"], source: "desk" }, ASCEND: { risk: "Low risk", tags: [], source: "desk" } },
+      risk_check: { SNEK: { risk: "High risk", tags: ["Dev sold"], source: "scanner" }, ASCEND: { risk: "Low risk", tags: [], source: "dev_checks" } },
       cardano_top10: [{ rank: 1, ticker: "SNEK", ada_side_depth: 9000, whale_tags: ["w-0123abcd", stake] }, { rank: 2, ticker: "NIGHT", ada_side_depth: 5000 }],
       flag_outcomes: { sniper_full_exit: { pump: 2, rug: 1 }, founder_whale_move: { pump: 0, rug: 0 } },
       kill_hits: ["BOLT holders under 265"],
@@ -589,10 +589,23 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
     pump: { open: [], closed: [{ ticker: "X", mint: "C".repeat(44), result: { pnl: -1, pct: -1 } }], unit: "ADA-equivalent" }
   });
   assert(!cardano.includes("addr1") && !cardano.includes("stake1") && !cardano.includes("uylu74g0") && !cardano.includes("cock_order"), "address, stake prefix, and order stay off the page");
-  assert(!/founder|cockwhale|Lead whale|COCK LP|Suri on the name|Snek depth/i.test(cardano), "identifying whale wording and old panel names stay off the page");
+  const retired = String.fromCharCode(115, 117, 114, 105);
+  assert(!/founder|cockwhale|Lead whale|COCK LP|Snek depth/i.test(cardano), "identifying whale wording and old panel names stay off the page");
+  assert(!cardano.toLowerCase().includes(retired) && !cardano.includes("on the name"), "retired scanner name and old panel subtitle stay off the page");
   assert(cardano.includes("Grumpy Walrus") && cardano.includes("Pool ADA") && !cardano.includes(stake), "codename and pool label render, and the stake key stays hidden");
   assert(cardano.indexOf("ASCEND") < cardano.indexOf("NIGHT") && cardano.includes(">Core<"), "core names are pinned and badged");
-  assert(cardano.includes("Flagged this run") && cardano.includes("COOKED") && cardano.includes("Suri risk"), "flag row and Suri legend render");
+  assert(cardano.includes("Flagged this run") && cardano.includes("COOKED") && cardano.includes("Risk score") && cardano.includes("risk scanner") && cardano.includes("dev_checks"), "flag row, risk score legend, and both sources render");
+  const legacyLog = {
+    cardano_top10: [{ rank: 1, ticker: "SNEK", ada_side_depth: 1000 }]
+  };
+  legacyLog[retired] = { SNEK: { risk: "Low risk", tags: ["Dev locked"], source: retired } };
+  const legacy = P.cardanoHtml({ log: legacyLog });
+  assert(legacy.includes("Risk score") && legacy.includes("risk scanner") && legacy.includes("SNEK") && !legacy.toLowerCase().includes(retired), "old snapshots still render a risk score");
+  const both = { cardano_top10: [{ ticker: "SNEK", ada_side_depth: 1 }] };
+  both.risk_check = { SNEK: { risk: "High risk", tags: [], source: "scanner" } };
+  both[retired] = { SNEK: { risk: "Low risk", tags: [], source: retired } };
+  const prefer = P.cardanoHtml({ log: both });
+  assert(prefer.includes("Risk score: High risk") && !prefer.includes("Risk score: Low risk"), "risk_check wins when an old snapshot key is also present");
   assert(cardano.includes("Grumpy Walrus move") && !/founder_whale|founder_whale_move|founder_pct|\bfounder\b/i.test(cardano), "whale-move flag uses the codename, not the data key");
   assert(!cardano.includes("B".repeat(32)) && !cardano.includes("C".repeat(32)), "forensics and pumpfun address-like values stay hidden");
   const paper = load("scripts/fixtures/solana-desk/paper-fills.json");
