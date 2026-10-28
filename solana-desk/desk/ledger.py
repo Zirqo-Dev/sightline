@@ -1,7 +1,10 @@
 """tasks.csv, trades.csv, health.json, lock file."""
 import csv, json, os, time, fcntl
 TASK_COLS = ["time","run_id","agent","task","mint","book","result","skip_type","reason","source","check_delay_s","cfg_version","seed","error_src"]  # error_src: APIs that failed (dexscreener/rugcheck/jupiter), ";"-joined
-TRADE_COLS = ["time","book","agent","mint","symbol","action","frac","sol","quote_px","impact_pct","fee_sol","haircut_pct","why","pnl","check_delay_s","stale"]
+# pnl stays the net SOL result (sells and partial exits). gross_pnl / net_pnl are appended so
+# older trades.csv files (header is a prefix of this list) keep their pnl cell and gain blank cells.
+# haircut_pct is the haircut on this fill, in percent. entry_haircut_pct / exit_haircut_pct split the two sides.
+TRADE_COLS = ["time","book","agent","mint","symbol","action","frac","sol","quote_px","impact_pct","fee_sol","haircut_pct","why","pnl","check_delay_s","stale","gross_pnl","net_pnl","entry_haircut_pct","exit_haircut_pct"]
 
 def _append(path, cols, row):
     new = not os.path.exists(path)
