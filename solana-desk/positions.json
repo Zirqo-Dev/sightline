@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793205024,
+ "last_run_ts": 1793206837,
  "voids": [],
  "books": {
   "F": {
@@ -224,16 +224,16 @@
    "realized_gross": -0.030990180666529393
   },
   "S": {
-   "cash": 9.019948440246136,
+   "cash": 9.332185916114707,
    "open": {
     "S-20261028T1600-6EKmpump": {
      "entry": 0.001490807631491715,
-     "peak": 0.0015413568781869177,
-     "steps": 0,
+     "peak": 0.0022440910334518252,
+     "steps": 1,
      "liq0": 163.5723,
      "opened": 1793203232,
-     "frac": 1.0,
-     "last_mark": 0.0015413568781869177,
+     "frac": 0.6666666666666667,
+     "last_mark": 0.0022440910334518252,
      "stale": 0,
      "no_route_count": 0,
      "mint": "6EKmRQYzAXh5t6t1XNe2chYqmdSHgd32uA7xki9upump",
@@ -242,34 +242,14 @@
      "run_id": "20261028T1600",
      "why": "safety:too_fresh",
      "book": "S",
-     "pnl": 0.0,
-     "exit_haircut": 0.02317982731809584
-    },
-    "S-20261028T1630-3fK5pump": {
-     "entry": 0.0003518618380684813,
-     "peak": 0.0003518618380684813,
-     "steps": 0,
-     "liq0": 57.4194,
-     "opened": 1793205024,
-     "frac": 1.0,
-     "last_mark": 0.0003518618380684813,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "3fK54p5SzHiPKB9JqPw893i1FNU5Xahf1QQbt4iPpump",
-     "symbol": "LevelGrok",
-     "tokens": 1421012300580,
-     "run_id": "20261028T1630",
-     "why": "safety:too_fresh",
-     "book": "S",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
-     "entry_haircut": 0.028873250067730685,
-     "entry_cost": 0.5144466250338653
+     "pnl": 0.07736447488289439,
+     "exit_haircut": 0.023928085367788406,
+     "gross_pnl": 0.0842142413333333
     }
    },
    "fills_day": "2026-10-28",
    "fills_today": 3,
-   "realized_pnl": 0.03690506528000015,
+   "realized_pnl": -0.3328074172186271,
    "closed": [
     {
      "id": "S-20261028T1330-5Zjdpump",
@@ -283,10 +263,26 @@
      "pnl": 0.036905065,
      "pct": 7.34,
      "why_entered": "safety:too_old"
+    },
+    {
+     "id": "S-20261028T1630-3fK5pump",
+     "mint": "3fK54p5SzHiPKB9JqPw893i1FNU5Xahf1QQbt4iPpump",
+     "symbol": "LevelGrok",
+     "opened": 1793205024,
+     "closed": 1793206837,
+     "entry": 0.0003518618380684813,
+     "exit_px": 4.8764235166519493e-05,
+     "why": "liquidity_pulled",
+     "pnl": -0.447076957,
+     "gross_pnl": -0.430705422,
+     "pct": -86.9,
+     "gross_pct": -86.14,
+     "why_entered": "safety:too_fresh"
     }
    ],
    "would_halt": [],
-   "peak_equity": 10.043404528660002
+   "peak_equity": 10.043404528660002,
+   "realized_gross": -0.34649118066666673
   }
  }
 }

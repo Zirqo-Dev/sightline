@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-28T16:30:24Z",
+ "generated_at": "2026-10-28T17:00:37Z",
  "cfg_version": "v1-v6.5",
  "open": [
   {
@@ -22,37 +22,15 @@
    "entry": {
     "px": 0.001490807631491715
    },
-   "frac": 1.0,
-   "last_mark": 0.0015413568781869177,
+   "frac": 0.666667,
+   "last_mark": 0.0022440910334518252,
    "thesis": "safety:too_fresh",
    "result": {
-    "pnl": 0.0,
-    "pct": 3.39,
+    "pnl": 0.077364475,
+    "pct": 50.53,
     "unit": "SOL",
-    "net_pnl": 0.0
-   }
-  },
-  {
-   "id": "S-20261028T1630-3fK5pump",
-   "ticker": "LevelGrok",
-   "mint": "3fK54p5SzHiPKB9JqPw893i1FNU5Xahf1QQbt4iPpump",
-   "book": "S",
-   "status": "open",
-   "size": 0.5,
-   "opened_at": "2026-10-28T16:30:24Z",
-   "window_ends_at": "2026-10-28T18:30:24Z",
-   "entry": {
-    "px": 0.0003518618380684813
-   },
-   "frac": 1.0,
-   "last_mark": 0.0003518618380684813,
-   "thesis": "safety:too_fresh",
-   "result": {
-    "pnl": 0.0,
-    "pct": 0.0,
-    "unit": "SOL",
-    "net_pnl": 0.0,
-    "gross_pnl": 0.0
+    "net_pnl": 0.077364475,
+    "gross_pnl": 0.084214241
    }
   }
  ],
@@ -458,6 +436,33 @@
     "net_pct": 7.34
    },
    "thesis": "safety:too_old"
+  },
+  {
+   "id": "S-20261028T1630-3fK5pump",
+   "ticker": "LevelGrok",
+   "mint": "3fK54p5SzHiPKB9JqPw893i1FNU5Xahf1QQbt4iPpump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "opened_at": "2026-10-28T16:30:24Z",
+   "closed_at": "2026-10-28T17:00:37Z",
+   "entry": {
+    "px": 0.0003518618380684813
+   },
+   "exit": {
+    "px": 4.8764235166519493e-05
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": -0.447076957,
+    "pct": -86.9,
+    "unit": "SOL",
+    "net_pnl": -0.447076957,
+    "net_pct": -86.9,
+    "gross_pnl": -0.430705422,
+    "gross_pct": -86.14
+   },
+   "thesis": "safety:too_fresh"
   }
  ],
  "books": {
@@ -481,13 +486,14 @@
    "realized_gross_pnl": -0.030990181
   },
   "S": {
-   "cash": 9.01994844,
-   "equity": 10.017399189,
-   "realized_pnl": 0.036905065,
-   "open": 2,
-   "closed": 1,
+   "cash": 9.332185916,
+   "equity": 9.821931533,
+   "realized_pnl": -0.332807417,
+   "open": 1,
+   "closed": 2,
    "fills_today": 3,
-   "would_halt": []
+   "would_halt": [],
+   "realized_gross_pnl": -0.346491181
   }
  },
  "costs": {
