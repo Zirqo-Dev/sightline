@@ -73,8 +73,18 @@
     return textCache[clean];
   }
 
+  let leadCodename = "";
   function sanitize(value) {
-    return String(value ?? "").replace(ADDRESS, "").replace(/[ \t]{2,}/g, " ").replace(/\s+([,.;])/g, "$1").trim();
+    let s = String(value ?? "");
+    s = s.replace(/\$[A-Za-z0-9_]{2,32}/g, " ");
+    s = s.replace(/@[A-Za-z0-9_]{2,32}/g, " ");
+    s = s.replace(/cockwhale/gi, " ");
+    s = s.replace(/founder_whale_move/gi, (leadCodename || "Whale") + " move");
+    s = s.replace(/founder_pct/gi, " ");
+    s = s.replace(/founder_whale/gi, leadCodename || "whale");
+    s = s.replace(/\bfounder\b/gi, " ");
+    s = s.replace(ADDRESS, "");
+    return s.replace(/[ \t]{2,}/g, " ").replace(/\s+([,.;])/g, "$1").replace(/\(\s*\)/g, "").trim();
   }
   function safeTag(value) {
     const s = String(value ?? "").trim();
@@ -183,14 +193,20 @@
       pill("failures", fail, fcls)
     ].join("");
   }
+  function displayKind(kind) {
+    const raw = String(kind || "");
+    if (raw === "founder_whale_move") return (leadCodename || "Whale") + " move";
+    if (raw === "founder_whale" || raw === "founder_pct") return "";
+    return sanitize(raw.replace(/_/g, " "));
+  }
   function chip(text, cls, extra) {
     const s = sanitize(text).replace(/_/g, " ");
     if (!s) return "";
     return `<span class="chip ${cls || ""}"${extra || ""}>${esc(s)}</span>`;
   }
   function tagChip(value) {
-    const s = safeTag(value);
-    return s ? `<span class="chip tag">${esc(s)}</span>` : "";
+    const shown = labelTag(value);
+    return shown ? `<span class="chip tag">${esc(shown)}</span>` : "";
   }
   function spark(values) {
     const nums = (values || []).filter(n => typeof n === "number" && isFinite(n));
@@ -213,8 +229,10 @@
     return `<article class="tile"><div class="k">${esc(k)}</div><div class="v${cls}"${attrs}>${esc(text)}</div>${o.hint ? `<div class="hint">${esc(o.hint)}</div>` : ""}${spark(o.series)}</article>`;
   }
   function tiles(list) { return `<div class="tiles">${list.join("")}</div>`; }
-  function panel(title, tag, body, ico) {
-    return `<section class="panel"><h3><span class="ttl">${icon(ico || "layers")}${esc(title)}</span><span class="tag">${esc(tag || "")}</span></h3>${body}</section>`;
+  function panel(title, tag, body, ico, hint) {
+    const tip = hint ? `<span class="hint-tip" tabindex="0" title="${esc(hint)}" aria-label="${esc(hint)}">i</span>` : "";
+    const tagHtml = tag ? `<span class="tag">${esc(tag)}</span>` : "";
+    return `<section class="panel"><h3><span class="ttl">${icon(ico || "layers")}${esc(title)}${tip}</span>${tagHtml}</h3>${body}</section>`;
   }
   function empty(title, detail) {
     return `<div class="empty">${icon("feed")}<strong>${esc(title)}</strong><span>${esc(detail || "Nothing published on desk-data or main yet.")}</span></div>`;
@@ -482,18 +500,99 @@
       return { ticker: sanitize(ticker), risk: sanitize(row.risk), tone: suriTone(row.risk), tags };
     }).filter(r => r.ticker);
   }
+  const CORE_NAMES = ["ASCEND", "STRIKE"];
+  function orderPoolRows(rows, log, pulse) {
+    const list = (rows || []).map(r => Object.assign({}, r));
+    CORE_NAMES.forEach(name => {
+      if (list.some(r => String(r.ticker || "").toUpperCase() === name)) return;
+      const series = depthSeries(log, pulse, name);
+      list.push({ ticker: name, ada_side_depth: series.length ? series[series.length - 1] : null, rank: "" });
+    });
+    const core = CORE_NAMES.map(name => list.find(r => String(r.ticker || "").toUpperCase() === name)).filter(Boolean);
+    const rest = list.filter(r => CORE_NAMES.indexOf(String(r.ticker || "").toUpperCase()) < 0)
+      .sort((a, b) => (num(b.ada_side_depth) || 0) - (num(a.ada_side_depth) || 0));
+    return core.concat(rest);
+  }
+  function flagTone(kind) {
+    const k = String(kind || "");
+    if (/rug|sniper_full_exit|dump|kill/.test(k)) return "red";
+    if (/coordinated|preseeder|fresh_wallet|identical_size|swarm/.test(k)) return "amber";
+    return "";
+  }
+  function flaggedThisRun(log, flagsDoc, kills) {
+    const map = {};
+    const put = (ticker, tone) => {
+      const name = tickerName(ticker);
+      if (!name || !tone) return;
+      const row = map[name] || { ticker: name, tone: tone };
+      if (tone === "red") row.tone = "red";
+      map[name] = row;
+    };
+    ((flagsDoc && flagsDoc.new) || []).forEach(f => {
+      const tone = flagTone(f.kind);
+      const names = [];
+      if (f.ticker) names.push(f.ticker);
+      (f.launches || []).forEach(n => names.push(n));
+      names.forEach(n => put(n, tone));
+    });
+    if (kills && typeof kills === "object") {
+      Object.keys(kills).forEach(k => { if (kills[k] && kills[k].hit === true) put(k, "red"); });
+    }
+    ((log && log.kill_hits) || []).forEach(line => {
+      const m = String(line).match(/^([A-Z][A-Z0-9]{1,15})\b/);
+      if (m) put(m[1], "red");
+    });
+    return Object.keys(map).map(k => map[k]).sort((a, b) => (a.tone === b.tone ? a.ticker.localeCompare(b.ticker) : (a.tone === "red" ? -1 : 1)));
+  }
   function suriBadge(row) {
     if (!row || !row.ticker) return "";
     const tip = [row.risk].concat(row.tags || []).filter(Boolean).join(" · ");
     return `<span class="suri ${row.tone}" title="${esc(tip)}">${esc(row.ticker)}</span>`;
   }
+  const CODENAME_KEYS = ["codename", "code_name", "animal", "nickname", "alias", "public_name", "display_name"];
+  function animalName(value) {
+    const t = String(value || "").trim();
+    if (!t || t.length > 40 || !/^[A-Za-z][A-Za-z' -]{1,40}$/.test(t)) return "";
+    if (/founder|cockwhale|seller|buyer|cluster|sniper|dumper|launcher|\$|@/i.test(t)) return "";
+    return t;
+  }
+  function whaleCodenames(log) {
+    const map = {};
+    const wallets = log && log.whale_watch && log.whale_watch.wallets;
+    const list = Array.isArray(wallets) ? wallets : wallets && typeof wallets === "object" ? Object.keys(wallets).map(k => Object.assign({ tag: k }, wallets[k])) : [];
+    list.forEach(w => {
+      if (!w || typeof w !== "object") return;
+      let tag = null;
+      const pre = String(w.prefix || "").trim();
+      if (/^w-[0-9a-f]{8}$/i.test(pre)) tag = safeTag(pre);
+      Object.keys(w).forEach(k => {
+        if (k === "prefix") return;
+        const v = w[k];
+        if (typeof v === "string" && /^w-[0-9a-f]{8}$/i.test(v.trim())) tag = safeTag(v);
+      });
+      let name = "";
+      CODENAME_KEYS.forEach(k => { if (!name && w[k] != null) name = animalName(w[k]); });
+      if (tag && name) map[tag] = name;
+    });
+    return map;
+  }
+  let whaleNames = {};
+  function labelTag(tag) {
+    const s = safeTag(tag);
+    if (!s) return "";
+    if (whaleNames[s]) return whaleNames[s];
+    if (/^w-[0-9a-f]{8}$/.test(s)) return s;
+    if (/founder|cockwhale/i.test(s)) return "";
+    return s;
+  }
   function publicFounder(fw) {
     if (!fw || typeof fw !== "object") return null;
+    const tag = safeTag(fw.address) || safeTag(fw.tag) || safeTag(fw.w_tag);
     return {
-      handle: sanitize(fw.handle),
+      tag: tag && /^w-[0-9a-f]{8}$/.test(tag) ? tag : "",
       net_flow_ada: num(fw.net_flow_ada),
-      summary: sanitize(fw.summary),
-      line: sanitize(fw.line)
+      summary: fw.summary,
+      line: fw.line
     };
   }
   function tickerName(v) {
@@ -686,7 +785,7 @@
     if (!model.rowList.length || !model.colList.length) return empty("No early-buyer clusters yet", "The heat grid fills when flags name a w- tag and a launch.");
     let i = 0;
     const head = model.colList.map(c => `<th><span>${esc(c)}</span></th>`).join("");
-    const body = model.rowList.map(tag => `<tr><th class="rowlab">${esc(tag)}</th>${model.colList.map(col => {
+    const body = model.rowList.map(tag => `<tr><th class="rowlab">${esc(labelTag(tag) || tag)}</th>${model.colList.map(col => {
       const hit = model.cell[tag + "|" + col];
       const n = hit ? hit.n : 0;
       const level = n >= 3 ? 3 : n;
@@ -719,7 +818,8 @@
     const labels = L.map(r => `<text x="${r.x}" y="${r.y + 4}" fill="#ffc6d0" font-size="11" font-family="ui-monospace,monospace">${esc(r.token)} ${esc(fmt(r.out, 0))}</text>`).concat(
       R.map(r => `<text x="${r.x}" y="${r.y + 4}" fill="#c8ffe6" font-size="11" font-family="ui-monospace,monospace">${esc(r.token)} ${esc(fmt(r.inn, 0))}</text>`)
     );
-    return `<svg class="sankey" viewBox="0 0 ${w} ${h}" role="img" aria-label="Founder whale rotation">${paths.join("")}<circle cx="${mid}" cy="120" r="22" fill="#0c1526" stroke="#3d8bff" stroke-width="2"/><text x="${mid}" y="124" text-anchor="middle" fill="#3d8bff" font-size="10" font-family="ui-monospace,monospace">${esc(flow.tag || "whale")}</text>${labels.join("")}</svg><p class="dim">Left is ADA that left with a token. Right is ADA that came back in. Width is the flow, not a balance.</p>`;
+    const who = labelTag(flow.tag) || "Whale";
+    return `<svg class="sankey" viewBox="0 0 ${w} ${h}" role="img" aria-label="Whale rotation">${paths.join("")}<circle cx="${mid}" cy="120" r="22" fill="#0c1526" stroke="#3d8bff" stroke-width="2"/><text x="${mid}" y="124" text-anchor="middle" fill="#3d8bff" font-size="10" font-family="ui-monospace,monospace">${esc(who)}</text>${labels.join("")}</svg><p class="dim">Left is ADA that left with a token. Right is ADA that came back in. Width is the flow, not a balance.</p>`;
   }
   function flowMapHtml(log, liq) {
     const pools = (log && log.liquidity_flows && log.liquidity_flows.pools) || [];
@@ -747,7 +847,10 @@
     }).join("") + `<p class="dim">Bars are the 24h ADA-side change. Arrows mark enter and exit prints. Tags stay w- hashes.</p>`;
   }
   function cardanoHtml(data) {
+    whaleNames = whaleCodenames(data && data.log);
     const v = cardanoView(data);
+    const linked = (v.whale && safeTag(v.whale.whale_tag)) || (v.founder && v.founder.tag) || "";
+    leadCodename = (linked && whaleNames[linked]) || "";
     const brief = briefBits(v.brief, "Cardano");
     const suriBy = {};
     v.suri.forEach(s => { suriBy[s.ticker.toUpperCase()] = s; });
@@ -758,18 +861,22 @@
     const briefBar = brief
       ? `<p class="slim-brief">${esc(when(brief.date) || "")} · ${tx(brief.headline)}</p>`
       : `<p class="slim-brief">No brief published yet.</p>`;
-    const maxDepth = Math.max(1, ...v.top.map(r => num(r.ada_side_depth) || 0));
-    const depthBars = v.top.length ? `<div class="depth-list">${v.top.map(r => {
+    const ordered = orderPoolRows(v.top, v.log, v.pulse);
+    const maxDepth = Math.max(1, ...ordered.map(r => num(r.ada_side_depth) || 0));
+    const depthBars = ordered.length ? `<div class="depth-list">${ordered.map(r => {
       const name = tickerName(r.ticker) || "–";
       const suri = suriBy[name.toUpperCase()];
+      const tone = suri ? suri.tone : "s-none";
+      const tip = suri && suri.risk ? "Suri: " + suri.risk : "No Suri score";
+      const core = CORE_NAMES.indexOf(name.toUpperCase()) >= 0;
       const depth = num(r.ada_side_depth) || 0;
-      const pct = Math.max(4, Math.round(depth / maxDepth * 100));
-      return `<div class="depth-row">${suri ? suriBadge(suri) : `<b class="mono">${esc(name)}</b>`}<div class="depth-track"><i style="width:${pct}%"></i></div><span class="mono dim">${esc(fmt(depth, 0))}</span></div>`;
-    }).join("")}</div>` : empty("Top 10 not published yet", "Depth bars appear when cardano_top10 or the pulse has an ADA side.");
+      const pct = depth ? Math.max(4, Math.round(depth / maxDepth * 100)) : 0;
+      return `<div class="depth-row"><div class="depth-name"><i class="suri-dot ${tone}" title="${esc(tip)}"></i><span class="nm">${esc(name)}</span>${core ? '<span class="core-badge">Core</span>' : ""}</div><div class="depth-track"><i style="width:${pct}%"></i></div><span class="mono dim">${esc(depth ? fmt(depth, 0) : "–")}</span></div>`;
+    }).join("")}</div>` : empty("No pool depths yet", "Bars appear when cardano_top10 or the pulse has an ADA side.");
     const outcomes = (v.log && v.log.flag_outcomes) || {};
     const kinds = Object.keys(outcomes);
-    const donuts = kinds.length ? `<div class="donuts">${kinds.map(k => donut(num(outcomes[k].pump) || 0, num(outcomes[k].rug) || 0, String(k).replace(/_/g, " "))).join("")}</div>` : empty("No flag outcomes yet", "Pump and rug counts show up as rings once the desk scores them.");
-    const sparks = v.top.slice(0, 6).map(r => {
+    const donuts = kinds.length ? `<div class="donuts">${kinds.map(k => donut(num(outcomes[k] && outcomes[k].pump) || 0, num(outcomes[k] && outcomes[k].rug) || 0, displayKind(k))).join("")}</div>` : empty("No flag outcomes yet", "Pump and rug counts show up as rings once the desk scores them.");
+    const sparks = ordered.slice(0, 6).map(r => {
       const name = tickerName(r.ticker);
       const series = depthSeries(v.log, v.pulse, name);
       const kill = killFor(v.kills, name);
@@ -782,9 +889,10 @@
     const gauges = v.kills ? Object.keys(v.kills).map(k => gauge(killFor(v.kills, k))).filter(Boolean).slice(0, 8).join("") : "";
     const gaugeBlock = gauges ? `<div class="gauges">${gauges}</div>` : empty("No kill gauges", "kill_status has no numeric lines yet.");
     const heat = heatHtml(heatModel(v.flags));
-    const founder = v.founder;
-    const founderNote = founder
-      ? `<p class="slim-brief"><b>${esc(founder.handle || "founder")}</b> · net flow ${founder.net_flow_ada == null ? "–" : (founder.net_flow_ada > 0 ? "+" : "") + fmt(founder.net_flow_ada, 0) + " ADA"}</p><p class="slim-brief">${tx(founder.summary)}</p><p class="slim-brief">${tx(founder.line)}</p>`
+    const whaleTag = (v.whale && safeTag(v.whale.whale_tag)) || (v.founder && v.founder.tag) || "";
+    const whaleName = labelTag(whaleTag) || "Whale";
+    const whaleNote = v.founder
+      ? `<p class="slim-brief"><b>${esc(whaleName)}</b> · net flow ${v.founder.net_flow_ada == null ? "–" : (v.founder.net_flow_ada > 0 ? "+" : "") + fmt(v.founder.net_flow_ada, 0) + " ADA"}</p>${v.founder.summary ? `<p class="slim-brief">${tx(v.founder.summary)}</p>` : ""}${v.founder.line ? `<p class="slim-brief">${tx(v.founder.line)}</p>` : ""}`
       : "";
     const sankey = sankeyHtml(sankeyFlows(v.whale, v.big, v.log));
     const flow = flowMapHtml(v.log, v.liq);
@@ -807,15 +915,18 @@
     }).join("") : empty("No lessons yet", "Patterns, learned notes, and follow-ups land here.");
     const recentFlags = v.flags.slice(0, 16).map(f => {
       const tags = flagTags(f).slice(0, 2).map(tagChip).join("");
-      return `<span class="chip ${/exit|rug|dump/i.test(f.kind || "") ? "bad" : ""}">${esc(String(f.kind || "").replace(/_/g, " "))}${f.ticker ? " · " + esc(tickerName(f.ticker)) : ""}</span>${tags}`;
+      return `<span class="chip ${/exit|rug|dump/i.test(f.kind || "") ? "bad" : ""}">${esc(displayKind(f.kind))}${f.ticker ? " · " + esc(tickerName(f.ticker)) : ""}</span>${tags}`;
     }).join(" ");
-    const topRows = v.top.map(r => {
+    const flagged = flaggedThisRun(v.log, data && data.flags, v.kills);
+    const flagRow = `<div class="flag-legend"><b>Flagged this run</b><span class="chip bad">rug or kill-line</span><span class="chip caution">coordinated launch</span></div><div class="filters">${flagged.length ? flagged.map(f => `<span class="chip ${f.tone === "red" ? "bad" : "caution"}">${esc(f.ticker)}</span>`).join("") : `<span class="dim">None on the latest run.</span>`}</div>`;
+    const suriLegend = `<div class="suri-legend"><b>Suri risk</b><span class="suri s-low">green · lower</span><span class="suri s-mid">amber · caution</span><span class="suri s-high">red · high</span></div>`;
+    const topRows = ordered.map(r => {
       const name = tickerName(r.ticker) || "–";
       const suri = suriBy[name.toUpperCase()];
       const depth = num(r.ada_side_depth);
       return {
         rank: `<span data-v="${esc(r.rank ?? "")}">${esc(r.rank ?? "")}</span>`,
-        ticker: `<b>${esc(name)}</b> ${suri ? suriBadge(suri) : ""}`,
+        ticker: `<span class="depth-name"><i class="suri-dot ${suri ? suri.tone : "s-none"}"></i><b>${esc(name)}</b>${CORE_NAMES.indexOf(name.toUpperCase()) >= 0 ? '<span class="core-badge">Core</span>' : ""}</span>`,
         depth: `<span data-v="${depth == null ? "" : depth}">${esc(depth == null ? "–" : fmt(depth, 0))}</span>`,
         holders: `<span data-v="${num(r.holders) == null ? "" : num(r.holders)}">${esc(num(r.holders) == null ? "–" : fmt(r.holders, 0))}</span>`,
         delta: `<span data-v="${num(r.holders_delta) == null ? "" : num(r.holders_delta)}">${esc(num(r.holders_delta) == null ? "–" : fmt(r.holders_delta, 0))}</span>`
@@ -832,10 +943,10 @@
       .replace(">Holders</th>", ' data-sort="h">Holders</th>');
     return `<div class="stack">
       <div class="pagehead"><div><h1>Cardano</h1><div class="sub">Visuals first · paper research · w- tags only</div>${briefBar}</div>${headChips}</div>
-      <div class="viz-grid">${panel("Snek depth", "Suri on the name", (v.suri.length ? `<div>${v.suri.map(suriBadge).join("")}</div>` : "") + depthBars, "chart")}${panel("Flag hit rate", "pump vs rug", donuts, "flag")}</div>
+      <div class="viz-grid">${panel("Pool ADA (one side)", "", flagRow + suriLegend + depthBars, "chart", "ADA in the token's deepest pool (Minswap); total TVL is ~2x.")}${panel("Flag hit rate", "pump vs rug", donuts, "flag")}</div>
       ${panel("Pool depth", "dashed kill line", `<div class="killsparks">${sparkBlock}</div>${gaugeBlock}`, "chart")}
       ${panel("Cluster heat", "early buyers", (recentFlags ? `<div class="filters">${recentFlags}</div>` : "") + heat, "flag")}
-      <div class="viz-grid">${panel("Whale rotation", founder && founder.handle ? founder.handle : "tag only", founderNote + sankey, "chart")}${panel("Liquidity map", "enter / exit", flow, "chart")}</div>
+      <div class="viz-grid">${panel(whaleName, /^w-[0-9a-f]{8}$/.test(whaleTag) && whaleName !== whaleTag ? whaleTag : "", whaleNote + sankey, "chart")}${panel("Liquidity map", "enter / exit", flow, "chart")}</div>
       ${panel("Dev risk", "fresh funded", devCards, "flag")}
       ${panel("Paper books", "not orders", bookHtml, "layers")}
       ${panel("Lessons", "follow-ups", lessonHtml, "feed")}
@@ -980,7 +1091,7 @@
       tile("NFT names", String(nftCount), { count: nftCount, digits: 0, hint: nftCount ? "KING watch" : "no file yet" })
     ]);
     const cards = `<div class="cards">
-      <a class="card" data-desk="solada" href="#/cardano"><h3>Cardano</h3><p>${tx((pack.cardanoBrief && pack.cardanoBrief.headline) || "Charts first. Snek depth, heat, and the whale rotation.")}</p>${(ada.suri || []).slice(0, 6).map(suriBadge).join("")}<span class="go">Open tab</span></a>
+      <a class="card" data-desk="solada" href="#/cardano"><h3>Cardano</h3><p>${tx((pack.cardanoBrief && pack.cardanoBrief.headline) || "Charts first. Pool ADA and the heat grid.")}</p>${(ada.suri || []).length ? `<div class="suri-legend"><b>Suri risk</b>${(ada.suri || []).slice(0, 6).map(suriBadge).join("")}</div>` : ""}<span class="go">Open tab</span></a>
       <a class="card" data-desk="solana" href="#/solana"><h3>Solana</h3><p>Calm terminal · F / R / S paper books${sol ? ` · ${sol.openCount} open` : ""}.</p><span class="go">Open tab</span></a>
       <a class="card" data-desk="nft" href="#/nft"><h3>NFT</h3><p>KING · multichain · coming soon. ${nftCount ? nftCount + " names on the watchlist." : "Placeholder until a pulse file lands."}</p><span class="go">Open tab</span></a>
     </div>`;
