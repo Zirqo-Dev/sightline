@@ -1,0 +1,9 @@
+time,book,agent,mint,symbol,action,frac,sol,quote_px,impact_pct,fee_sol,haircut_pct,why,pnl,check_delay_s,stale
+1793500000,F,EXECUTE,Mint01xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx01pp,T1,buy,1,0.5,0.5,1.0,1e-05,0.5,pass,,0.0,0
+1793500000,R,EXECUTE,Mint02xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx02pp,T2,buy,1,0.5,0.5,1.0,1e-05,0.5,random_match,,0.0,0
+1793500000,S,EXECUTE,Mint02xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx02pp,T2,buy,1,0.5,0.5,1.0,1e-05,0.5,safety:dev_holds,,0.0,0
+1793501800,F,EXIT,Mint01xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx01pp,T1,sell,0.333333,0.240448333,0.725,,1e-05,0.5,take_profit_40,0.072945,0.0,0
+1793501800,F,EXECUTE,Mint03xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx03pp,T3,buy,1,0.5,0.5,1.0,1e-05,0.5,pass,,0.0,0
+1793501800,R,EXECUTE,Mint03xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx03pp,T3,buy,1,0.5,0.5,1.0,1e-05,0.5,random_match,,0.0,0
+1793503600,R,EXIT,Mint02xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx02pp,T2,sell,1.0,0.29849,0.3,,1e-05,0.5,hard_stop,-0.20402,0.0,0
+1793503600,S,EXIT,Mint02xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx02pp,T2,sell,1.0,0.29849,0.3,,1e-05,0.5,hard_stop,-0.20402,0.0,0

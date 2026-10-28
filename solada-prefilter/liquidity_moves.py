@@ -19,6 +19,9 @@ Koios call budget per run (default max_calls 36, shared pace): 1 tip, then per t
 marker asset_txs plus tx_info batches under 1 KB. Blockfrost is used only when a Koios read
 returns nothing, and only up to max_bf_calls (default 12). The job stops at its own budget_s,
 measured from when the slice starts, and at the run's late-slice end, whichever is sooner.
+Tokens are scanned least-recently-checked first. The private cache stores each ticker's
+last_checked time. A budget skip does not stamp that token, so later runs cover the rest of
+the top 10. budget_s and the Koios cap stay where they are.
 """
 import hashlib, os, time
 from datetime import datetime, timezone
@@ -80,6 +83,7 @@ LIMITS = [
     "Blockfrost runs only after a Koios read returns nothing, and only up to max_bf_calls (default 12). An empty BLOCKFROST_PROJECT_ID skips it.",
     "Minswap V2 markers are the derived LP asset name. Sundae and Splash pools are recognized when a continuing pool UTxO is inside a transaction this job already read. Discovery of those pools rechecks the newest token transactions at most every discover_every_h.",
     "The job gets budget_s from the moment it starts (default 50s), and still stops before the process kill. A capped pool resumes next run. Nothing here changes desk rules, kill lines, or the webhook.",
+    "Tokens are scanned least-recently-checked first. The private cache stores each ticker's last_checked time. A token skipped for budget is not stamped, so the next run reads it before tokens this run already read. budget_s and max_calls do not change. tokens[].last_checked is that time in UTC, or null.",
 ]
 
 
@@ -642,6 +646,69 @@ def resolve_tokens(top10, units_by_ticker, cached, max_tokens):
     return rows, skipped
 
 
+def _rank_key(row):
+    rank = row.get("rank") if isinstance(row, dict) else None
+    if isinstance(rank, bool) or not isinstance(rank, (int, float)):
+        return 99
+    return rank
+
+
+def order_least_recent(rows, last_checked):
+    """Least-recently-checked first.
+
+    A missing or non-positive stamp sorts as never checked, ahead of any real time.
+    Rank, then ticker, breaks ties, so a fresh cache still follows Snek rank.
+    """
+    stamps = last_checked if isinstance(last_checked, dict) else {}
+
+    def key(row):
+        ts = _safe_int(stamps.get(row.get("ticker")))
+        return (ts if ts > 0 else 0, _rank_key(row), str(row.get("ticker") or ""))
+
+    return sorted(rows or [], key=key)
+
+
+def _unix(v):
+    """Unix seconds. time.time() is fractional; int() truncates it. A bool is not a time."""
+    if isinstance(v, bool) or v is None:
+        return 0
+    if isinstance(v, (int, float)):
+        n = int(v)
+        return n if n > 0 else 0
+    return _safe_int(v)
+
+
+def stamp_checked(cache, checked, tickers, now_s):
+    """Record last_checked for tokens this run started. A budget skip is left alone.
+
+    Keys that are not in this run's top 10 are dropped. The map is ticker to unix time.
+    """
+    prev = cache.get("last_checked") if isinstance(cache, dict) and isinstance(cache.get("last_checked"), dict) else {}
+    stamps = {}
+    for k, v in prev.items():
+        n = _unix(v)
+        if isinstance(k, str) and k and not k.startswith("_") and n > 0:
+            stamps[k.upper()] = n
+    now = _unix(now_s)
+    if now > 0:
+        for tk in checked or []:
+            if isinstance(tk, str) and tk and not tk.startswith("_"):
+                stamps[tk.upper()] = now
+    keep = {str(t).upper() for t in (tickers or []) if isinstance(t, str) and t and not str(t).startswith("_")}
+    stamps = {k: v for k, v in stamps.items() if k in keep}
+    if isinstance(cache, dict):
+        cache["last_checked"] = stamps
+    return stamps
+
+
+def _token_public(row, stamps):
+    ts = _safe_int((stamps or {}).get(row.get("ticker")))
+    return {
+        "ticker": row["ticker"], "policy_short": row["policy_short"], "rank": row.get("rank"),
+        "unit_source": row.get("unit_source"), "last_checked": iso(ts) if ts > 0 else None,
+    }
+
+
 class Reader:
     def __init__(self, http, bc, bf_key, deadline):
         self.h, self.bc = http, bc
@@ -913,16 +980,17 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
     if not isinstance(prev_doc, dict):
         prev_doc = {}
     rows, skipped = resolve_tokens(top10, units_by_ticker, cache.get("units"), bc["max_tokens"])
-    if rows and cache.get("capped"):
-        k = int(cache.get("next") or 0) % len(rows)
-        rows = rows[k:] + rows[:k]
     listed = list(rows)
+    # Least-recently-checked first. The legacy `next` index advanced by one, so a run that
+    # finished two tokens re-read the second one next time and the tail stayed on
+    # skipped: budget. `next` is still stored so a tip or deadline skip keeps it.
+    rows = order_least_recent(rows, cache.get("last_checked"))
     keep_next = False
     reader = Reader(http, bc, bf_key, deadline)
     names = WL.assign_token_keys([row["unit"] for row in rows])
     seen_list = [h for h in cache.get("seen") or [] if isinstance(h, str)]
     seen = set(seen_list)
-    events, pools, coverage, capped = [], [], {}, []
+    events, pools, coverage, capped, checked = [], [], {}, [], []
     tip = reader.tip() if rows else None
     tip_h = tip[0] if tip else None
     if rows and (reader.late() or tip_h is None):
@@ -938,6 +1006,7 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
             coverage[tk] = {"read": 0, "complete": False, "skipped": "budget"}
             capped.append(tk)
             continue
+        checked.append(tk)
         try:
             evs, cov, new_markers = _scan_token(
                 reader, row, cache, scripts, splash_pols, bc, lp_pols or V.lp_policies(cfg), watch, loaded, ex_tags,
@@ -984,7 +1053,7 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
     cache["open_pulls"] = [_pull_state(p) for p in waiting]
     cache["seen"] = seen_list[-int(bc["keep_seen"]):]
     if keep_next:
-        # Tip or deadline skip: the rotation index only applies while capped stays true.
+        # Tip or deadline skip: nobody was read, so last_checked and the legacy index stay.
         cache["capped"] = True
         cache["next"] = kept_next
     elif capped:
@@ -993,6 +1062,7 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
     else:
         cache["capped"] = False
         cache["next"] = 0
+    stamps = stamp_checked(cache, checked, [r["ticker"] for r in listed], now_s)
     koios_calls = http.calls.get("koios", 0) - reader.start
     bf_calls = http.calls.get("blockfrost", 0) - reader.bf_start
     doc = {
@@ -1006,8 +1076,7 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
         "actor_tags": bool(loaded),
         "moves": merged[-int(bc["keep_rows"]):],
         "pools": merge_pools(prev_doc.get("pools"), [_pool_public(p) for p in pools]),
-        "tokens": [{"ticker": r["ticker"], "policy_short": r["policy_short"], "rank": r.get("rank"),
-                    "unit_source": r.get("unit_source")} for r in listed],
+        "tokens": [_token_public(r, stamps) for r in listed],
         "skipped": skipped, "coverage": coverage, "capped": capped,
         "koios_calls": koios_calls, "blockfrost_calls": bf_calls,
         "blockfrost_fallbacks": reader.fallbacks, "blockfrost_available": bool(reader.bf_key),
@@ -1150,9 +1219,18 @@ def _cache_public(cache):
     seen = [h for h in cache.get("seen") or [] if isinstance(h, str)][-4000:] if isinstance(cache.get("seen"), list) else []
     raw_pulls = cache.get("open_pulls") if isinstance(cache.get("open_pulls"), list) else []
     pulls = [row for row in (_pull_state(p) for p in raw_pulls) if row]
+    checked = {}
+    raw_c = cache.get("last_checked")
+    if isinstance(raw_c, dict):
+        for k, v in raw_c.items():
+            if not isinstance(k, str) or not k or k.startswith("_"):
+                continue
+            n = _unix(v)
+            if n > 0:
+                checked[k.upper()] = n
     return {
         "height": height, "markers": markers, "units": units, "seen": seen, "open_pulls": pulls,
-        "discovered_at": discovered, "misses": misses,
+        "discovered_at": discovered, "misses": misses, "last_checked": checked,
         "capped": cache.get("capped") is True, "next": _safe_int(cache.get("next")),
     }
 
