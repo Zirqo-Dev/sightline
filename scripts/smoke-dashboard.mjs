@@ -543,6 +543,61 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(css.includes('body[data-desk="solada"]') && css.includes('nav a[data-d="solada"]') && css.includes("#0033AD"), "Cardano-blue theme stays keyed to solada");
 }
 
+{
+  const previewJs = path.join(root, "preview/app.js");
+  const parsed = spawnSync(process.execPath, ["--check", previewJs], { encoding: "utf8" });
+  if (parsed.status !== 0) throw new Error("preview/app.js failed to parse\n" + (parsed.stderr || parsed.stdout));
+  const pbox = { console, matchMedia: () => ({ matches: true }) };
+  pbox.window = pbox;
+  pbox.globalThis = pbox;
+  vm.runInNewContext(fs.readFileSync(previewJs, "utf8"), pbox);
+  const P = pbox.Preview;
+  assert(P && P.safeTag("w-0123abcd") === "w-0123abcd", "w- hash is kept");
+  assert(P.safeTag("W-ABCDEF01") === "w-abcdef01", "w- hash is normalized");
+  assert(P.safeTag("dev") === "dev" && P.safeTag("whale-1") === "whale-1", "role labels are kept");
+  assert(P.safeTag("founder_whale") === "founder_whale", "known role label is kept");
+  const stake = "stake1u" + "x".repeat(52);
+  const addr = "addr1q" + "y".repeat(90);
+  assert(P.safeTag(stake) == null && P.safeTag(addr) == null && P.safeTag("u8a2m6") == null, "stake keys, addresses, and prefixes are dropped");
+  assert(!P.sanitize("paid " + stake + " and " + addr).includes("stake1") && !P.sanitize(addr).includes("addr1"), "prose drops wallet ids");
+  const whale = P.whaleHtml({
+    ada_balance: 123456.78,
+    positions: [{ token: "SECRETBAG", qty: 999 }],
+    whale_tag: "founder_whale",
+    rows: [{ time: "2026-10-28T00:00:00Z", kind: "swap", token: "SNEK", ada_leg: 12, qty: 1000, counterparty_tag: addr }]
+  });
+  assert(!whale.includes("123456") && !whale.includes("SECRETBAG") && !whale.includes("addr1") && !whale.includes("999"), "whale ledger hides balances, bags, and addresses");
+  assert(whale.includes("founder_whale") && whale.includes("SNEK"), "whale ledger keeps the role and the token");
+  const dev = P.devHtml({ entries: [
+    { ticker: "SNEK", risk: "caution", dev_tag: "dev", fresh_funded: true, dev_sold_ada: 10 },
+    { ticker: "NOPE", dev_tag: stake, fresh_funded: false }
+  ] });
+  assert(dev.includes("fresh funded") && dev.includes(">dev<"), "fresh funded chip and dev role render");
+  assert(!dev.includes("stake1"), "dev tag that is a stake key is not rendered");
+  const paper = load("scripts/fixtures/solana-desk/paper-fills.json");
+  const trades = P.parseCsv(fs.readFileSync(path.join(root, "scripts/fixtures/solana-desk/trades-fills.csv"), "utf8"));
+  const model = P.solanaModel(paper, trades, null);
+  assert(model.openCount === 3, "open paper positions, got " + model.openCount);
+  assert(model.closed === 3 && Math.round(model.winRate * 100) === 33, "win rate uses closed fills");
+  closeTo(model.net, -0.26215, "net pnl");
+  const desk = P.solanaHtml(model);
+  assert(!desk.includes("Mint01") && desk.includes("T1"), "positions show tickers, not mints");
+  assert(desk.includes("hard stop") && (desk.includes("take profit") || desk.includes("pass")), "trade reasons render");
+  const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
+  const preview = fs.readFileSync(path.join(root, "preview.html"), "utf8");
+  const logo = '<a class="logo" href="#/">&gt;sight<span>line</span><i>_</i></a>';
+  assert(index.includes(logo) && preview.includes(logo), "preview keeps the live Sightline logo markup");
+  assert(!index.includes("preview.html") && !index.includes("preview/app"), "live page does not link to the preview");
+  const css = fs.readFileSync(path.join(root, "preview/app.css"), "utf8");
+  assert(css.includes(".logo span{color:var(--accent)") && css.includes(".logo i{font-style:normal;color:var(--accent)"), "logo color still follows --accent");
+  assert(css.includes('body[data-desk="nft"]') && css.includes("#ff4fd8"), "NFT accent reaches the logo token");
+  assert(css.includes("#14F195") && css.includes("#9945FF") && css.includes("#3d8bff"), "Solana and Cardano palettes stay");
+  assert(css.includes("prefers-reduced-motion"), "reduced motion is respected");
+  const build = fs.readFileSync(path.join(root, "scripts/build-site.py"), "utf8");
+  assert(build.includes("def bust_preview(") && build.includes("def preview_version("), "preview assets are cache-busted on their own");
+  assert(build.includes("Kept off asset_version()"), "preview hash does not retint the live dashboard assets");
+}
+
 console.log("smoke-dashboard: OK");
 console.log("  fixture ADA", sc.byUnit.ADA.pnl, "ADA-equivalent", sc.byUnit["ADA-equivalent"].pnl, "USD", sc.byUnit.USD.pnl);
 console.log("  live books", live.length, "open", live.reduce((n, b) => n + b.json.open.length, 0), "closed", live.reduce((n, b) => n + b.json.closed.length, 0));
