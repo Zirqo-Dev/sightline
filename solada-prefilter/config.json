@@ -188,7 +188,7 @@
     "min_ada_row": 1.0
   },
   "dev_checks": {
-    "_note": "Phase 1 dev checks (dev_checks.py). Own budget_s and max_calls, capped at run start + 600s, run before the webhook, separate from research_budget_s. Koios primary, Blockfrost fallback via the existing BLOCKFROST_PROJECT_ID. A Koios 429 stops Koios here and pauses it for ~60s, then Koios resumes; the breaker is not tripped. On a Koios outage each scanned row gets about 8 Blockfrost calls (newest transactions first). Rows that do not fit that floor are marked budget and picked up on a later run. max_bf_calls stays 50. A new dev sell (unseen sell tx, changed_since_last) on a tracked token may add one dev_sell trigger; unchanged state does not re-fire. Rows are keyed by policy + asset name. min_sell_ada is a dust floor. Curve reserve stays in flags.exclude_tags and is left out of holder and seller logic. dev_buy_ada, dev_locked_pct, unlock_date and LP pulls are phase 2 (the three fields are always null).",
+    "_note": "Phase 1 dev checks (dev_checks.py). Own budget_s and max_calls, capped at run start + 600s, run before the webhook, separate from research_budget_s. Koios primary, Blockfrost fallback via the existing BLOCKFROST_PROJECT_ID. A Koios 429 stops Koios here and pauses it for ~60s, then Koios resumes; the breaker is not tripped. On a Koios outage each scanned row gets about 8 Blockfrost calls (newest transactions first). Rows that do not fit that floor are marked budget and picked up on a later run. max_bf_calls stays 50. A new dev sell (unseen sell tx, changed_since_last) on a tracked token may add one dev_sell trigger; unchanged state does not re-fire. Rows are keyed by policy + asset name. min_sell_ada is a dust floor. Curve reserve stays in flags.exclude_tags and is left out of holder and seller logic. dev_buy_ada, dev_locked_pct and unlock_date are phase 2 (always null). LP pulls are liquidity_moves.py.",
     "enabled": true,
     "budget_s": 45,
     "max_calls": 36,
@@ -209,6 +209,27 @@
     "serial_caution_3h": 2,
     "serial_caution_7d": 3,
     "drawdown_caution_pct": 80
+  },
+  "liquidity_moves": {
+    "_note": "SPD-55 pool reserves for Snek cardano_top10 (liquidity_moves.py). Research only: no webhook, no desk rule, no kill line. Runs after whale_ledger and big_moves, inside whatever is left of research_budget_s, and also stops at budget_s. Koios max_calls 36 per run (1 tip + one asset_txs page per pool marker + tx_info batches under 1 KB). Blockfrost only when a Koios read fails, max_bf_calls 12. min_swap_ada / min_lp_ada / dump_ada are this job's own floors.",
+    "enabled": true,
+    "budget_s": 50,
+    "max_calls": 36,
+    "max_bf_calls": 12,
+    "utxo_batch": 10,
+    "max_tokens": 10,
+    "max_txs_per_pool": 15,
+    "discover_txs": 12,
+    "discover_every_h": 24,
+    "min_swap_ada": 5000,
+    "min_lp_ada": 1000,
+    "min_pool_ada": 500,
+    "dump_window_h": 6,
+    "dump_ada": 5000,
+    "dump_reserve_pct": 8,
+    "keep_h": 72,
+    "keep_rows": 400,
+    "keep_seen": 4000
   },
   "research_budget_s": 240
 }

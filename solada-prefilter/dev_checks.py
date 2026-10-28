@@ -10,8 +10,8 @@ flags.py uses. Never a raw prefix, address, or stake key. Rows and trigger keys 
 token (policy + asset name): a ticker that changes token is a new baseline.
 
 Phase 1 is dev sells / late rugs, serial-launcher counts, and drawdown / inactivity.
-dev_buy_ada, dev_locked_pct and unlock_date are always null. LP pulls are phase 2, with
-dev lock, dev buy class, and social checks.
+dev_buy_ada, dev_locked_pct and unlock_date are always null. LP pulls are liquidity_moves.py
+(SPD-55), not this file. Dev lock, dev buy class, and social checks stay phase 2.
 
 A sell is one transaction whose creator key UTxOs lose this token and gain ADA, or a
 later tx that pays the dev ADA for tokens they had parked at a script without returning
@@ -1050,18 +1050,19 @@ def dev_deadline(budget_s, t_start, now):
 _ADDR_IN_PATTERN = re.compile(r"addr1[02-9ac-hj-np-z]{50,}")
 
 
-def _patterns(owner_env):
+def _patterns(owner_env, who="dev_checks"):
     """(compiled patterns, stake keys derived from full-address patterns), or None when unusable (fail closed).
 
     Never prints a pattern or a derived stake. Stake derivation matches the privacy guard: a full base
     address in a pattern line contributes addr_info's stake, so a sibling address of that wallet matches.
+    `who` is only the log prefix, so a liquidity-moves caller is not reported as dev_checks.
     """
     import big_moves as BM
     if owner_env is None:
         owner_env = os.environ.get("PRIVACY_GUARD_PATTERNS", "")
     pats, bad = BM.owner_patterns(owner_env)
     if bad or not pats:
-        print(f"dev_checks: skipped: owner patterns unusable ({bad} bad, {len(pats)} usable)", file=sys.stderr)
+        print(f"{who}: skipped: owner patterns unusable ({bad} bad, {len(pats)} usable)", file=sys.stderr)
         return None
     stakes = set()
     for line in (owner_env or "").splitlines():
