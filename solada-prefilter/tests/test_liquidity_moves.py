@@ -1,5 +1,5 @@
 """SPD-55 liquidity moves (offline, no secrets, no network). Frozen fixture, synthetic addresses."""
-import hashlib, io, json, os, shutil, subprocess, sys, tempfile, unittest
+import hashlib, io, json, os, shutil, subprocess, sys, tempfile, time, unittest
 from unittest import mock
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -941,6 +941,63 @@ class Top10Names(unittest.TestCase):
         self.assertEqual(cache["units"]["SNEK"], units["SNEK"])
         self.assertNotIn("stake1", json.dumps(doc))
         self.assertNotIn("addr1", json.dumps(doc))
+
+    def test_a_spent_reserve_still_calls_koios_for_every_resolved_name(self):
+        """The hard cap can already be gone when this slice starts.
+
+        job_deadline used to return `now`, and every resolved name was then
+        coverage.skipped budget with 0 Koios calls. The slice now keeps budget_s.
+        """
+        calls = []
+
+        def req(self_, src, url, method="GET", body=None, headers=None, quiet404=True):
+            self_.calls[src] = self_.calls.get(src, 0) + 1
+            calls.append((src, url))
+            if src == "koios" and url.endswith("/tip"):
+                return [{"block_height": 1000, "block_time": NOW}]
+            if src == "koios" and "/asset_txs" in url:
+                return []
+            return None
+
+        cfg = json.load(open(os.path.join(os.path.dirname(HERE), "config.json")))
+        t_start = time.time() - P.HARD_CAP_S
+        deadline = P.job_deadline(cfg, t_start, time.time(), "liquidity_moves")
+        self.assertGreaterEqual(deadline - time.time(), cfg["liquidity_moves"]["budget_s"] - 1)
+        self.assertLessEqual(deadline, t_start + P.LATE_SLICE_END_S + 0.001)
+        http = P.Http({"koios": 0})
+        narrow = {"liquidity_moves": {"discover_every_h": 10 ** 9, "max_calls": 36, "max_bf_calls": 12}}
+        with mock.patch.object(P.Http, "req", req), tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            summary = LM.run(http, narrow, DESK_TOP10, {}, {}, V.lp_policies(), d, c, False, NOW,
+                             deadline=deadline, owner_env=OWNER)
+            doc = json.load(open(os.path.join(d, "liquidity_moves.json")))
+        self.assertEqual(summary["tokens"], 10)
+        self.assertEqual(summary["koios_calls"], 11)
+        self.assertLessEqual(summary["koios_calls"], 36)
+        self.assertEqual(doc["skipped"], [])
+        units = LM.known_units()
+        asked = [u for src, u in calls if src == "koios" and "/asset_txs" in u]
+        for src in DESK_TOP10:
+            cov = doc["coverage"][src["ticker"]]
+            self.assertNotEqual(cov.get("skipped"), "budget")
+            self.assertTrue(cov.get("complete"))
+            marker = LM.MINSWAP_V2_LP + LM.minswap_v2_lp_name(units[src["ticker"]])
+            self.assertTrue(any(f"_asset_policy={marker[:56]}" in u and f"_asset_name={marker[56:]}" in u
+                                for u in asked), src["ticker"])
+        text = json.dumps(doc)
+        self.assertNotIn("stake1", text)
+        self.assertNotIn("addr1", text)
+        self.assertNotIn(units["SNEK"], text)
+        # A deadline that is already past still skips before the tip. That is the old failure.
+        http2 = P.Http({"koios": 0})
+        with mock.patch.object(P.Http, "req", lambda *a, **k: (_ for _ in ()).throw(AssertionError("called"))), \
+                tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            skipped = LM.run(http2, narrow, DESK_TOP10, {}, {}, V.lp_policies(), d, c, False, NOW,
+                             deadline=time.time() - 5, owner_env=OWNER)
+            missed = json.load(open(os.path.join(d, "liquidity_moves.json")))
+        self.assertEqual(skipped["koios_calls"], 0)
+        self.assertEqual(missed["skipped"], [])
+        for src in DESK_TOP10:
+            self.assertEqual(missed["coverage"][src["ticker"]], {"read": 0, "complete": False, "skipped": "budget"})
 
     def test_a_bad_tip_does_not_raise_attribute_error(self):
         def req(self_, src, url, method="GET", body=None, headers=None, quiet404=True):

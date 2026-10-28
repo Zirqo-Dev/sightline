@@ -17,8 +17,8 @@ by the pre-filter so the webhook, state.json and kill_status.json still finish.
 
 Koios call budget per run (default max_calls 36, shared pace): 1 tip, then per token one LP or
 marker asset_txs plus tx_info batches under 1 KB. Blockfrost is used only when a Koios read
-returns nothing, and only up to max_bf_calls (default 12). The job also stops at its budget_s and
-at the shared research deadline, whichever is sooner.
+returns nothing, and only up to max_bf_calls (default 12). The job stops at its own budget_s,
+measured from when the slice starts, and at the run's late-slice end, whichever is sooner.
 """
 import hashlib, os, time
 from datetime import datetime, timezone
@@ -79,7 +79,7 @@ LIMITS = [
     "Koios: at most max_calls per run (default 36), on the shared pre-filter pace. One tip, then one asset_txs page per pool marker and tx_info batches kept under 1 KB.",
     "Blockfrost runs only after a Koios read returns nothing, and only up to max_bf_calls (default 12). An empty BLOCKFROST_PROJECT_ID skips it.",
     "Minswap V2 markers are the derived LP asset name. Sundae and Splash pools are recognized when a continuing pool UTxO is inside a transaction this job already read. Discovery of those pools rechecks the newest token transactions at most every discover_every_h.",
-    "The job stops at budget_s or the shared research deadline. A capped pool resumes next run. Nothing here changes desk rules, kill lines, or the webhook.",
+    "The job gets budget_s from the moment it starts (default 50s), and still stops before the process kill. A capped pool resumes next run. Nothing here changes desk rules, kill lines, or the webhook.",
 ]
 
 
