@@ -68,9 +68,9 @@ def swap_tx():
             + [_row(ORDER, 5_000_000_000, _assets(s["tok_in"]), None)]}
 
 
-def add_tx(st=None):
+def add_tx(st=None, user=None):
     s = FX["add"]
-    user = addr("lp")
+    user = user or addr("lp")
     return {"hash": s["hash"], "time": NOW - s["age_s"], "height": 999200,
             "inputs": [_row(POOL, s["pool_in_lov"], _assets(s["tok_in"], {LP: s["lp_pool_in"]})),
                        _row(user, 5_000_000, {}, st or stake("lp"))],
@@ -165,9 +165,10 @@ class Pure(unittest.TestCase):
 
     def test_pull_then_sell_is_ahead_of_dump_and_the_other_way_is_not(self):
         bc = LM.lm_cfg({})
-        pull = {"kind": "lp_remove", "time": NOW - 3600, "pool_key": "minswap_v2~41edcb63", "hash": FX["pull"]["hash"],
-                "tx_short": FX["pull"]["hash"][:10], "ada": FX["pull"]["expect_ada"], "reserve_ada": 90000.0}
-        sell = {"kind": "swap", "direction": "sell", "time": NOW - 1800, "pool_key": pull["pool_key"],
+        pull = {"kind": "lp_remove", "time": NOW - 3600, "pool_key": "minswap_v2~41edcb63", "unit": UNIT,
+                "hash": FX["pull"]["hash"], "tx_short": FX["pull"]["hash"][:10], "ada": FX["pull"]["expect_ada"],
+                "reserve_ada": 90000.0}
+        sell = {"kind": "swap", "direction": "sell", "time": NOW - 1800, "pool_key": pull["pool_key"], "unit": UNIT,
                 "hash": FX["sell"]["hash"], "tx_short": FX["sell"]["hash"][:10], "ada": FX["sell"]["expect_ada"]}
         waiting, flagged = LM.mark_dumps([pull, sell], [], bc, NOW)
         self.assertEqual(waiting, [])
@@ -266,7 +267,7 @@ class Run(unittest.TestCase):
             summary, calls = self._run(txs, d, c)
             doc = json.load(open(os.path.join(d, "liquidity_moves.json")))
             cache = json.load(open(os.path.join(c, "liquidity-moves-cache.json")))
-            summary2, _ = self._run(txs, d, c)
+            summary2, calls2 = self._run(txs, d, c)
             doc2 = json.load(open(os.path.join(d, "liquidity_moves.json")))
         self.assertIn("pool level", doc["note"])
         self.assertIn("batcher", doc["note"])
@@ -286,6 +287,7 @@ class Run(unittest.TestCase):
         self.assertTrue(pull["actor_tag"].startswith("w-") and len(pull["actor_tag"]) == 10)
         self.assertEqual(len(doc2["moves"]), len(doc["moves"]))
         self.assertEqual(summary2["moves_new"], 0)
+        self.assertFalse(any("/tx_info" in u or u.endswith("/utxos") for s, u, b, h in calls2))
         blob = json.dumps(doc) + json.dumps(cache)
         self.assertNotIn(stake("lp"), blob)
         self.assertNotIn(addr("lp"), blob)
@@ -386,6 +388,171 @@ class Run(unittest.TestCase):
             self.assertIn("liquidity_moves", run)
             self.assertIsNone(run["liquidity_moves"])
             self.assertTrue(os.path.exists(os.path.join(d, "state.json")))
+
+
+class ReviewFixes(unittest.TestCase):
+    """B1, B2, S1, S2, S6, S7 from the PR #38 review."""
+
+    def test_sundae_cip68_prefix_does_not_collapse_pool_keys(self):
+        a = LM.SUNDAE_V3_LP + "000de140" + "11" * 28
+        b = LM.SUNDAE_V3_LP + "000de140" + "22" * 28
+        ka, kb = LM.pool_key("sundaeswap_v3", a, UNIT), LM.pool_key("sundaeswap_v3", b, UNIT)
+        self.assertNotEqual(ka, kb)
+        self.assertNotEqual(ka, "sundaeswap_v3~000de140")
+        self.assertEqual(ka, "sundaeswap_v3~" + hashlib.sha256(a.encode()).hexdigest()[:8])
+        lov = 80_000_000_000
+        tx = {"hash": "44" * 32, "time": NOW, "inputs": [
+            _row(SUNDAE, lov, _assets(1000, {a: 1})), _row(SUNDAE, lov, _assets(1000, {b: 1}))],
+            "outputs": [_row(SUNDAE, lov + 6_000_000_000, _assets(400, {a: 1})),
+                        _row(SUNDAE, lov - 7_000_000_000, _assets(1800, {b: 1}))]}
+        evs = LM.events_from_tx(tx, UNIT, *LM.dex_tables({}), 500_000_000)
+        self.assertEqual(len(evs), 2)
+        self.assertEqual({LM.pool_key(e["dex"], e["marker"], UNIT) for e in evs}, {ka, kb})
+        self.assertEqual(sorted(abs(e["ada_delta"]) for e in evs), [6_000_000_000, 7_000_000_000])
+
+    def test_msp_auth_token_is_not_the_pool_key(self):
+        msp = LM.MINSWAP_V2_LP + "4d5350"
+        lp_a = LM.MINSWAP_V2_LP + "ab" * 32
+        lp_b = LM.MINSWAP_V2_LP + "cd" * 32
+        self.assertTrue(LM._shared_auth(msp))
+        self.assertIsNone(LM._pick_marker([msp], "minswap_v2"))
+        self.assertEqual(LM._pick_marker([msp, lp_a], "minswap_v2"), lp_a)
+        self.assertNotEqual(LM.pool_key("minswap_v2", lp_a, UNIT), LM.pool_key("minswap_v2", msp, UNIT))
+        lov = 90_000_000_000
+        tx = {"hash": "55" * 32, "time": NOW, "inputs": [
+            _row(POOL, lov, _assets(1000, {msp: 1, lp_a: 10})),
+            _row(POOL, lov, _assets(1000, {msp: 1, lp_b: 10}))],
+            "outputs": [
+            _row(POOL, lov + 8_000_000_000, _assets(400, {msp: 1, lp_a: 10})),
+            _row(POOL, lov - 9_000_000_000, _assets(2000, {msp: 1, lp_b: 10}))]}
+        evs = LM.events_from_tx(tx, UNIT, *LM.dex_tables({}), 500_000_000)
+        self.assertEqual({e["marker"] for e in evs}, {lp_a, lp_b})
+        keys = {LM.pool_key(e["dex"], e["marker"], UNIT) for e in evs}
+        self.assertEqual(len(keys), 2)
+        self.assertNotIn(LM.pool_key("minswap_v2", msp, UNIT), keys)
+
+    def test_marker_must_persist_and_min_pool_ada_and_dump_rules(self):
+        scripts, splash = LM.dex_tables({})
+        nft = LM.SUNDAE_V3_LP + "000de140" + "33" * 28
+        only_in = {"hash": "66" * 32, "time": NOW,
+                   "inputs": [_row(SUNDAE, 80_000_000_000, _assets(1000, {nft: 1}))],
+                   "outputs": [_row(SUNDAE, 80_000_000_000, _assets(1000))]}
+        self.assertEqual(LM.events_from_tx(only_in, UNIT, scripts, splash, 500_000_000), [])
+        dust = {"hash": "77" * 32, "time": NOW,
+                "inputs": [_row(POOL, 400_000_000, _assets(1000, {LP: 1}))],
+                "outputs": [_row(POOL, 499_000_000, _assets(900, {LP: 1}))]}
+        self.assertEqual(LM.events_from_tx(dust, UNIT, scripts, splash, 500 * 1_000_000), [])
+        bc = LM.lm_cfg({})
+        pull = {"kind": "lp_remove", "time": NOW - 10 * 3600, "pool_key": "p1", "unit": UNIT,
+                "ada": 20000, "reserve_ada": 90000, "hash": "aa" * 32, "tx_short": "aa" * 5}
+        sell = {"kind": "swap", "direction": "sell", "time": NOW - 3600, "pool_key": "p1", "unit": UNIT,
+                "ada": 12000, "hash": "bb" * 32, "tx_short": "bb" * 5}
+        waiting, flagged = LM.mark_dumps([pull, sell], [], bc, NOW)
+        self.assertEqual(flagged, [])
+        self.assertFalse(pull.get("ahead_of_dump"))
+        inside = dict(pull, time=NOW - 3 * 3600, ahead_of_dump=False)
+        other = dict(sell, pool_key="p2", time=NOW - 1800)
+        LM.mark_dumps([inside, other], [], bc, NOW)
+        self.assertFalse(inside.get("ahead_of_dump"))
+        other_unit = dict(sell, unit=UNIT + "ff", time=NOW - 1000)
+        same = dict(inside, ahead_of_dump=False)
+        LM.mark_dumps([same, other_unit], [], bc, NOW)
+        self.assertFalse(same.get("ahead_of_dump"))
+
+    def test_blockfrost_ignores_after_so_we_read_newest_first(self):
+        recent = swap_tx()
+        ancient = {"tx_hash": "00" * 32, "block_height": 10, "block_time": 1}
+        calls = []
+
+        def req(self_, src, url, method="GET", body=None, headers=None, quiet404=True):
+            self_.calls[src] = self_.calls.get(src, 0) + 1
+            calls.append((src, url))
+            if src == "koios":
+                return None
+            if url.endswith("/blocks/latest"):
+                return {"height": 1000000, "time": NOW}
+            if "/transactions?" in url:
+                row = {"tx_hash": recent["hash"], "block_height": recent["height"], "block_time": recent["time"]}
+                if "order=desc" in url:
+                    return [row, ancient]
+                return [ancient]
+            if url.endswith("/utxos"):
+                h = url.split("/txs/")[1].split("/")[0]
+                if h == ancient["tx_hash"]:
+                    return {"hash": h, "inputs": [], "outputs": []}
+                t = recent
+                def amt(u):
+                    rows = [{"unit": "lovelace", "quantity": str(u["lovelace"])}]
+                    rows += [{"unit": k, "quantity": str(q)} for k, q in u["assets"].items()]
+                    return {"address": u["addr"], "amount": rows}
+                return {"hash": h, "inputs": [amt(u) for u in t["inputs"]], "outputs": [amt(u) for u in t["outputs"]]}
+            return None
+
+        http = P.Http({"koios": 0, "blockfrost": 0})
+        with mock.patch.object(P.Http, "req", req), tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            json.dump({"discovered_at": {UNIT: NOW}}, open(os.path.join(c, "liquidity-moves-cache.json"), "w"))
+            summary = LM.run(http, {}, _top(), {FX["ticker"]: UNIT}, {UNIT: {"decimals": 6}}, V.lp_policies(),
+                             d, c, False, NOW, bf_key="k-bf", owner_env=OWNER)
+            doc = json.load(open(os.path.join(d, "liquidity_moves.json")))
+            cache = json.load(open(os.path.join(c, "liquidity-moves-cache.json")))
+        self.assertTrue(any("order=desc" in u for s, u in calls if s == "blockfrost" and "/transactions?" in u))
+        self.assertFalse(any("order=asc" in u for s, u in calls if "/transactions?" in u))
+        self.assertTrue(any(r["kind"] == "swap" for r in doc["moves"]))
+        self.assertNotIn(ancient["tx_hash"], cache["seen"])
+        self.assertTrue(doc["coverage"][FX["ticker"]]["complete"])
+        self.assertGreater(summary["blockfrost_fallbacks"], 0)
+
+    def test_koios_cap_skips_later_markers_and_does_not_miss_unsent_txs(self):
+        sundae = LM.SUNDAE_V3_LP + "000de140" + "44" * 28
+        txs = [swap_tx()]
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            json.dump({"markers": {UNIT: [{"dex": "sundaeswap_v3", "marker": sundae}]},
+                       "next": 2, "capped": False}, open(os.path.join(c, "liquidity-moves-cache.json"), "w"))
+            summary, calls = Run()._run(txs, d, c, cfg={"liquidity_moves": {"max_calls": 2, "discover_every_h": 100000}})
+            doc = json.load(open(os.path.join(d, "liquidity_moves.json")))
+            cache = json.load(open(os.path.join(c, "liquidity-moves-cache.json")))
+            self.assertFalse(any(sundae[56:] in u for s, u, b, h in calls))
+            self.assertFalse(doc["coverage"][FX["ticker"]]["complete"])
+            self.assertEqual(cache.get("misses") or {}, {})
+            self.assertNotIn(txs[0]["hash"], cache.get("misses") or {})
+            summary2, _ = Run()._run(txs, d, c, cfg={"liquidity_moves": {"max_calls": 36, "discover_every_h": 100000}})
+        self.assertGreaterEqual(summary2["moves"], 1)
+        self.assertLessEqual(summary["koios_calls"], 2)
+        asset_urls = [u for s, u, b, h in calls if "/asset_txs" in u]
+        self.assertEqual(len(asset_urls), 1)
+
+    def test_corrupt_cache_and_tip_skip_keeps_rotation(self):
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            json.dump({"units": [], "next": "x", "height": "nope", "markers": 3, "seen": "abc", "open_pulls": {}},
+                      open(os.path.join(c, "liquidity-moves-cache.json"), "w"))
+            summary = Run()._run([swap_tx()], d, c)[0]
+            cache = json.load(open(os.path.join(c, "liquidity-moves-cache.json")))
+        self.assertNotIn("error", summary)
+        self.assertIsInstance(cache["units"], dict)
+        self.assertIsInstance(cache["next"], int)
+        self.assertIsInstance(cache["height"], dict)
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            json.dump({"next": 4, "capped": False, "units": {FX["ticker"]: UNIT}},
+                      open(os.path.join(c, "liquidity-moves-cache.json"), "w"))
+            http = P.Http({"koios": 0})
+            with mock.patch.object(P.Http, "req", lambda *a, **k: None):
+                LM.run(http, {}, _top(), {FX["ticker"]: UNIT}, {}, V.lp_policies(), d, c, False, NOW,
+                       owner_env=OWNER, deadline=0)
+            cache = json.load(open(os.path.join(c, "liquidity-moves-cache.json")))
+        self.assertEqual(cache["next"], 4)
+
+    def test_owner_given_as_an_address_is_not_tagged(self):
+        user = addr("own")
+        st = stake("own")
+        self.assertEqual(F.addr_info(user)[0], st)
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            Run()._run([add_tx(st, user)], d, c, owner=user)
+            doc = json.load(open(os.path.join(d, "liquidity_moves.json")))
+        self.assertTrue(doc["moves"])
+        self.assertIsNone(doc["moves"][0]["actor_tag"])
+        blob = json.dumps(doc)
+        self.assertNotIn(user, blob)
+        self.assertNotIn(st, blob)
 
 
 class FileGuard(unittest.TestCase):

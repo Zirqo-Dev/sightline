@@ -19,10 +19,9 @@ marker asset_txs plus tx_info batches under 1 KB. Blockfrost is used only when a
 returns nothing, and only up to max_bf_calls (default 12). The job also stops at its budget_s and
 at the shared research deadline, whichever is sooner.
 """
-import hashlib, os, re, time
+import hashlib, os, time
 from datetime import datetime, timezone
 
-import big_moves as BM
 import dev_checks as DC
 import flags as F
 import koios_tx as KT
@@ -47,6 +46,8 @@ LP_DEX = {
 }
 DEX_LP = {v: k for k, v in LP_DEX.items()}
 TRACKED_DEX = ("minswap_v1", "minswap_v2", "sundaeswap_v1", "sundaeswap_v3", "splash")
+# Minswap V2 auth tokens share one name across every pool (MSP, factory, global setting).
+SHARED_AUTH_NAMES = {"4d5350", "4d5346", "4d534753"}
 
 DEFAULTS = {
     "enabled": True, "budget_s": 50, "max_calls": 36, "max_bf_calls": 12, "utxo_batch": 10,
@@ -167,16 +168,21 @@ def _dex_from_markers(markers, splash_pols):
     return None
 
 
+def _shared_auth(unit):
+    """True for a marker that is the same asset in every pool of that DEX."""
+    raw = _hex(unit)
+    return raw[:56] == MINSWAP_V2_LP and raw[56:] in SHARED_AUTH_NAMES
+
+
 def _pick_marker(markers, dex):
-    if not markers:
+    """Per-pool marker. Shared auth tokens (Minswap MSP) are not an identity."""
+    ranked = sorted(m for m in (markers or []) if m and not _shared_auth(m))
+    if not ranked:
         return None
     prefer = DEX_LP.get(dex)
-    ranked = sorted(markers)
     if prefer:
         owned = [m for m in ranked if _hex(m)[:56] == prefer]
         if owned:
-            # The shared pool-auth token is a short name. The per-pool LP name is longer.
-            owned.sort(key=lambda m: (0 if len(_hex(m)) > 60 else 1, m))
             return owned[0]
     return ranked[0]
 
@@ -196,19 +202,19 @@ def _key_stake(u):
 
 
 def lp_mover(tx, dex, marker, splash_pols):
-    """Stake of the key wallet whose LP balance changed the most, or None.
+    """(stake, addr) of the key wallet whose LP balance changed the most, or (None, None).
 
-    Swaps do not use this. The stake is for tagging only and is not stored.
+    Swaps do not use this. The stake and address are for the owner check only and are not stored.
     """
     policy = DEX_LP.get(dex) or (_hex(marker)[:56] if marker else "")
-    acc = {}
+    acc, addrs = {}, {}
     for side, sign in (("inputs", -1), ("outputs", 1)):
         for u in tx.get(side) or []:
             st = _key_stake(u)
             if not st:
                 continue
             for unit, qty in (u.get("assets") or {}).items():
-                if not qty:
+                if not qty or _shared_auth(unit):
                     continue
                 pol = _hex(unit)[:56]
                 if policy and pol == policy:
@@ -218,10 +224,12 @@ def lp_mover(tx, dex, marker, splash_pols):
                 else:
                     continue
                 acc[st] = acc.get(st, 0) + sign * int(qty)
+                addrs.setdefault(st, u.get("addr") or "")
     acc = {s: q for s, q in acc.items() if q}
     if not acc:
-        return None
-    return max(acc, key=lambda s: abs(acc[s]))
+        return None, None
+    st = max(acc, key=lambda s: abs(acc[s]))
+    return st, addrs.get(st) or ""
 
 
 def events_from_tx(tx, token_unit, scripts, splash_pols, min_pool_lovelace):
@@ -246,27 +254,47 @@ def events_from_tx(tx, token_unit, scripts, splash_pols, min_pool_lovelace):
     for cred, g in groups.items():
         if not g["inputs"] or not g["outputs"]:
             continue
-        ins, outs = _sum_assets(g["inputs"]), _sum_assets(g["outputs"])
-        markers = set(_marker_units(ins, token_unit, splash_pols)) & set(_marker_units(outs, token_unit, splash_pols))
         known = scripts.get(cred)
-        if not known and not markers:
-            continue
-        in_lov = sum(int(u.get("lovelace") or 0) for u in g["inputs"])
-        out_lov = sum(int(u.get("lovelace") or 0) for u in g["outputs"])
-        if max(in_lov, out_lov) < int(min_pool_lovelace):
-            continue
-        dex = known or _dex_from_markers(markers, splash_pols)
-        if dex not in TRACKED_DEX:
-            continue
-        marker = _pick_marker(markers, dex)
-        events.append({
-            "dex": dex, "marker": marker,
-            "ada_delta": out_lov - in_lov,
-            "token_delta": int(outs.get(token_unit, 0)) - int(ins.get(token_unit, 0)),
-            "reserve_lovelace": out_lov,
-            "reserve_qty": int(outs.get(token_unit, 0)),
-            "lp_stake": lp_mover(tx, dex, marker, splash_pols),
-        })
+        # One event per continuing unique marker, so two Minswap pools in one tx stay apart.
+        # A marker only on the input (an order spending an LP) is not a pool.
+        buckets, plain = {}, {"inputs": [], "outputs": []}
+        for side in ("inputs", "outputs"):
+            for u in g[side]:
+                mark = _pick_marker(_marker_units(u.get("assets"), token_unit, splash_pols), known)
+                if mark:
+                    buckets.setdefault(mark, {"inputs": [], "outputs": []})[side].append(u)
+                else:
+                    plain[side].append(u)
+        groups = [(m, b) for m, b in buckets.items() if b["inputs"] and b["outputs"]]
+        if not groups and plain["inputs"] and plain["outputs"]:
+            groups = [(None, plain)]
+        for marker, b in groups:
+            if not known and not marker:
+                continue
+            ins, outs = _sum_assets(b["inputs"]), _sum_assets(b["outputs"])
+            both = set(_marker_units(ins, token_unit, splash_pols)) & set(_marker_units(outs, token_unit, splash_pols))
+            if marker and marker not in both and not _shared_auth(marker):
+                # The chosen marker has to be on the pool input and the pool output.
+                if not known:
+                    continue
+            in_lov = sum(int(u.get("lovelace") or 0) for u in b["inputs"])
+            out_lov = sum(int(u.get("lovelace") or 0) for u in b["outputs"])
+            if max(in_lov, out_lov) < int(min_pool_lovelace):
+                continue
+            dex = known or _dex_from_markers(both or ([marker] if marker else []), splash_pols)
+            if dex not in TRACKED_DEX:
+                continue
+            if not marker:
+                marker = _pick_marker(both, dex)
+            st, lp_addr = lp_mover(tx, dex, marker, splash_pols)
+            events.append({
+                "dex": dex, "marker": marker, "unit": token_unit,
+                "ada_delta": out_lov - in_lov,
+                "token_delta": int(outs.get(token_unit, 0)) - int(ins.get(token_unit, 0)),
+                "reserve_lovelace": out_lov,
+                "reserve_qty": int(outs.get(token_unit, 0)),
+                "lp_stake": st, "lp_addr": lp_addr,
+            })
     return events
 
 
@@ -285,9 +313,16 @@ def kind_of(ada_delta, token_delta, bc):
 
 
 def pool_key(dex, marker, token_unit):
-    """Short public id. The marker asset-name prefix, not an address."""
-    name = _hex(marker or token_unit)[56:64] or "pool"
-    return f"{dex}~{name}"
+    """Short public id: dex plus 8 hex of sha256(full marker unit).
+
+    The asset-name prefix is not unique. Sundae V3 CIP-68 names share 000de140, and
+    Minswap's MSP auth token is the same asset in every V2 pool. A shared auth token
+    is not used as the marker; the token unit is the fallback.
+    """
+    raw = _hex(marker) if marker and not _shared_auth(marker) else ""
+    if not raw:
+        raw = _hex(token_unit) or "pool"
+    return f"{dex}~{hashlib.sha256(raw.encode()).hexdigest()[:8]}"
 
 
 def mark_dumps(events, open_pulls, bc, now_s):
@@ -306,7 +341,7 @@ def mark_dumps(events, open_pulls, bc, now_s):
             pulls.append(ev)
         elif ev.get("kind") == "swap" and ev.get("direction") == "sell":
             for p in pulls:
-                if p.get("ahead_of_dump") or p.get("pool_key") != ev.get("pool_key"):
+                if p.get("ahead_of_dump") or not _same_pool(p, ev):
                     continue
                 if not (int(p.get("time") or 0) < int(ev.get("time") or 0) <= int(p.get("time") or 0) + window):
                     continue
@@ -328,14 +363,27 @@ def mark_dumps(events, open_pulls, bc, now_s):
     return waiting, flagged
 
 
-def _safe_tag(stake, watch, pats, ex_tags):
-    """w- hash or role label. No tag at all when owner patterns are missing or the stake matches one."""
-    if not stake or not pats:
+def _same_pool(a, b):
+    """Pull and sell match only for the same token unit and the same pool_key."""
+    if a.get("pool_key") != b.get("pool_key"):
+        return False
+    ua = a.get("unit") or a.get("_unit")
+    ub = b.get("unit") or b.get("_unit")
+    return bool(ua) and ua == ub
+
+
+def _safe_tag(stake, addr, watch, loaded, ex_tags):
+    """w- hash or role label. Hidden when owner patterns miss, or when they match the stake or the address.
+
+    Address patterns contribute their stake (DC._patterns / DC._hidden), so an owner listed only as
+    an address does not get a public tag on a sibling of that wallet.
+    """
+    if not loaded or not (stake or addr):
         return None
-    try:
-        if any(p.search(stake) for p in pats):
-            return None
-    except (TypeError, re.error):
+    pats, stakes = loaded
+    if DC._hidden(pats, stakes, stake, addr):
+        return None
+    if not stake:
         return None
     tag = DC.short_tag(stake, watch)
     if not DC.dev_tag_ok(tag):
@@ -439,6 +487,13 @@ class Reader:
         return b.get("height"), b.get("time")
 
     def asset_txs(self, unit, after=None, limit=20, newest=False):
+        """(rows, complete) or None when the read was not answered.
+
+        Blockfrost has no after-height filter. Asking it for ascending order returns the
+        asset's first transactions, which then look like a finished short page. The fallback
+        always reads newest-first and stops once a row is older than the cursor. A full page
+        that never reaches the cursor is incomplete.
+        """
         if self.late() or not unit or len(unit) < 56 or self.koios_left() <= 0:
             return None
         order = "desc" if newest else "asc"
@@ -448,52 +503,71 @@ class Reader:
             path += f"&_after_block_height={int(after)}"
         r = self.h.req("koios", KOIOS + path, quiet404=False)
         if r is None:
-            b = self._bf(f"/assets/{unit}/transactions?order={order}&count={min(100, int(limit))}")
-            if not isinstance(b, list):
-                return None
-            rows = []
-            for t in b:
-                hgt = t.get("block_height")
-                if not t.get("tx_hash") or hgt is None:
-                    continue
-                if after is not None and not newest and int(hgt) <= int(after):
-                    continue
-                rows.append((t["tx_hash"], int(hgt), t.get("block_time")))
-            return rows[:int(limit)]
+            return self._bf_asset_txs(unit, after, limit, newest)
         out = []
         for t in r:
             if not t.get("tx_hash"):
                 continue
             hgt = t.get("block_height")
-            if after is not None and not newest and hgt is not None and int(hgt) <= int(after):
+            # Keep the cursor height. Already-applied txs there are dropped by the seen set.
+            if after is not None and not newest and hgt is not None and int(hgt) < int(after):
                 continue
             out.append((t["tx_hash"], None if hgt is None else int(hgt), t.get("block_time")))
-        return out
+        return out, len(out) < int(limit)
+
+    def _bf_asset_txs(self, unit, after, limit, newest):
+        count = min(100, max(int(limit), 1))
+        b = self._bf(f"/assets/{unit}/transactions?order=desc&count={count}")
+        if not isinstance(b, list):
+            return None
+        rows, reached = [], False
+        for t in b:
+            hgt = t.get("block_height")
+            if not t.get("tx_hash") or hgt is None:
+                continue
+            if after is not None and not newest and int(hgt) < int(after):
+                reached = True
+                break
+            rows.append((t["tx_hash"], int(hgt), t.get("block_time")))
+            if len(rows) >= int(limit):
+                break
+        complete = reached or len(b) < count
+        if newest:
+            complete = len(b) < count
+        return rows, complete
 
     def utxos(self, hashes):
-        out = {}
+        """(found, absent). absent is hashes a provider list omitted.
+
+        A budget or deadline cut before the request is neither found nor absent, so it is
+        not a miss. A Koios failure falls back per tx; a Blockfrost error is not a miss either.
+        """
+        found, absent = {}, set()
         pending = [h for h in hashes if isinstance(h, str)]
         for body in KT.batches(pending, "_tx_hashes", self.bc["utxo_batch"], KT.TX_INFO_FLAGS):
-            if self.late():
+            if self.late() or self.koios_left() <= 0:
                 break
             chunk = body["_tx_hashes"]
-            got = {}
-            if self.koios_left() > 0:
-                got = KT.tx_info(self.h, chunk, len(chunk), budget_ok=lambda: self.koios_left() > 0 and not self.late())
-            else:
-                break
-            missing = [h for h in chunk if h not in got]
-            if missing and not got:
-                for h in missing:
-                    if self.bf_left() <= 0 or self.late():
-                        break
-                    x = self._bf(f"/txs/{h}/utxos")
-                    norm = _bf_utxo(x) if isinstance(x, dict) else None
-                    if norm:
-                        out[h] = norm
-            for h, tx in (got or {}).items():
-                out[h] = {"inputs": tx.get("inputs") or [], "outputs": tx.get("outputs") or []}
-        return out
+            r = self.h.req("koios", KOIOS + "/tx_info", method="POST", body=body, quiet404=False)
+            if isinstance(r, list):
+                got = {}
+                for tx in r:
+                    if tx.get("tx_hash"):
+                        got[tx["tx_hash"]] = {"inputs": [KT.norm_utxo(u) for u in tx.get("inputs") or []],
+                                              "outputs": [KT.norm_utxo(u) for u in tx.get("outputs") or []]}
+                for h in chunk:
+                    if h in got:
+                        found[h] = got[h]
+                    else:
+                        absent.add(h)
+                continue
+            for h in chunk:
+                if self.late() or self.bf_left() <= 0:
+                    break
+                x = self._bf(f"/txs/{h}/utxos")
+                if isinstance(x, dict):
+                    found[h] = _bf_utxo(x)
+        return found, absent
 
 
 def _bf_utxo(x):
@@ -527,7 +601,7 @@ def _markers_for(unit, cached_markers):
     return out
 
 
-def _apply_tx(tx, token_row, scripts, splash_pols, bc, lp_pols, watch, pats, ex_tags, names):
+def _apply_tx(tx, token_row, scripts, splash_pols, bc, lp_pols, watch, loaded, ex_tags, names):
     """Public-ready event dicts for one tx, or [] when the tx is not a sized pool move."""
     events = events_from_tx(tx, token_row["unit"], scripts, splash_pols, int(bc["min_pool_ada"] * 1e6))
     out = []
@@ -538,6 +612,7 @@ def _apply_tx(tx, token_row, scripts, splash_pols, bc, lp_pols, watch, pats, ex_
         ev["hash"] = tx["hash"]
         ev["tx_short"] = tx["hash"][:10]
         ev["time"] = tx["time"]
+        ev["unit"] = token_row["unit"]
         ev["pool_key"] = pool_key(ev["dex"], ev["marker"], token_row["unit"])
         ev["ticker"] = token_row["ticker"]
         ev["token"] = token
@@ -548,8 +623,9 @@ def _apply_tx(tx, token_row, scripts, splash_pols, bc, lp_pols, watch, pats, ex_
         ev["reserve_ada"] = round(int(ev["reserve_lovelace"]) / 1e6, 2)
         ev["actor_tag"] = None
         if kind in ("lp_add", "lp_remove"):
-            ev["actor_tag"] = _safe_tag(ev.get("lp_stake"), watch, pats, ex_tags)
+            ev["actor_tag"] = _safe_tag(ev.get("lp_stake"), ev.get("lp_addr"), watch, loaded, ex_tags)
         ev.pop("lp_stake", None)
+        ev.pop("lp_addr", None)
         out.append(ev)
     return out
 
@@ -569,7 +645,7 @@ def merge_moves(prev, new_rows, now_s, keep_h):
         t = _row_time(r)
         if t is None or now_s - t > keep_h * 3600:
             continue
-        key = (r.get("tx_short"), r.get("pool_key"), r.get("kind"))
+        key = (r.get("tx_short"), r.get("pool_key"), r.get("kind"), r.get("token"))
         old = keep.get(key)
         if old and old.get("ahead_of_dump") and not r.get("ahead_of_dump"):
             r = dict(r, ahead_of_dump=True, dump_tx_short=old.get("dump_tx_short"), dump_ada=old.get("dump_ada"))
@@ -624,21 +700,14 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
         bf_key = os.environ.get("BLOCKFROST_PROJECT_ID", "")
     if owner_env is None:
         owner_env = os.environ.get("PRIVACY_GUARD_PATTERNS", "")
-    pats, bad = BM.owner_patterns(owner_env)
-    pats = pats if pats and not bad else None
+    loaded = DC._patterns(owner_env)
     ex_tags = set((F.excluded_tags((cfg or {}).get("flags")) or {}))
     scripts, splash_pols = dex_tables(cfg)
     cpath = os.path.join(cache_dir, "liquidity-moves-cache.json") if cache_dir else None
     same_dir = bool(cache_dir) and os.path.abspath(cache_dir) == os.path.abspath(os.path.dirname(path) or ".")
-    cache = KT.read_json(cpath, {}) if cpath and not same_dir else {}
-    if not isinstance(cache, dict):
-        cache = {}
-    cache.setdefault("height", {})
-    cache.setdefault("markers", {})
-    cache.setdefault("units", {})
-    cache.setdefault("seen", [])
-    cache.setdefault("open_pulls", [])
-    cache.setdefault("discovered_at", {})
+    raw_cache = KT.read_json(cpath, {}) if cpath and not same_dir else {}
+    cache = _cache_public(raw_cache)
+    kept_next = cache.get("next") or 0
     prev_doc = KT.read_json(path, {})
     if not isinstance(prev_doc, dict):
         prev_doc = {}
@@ -647,6 +716,7 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
         k = int(cache.get("next") or 0) % len(rows)
         rows = rows[k:] + rows[:k]
     listed = list(rows)
+    keep_next = False
     reader = Reader(http, bc, bf_key, deadline)
     names = WL.assign_token_keys([row["unit"] for row in rows])
     seen_list = [h for h in cache.get("seen") or [] if isinstance(h, str)]
@@ -654,9 +724,11 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
     events, pools, coverage, capped = [], [], {}, []
     tip = reader.tip() if rows else None
     tip_h = tip[0] if tip else None
-    if rows and tip_h is None:
+    if rows and (reader.late() or tip_h is None):
+        why = "budget" if reader.late() else "tip"
         for row in rows:
-            coverage[row["ticker"]] = {"read": 0, "complete": False, "skipped": "tip"}
+            coverage[row["ticker"]] = {"read": 0, "complete": False, "skipped": why}
+        keep_next = True
         rows = []
     window_after = (int(tip_h) - int(bc["keep_h"]) * BLOCKS_PER_HOUR) if tip_h else 0
     for row in rows:
@@ -667,7 +739,7 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
             continue
         try:
             evs, cov, new_markers = _scan_token(
-                reader, row, cache, scripts, splash_pols, bc, lp_pols or V.lp_policies(cfg), watch, pats, ex_tags,
+                reader, row, cache, scripts, splash_pols, bc, lp_pols or V.lp_policies(cfg), watch, loaded, ex_tags,
                 names, seen, seen_list, window_after, now_s)
         except (SystemExit, Exception) as e:
             coverage[tk] = {"read": 0, "complete": False, "skipped": type(e).__name__}
@@ -691,9 +763,9 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
     flagged = {}
     for p in flagged_pulls:
         short = p.get("tx_short") or (p.get("hash") or "")[:10]
-        flagged[(short, p.get("pool_key"))] = p
+        flagged[(short, p.get("pool_key"), p.get("token"))] = p
     moves = []
-    prev_keys = {(r.get("tx_short"), r.get("pool_key"), r.get("kind"))
+    prev_keys = {(r.get("tx_short"), r.get("pool_key"), r.get("kind"), r.get("token"))
                  for r in (prev_doc.get("moves") or []) if isinstance(r, dict)}
     for e in sized:
         if not e.get("time"):
@@ -702,7 +774,7 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
         moves.append(public_move(e, e["token"], e["ticker"], e["policy_short"], dec, V.lp_dex(e.get("_unit"), lp_pols or {})))
     prev_moves = [dict(r) for r in prev_doc.get("moves") if isinstance(r, dict)] if isinstance(prev_doc.get("moves"), list) else []
     for r in prev_moves:
-        hit = flagged.get((r.get("tx_short"), r.get("pool_key")))
+        hit = flagged.get((r.get("tx_short"), r.get("pool_key"), r.get("token")))
         if hit and r.get("kind") == "lp_remove":
             r["ahead_of_dump"] = True
             r["dump_tx_short"] = hit.get("dump_tx_short")
@@ -711,7 +783,12 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
     cache["open_pulls"] = [_pull_state(p) for p in waiting]
     cache["seen"] = seen_list[-int(bc["keep_seen"]):]
     cache["capped"] = bool(capped)
-    cache["next"] = 0 if not capped else (int(cache.get("next") or 0) + 1)
+    if keep_next:
+        cache["next"] = kept_next
+    elif capped:
+        cache["next"] = kept_next + 1
+    else:
+        cache["next"] = 0
     koios_calls = http.calls.get("koios", 0) - reader.start
     bf_calls = http.calls.get("blockfrost", 0) - reader.bf_start
     doc = {
@@ -719,7 +796,7 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
         "note": NOTE, "limits": LIMITS, "level": "pool",
         "thresholds": {k: bc[k] for k in ("min_swap_ada", "min_lp_ada", "dump_window_h", "dump_ada", "dump_reserve_pct")},
         "budget": {"max_calls": bc["max_calls"], "max_bf_calls": bc["max_bf_calls"], "budget_s": bc["budget_s"]},
-        "actor_tags": bool(pats),
+        "actor_tags": bool(loaded),
         "moves": merged[-int(bc["keep_rows"]):],
         "pools": merge_pools(prev_doc.get("pools"), [_pool_public(p) for p in pools]),
         "tokens": [{"ticker": r["ticker"], "policy_short": r["policy_short"], "rank": r.get("rank")} for r in listed],
@@ -737,7 +814,7 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
         if cpath and not same_dir:
             KT.write_json(cpath, _cache_public(cache), indent=1)
         KT.write_json(path, doc, indent=1)
-    new = sum(1 for r in moves if (r["tx_short"], r["pool_key"], r["kind"]) not in prev_keys)
+    new = sum(1 for r in moves if (r["tx_short"], r["pool_key"], r["kind"], r["token"]) not in prev_keys)
     return {
         "tokens": len(listed), "moves": len(doc["moves"]), "moves_new": new, "capped": capped,
         "koios_calls": koios_calls, "blockfrost_calls": bf_calls, "blockfrost_fallbacks": reader.fallbacks,
@@ -758,8 +835,29 @@ def _decimals(meta, unit):
     return int(dec)
 
 
+def _safe_int(v, default=0):
+    if isinstance(v, bool) or v is None:
+        return default
+    if isinstance(v, int):
+        return v
+    if isinstance(v, float) and v.is_integer():
+        return int(v)
+    if isinstance(v, str):
+        try:
+            return int(v, 10)
+        except ValueError:
+            return default
+    return default
+
+
 def _pull_state(p):
-    return {k: p.get(k) for k in ("hash", "time", "pool_key", "tx_short", "reserve_ada", "ticker")}
+    out = {}
+    for k in ("hash", "time", "pool_key", "tx_short", "reserve_ada", "ticker", "unit", "token"):
+        if k in p:
+            out[k] = p.get(k)
+    if "time" in out:
+        out["time"] = _safe_int(out["time"])
+    return out
 
 
 def _pool_public(p):
@@ -768,20 +866,58 @@ def _pool_public(p):
 
 
 def _cache_public(cache):
-    """Drop anything that is not a cursor. Hashes and asset ids only."""
+    """A cache the run can use. Bad types (units: [], next: 'x') become empty cursors, not an error."""
+    if not isinstance(cache, dict):
+        cache = {}
+    height = {}
+    raw_h = cache.get("height")
+    if isinstance(raw_h, dict):
+        for k, v in raw_h.items():
+            if isinstance(k, str) and k:
+                height[k] = _safe_int(v)
+    markers = {}
+    raw_m = cache.get("markers")
+    if isinstance(raw_m, dict):
+        for unit, rows in raw_m.items():
+            if not isinstance(unit, str) or not isinstance(rows, list):
+                continue
+            kept = []
+            for m in rows:
+                if not isinstance(m, dict) or m.get("dex") not in TRACKED_DEX or not isinstance(m.get("marker"), str):
+                    continue
+                mk = _hex(m["marker"])
+                if len(mk) >= 56:
+                    kept.append({"dex": m["dex"], "marker": mk})
+            if kept:
+                markers[unit] = kept
+    units = {}
+    raw_u = cache.get("units")
+    if isinstance(raw_u, dict):
+        for k, v in raw_u.items():
+            if isinstance(k, str) and isinstance(v, str) and len(_hex(v)) >= 56:
+                units[k] = _hex(v)
+    discovered = {}
+    raw_d = cache.get("discovered_at")
+    if isinstance(raw_d, dict):
+        for k, v in raw_d.items():
+            if isinstance(k, str):
+                discovered[k] = _safe_int(v)
+    misses = {}
+    raw_miss = cache.get("misses")
+    if isinstance(raw_miss, dict):
+        for k, v in list(raw_miss.items())[-50:]:
+            if isinstance(k, str):
+                misses[k] = _safe_int(v)
+    seen = [h for h in cache.get("seen") or [] if isinstance(h, str)][-4000:] if isinstance(cache.get("seen"), list) else []
+    pulls = [p for p in cache.get("open_pulls") or [] if isinstance(p, dict)] if isinstance(cache.get("open_pulls"), list) else []
     return {
-        "height": cache.get("height") if isinstance(cache.get("height"), dict) else {},
-        "markers": cache.get("markers") if isinstance(cache.get("markers"), dict) else {},
-        "units": cache.get("units") if isinstance(cache.get("units"), dict) else {},
-        "seen": [h for h in cache.get("seen") or [] if isinstance(h, str)][-4000:],
-        "open_pulls": [p for p in cache.get("open_pulls") or [] if isinstance(p, dict)],
-        "discovered_at": cache.get("discovered_at") if isinstance(cache.get("discovered_at"), dict) else {},
-        "misses": cache.get("misses") if isinstance(cache.get("misses"), dict) else {},
-        "capped": bool(cache.get("capped")), "next": int(cache.get("next") or 0),
+        "height": height, "markers": markers, "units": units, "seen": seen, "open_pulls": pulls,
+        "discovered_at": discovered, "misses": misses,
+        "capped": cache.get("capped") is True, "next": _safe_int(cache.get("next")),
     }
 
 
-def _scan_token(reader, row, cache, scripts, splash_pols, bc, lp_pols, watch, pats, ex_tags, names, seen, seen_list,
+def _scan_token(reader, row, cache, scripts, splash_pols, bc, lp_pols, watch, loaded, ex_tags, names, seen, seen_list,
                 window_after, now_s):
     unit = row["unit"]
     markers = _markers_for(unit, (cache.get("markers") or {}).get(unit))
@@ -792,16 +928,17 @@ def _scan_token(reader, row, cache, scripts, splash_pols, bc, lp_pols, watch, pa
         if reader.late() or reader.koios_left() <= 0:
             complete = False
             break
-        after = max(int(height.get(m["marker"]) or 0), int(window_after))
+        after = max(_safe_int(height.get(m["marker"])), int(window_after))
         page = reader.asset_txs(m["marker"], after=after, limit=bc["max_txs_per_pool"], newest=False)
         if page is None:
             complete = False
             continue
-        txs.extend((h, hg, bt, m["marker"]) for h, hg, bt in page)
-        if len(page) >= int(bc["max_txs_per_pool"]):
+        rows, page_done = page
+        txs.extend((h, hg, bt, m["marker"]) for h, hg, bt in rows)
+        if not page_done or len(rows) >= int(bc["max_txs_per_pool"]):
             complete = False
     discovered = cache.setdefault("discovered_at", {})
-    last = int(discovered.get(unit) or 0)
+    last = _safe_int(discovered.get(unit))
     extra = [m for m in ((cache.get("markers") or {}).get(unit) or [])
              if isinstance(m, dict) and m.get("dex") not in (None, "minswap_v2")]
     due = now_s - last >= float(bc["discover_every_h"]) * 3600
@@ -810,9 +947,10 @@ def _scan_token(reader, row, cache, scripts, splash_pols, bc, lp_pols, watch, pa
         if page is None:
             complete = False
         else:
-            txs.extend((h, hg, bt, None) for h, hg, bt in page)
+            rows, page_done = page
+            txs.extend((h, hg, bt, None) for h, hg, bt in rows)
             discovered[unit] = int(now_s)
-            if len(page) >= int(bc["discover_txs"]):
+            if not page_done or len(rows) >= int(bc["discover_txs"]):
                 complete = False
     uniq = {}
     for h, hg, bt, src in txs:
@@ -820,7 +958,7 @@ def _scan_token(reader, row, cache, scripts, splash_pols, bc, lp_pols, watch, pa
             uniq[h] = (h, hg, bt, src)
     ordered = sorted(uniq.values(), key=lambda t: (t[1] is None, t[1] or 0, t[0]))
     todo = [t for t in ordered if t[0] not in seen]
-    ut = reader.utxos([t[0] for t in todo]) if todo else {}
+    found, absent = reader.utxos([t[0] for t in todo]) if todo else ({}, set())
     evs, read = [], 0
     misses = cache.setdefault("misses", {})
     if not isinstance(misses, dict):
@@ -832,22 +970,26 @@ def _scan_token(reader, row, cache, scripts, splash_pols, bc, lp_pols, watch, pa
         if h in seen:
             read += 1
             if hg is not None and src in tracked:
-                height[src] = max(int(height.get(src) or 0), int(hg))
+                height[src] = max(_safe_int(height.get(src)), int(hg))
             continue
-        if h not in ut or not bt:
-            n = int(misses.get(h) or 0) + 1
-            misses[h] = n
-            if n >= 2:
-                seen.add(h)
-                seen_list.append(h)
-                misses.pop(h, None)
-                continue
+        if h not in found:
+            if h in absent:
+                n = _safe_int(misses.get(h)) + 1
+                misses[h] = n
+                if n >= 2:
+                    seen.add(h)
+                    seen_list.append(h)
+                    misses.pop(h, None)
+                    continue
+            complete = False
+            break
+        if not bt:
             complete = False
             break
         misses.pop(h, None)
-        tx = {"hash": h, "time": int(bt), "inputs": ut[h]["inputs"], "outputs": ut[h]["outputs"]}
-        found = _apply_tx(tx, row, scripts, splash_pols, bc, lp_pols, watch, pats, ex_tags, names)
-        for ev in found:
+        tx = {"hash": h, "time": int(bt), "inputs": found[h]["inputs"], "outputs": found[h]["outputs"]}
+        got_rows = _apply_tx(tx, row, scripts, splash_pols, bc, lp_pols, watch, loaded, ex_tags, names)
+        for ev in got_rows:
             ev["_unit"] = unit
             if ev.get("dex") not in (None, "minswap_v2") and ev.get("marker"):
                 key = (ev["dex"], ev["marker"])

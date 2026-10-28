@@ -1316,11 +1316,13 @@ def main():
 
     # ---- SPD-55 liquidity moves use only the time left in the same shared deadline, after whale_ledger
     # and big_moves, so this job cannot take their budgets. A failure here does not touch the webhook.
-    liq_budget = float(LM.lm_cfg(cfg).get("budget_s", 50))
-    http.deadline = min(shared_end, time.time() + max(0.0, liq_budget))
+    # big_moves keeps shared_end. This slice is whatever remains, capped by liquidity_moves.budget_s.
     liquidity = None
-    if LM.lm_cfg(cfg).get("enabled", True):
-        try:
+    try:
+        bc_lm = LM.lm_cfg(cfg)
+        if bc_lm.get("enabled", True):
+            liq_budget = float(bc_lm.get("budget_s", 50))
+            http.deadline = min(shared_end, time.time() + max(0.0, liq_budget))
             units_by_ticker = {}
             try:
                 pulse_doc, _ = load_desk_json("solada/pulse.json", desk, args.repo)
@@ -1343,8 +1345,8 @@ def main():
                 owner_env=os.environ.get("PRIVACY_GUARD_PATTERNS", ""),
                 watch=flagmod.watch_map(cfg.get("flags") or {}, wkeys))
             print(f"liquidity moves: {json.dumps(liquidity)}")
-        except (SystemExit, Exception) as e:
-            http._fail("liquidity_moves", type(e).__name__)
+    except (SystemExit, Exception) as e:
+        http._fail("liquidity_moves", type(e).__name__)
 
     http.deadline = None
 
