@@ -1144,6 +1144,127 @@ class TokenRotation(unittest.TestCase):
         self.assertNotIn("stake1", json.dumps(missed))
         self.assertNotIn("addr1", json.dumps(missed))
 
+    def _run_until(self, d, c, now_s, start, span, strike_page, jump_strike):
+        """One slice. strike_page is what Koios returns for STRIKE's marker.
+
+        jump_strike moves the clock past the deadline at the start of STRIKE's
+        scan, after the outer budget check has already accepted it.
+        """
+        asked = []
+        clock = {"t": float(start)}
+        marker = self._marker("STRIKE")
+        real = LM._scan_token
+
+        def is_strike(url):
+            return (f"_asset_policy={marker[:56]}" in url
+                    and f"_asset_name={marker[56:]}" in url)
+
+        def req(self_, src, url, method="GET", body=None, headers=None, quiet404=True):
+            self_.calls[src] = self_.calls.get(src, 0) + 1
+            clock["t"] += 10
+            if "/asset_txs" in url:
+                asked.append(url)
+            if url.endswith("/tip"):
+                return [{"block_height": 1000, "block_time": now_s}]
+            if "/asset_txs" in url and is_strike(url):
+                return strike_page
+            if "/asset_txs" in url:
+                return []
+            return None
+
+        def scan(reader, row, *args, **kwargs):
+            if jump_strike and row.get("ticker") == "STRIKE":
+                clock["t"] = start + span + 10
+            return real(reader, row, *args, **kwargs)
+
+        http = P.Http({"koios": 0, "blockfrost": 0})
+        with mock.patch.object(LM.time, "time", lambda: clock["t"]), \
+                mock.patch.object(P.Http, "req", req), \
+                mock.patch.object(LM, "_scan_token", scan):
+            summary = LM.run(
+                http, self.CFG, DESK_TOP10, {}, {}, V.lp_policies(), d, c, False, now_s,
+                deadline=start + span, bf_key="", owner_env=OWNER)
+        return summary, asked
+
+    def test_budget_cut_before_a_read_does_not_stamp(self):
+        """Run 40742102339 stamped STRIKE with 0 txs and no Koios page.
+
+        ASCEND and NIGHT each get an empty page, so their stamps move. The
+        deadline then passes after STRIKE was accepted and before asset_txs.
+        That is the coverage from that run: read 0, complete false, not a
+        budget skip. STRIKE stays unset, so the next run reads it first.
+        """
+        start = 1_000_000.0
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            summary, asked = self._run_until(d, c, NOW, start, 35, [], True)
+            with open(os.path.join(d, "liquidity_moves.json")) as f:
+                doc = json.load(f)
+            with open(os.path.join(c, "liquidity-moves-cache.json")) as f:
+                cache = json.load(f)
+            self.assertEqual(self._read(asked), ["ASCEND", "NIGHT"])
+            strike_name = self._marker("STRIKE")[56:]
+            self.assertTrue(all(f"_asset_name={strike_name}" not in u for u in asked))
+            self.assertEqual(summary["koios_calls"], 3)
+            self.assertLessEqual(summary["koios_calls"], 36)
+            self.assertEqual(doc["budget"]["max_calls"], 36)
+            self.assertEqual(doc["budget"]["budget_s"], 50)
+            self.assertEqual(doc["thresholds"]["ahead_of_dump"], dict(LM.AHEAD_OF_DUMP))
+            self.assertEqual(doc["coverage"]["STRIKE"], {"read": 0, "complete": False, "pools": 0})
+            self.assertIn("STRIKE", summary["capped"])
+            by = {t["ticker"]: t["last_checked"] for t in doc["tokens"]}
+            self.assertEqual(by["ASCEND"], LM.iso(NOW))
+            self.assertEqual(by["NIGHT"], LM.iso(NOW))
+            self.assertIsNone(by["STRIKE"])
+            self.assertNotIn("STRIKE", cache["last_checked"])
+            self.assertEqual(cache["last_checked"]["ASCEND"], NOW)
+            self.assertEqual(doc["coverage"]["SNEK"], {"read": 0, "complete": False, "skipped": "budget"})
+            self.assertNotIn(LM.known_units()["STRIKE"], json.dumps(doc))
+            self.assertNotIn("stake1", json.dumps(doc))
+            summary2, asked2 = self._run_slice(d, c, NOW + 7200)
+            with open(os.path.join(c, "liquidity-moves-cache.json")) as f:
+                cache2 = json.load(f)
+        self.assertEqual(self._read(asked2), ["STRIKE", "SNEK"])
+        self.assertIn(f"_asset_name={self._marker('STRIKE')[56:]}", asked2[0])
+        self.assertEqual(cache2["last_checked"]["STRIKE"], NOW + 7200)
+        self.assertEqual(cache2["last_checked"]["ASCEND"], NOW)
+        self.assertLessEqual(summary2["koios_calls"], 36)
+
+    def test_unanswered_page_keeps_the_previous_stamp(self):
+        """Koios returning nothing is not a successful read.
+
+        STRIKE is oldest, so this run opens it. The marker read comes back
+        unanswered. The old stamp stays, and the next run still opens STRIKE
+        before the token this run did read.
+        """
+        old = NOW - 7200
+        start = 1_000_000.0
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            seeded = {r["ticker"]: NOW for r in DESK_TOP10}
+            seeded["STRIKE"] = old
+            with open(os.path.join(c, "liquidity-moves-cache.json"), "w") as f:
+                json.dump({"last_checked": seeded}, f)
+            summary, asked = self._run_until(d, c, NOW + 7200, start, 25, None, False)
+            with open(os.path.join(d, "liquidity_moves.json")) as f:
+                doc = json.load(f)
+            with open(os.path.join(c, "liquidity-moves-cache.json")) as f:
+                cache = json.load(f)
+            self.assertIn(f"_asset_name={self._marker('STRIKE')[56:]}", asked[0])
+            self.assertEqual(doc["coverage"]["STRIKE"], {"read": 0, "complete": False, "pools": 0})
+            self.assertNotEqual(doc["coverage"]["STRIKE"].get("skipped"), "budget")
+            by = {t["ticker"]: t["last_checked"] for t in doc["tokens"]}
+            self.assertEqual(by["STRIKE"], LM.iso(old))
+            self.assertEqual(cache["last_checked"]["STRIKE"], old)
+            self.assertEqual(cache["last_checked"]["ASCEND"], NOW + 7200)
+            self.assertEqual(cache["last_checked"]["NIGHT"], NOW)
+            self.assertEqual(doc["budget"]["budget_s"], 50)
+            self.assertEqual(doc["budget"]["max_calls"], 36)
+            self.assertLessEqual(summary["koios_calls"], 36)
+            self.assertNotIn("stake1", json.dumps(doc))
+            _, asked2 = self._run_slice(d, c, NOW + 2 * 7200)
+        # _read reports rank order, not scan order. The first URL is the scan order.
+        self.assertIn(f"_asset_name={self._marker('STRIKE')[56:]}", asked2[0])
+        self.assertIn(f"_asset_name={self._marker('NIGHT')[56:]}", asked2[1])
+
     def test_legacy_cursor_does_not_override_last_checked(self):
         """next used to rotate by one. A stored index must not jump ahead of never-checked tokens."""
         with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
