@@ -1,5 +1,5 @@
 {
- "at": "2026-10-28T02:11:13Z",
+ "at": "2026-10-28T12:11:44Z",
  "phase": 1,
  "note": "Phase 1 only: creator-stake sells and late rugs, serial launch counts, drawdown from the peak this job has seen, and inactivity. dev_buy_ada, dev_locked_pct, unlock_date and LP pulls are phase 2 (the three fields are always null). No dev lock, dev buy class, or social checks. dev_tag is a watch-list role label or a 10-character hash, never a prefix, address, or stake key. Rows are keyed by policy + asset name. ATH is the highest mcap this job has observed (the run is every 2h), not a tick peak. prior_rugs counts earlier launches this job has already marked late_rug for the same creator stake. A sell is token out and ADA in on the creator's own key in one tx, or ADA paid later for tokens parked at a script (a cancel is not a sell). late_rug needs the net drop and tokens actually sold, both at least rug_bag_pct of that stake's peak; a lock is not a sell. min_sell_ada is a dust floor on the ADA of sell txs not seen before. A partial read adds that fresh ADA to the stored total and does not lower it. An incomplete read is marked partial.",
  "thresholds": {
@@ -30,7 +30,7 @@
    "inactive": null,
    "risk": "caution",
    "changed_since_last": false,
-   "asof": "2026-10-28T02:11:13Z",
+   "asof": "2026-10-28T12:11:44Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
@@ -38,7 +38,7 @@
     "txs_read": 0,
     "complete": false,
     "partial": true,
-    "skipped": "deadline",
+    "skipped": "budget",
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -60,7 +60,7 @@
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-28T02:11:13Z",
+   "asof": "2026-10-28T12:11:44Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
@@ -68,7 +68,7 @@
     "txs_read": 0,
     "complete": false,
     "partial": true,
-    "skipped": "deadline",
+    "skipped": "budget",
     "unread_txs": 0
    },
    "mcap_basis": "solada-curve"
@@ -90,7 +90,7 @@
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-28T02:11:13Z",
+   "asof": "2026-10-28T12:11:44Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
@@ -98,7 +98,7 @@
     "txs_read": 0,
     "complete": false,
     "partial": true,
-    "skipped": "deadline",
+    "skipped": "budget",
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -115,20 +115,20 @@
    "serial_3h": 0,
    "serial_7d": 0,
    "prior_rugs": 0,
-   "ath_mcap": 319892,
+   "ath_mcap": 323493,
    "drawdown_pct": 0.0,
-   "inactive": false,
+   "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-28T02:11:13Z",
+   "asof": "2026-10-28T12:11:44Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
-    "txs_read": 50,
+    "txs_read": 0,
     "complete": false,
     "partial": true,
-    "skipped": null,
+    "skipped": "budget",
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -146,11 +146,11 @@
    "serial_7d": 0,
    "prior_rugs": 0,
    "ath_mcap": 43202,
-   "drawdown_pct": 1.4,
+   "drawdown_pct": 0.8,
    "inactive": false,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-28T02:11:13Z",
+   "asof": "2026-10-28T12:11:44Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
@@ -180,16 +180,16 @@
    "inactive": false,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-28T02:11:13Z",
+   "asof": "2026-10-28T12:11:44Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
-    "txs_read": 39,
+    "txs_read": 50,
     "complete": false,
     "partial": true,
     "skipped": null,
-    "unread_txs": 11
+    "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
   },
@@ -198,7 +198,7 @@
    "unit": "33f805e65f656f2f7e050cdd1eb2a31db6df0e6b4da3af2e1370c3f80014df104556494c",
    "policy_short": "33f805e65f65",
    "dev_tag": "w-d562675b",
-   "dev_sold_ada": null,
+   "dev_sold_ada": 0.0,
    "dev_sold_after_min": null,
    "holders_at_sell": null,
    "late_rug": null,
@@ -207,18 +207,18 @@
    "prior_rugs": 0,
    "ath_mcap": 5704,
    "drawdown_pct": 2.5,
-   "inactive": null,
+   "inactive": false,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-28T02:11:13Z",
+   "asof": "2026-10-28T12:11:44Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
-    "txs_read": 0,
+    "txs_read": 50,
     "complete": false,
     "partial": true,
-    "skipped": "deadline",
+    "skipped": null,
     "unread_txs": 0
    },
    "mcap_basis": "solada-curve"
@@ -228,7 +228,7 @@
    "unit": "00e049b5a595740efcf34e90c4a209705f75c41d349c7e1a5a9cd5af0014df1046454544",
    "policy_short": "00e049b5a595",
    "dev_tag": "w-27304ad6",
-   "dev_sold_ada": null,
+   "dev_sold_ada": 0.0,
    "dev_sold_after_min": null,
    "holders_at_sell": null,
    "late_rug": null,
@@ -236,19 +236,19 @@
    "serial_7d": 0,
    "prior_rugs": 0,
    "ath_mcap": 29900,
-   "drawdown_pct": 1.6,
-   "inactive": null,
+   "drawdown_pct": 5.1,
+   "inactive": false,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-28T02:11:13Z",
+   "asof": "2026-10-28T12:11:44Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
-    "txs_read": 0,
+    "txs_read": 50,
     "complete": false,
     "partial": true,
-    "skipped": "deadline",
+    "skipped": null,
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -258,7 +258,7 @@
    "unit": "471e9570f0a0ae34df294574232bb5d7be71609e35d3550d8654071e0014df10474f4c4659",
    "policy_short": "471e9570f0a0",
    "dev_tag": "w-5e239d7c",
-   "dev_sold_ada": null,
+   "dev_sold_ada": 0.0,
    "dev_sold_after_min": null,
    "holders_at_sell": null,
    "late_rug": null,
@@ -267,18 +267,18 @@
    "prior_rugs": 0,
    "ath_mcap": 7488,
    "drawdown_pct": 0.0,
-   "inactive": null,
+   "inactive": false,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-28T02:11:13Z",
+   "asof": "2026-10-28T12:11:44Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
-    "txs_read": 0,
+    "txs_read": 50,
     "complete": false,
     "partial": true,
-    "skipped": "deadline",
+    "skipped": null,
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -288,7 +288,7 @@
    "unit": "47478467b3af325266cb4da6e92bdf522217e97d85b8d8d864b573cf0014df104845524f",
    "policy_short": "47478467b3af",
    "dev_tag": "w-772ddd96",
-   "dev_sold_ada": null,
+   "dev_sold_ada": 0.0,
    "dev_sold_after_min": null,
    "holders_at_sell": null,
    "late_rug": null,
@@ -297,18 +297,18 @@
    "prior_rugs": 0,
    "ath_mcap": 3773,
    "drawdown_pct": 0.0,
-   "inactive": null,
+   "inactive": false,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-28T02:11:13Z",
+   "asof": "2026-10-28T12:11:44Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
    "coverage": {
-    "txs_read": 0,
+    "txs_read": 50,
     "complete": false,
     "partial": true,
-    "skipped": "deadline",
+    "skipped": null,
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -326,11 +326,11 @@
    "serial_7d": 0,
    "prior_rugs": 0,
    "ath_mcap": 16587,
-   "drawdown_pct": 5.6,
+   "drawdown_pct": 0.3,
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-28T02:11:13Z",
+   "asof": "2026-10-28T12:11:44Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
@@ -338,7 +338,7 @@
     "txs_read": 0,
     "complete": false,
     "partial": true,
-    "skipped": "deadline",
+    "skipped": "budget",
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -356,11 +356,11 @@
    "serial_7d": 1,
    "prior_rugs": 0,
    "ath_mcap": 15717,
-   "drawdown_pct": 20.1,
+   "drawdown_pct": 3.5,
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-28T02:11:13Z",
+   "asof": "2026-10-28T12:11:44Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
@@ -368,7 +368,7 @@
     "txs_read": 0,
     "complete": false,
     "partial": true,
-    "skipped": "deadline",
+    "skipped": "budget",
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -390,7 +390,7 @@
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-28T02:11:13Z",
+   "asof": "2026-10-28T12:11:44Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
@@ -398,7 +398,7 @@
     "txs_read": 0,
     "complete": false,
     "partial": true,
-    "skipped": "deadline",
+    "skipped": "budget",
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -416,11 +416,11 @@
    "serial_7d": 1,
    "prior_rugs": 0,
    "ath_mcap": 33771,
-   "drawdown_pct": 37.8,
+   "drawdown_pct": 20.6,
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-28T02:11:13Z",
+   "asof": "2026-10-28T12:11:44Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
@@ -428,7 +428,7 @@
     "txs_read": 0,
     "complete": false,
     "partial": true,
-    "skipped": "deadline",
+    "skipped": "budget",
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -445,12 +445,12 @@
    "serial_3h": 0,
    "serial_7d": 0,
    "prior_rugs": 0,
-   "ath_mcap": 27427,
-   "drawdown_pct": 3.9,
+   "ath_mcap": 27689,
+   "drawdown_pct": 0.0,
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-28T02:11:13Z",
+   "asof": "2026-10-28T12:11:44Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
@@ -458,7 +458,7 @@
     "txs_read": 0,
     "complete": false,
     "partial": true,
-    "skipped": "deadline",
+    "skipped": "budget",
     "unread_txs": 0
    },
    "mcap_basis": "geckoterminal"
@@ -476,11 +476,11 @@
    "serial_7d": 1,
    "prior_rugs": 0,
    "ath_mcap": 22535,
-   "drawdown_pct": 16.7,
+   "drawdown_pct": 17.8,
    "inactive": null,
    "risk": null,
    "changed_since_last": false,
-   "asof": "2026-10-28T02:11:13Z",
+   "asof": "2026-10-28T12:11:44Z",
    "dev_buy_ada": null,
    "dev_locked_pct": null,
    "unlock_date": null,
@@ -488,7 +488,7 @@
     "txs_read": 0,
     "complete": false,
     "partial": true,
-    "skipped": "deadline",
+    "skipped": "budget",
     "unread_txs": 0
    },
    "mcap_basis": "solada-curve"
@@ -496,69 +496,57 @@
  ],
  "coverage": {
   "tracked": 16,
-  "scanned": 3,
+  "scanned": 6,
   "complete": 0,
   "skipped": [
    {
     "ticker": "BEAST",
-    "reason": "deadline"
+    "reason": "budget"
    },
    {
     "ticker": "BET",
-    "reason": "deadline"
+    "reason": "budget"
    },
    {
     "ticker": "BOLT",
-    "reason": "deadline"
+    "reason": "budget"
    },
    {
-    "ticker": "EVIL",
-    "reason": "deadline"
-   },
-   {
-    "ticker": "FEED",
-    "reason": "deadline"
-   },
-   {
-    "ticker": "GOLFY",
-    "reason": "deadline"
-   },
-   {
-    "ticker": "HERO",
-    "reason": "deadline"
+    "ticker": "CLOVE",
+    "reason": "budget"
    },
    {
     "ticker": "HIVE",
-    "reason": "deadline"
+    "reason": "budget"
    },
    {
     "ticker": "HOWDY",
-    "reason": "deadline"
+    "reason": "budget"
    },
    {
     "ticker": "JUICE",
-    "reason": "deadline"
+    "reason": "budget"
    },
    {
     "ticker": "SER",
-    "reason": "deadline"
+    "reason": "budget"
    },
    {
     "ticker": "SHARKY",
-    "reason": "deadline"
+    "reason": "budget"
    },
    {
     "ticker": "VAMP",
-    "reason": "deadline"
+    "reason": "budget"
    }
   ],
-  "prior_unchecked": 0,
-  "koios_calls": 17,
+  "prior_unchecked": 2,
+  "koios_calls": 36,
   "blockfrost_calls": 0,
   "blockfrost_fallbacks": 0,
   "blockfrost_available": true,
   "basis": "koios",
-  "budget_s": 45,
+  "budget_s": 180,
   "max_calls": 36
  }
 }
