@@ -6,11 +6,14 @@ Codes are standing research flags, not buy signals and not webhook triggers.
 
 dev_sold: that file's dev_sold_ada is at least its min_sell_ada, or late_rug is true.
 serial_launcher: serial_3h / serial_7d reached the existing caution floors, or prior_rugs >= 1.
-lp_pulled: a liquidity lp_remove whose ahead_of_dump meets the Balanced floors
-(AHEAD_OF_DUMP: pull at least 20% of the pool reserve and 2,000 ADA, and same-party
-sells inside 6h total at least 25% of that pull), or whose actor_tag is a role label
-or that token's dev tag. A loose ahead_of_dump flag does not count. A third-party pull
-is not a veto. LP-token rows are not vetoes. Adds and swaps are not vetoes.
+lp_pulled: a liquidity lp_remove whose actor_tag is a role label or that token's dev tag.
+A third-party pull is not an lp_pulled veto. LP-token rows are not vetoes. Adds and swaps
+are not vetoes.
+ahead_of_dump: its own code, not lp_pulled. A liquidity lp_remove whose ahead_of_dump meets
+the Balanced floors (AHEAD_OF_DUMP: pull at least 20% of the pool reserve and 2,000 ADA,
+and same-party sells inside 6h total at least 25% of that pull). A loose flag does not
+count. Each such token carries a reason with those amounts only (no wallet). counts on
+the document is the per-code total.
 
 A source whose `at` is older than vetoes.max_age_h (default 5, about two 2h runs) is
 skipped and listed under `stale`. A corrupt source keeps the previous vetoes.json.
@@ -31,11 +34,14 @@ NOTE = (
     "Research vetoes for the Cardano desk. Never a buy signal. They do not change desk rules, "
     "kill lines, or thresholds. Evidence values are wallet tags only."
 )
-CODES = ("dev_sold", "serial_launcher", "lp_pulled")
+CODES = ("dev_sold", "serial_launcher", "lp_pulled", "ahead_of_dump")
 TICKER_RE = re.compile(r"^[A-Z0-9][A-Z0-9._-]{0,31}$")
 POLICY_RE = re.compile(r"^[0-9a-f]{8,56}$")
 UNIT_RE = re.compile(r"^[0-9a-f]{56,200}$")
 AT_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")
+REASON_RE = re.compile(r"^[A-Za-z0-9 .,;%:()=<>+-]+$")
+# Amounts only. A wallet tag, address, or stake key in a reason is rejected.
+REASON_BANNED = re.compile(r"stake|addr|w-", re.I)
 
 
 def _num(v):
@@ -138,15 +144,22 @@ class _Tokens:
             row["unit"] = unit
         return row
 
-    def veto(self, row, code, evidence):
+    def veto(self, row, code, evidence, reason=None, rank=0):
         if row is None or code not in CODES:
             return
         for cur in row["vetoes"]:
             if cur["code"] == code:
                 for k, v in evidence.items():
                     cur["evidence"].setdefault(k, v)
+                if reason and rank >= cur.get("_rank", 0):
+                    cur["reason"] = reason
+                    cur["_rank"] = rank
                 return
-        row["vetoes"].append({"code": code, "evidence": dict(evidence)})
+        item = {"code": code, "evidence": dict(evidence)}
+        if reason:
+            item["reason"] = reason
+            item["_rank"] = rank
+        row["vetoes"].append(item)
 
 
 def _evidence(field, tag):
@@ -197,6 +210,35 @@ def _actor_is_dev(actor, ticker, policy, dev_index):
     return False
 
 
+def _num_txt(value):
+    value = float(value)
+    if value == int(value):
+        return str(int(value))
+    return f"{value:.2f}".rstrip("0").rstrip(".")
+
+
+def dump_reason(move, floors):
+    """Amounts and the Balanced floors. No wallet, address, stake key, or tx hash."""
+    floors = LM.floors_of(floors)
+    ada, dump = LM._ada(move.get("ada")), LM._ada(move.get("dump_ada"))
+    after = LM._ada(LM._reserve_after(move))
+    if ada is None or dump is None or after is None or ada <= 0:
+        return (
+            f"pull meets the Balanced floors (>= {_num_txt(floors['pull_reserve_pct'])} percent "
+            f"and >= {_num_txt(floors['pull_min_ada'])} ADA, same-party sell "
+            f">= {_num_txt(floors['sell_of_pull_pct'])} percent inside {_num_txt(floors['window_h'])}h)"
+        )
+    before = after + ada
+    pct = int(round(100.0 * ada / before)) if before > 0 else 0
+    sell_pct = int(round(100.0 * dump / ada))
+    return (
+        f"pull {_num_txt(ada)} ADA is {pct} percent of the reserve "
+        f"(>= {_num_txt(floors['pull_reserve_pct'])} percent and >= {_num_txt(floors['pull_min_ada'])} ADA); "
+        f"same-party sell {_num_txt(dump)} ADA is {sell_pct} percent of the pull "
+        f"inside {_num_txt(floors['window_h'])}h"
+    )
+
+
 def from_liquidity(doc, roles, loaded, tokens, dev_index, floors):
     if not isinstance(doc, dict):
         return
@@ -210,11 +252,16 @@ def from_liquidity(doc, roles, loaded, tokens, dev_index, floors):
         if not ticker and not policy:
             continue
         tag = keep_tag(move.get("actor_tag"), roles, loaded)
-        ahead = LM.tight_ahead(move, floors)
+        ev = _evidence("actor_tag", tag)
+        row = None
+        # ahead_of_dump is its own veto. lp_pulled stays the dev or role pull.
+        if LM.tight_ahead(move, floors):
+            row = tokens.add(ticker, policy, None)
+            ada = LM._ada(move.get("ada")) or 0
+            tokens.veto(row, "ahead_of_dump", ev, dump_reason(move, floors), rank=ada)
         role = bool(tag) and tag in roles
-        if not (ahead or role or _actor_is_dev(tag, ticker, policy, dev_index)):
-            continue
-        tokens.veto(tokens.add(ticker, policy, None), "lp_pulled", _evidence("actor_tag", tag))
+        if role or _actor_is_dev(tag, ticker, policy, dev_index):
+            tokens.veto(row or tokens.add(ticker, policy, None), "lp_pulled", ev)
 
 
 def build(dev_doc, liq_doc, cfg, owner_env, at, stale=None):
@@ -226,6 +273,8 @@ def build(dev_doc, liq_doc, cfg, owner_env, at, stale=None):
     from_liquidity(liq_doc, roles, loaded, tokens, dev_index, LM.resolve_floors(liq_doc, cfg))
     rows = [r for r in tokens.rows if r.get("vetoes")]
     for row in rows:
+        for veto in row["vetoes"]:
+            veto.pop("_rank", None)
         row["vetoes"] = sorted(row["vetoes"], key=lambda v: CODES.index(v["code"]))
     rows.sort(key=lambda r: (r.get("ticker") or "", r.get("policy_short") or ""))
     doc = {
@@ -236,11 +285,33 @@ def build(dev_doc, liq_doc, cfg, owner_env, at, stale=None):
         "buy_signal": False,
         "sources": ["dev_checks", "liquidity_moves"],
         "stale": [s for s in (stale or []) if s in ("dev_checks", "liquidity_moves")],
+        "counts": code_counts(rows),
         "tokens": rows,
     }
     validate_doc(doc)
     F.assert_public(doc)
     return doc
+
+
+def code_counts(rows):
+    counts = {c: 0 for c in CODES}
+    for row in rows or []:
+        for veto in row.get("vetoes") or []:
+            code = veto.get("code")
+            if code in counts:
+                counts[code] += 1
+    return counts
+
+
+def reason_ok(reason):
+    """True for an amounts-only reason. No wallet tag, address, or stake key."""
+    if not isinstance(reason, str) or not reason or len(reason) > 240:
+        return False
+    if not REASON_RE.fullmatch(reason):
+        return False
+    if REASON_BANNED.search(reason):
+        return False
+    return True
 
 
 def validate_doc(doc):
@@ -258,7 +329,7 @@ def validate_doc(doc):
     stale = doc.get("stale", [])
     if not isinstance(stale, list) or any(s not in ("dev_checks", "liquidity_moves") for s in stale):
         raise SystemExit("vetoes: stale rejected")
-    allowed = {"schema_version", "at", "desk", "note", "buy_signal", "sources", "stale", "tokens"}
+    allowed = {"schema_version", "at", "desk", "note", "buy_signal", "sources", "stale", "counts", "tokens"}
     if set(doc) - allowed:
         raise SystemExit("vetoes: unexpected field")
     rows = doc.get("tokens")
@@ -277,7 +348,13 @@ def validate_doc(doc):
         if not isinstance(vetoes, list) or not vetoes:
             raise SystemExit("vetoes: empty veto list")
         for veto in vetoes:
-            if not isinstance(veto, dict) or set(veto) != {"code", "evidence"} or veto.get("code") not in CODES:
+            if not isinstance(veto, dict) or veto.get("code") not in CODES:
+                raise SystemExit("vetoes: code rejected")
+            keys = set(veto)
+            if veto.get("code") == "ahead_of_dump":
+                if keys != {"code", "evidence", "reason"}:
+                    raise SystemExit("vetoes: code rejected")
+            elif keys != {"code", "evidence"}:
                 raise SystemExit("vetoes: code rejected")
             ev = veto.get("evidence")
             if not isinstance(ev, dict) or set(ev) - {"dev_tag", "actor_tag"}:
@@ -285,6 +362,11 @@ def validate_doc(doc):
             for value in ev.values():
                 if not DC.dev_tag_ok(value, DC.known_roles()):
                     raise SystemExit("vetoes: evidence tag rejected")
+            if veto.get("code") == "ahead_of_dump" and not reason_ok(veto.get("reason")):
+                raise SystemExit("vetoes: reason rejected")
+    counts = doc.get("counts")
+    if counts != code_counts(rows):
+        raise SystemExit("vetoes: counts rejected")
     return doc
 
 

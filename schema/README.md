@@ -20,7 +20,7 @@ Bots write daily briefs as `<desk>/briefs/YYYY-MM-DD.json` only. They do not mai
 
 `solada/forensics/` is experimental Solana research (`sol_forensics`), not a paper book, run log, brief, or pulse. It is not listed in `desks.json` and this check does not validate it. The privacy guard still scans it. Flag codes in those reports are hypotheses, not pulse signals.
 
-`solada-prefilter/vetoes.json` is research output on the desk-data branch (`schema/solada-vetoes.schema.json`). It is not a paper book. CI validates the fixture, and desk-data-guard validates the file when the branch has one. `buy_signal` is false. Evidence values are wallet tags only.
+`solada-prefilter/vetoes.json` is research output on the desk-data branch (`schema/solada-vetoes.schema.json`). It is not a paper book. CI validates the fixture, and desk-data-guard validates the file when the branch has one. `buy_signal` is false. Evidence values are wallet tags only. Codes are `dev_sold`, `serial_launcher`, `lp_pulled`, and `ahead_of_dump`. `counts` is the per-code total. An `ahead_of_dump` veto carries a `reason` with amounts only. `fresh_funded` is a caution flag on `dev_checks.json`, not a veto code and not a dashboard panel field.
 
 `solada-prefilter/liquidity_moves.json` is research output on the desk-data branch. It has no JSON schema of its own, so an extra field is allowed. The privacy guard checks `actor_tag` only. `tokens[]` stays in Snek rank order. Each token may include `last_checked`: UTC `YYYY-MM-DDTHH:MM:SSZ`, or null when that token has not been read. The value is a time. It is not a wallet, a unit, or a stake key. Which token is scanned first is least-recently-checked and is stored in the private cache, not in this list's order.
 

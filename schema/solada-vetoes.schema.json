@@ -5,7 +5,7 @@
   "description": "Zero-AI hard vetoes for the Cardano desk. Research only. buy_signal is always false. Evidence values are wallet tags only.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "at", "desk", "note", "buy_signal", "sources", "tokens"],
+  "required": ["schema_version", "at", "desk", "note", "buy_signal", "sources", "counts", "tokens"],
   "properties": {
     "schema_version": {"const": 1},
     "at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
@@ -22,6 +22,7 @@
       "type": "array",
       "items": {"enum": ["dev_checks", "liquidity_moves"]}
     },
+    "counts": {"$ref": "#/$defs/counts"},
     "tokens": {
       "type": "array",
       "items": {"$ref": "#/$defs/token"}
@@ -36,6 +37,17 @@
           "repeat_launcher", "swarm_launcher", "watch", "wojaks_dumper", "wojaks_whale"
         ]}
       ]
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dev_sold", "serial_launcher", "lp_pulled", "ahead_of_dump"],
+      "properties": {
+        "dev_sold": {"type": "integer", "minimum": 0},
+        "serial_launcher": {"type": "integer", "minimum": 0},
+        "lp_pulled": {"type": "integer", "minimum": 0},
+        "ahead_of_dump": {"type": "integer", "minimum": 0}
+      }
     },
     "token": {
       "type": "object",
@@ -57,7 +69,7 @@
       "additionalProperties": false,
       "required": ["code", "evidence"],
       "properties": {
-        "code": {"enum": ["dev_sold", "serial_launcher", "lp_pulled"]},
+        "code": {"enum": ["dev_sold", "serial_launcher", "lp_pulled", "ahead_of_dump"]},
         "evidence": {
           "type": "object",
           "additionalProperties": false,
@@ -65,8 +77,31 @@
             "dev_tag": {"$ref": "#/$defs/tag"},
             "actor_tag": {"$ref": "#/$defs/tag"}
           }
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240,
+          "pattern": "^[A-Za-z0-9 .,;%:()=<>+-]+$",
+          "description": "Amounts only, on ahead_of_dump. No wallet tag, address, or stake key."
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"code": {"const": "ahead_of_dump"}},
+            "required": ["code"]
+          },
+          "then": {"required": ["code", "evidence", "reason"]}
+        },
+        {
+          "if": {
+            "properties": {"code": {"enum": ["dev_sold", "serial_launcher", "lp_pulled"]}},
+            "required": ["code"]
+          },
+          "then": {"not": {"required": ["reason"]}}
+        }
+      ]
     }
   }
 }

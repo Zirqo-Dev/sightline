@@ -189,7 +189,7 @@
     "min_ada_row": 1.0
   },
   "dev_checks": {
-    "_note": "Phase 1 dev checks (dev_checks.py). budget_s is configurable (180). max_calls stays 36 and max_bf_calls stays 50: Koios first, Blockfrost fallback via the existing BLOCKFROST_PROJECT_ID, pace under 10/s. The primary webhook fires before this budget. The scan runs after that post and yields first if run start + 720s cannot also hold the whale, big_moves and liquidity reserves. A Koios 429 stops Koios here and pauses it for ~60s, then Koios resumes; the breaker is not tripped. On a Koios outage each scanned row gets about 8 Blockfrost calls (newest transactions first). Rows that do not fit that floor are marked budget and picked up on a later run. A new dev sell (unseen sell tx, changed_since_last) on a tracked token may add one dev_sell trigger, posted after the scan and independent of whether every row finished. Unchanged state does not re-fire. Rows are keyed by policy + asset name. min_sell_ada is a dust floor. Curve reserve stays in flags.exclude_tags and is left out of holder and seller logic. dev_buy_ada, dev_locked_pct and unlock_date are phase 2 (always null). LP pulls are liquidity_moves.py.",
+    "_note": "Phase 1 dev checks (dev_checks.py). budget_s is configurable (180). max_calls stays 36 and max_bf_calls stays 50: Koios first, Blockfrost fallback via the existing BLOCKFROST_PROJECT_ID, pace under 10/s. The primary webhook fires before this budget. The scan runs after that post and yields first if run start + 720s cannot also hold the whale, big_moves and liquidity reserves. A Koios 429 stops Koios here and pauses it for ~60s, then Koios resumes; the breaker is not tripped. On a Koios outage each scanned row gets about 8 Blockfrost calls (newest transactions first). Rows that do not fit that floor are marked budget and picked up on a later run. A new dev sell (unseen sell tx, changed_since_last) on a tracked token may add one dev_sell trigger, posted after the scan and independent of whether every row finished. Unchanged state does not re-fire. Rows are keyed by policy + asset name. min_sell_ada is a dust floor. Curve reserve stays in flags.exclude_tags and is left out of holder and seller logic. dev_buy_ada, dev_locked_pct and unlock_date are phase 2 (always null). LP pulls are liquidity_moves.py. fresh_funded_h (24) is a caution flag, not a veto: the dev wallet's first tx is within that many hours of launch. One Koios account_txs (oldest) per stake, Blockfrost /accounts/{stake}/transactions only when Koios fails, inside these same caps. A missing read stays null.",
     "enabled": true,
     "budget_s": 180,
     "max_calls": 36,
@@ -209,7 +209,8 @@
     "serial_7d_h": 168,
     "serial_caution_3h": 2,
     "serial_caution_7d": 3,
-    "drawdown_caution_pct": 80
+    "drawdown_caution_pct": 80,
+    "fresh_funded_h": 24
   },
   "liquidity_moves": {
     "_note": "SPD-55 pool reserves for Snek cardano_top10 (liquidity_moves.py). Research only: no webhook, no desk rule, no kill line. Runs after whale_ledger and big_moves. budget_s (50) is reserved inside the run-start + 720s cap, and the slice also gets that many seconds from the moment it starts if an earlier slice already spent the reserve. A late window stops at run start + 770s (10s before the 780s process kill). Koios max_calls 36 per run (1 tip + one asset_txs page per pool marker + tx_info batches under 1 KB). Blockfrost only when a Koios read fails, max_bf_calls 12. A short window reads least-recently-checked tokens first (private cache last_checked). A budget skip is not stamped, so the rest of the top 10 is read on later runs. budget_s and max_calls are not raised. min_swap_ada / min_lp_ada are event floors. ahead_of_dump is the Balanced block below.",
@@ -237,7 +238,7 @@
     "keep_seen": 4000
   },
   "vetoes": {
-    "_note": "SPD-65 research vetoes (vetoes.py). Derived from dev_checks.json and liquidity_moves.json after those jobs, no chain calls. Never a buy signal, never a webhook, never a desk rule or kill line. lp_pulled counts a Balanced ahead_of_dump (liquidity_moves.ahead_of_dump) or a dev/role actor_tag. A loose ahead_of_dump flag does not count. max_age_h (5, about two 2h runs) drops a source whose at is older than that; a corrupt source keeps the previous vetoes.json. Evidence is tags only. enabled can turn the file off. None of this changes desk floors.",
+    "_note": "SPD-65 research vetoes (vetoes.py). Derived from dev_checks.json and liquidity_moves.json after those jobs, no chain calls. Never a buy signal, never a webhook, never a desk rule or kill line. lp_pulled is a dev or role lp_remove. ahead_of_dump is its own code: a pull that meets liquidity_moves.ahead_of_dump (20% of reserve and 2,000 ADA, same-party sell 25% inside 6h). A loose flag does not count. counts is the per-code total. Each ahead_of_dump veto has a reason with those amounts only. max_age_h (5, about two 2h runs) drops a source whose at is older than that; a corrupt source keeps the previous vetoes.json. Evidence is tags only. fresh_funded is a dev_checks caution flag, not a code here. enabled can turn the file off. None of this changes desk floors.",
     "enabled": true,
     "max_age_h": 5
   },

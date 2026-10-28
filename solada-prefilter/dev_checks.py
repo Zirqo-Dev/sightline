@@ -10,8 +10,10 @@ flags.py uses. Never a raw prefix, address, or stake key. Rows and trigger keys 
 token (policy + asset name): a ticker that changes token is a new baseline.
 
 Phase 1 is dev sells / late rugs, serial-launcher counts, and drawdown / inactivity.
-dev_buy_ada, dev_locked_pct and unlock_date are always null. LP pulls are liquidity_moves.py
-(SPD-55), not this file. Dev lock, dev buy class, and social checks stay phase 2.
+fresh_funded is a caution flag on the same row, not a veto: the dev wallet's first tx
+is within fresh_funded_h of launch. A missing read stays null. dev_buy_ada, dev_locked_pct
+and unlock_date are always null. LP pulls are liquidity_moves.py (SPD-55), not this file.
+Dev lock, dev buy class, and social checks stay phase 2.
 
 A sell is one transaction whose creator key UTxOs lose this token and gain ADA, or a
 later tx that pays the dev ADA for tokens they had parked at a script without returning
@@ -41,6 +43,7 @@ DEFAULTS = {
     "rug_bag_pct": 80, "late_min_minutes": 30, "rug_min_other_holders": 1,
     "min_sell_ada": 25.0, "inactive_h": 24, "serial_3h_h": 3, "serial_7d_h": 168,
     "serial_caution_3h": 2, "serial_caution_7d": 3, "drawdown_caution_pct": 80,
+    "fresh_funded_h": 24,
 }
 PHASE2 = ("dev_buy_ada", "dev_locked_pct", "unlock_date")
 NOTE = (
@@ -54,7 +57,10 @@ NOTE = (
     "later for tokens parked at a script (a cancel is not a sell). late_rug needs the net drop and "
     "tokens actually sold, both at least rug_bag_pct of that stake's peak; a lock is not a sell. "
     "min_sell_ada is a dust floor on the ADA of sell txs not seen before. A partial read adds that "
-    "fresh ADA to the stored total and does not lower it. An incomplete read is marked partial."
+    "fresh ADA to the stored total and does not lower it. An incomplete read is marked partial. "
+    "fresh_funded is a caution flag, not a veto and not a webhook: true when the dev wallet's "
+    "first tx is within fresh_funded_h (24) of launch. A missing read stays null and does not "
+    "raise caution. Koios account_txs is first; Blockfrost is the fallback, inside this job's caps."
 )
 
 
@@ -345,18 +351,47 @@ def prior_rug_count(cache, stake, unit, live_ms):
     return n
 
 
-def risk_of(sold, late, prior, s3, s7, drawdown, inactive, complete, dc, sharp=False):
+def fresh_funded_of(first_s, launch_s, hours):
+    """True when the dev wallet's first tx is within `hours` of launch.
+
+    None when either time is missing or not usable. Missing data is not a caution.
+    """
+    if isinstance(first_s, bool) or isinstance(launch_s, bool):
+        return None
+    if not isinstance(first_s, (int, float)) or not isinstance(launch_s, (int, float)):
+        return None
+    try:
+        hours = float(hours)
+    except (TypeError, ValueError):
+        return None
+    if first_s <= 0 or launch_s <= 0 or hours < 0:
+        return None
+    return abs(float(launch_s) - float(first_s)) <= hours * 3600.0
+
+
+def _tx_time(row):
+    if not isinstance(row, dict):
+        return None
+    t = row.get("block_time")
+    if isinstance(t, bool) or not isinstance(t, (int, float)) or t <= 0:
+        return None
+    return float(t)
+
+
+def risk_of(sold, late, prior, s3, s7, drawdown, inactive, complete, dc, sharp=False, fresh_funded=None):
     """low | caution | high, or None when a partial read is not enough to call it low.
 
     sharp: the dev's balance fell by rug_bag_pct, or that much is still parked at a script.
     That is never "low" (a batcher order is not a same-tx sell, and a round trip is not a rug).
+    fresh_funded true is a caution flag. It is not a veto and it does not fire the webhook.
+    None (the read failed) does not raise caution.
     """
     if late is True or (prior or 0) >= 1:
         return "high"
     caution = ((sold or 0) >= float(dc["min_sell_ada"]) or (s3 or 0) >= int(dc["serial_caution_3h"])
                or (s7 or 0) >= int(dc["serial_caution_7d"])
                or (drawdown is not None and drawdown >= float(dc["drawdown_caution_pct"]))
-               or inactive is True or sharp)
+               or inactive is True or sharp or fresh_funded is True)
     if caution:
         return "caution"
     if late is None or not complete or sharp:
@@ -481,7 +516,7 @@ def _blank(ticker, policy_short, asof, unit=None):
         "ticker": ticker, "unit": unit, "policy_short": policy_short, "dev_tag": None,
         "dev_sold_ada": None, "dev_sold_after_min": None, "holders_at_sell": None, "late_rug": None,
         "serial_3h": None, "serial_7d": None, "prior_rugs": None,
-        "ath_mcap": None, "drawdown_pct": None, "inactive": None, "risk": None,
+        "ath_mcap": None, "drawdown_pct": None, "inactive": None, "fresh_funded": None, "risk": None,
         "changed_since_last": False, "asof": asof,
     }
     for k in PHASE2:
@@ -765,6 +800,62 @@ class DevChain:
             out.update(got or {})
         return out
 
+    def first_funded_s(self, stake, cache=None):
+        """Unix time of this stake's earliest tx, or None when the read did not land.
+
+        One Koios GET /account_txs (oldest, limit 1). Blockfrost
+        /accounts/{stake}/transactions?order=asc&count=1 only when that Koios read
+        fails. A positive time is kept on the private cache and not fetched again.
+        An empty account, a missing time, or no budget left returns None. The stake
+        is not printed.
+        """
+        if not isinstance(stake, str) or not stake.startswith("stake1"):
+            return None
+        if isinstance(cache, dict) and isinstance(cache.get("funded"), dict):
+            cached = cache["funded"].get(stake)
+            if isinstance(cached, (int, float)) and not isinstance(cached, bool) and cached > 0:
+                return float(cached)
+        if self.late():
+            return None
+        row, failed = None, False
+        if self.koios_open() and self.koios_left() > 0:
+            try:
+                got = self.h.req(
+                    "koios",
+                    f"{KOIOS}/account_txs?_stake_address={stake}&order=block_height.asc&limit=1",
+                    quiet404=False)
+            except Exception:
+                got = None
+            self.note_koios()
+            if isinstance(got, list):
+                if not got:
+                    return None
+                row = got[0]
+                if _tx_time(row) is None:
+                    row, failed = None, True
+            else:
+                failed = True
+        elif not self.koios_open():
+            failed = True
+        else:
+            return None
+        if failed and self._fallback():
+            try:
+                got = self.bf(f"/accounts/{stake}/transactions?order=asc&count=1")
+            except Exception:
+                got = None
+            row = got[0] if isinstance(got, list) and got else None
+        elif failed:
+            return None
+        t = _tx_time(row)
+        if t is None:
+            return None
+        if isinstance(cache, dict):
+            if not isinstance(cache.get("funded"), dict):
+                cache["funded"] = {}
+            cache["funded"][stake] = int(t)
+        return t
+
 
 def _private_cache(cache_dir, data_dir):
     """Actions-cache path for stake keys. Never a file inside the public desk-data directory."""
@@ -891,6 +982,7 @@ def _no_stake(row, stake, keep=False):
     row["changed_since_last"] = False
     if row.get("risk") == "low":
         row["risk"] = None
+    row["fresh_funded"] = None
     if not keep:
         row["dev_tag"] = None
         row["dev_sold_ada"] = None
@@ -903,6 +995,36 @@ def _no_stake(row, stake, keep=False):
     cov["complete"] = False
     row["coverage"] = cov
     return row
+
+
+def _funding_flag(scan, prev, unit, stake):
+    """This run's fresh_funded bool, else the last bool for the same unit.
+
+    A failed read does not invent caution and does not erase a bool already stored.
+    No creator stake this run publishes null.
+    """
+    if not stake:
+        return None
+    if isinstance(scan, dict) and scan.get("fresh_funded") in (True, False):
+        return scan["fresh_funded"]
+    if isinstance(prev, dict) and prev.get("unit") == unit and prev.get("fresh_funded") in (True, False):
+        return prev["fresh_funded"]
+    return None
+
+
+def _note_fresh_funded(chain, sc, item, cache, dc):
+    """One account read after the scan. Fail soft. Does not print the stake."""
+    if not isinstance(sc, dict) or sc.get("skipped") or not sc.get("stake"):
+        return
+    launch_s = sc.get("launch_s")
+    if launch_s is None:
+        launch_s = _launch_s(item.get("launch"))
+    try:
+        first = chain.first_funded_s(sc["stake"], cache)
+    except Exception:
+        first = None
+    flag = fresh_funded_of(first, launch_s, dc.get("fresh_funded_h", 24))
+    sc["fresh_funded"] = flag if flag in (True, False) else None
 
 
 def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline, new_hashes=(), fresh_ada=0.0):
@@ -942,8 +1064,9 @@ def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline, new_h
                 row["mcap_basis"] = prev.get("mcap_basis")
         row["inactive"] = inactive_of(None, False, item.get("vol_h24_ada"), now_s, launch_s, dc["inactive_h"],
                                       volume_counts=not bool(skipped))
+        row["fresh_funded"] = _funding_flag(scan, prev, unit, stake)
         risk = risk_of(row["dev_sold_ada"], row["late_rug"], row["prior_rugs"], s3, s7, row["drawdown_pct"],
-                       row["inactive"], False, dc)
+                       row["inactive"], False, dc, fresh_funded=row["fresh_funded"])
         if risk is None and isinstance(prev, dict) and prev.get("unit") == unit and prev.get("risk") in ("low", "caution", "high"):
             risk = prev.get("risk")
         row["risk"] = risk
@@ -983,8 +1106,9 @@ def _entry(item, scan, prev, cache, launches, dc, now_s, now_ms, baseline, new_h
         if row.get("dev_sold_after_min") is None and same.get("dev_sold_after_min") is not None:
             row["dev_sold_after_min"] = same["dev_sold_after_min"]
     sharp = bool(stats.get("sharp"))
+    row["fresh_funded"] = _funding_flag(scan, same, unit, stake)
     risk = risk_of(row["dev_sold_ada"], row["late_rug"], row["prior_rugs"], s3, s7, dd, row["inactive"],
-                   complete, dc, sharp=sharp)
+                   complete, dc, sharp=sharp, fresh_funded=row["fresh_funded"])
     if risk == "low" and (not complete or sharp):
         risk = "caution" if sharp else None
     if risk is None and isinstance(same, dict) and same.get("risk") in ("low", "caution", "high"):
@@ -1350,6 +1474,7 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
             _remember(cache, item["unit"], sc.get("stake"), live_ms,
                       (sc.get("stats") or {}).get("late_rug") if sc.get("complete") else None, sc.get("complete"),
                       item.get("ticker"), baseline_only=keep_base)
+            _note_fresh_funded(chain, sc, item, cache, dc)
         # priors: other recent launches by a dev we already identified, only with calls left
         scanned_units = set(scans)
         stakes = {sc.get("stake") for sc in scans.values() if sc.get("stake")}
@@ -1424,11 +1549,13 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
         "koios_calls": koios_calls, "blockfrost_calls": bf_calls, "blockfrost_fallbacks": chain.fallbacks,
         "blockfrost_available": bool(chain.bf_key), "basis": _basis(koios_calls, bf_calls),
         "budget_s": dc["budget_s"], "max_calls": dc["max_calls"],
+        "fresh_funded": sum(1 for e in entries if e.get("fresh_funded") is True),
     }
     doc = _guard({
         "at": iso(now_s), "phase": 1, "note": NOTE,
         "thresholds": {k: dc[k] for k in ("rug_bag_pct", "late_min_minutes", "rug_min_other_holders", "min_sell_ada",
-                                          "inactive_h", "serial_caution_3h", "serial_caution_7d", "drawdown_caution_pct")},
+                                          "inactive_h", "serial_caution_3h", "serial_caution_7d", "drawdown_caution_pct",
+                                          "fresh_funded_h")},
         "entries": entries, "coverage": coverage,
     })
     if not dry_run:

@@ -296,8 +296,13 @@ def fake_req(koios_up, books, seen, key=KEY):
             if url.endswith("/tx_info"):
                 want = set(body["_tx_hashes"])
                 return [_koios_tx(t) for rows in books.values() for t in rows if t["hash"] in want]
+            if "/account_txs" in url:
+                # Oldest account tx. Ancient, so fresh_funded stays false in these books.
+                return [{"tx_hash": "ff" * 32, "block_height": 1, "block_time": 1}]
             return None
         assert headers.get("project_id") == key
+        if "/accounts/" in url and "/transactions" in url:
+            return [{"tx_hash": "ff" * 32, "block_height": 1, "block_time": 1}]
         if "/transactions" in url:
             uid = url.split("/assets/")[1].split("/")[0]
             rows = books.get(uid) or []
@@ -1994,9 +1999,14 @@ class ReviewFixes(unittest.TestCase):
 
 
 def _bf_spans(urls):
-    """Blockfrost calls grouped by asset-transaction list. Each group is one scanned row."""
+    """Blockfrost calls grouped by asset-transaction list. Each group is one scanned row.
+
+    An account-history read (fresh_funded) is not a new asset span.
+    """
     spans = []
     for url in urls:
+        if "/accounts/" in url:
+            continue
         if "/transactions" in url:
             spans.append({"url": url, "n": 1, "utxos": []})
         elif spans:
@@ -2036,6 +2046,8 @@ def _bf_req(books, urls):
         if src == "koios":
             return None
         urls.append(url)
+        if "/accounts/" in url and "/transactions" in url:
+            return [{"tx_hash": "ff" * 32, "block_height": 1, "block_time": 1}]
         if "/transactions" in url:
             uid = url.split("/assets/")[1].split("/")[0]
             rows = books[uid]
