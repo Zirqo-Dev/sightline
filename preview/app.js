@@ -465,6 +465,160 @@
     dev_sold: "Dev sell reached the desk minimum",
     serial_launcher: "Serial launches crossed the caution line"
   };
+  function suriTone(risk) {
+    const s = String(risk || "").toLowerCase();
+    if (!s || s === "none" || s === "null") return "s-none";
+    if (/red|high|rug/.test(s)) return "s-high";
+    if (/yellow|caution|med|mid/.test(s)) return "s-mid";
+    if (/low|green|ok/.test(s)) return "s-low";
+    return "s-none";
+  }
+  function suriList(log) {
+    const suri = log && log.suri;
+    if (!suri || typeof suri !== "object") return [];
+    return Object.keys(suri).map(ticker => {
+      const row = suri[ticker] || {};
+      const tags = Array.isArray(row.tags) ? row.tags.map(t => sanitize(t)).filter(t => t && t.length <= 28) : [];
+      return { ticker: sanitize(ticker), risk: sanitize(row.risk), tone: suriTone(row.risk), tags };
+    }).filter(r => r.ticker);
+  }
+  function suriBadge(row) {
+    if (!row || !row.ticker) return "";
+    const tip = [row.risk].concat(row.tags || []).filter(Boolean).join(" · ");
+    return `<span class="suri ${row.tone}" title="${esc(tip)}">${esc(row.ticker)}</span>`;
+  }
+  function publicFounder(fw) {
+    if (!fw || typeof fw !== "object") return null;
+    return {
+      handle: sanitize(fw.handle),
+      net_flow_ada: num(fw.net_flow_ada),
+      summary: sanitize(fw.summary),
+      line: sanitize(fw.line)
+    };
+  }
+  function tickerName(v) {
+    const s = sanitize(v);
+    if (!s || s.length > 24 || /(?:stake|addr)1|0x[0-9a-f]{8,}/i.test(s)) return "";
+    return s;
+  }
+  function flagTags(f) {
+    const bag = [].concat(f.tag || [], f.tags || [], f.wallet || [], f.wallets || []);
+    const out = [];
+    bag.forEach(t => { const s = safeTag(t); if (s && out.indexOf(s) < 0) out.push(s); });
+    return out;
+  }
+  function flagAda(f) {
+    return num(f.ada) != null ? num(f.ada) : num(f.ada_equiv) != null ? num(f.ada_equiv) : num(f.ada_each);
+  }
+  function depthSeries(log, pulse, ticker) {
+    const tk = String(ticker || "").toUpperCase();
+    const fromPulse = [];
+    ((pulse && pulse.points) || []).forEach(p => {
+      if (!p || String(p.ticker || "").toUpperCase() !== tk) return;
+      if (p.chain && p.chain !== "cardano") return;
+      const m = p.metrics || {};
+      const v = num(m.ada_side);
+      if (v != null) fromPulse.push(v);
+    });
+    if (fromPulse.length >= 2) return fromPulse;
+    const fromHist = [];
+    ((log && log.history) || []).forEach(h => {
+      ((h && h.cardano_top10) || []).forEach(row => {
+        if (String(row.ticker || "").toUpperCase() !== tk) return;
+        const v = num(row.ada_side_depth);
+        if (v != null) fromHist.push(v);
+      });
+    });
+    const cur = ((log && log.cardano_top10) || []).find(r => String(r.ticker || "").toUpperCase() === tk);
+    if (cur && num(cur.ada_side_depth) != null) fromHist.push(num(cur.ada_side_depth));
+    return fromHist;
+  }
+  function killFor(kills, ticker) {
+    if (!kills || typeof kills !== "object") return null;
+    const key = Object.keys(kills).find(k => k.toUpperCase() === String(ticker || "").toUpperCase());
+    const row = key ? kills[key] : null;
+    if (!row || typeof row !== "object") return null;
+    return { line: num(row.line), value: num(row.value), hit: row.hit === true, metric: sanitize(row.metric), text: sanitize(row.text) };
+  }
+  function heatModel(flags) {
+    const early = (flags || []).filter(f => f.kind === "repeat_early_buyer" || f.kind === "watch_tags_first_block" || f.kind === "coordinated_buys");
+    const cell = {};
+    const cols = {};
+    early.forEach(f => {
+      const tags = flagTags(f);
+      const launches = Array.isArray(f.launches) && f.launches.length ? f.launches : (f.ticker ? [f.ticker] : []);
+      const ada = flagAda(f);
+      launches.forEach(launch => {
+        const col = tickerName(launch);
+        if (!col) return;
+        cols[col] = (cols[col] || 0) + 1;
+        tags.forEach(tag => {
+          const k = tag + "|" + col;
+          const prev = cell[k] || { tag, col, n: 0, ada: 0 };
+          prev.n += 1;
+          if (ada != null) prev.ada += ada;
+          cell[k] = prev;
+        });
+      });
+    });
+    const snipers = {};
+    (flags || []).forEach(f => {
+      if (f.kind !== "sniper_full_exit") return;
+      const col = tickerName(f.ticker);
+      flagTags(f).forEach(tag => { if (col) snipers[tag + "|" + col] = true; });
+    });
+    const colList = Object.keys(cols).sort((a, b) => cols[b] - cols[a]).slice(0, 12);
+    const rowScore = {};
+    Object.keys(cell).forEach(k => { rowScore[cell[k].tag] = (rowScore[cell[k].tag] || 0) + cell[k].n; });
+    const rowList = Object.keys(rowScore).sort((a, b) => rowScore[b] - rowScore[a]).slice(0, 14);
+    return { colList, rowList, cell, snipers };
+  }
+  function sankeyFlows(whale, big, log) {
+    const tag = safeTag(whale && whale.whale_tag);
+    const flows = {};
+    const add = (token, dir, ada) => {
+      const name = tickerName(token);
+      if (!name || name === "ADA" || ada == null || !isFinite(ada) || ada === 0) return;
+      const row = flows[name] || { token: name, inn: 0, out: 0 };
+      if (dir === "out") row.out += Math.abs(ada); else row.inn += Math.abs(ada);
+      flows[name] = row;
+    };
+    ((whale && whale.rows) || []).forEach(r => {
+      const q = num(r.qty);
+      const ada = num(r.ada_leg);
+      const kind = String(r.kind || "");
+      let dir = q != null ? (q < 0 ? "out" : "in") : "";
+      if (!dir && /out|remove|sell/.test(kind)) dir = "out";
+      if (!dir && /in|add|buy|fill/.test(kind)) dir = "in";
+      if (dir) add(r.token, dir, ada != null ? ada : (q != null ? 1 : null));
+    });
+    const extra = []
+      .concat((big && big.moves) || [])
+      .concat((log && log.liquidity_flows && log.liquidity_flows.big_moves) || []);
+    extra.forEach(m => {
+      if (tag && safeTag(m.tag) !== tag) return;
+      const dir = /out|sell/.test(String(m.direction || "")) ? "out" : "in";
+      add(m.ticker, dir, num(m.ada));
+    });
+    const list = Object.keys(flows).map(k => flows[k]);
+    return {
+      tag: tag || "",
+      out: list.filter(r => r.out > 0).sort((a, b) => b.out - a.out).slice(0, 6),
+      inn: list.filter(r => r.inn > 0).sort((a, b) => b.inn - a.inn).slice(0, 6)
+    };
+  }
+  function paperBoard(paper) {
+    const closed = (paper && paper.closed) || [];
+    const open = (paper && paper.open) || [];
+    let wins = 0, losses = 0, pnl = 0;
+    closed.forEach(c => {
+      const pct = c && c.result && num(c.result.pct);
+      const p = c && c.result && num(c.result.pnl);
+      if ((pct != null ? pct : p) > 0) wins += 1; else losses += 1;
+      if (p != null) pnl += p;
+    });
+    return { wins, losses, pnl, open: open.length, closed: closed.length, unit: sanitize(paper && paper.unit) };
+  }
   function cardanoView(data) {
     const d = data || {};
     const flags = flagsFor(d.flags);
@@ -477,130 +631,216 @@
     });
     const vetoTokens = (d.vetoes && Array.isArray(d.vetoes.tokens)) ? d.vetoes.tokens : [];
     const dumpMoves = ((d.liq && d.liq.moves) || []).filter(m => m && m.ahead_of_dump);
-    const counts = { lp_pulled: 0, ahead_of_dump: dumpMoves.length, dev_sold: 0, serial_launcher: 0 };
-    vetoTokens.forEach(t => (t.vetoes || []).forEach(v => { if (counts[v.code] != null && v.code !== "ahead_of_dump") counts[v.code] += 1; }));
+    const counts = Object.assign({ lp_pulled: 0, ahead_of_dump: dumpMoves.length, dev_sold: 0, serial_launcher: 0 }, (d.vetoes && d.vetoes.counts) || {});
+    if (!(d.vetoes && d.vetoes.counts)) {
+      vetoTokens.forEach(t => (t.vetoes || []).forEach(v => { if (counts[v.code] != null && v.code !== "ahead_of_dump") counts[v.code] += 1; }));
+    }
     const devs = (d.devs && Array.isArray(d.devs.entries)) ? d.devs.entries : [];
-    return { flags, top, byTicker, vetoTokens, dumpMoves, counts, devs, brief: d.brief || null, whale: d.whale || null, liq: d.liq || null, big: d.big || null };
+    const suri = suriList(d.log);
+    const founder = publicFounder(d.log && d.log.founder_whale);
+    return { flags, top, byTicker, vetoTokens, dumpMoves, counts, devs, suri, founder, brief: d.brief || null, whale: d.whale || null, liq: d.liq || null, big: d.big || null, log: d.log || null, pulse: d.pulse || null, kills: d.kills || null, pump: d.pump || null, paper: d.paper || null, vetoes: d.vetoes || null };
   }
   function briefBits(b, desk) {
     if (!b) return null;
     const learned = [].concat(b.learned || [], b.highlights || [], b.rules_learned || []).map(x => (typeof x === "string" ? x : x && (x.text || x.rule || ""))).filter(Boolean);
     return { date: b.date, desk, headline: b.headline || "", learned, score: b.scoreboard || null };
   }
+  function donut(pump, rug, label) {
+    const p = pump || 0, r = rug || 0, total = p + r;
+    const R = 28, C = 2 * Math.PI * R;
+    const pumpLen = total ? (p / total) * C : 0;
+    const rugLen = total ? (r / total) * C : 0;
+    const ring = total
+      ? `<circle cx="36" cy="36" r="${R}" fill="none" stroke="rgba(255,93,115,.85)" stroke-width="8" stroke-dasharray="${rugLen.toFixed(2)} ${(C - rugLen).toFixed(2)}" stroke-dashoffset="${(-pumpLen).toFixed(2)}" transform="rotate(-90 36 36)"/>
+         <circle cx="36" cy="36" r="${R}" fill="none" stroke="rgba(62,224,162,.9)" stroke-width="8" stroke-dasharray="${pumpLen.toFixed(2)} ${(C - pumpLen).toFixed(2)}" transform="rotate(-90 36 36)"/>`
+      : `<circle cx="36" cy="36" r="${R}" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="8" stroke-dasharray="3 4"/>`;
+    return `<div class="donut"><svg viewBox="0 0 72 72" width="72" height="72" aria-hidden="true">${ring}<text x="36" y="40" text-anchor="middle" fill="#e8eef6" font-size="11" font-family="ui-monospace,monospace">${total ? Math.round(100 * p / total) + "%" : "–"}</text></svg><b>${esc(label)}</b><span>${total ? p + " pump · " + r + " rug" : "no scores yet"}</span></div>`;
+  }
+  function killSpark(values, kill) {
+    const nums = (values || []).filter(n => typeof n === "number" && isFinite(n));
+    if (nums.length < 2) return "";
+    const line = kill && kill.line != null ? kill.line : null;
+    const all = line == null ? nums : nums.concat([line]);
+    const min = Math.min.apply(null, all), max = Math.max.apply(null, all);
+    const span = max - min || 1;
+    const w = 220, h = 52;
+    const d = nums.map((n, i) => {
+      const x = 4 + (i / (nums.length - 1)) * (w - 8);
+      const y = h - 6 - ((n - min) / span) * (h - 14);
+      return (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1);
+    }).join(" ");
+    const ky = line == null ? null : h - 6 - ((line - min) / span) * (h - 14);
+    const rule = ky == null ? "" : `<line x1="4" y1="${ky.toFixed(1)}" x2="${w - 4}" y2="${ky.toFixed(1)}" stroke="${kill.hit ? "#ff5d73" : "#ffb020"}" stroke-width="1.2" stroke-dasharray="4 3"/>`;
+    return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Pool depth"><path d="${d}" fill="none" stroke="#3d8bff" stroke-width="2.2"/>${rule}</svg>`;
+  }
+  function gauge(kill) {
+    if (!kill || kill.line == null || kill.value == null) return "";
+    const ratio = kill.line === 0 ? 0 : Math.max(0, Math.min(1.35, kill.value / kill.line));
+    const ang = Math.PI * (1 - Math.min(ratio, 1));
+    const x = 50 + Math.cos(ang) * 36;
+    const y = 46 - Math.sin(ang) * 36;
+    const large = ratio >= 1 ? 1 : 0;
+    return `<div class="gauge ${kill.hit ? "hit" : ""}"><svg viewBox="0 0 100 58" aria-hidden="true"><path d="M14 46 A36 36 0 0 1 86 46" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="6" stroke-linecap="round"/><path d="M14 46 A36 36 0 ${large} 1 ${x.toFixed(1)} ${y.toFixed(1)}" fill="none" stroke="${kill.hit ? "#ff5d73" : "#3d8bff"}" stroke-width="6" stroke-linecap="round"/></svg><div class="nm">${esc(kill.metric || "line")}</div><div class="dim">${esc(fmt(kill.value, 0))} / ${esc(fmt(kill.line, 0))}</div></div>`;
+  }
+  function heatHtml(model) {
+    if (!model.rowList.length || !model.colList.length) return empty("No early-buyer clusters yet", "The heat grid fills when flags name a w- tag and a launch.");
+    let i = 0;
+    const head = model.colList.map(c => `<th><span>${esc(c)}</span></th>`).join("");
+    const body = model.rowList.map(tag => `<tr><th class="rowlab">${esc(tag)}</th>${model.colList.map(col => {
+      const hit = model.cell[tag + "|" + col];
+      const n = hit ? hit.n : 0;
+      const level = n >= 3 ? 3 : n;
+      const ring = model.snipers[tag + "|" + col] ? " ring" : "";
+      const label = hit && hit.ada ? fmt(hit.ada, 0) : n ? String(n) : "";
+      const delay = (i++ * 18);
+      return `<td class="h${level}${ring}" style="animation-delay:${delay}ms" title="${esc(tag + " · " + col + (hit && hit.ada ? " · " + fmt(hit.ada, 0) + " ADA" : " · " + n + " hits"))}">${esc(label)}</td>`;
+    }).join("")}</tr>`).join("");
+    return `<div class="heat-wrap"><table class="heat"><thead><tr><th></th>${head}</tr></thead><tbody>${body}</tbody></table></div><p class="dim">Color is how often the tag showed up. A number is ADA when the flag recorded it. A red ring is a sniper full exit.</p>`;
+  }
+  function sankeyHtml(flow) {
+    const outs = flow.out, inns = flow.inn;
+    if (!outs.length && !inns.length) return empty("No rotation to draw", "Whale ledger deltas and whale-tagged moves are empty. Balances stay off this page.");
+    const h = 250, w = 640, mid = w / 2;
+    const slot = (list, x) => list.map((row, i) => {
+      const y = 28 + (list.length === 1 ? 90 : (i / (list.length - 1)) * 180);
+      return Object.assign({ x, y }, row);
+    });
+    const L = slot(outs, 16), R = slot(inns, w - 150);
+    const max = Math.max(1, ...outs.map(r => r.out), ...inns.map(r => r.inn));
+    const paths = [];
+    L.forEach(src => {
+      const sw = 2 + (src.out / max) * 16;
+      paths.push(`<path class="flow" d="M${src.x + 120} ${src.y} C ${mid - 40} ${src.y}, ${mid - 20} 120, ${mid} 120" stroke="rgba(255,93,115,.85)" stroke-width="${sw.toFixed(1)}"/>`);
+    });
+    R.forEach(dst => {
+      const sw = 2 + (dst.inn / max) * 16;
+      paths.push(`<path class="flow" d="M${mid} 120 C ${mid + 20} 120, ${mid + 40} ${dst.y}, ${dst.x} ${dst.y}" stroke="rgba(62,224,162,.9)" stroke-width="${sw.toFixed(1)}"/>`);
+    });
+    const labels = L.map(r => `<text x="${r.x}" y="${r.y + 4}" fill="#ffc6d0" font-size="11" font-family="ui-monospace,monospace">${esc(r.token)} ${esc(fmt(r.out, 0))}</text>`).concat(
+      R.map(r => `<text x="${r.x}" y="${r.y + 4}" fill="#c8ffe6" font-size="11" font-family="ui-monospace,monospace">${esc(r.token)} ${esc(fmt(r.inn, 0))}</text>`)
+    );
+    return `<svg class="sankey" viewBox="0 0 ${w} ${h}" role="img" aria-label="Founder whale rotation">${paths.join("")}<circle cx="${mid}" cy="120" r="22" fill="#0c1526" stroke="#3d8bff" stroke-width="2"/><text x="${mid}" y="124" text-anchor="middle" fill="#3d8bff" font-size="10" font-family="ui-monospace,monospace">${esc(flow.tag || "whale")}</text>${labels.join("")}</svg><p class="dim">Left is ADA that left with a token. Right is ADA that came back in. Width is the flow, not a balance.</p>`;
+  }
+  function flowMapHtml(log, liq) {
+    const pools = (log && log.liquidity_flows && log.liquidity_flows.pools) || [];
+    const moves = []
+      .concat((log && log.liquidity_flows && log.liquidity_flows.big_moves) || [])
+      .concat((liq && liq.moves) || []);
+    if (!pools.length && !moves.length) return empty("No liquidity map yet", "Pool deltas and big moves are missing.");
+    const max = Math.max(1, ...pools.map(p => Math.abs(num(p.delta_24h_ada) || 0)));
+    const byTicker = {};
+    moves.forEach(m => {
+      const tk = tickerName(m.ticker);
+      if (!tk) return;
+      const dir = /out|sell|remove/.test(String(m.direction || m.kind || "")) ? "out" : "in";
+      (byTicker[tk] = byTicker[tk] || { inn: 0, out: 0 });
+      if (dir === "out") byTicker[tk].out += 1; else byTicker[tk].inn += 1;
+    });
+    const rows = (pools.length ? pools : Object.keys(byTicker).map(t => ({ ticker: t, delta_24h_ada: (byTicker[t].inn - byTicker[t].out) }))).slice(0, 12);
+    return rows.map(p => {
+      const tk = tickerName(p.ticker) || "–";
+      const d = num(p.delta_24h_ada) || 0;
+      const pct = Math.min(100, Math.round(Math.abs(d) / max * 100));
+      const arrows = byTicker[tk.toUpperCase()] || byTicker[tk] || { inn: 0, out: 0 };
+      const arrow = `<span class="flow-arrows ${d < 0 || arrows.out > arrows.inn ? "out" : "in"}">${[0, 1, 2].map(() => "<i></i>").join("")}</span>`;
+      return `<div class="flow-row"><b class="mono">${esc(tk)}</b><div class="divtrack"><div class="neg" style="width:${d < 0 ? pct : 0}%"></div><div class="pos" style="width:${d > 0 ? pct : 0}%"></div></div><span class="dim">${arrow} ${esc((d > 0 ? "+" : "") + fmt(d, 0))}</span></div>`;
+    }).join("") + `<p class="dim">Bars are the 24h ADA-side change. Arrows mark enter and exit prints. Tags stay w- hashes.</p>`;
+  }
   function cardanoHtml(data) {
     const v = cardanoView(data);
     const brief = briefBits(v.brief, "Cardano");
-    const briefHtml = brief
-      ? panel("Today's brief", brief.date || "solada", feedItem(`${chip("Cardano", "ok")}<span>${esc(when(brief.date) || brief.date || "")}</span>`, brief.headline, brief.learned), "feed")
-      : panel("Today's brief", "solada", empty("No brief published yet", "solada/briefs has no dated file on desk-data or main."), "feed");
-    const head = tiles([
-      tile("Hard vetoes", String(v.vetoTokens.length), { count: v.vetoTokens.length, digits: 0, hint: "research flags, not orders" }),
-      tile("Ahead of dump", String(v.counts.ahead_of_dump), { count: v.counts.ahead_of_dump, digits: 0, hint: "lp pull then sell" }),
-      tile("Dev cautions", String(v.devs.filter(e => e && (e.risk === "caution" || e.risk === "high" || freshFunded(e))).length), { digits: 0, hint: "includes fresh funded" }),
-      tile("Snek top 10", String(v.top.length), { count: v.top.length, digits: 0, hint: v.top.length ? "latest board" : "not published" })
-    ]);
+    const suriBy = {};
+    v.suri.forEach(s => { suriBy[s.ticker.toUpperCase()] = s; });
+    const trigger = sanitize(v.log && v.log.trigger);
+    const runAt = v.vetoes && v.vetoes.at;
+    const stale = v.vetoes && Array.isArray(v.vetoes.stale) && v.vetoes.stale.length;
+    const headChips = `<div class="head-chips">${trigger && trigger.length <= 32 ? chip("trigger " + trigger, "ok") : ""}${chip(runAt ? "last run " + (when(runAt) || "") : "no last run", stale ? "bad" : "ok")}${chip("lp " + (v.counts.lp_pulled || 0), "bad")}${chip("dump " + (v.counts.ahead_of_dump || 0), "caution")}</div>`;
+    const briefBar = brief
+      ? `<p class="slim-brief">${esc(when(brief.date) || "")} · ${tx(brief.headline)}</p>`
+      : `<p class="slim-brief">No brief published yet.</p>`;
+    const maxDepth = Math.max(1, ...v.top.map(r => num(r.ada_side_depth) || 0));
+    const depthBars = v.top.length ? `<div class="depth-list">${v.top.map(r => {
+      const name = tickerName(r.ticker) || "–";
+      const suri = suriBy[name.toUpperCase()];
+      const depth = num(r.ada_side_depth) || 0;
+      const pct = Math.max(4, Math.round(depth / maxDepth * 100));
+      return `<div class="depth-row">${suri ? suriBadge(suri) : `<b class="mono">${esc(name)}</b>`}<div class="depth-track"><i style="width:${pct}%"></i></div><span class="mono dim">${esc(fmt(depth, 0))}</span></div>`;
+    }).join("")}</div>` : empty("Top 10 not published yet", "Depth bars appear when cardano_top10 or the pulse has an ADA side.");
+    const outcomes = (v.log && v.log.flag_outcomes) || {};
+    const kinds = Object.keys(outcomes);
+    const donuts = kinds.length ? `<div class="donuts">${kinds.map(k => donut(num(outcomes[k].pump) || 0, num(outcomes[k].rug) || 0, String(k).replace(/_/g, " "))).join("")}</div>` : empty("No flag outcomes yet", "Pump and rug counts show up as rings once the desk scores them.");
+    const sparks = v.top.slice(0, 6).map(r => {
+      const name = tickerName(r.ticker);
+      const series = depthSeries(v.log, v.pulse, name);
+      const kill = killFor(v.kills, name);
+      const overlay = kill && /ada|side|depth|pool/i.test(kill.metric || "") ? kill : null;
+      const svg = killSpark(series, overlay);
+      if (!svg) return "";
+      return `<div class="killspark"><div class="mono">${esc(name)}${kill && kill.hit ? chip(" kill", "bad") : ""}</div>${svg}</div>`;
+    }).filter(Boolean).join("");
+    const sparkBlock = sparks || empty("No depth history yet", "Sparklines need two ADA-side readings from the pulse or the run history.");
+    const gauges = v.kills ? Object.keys(v.kills).map(k => gauge(killFor(v.kills, k))).filter(Boolean).slice(0, 8).join("") : "";
+    const gaugeBlock = gauges ? `<div class="gauges">${gauges}</div>` : empty("No kill gauges", "kill_status has no numeric lines yet.");
+    const heat = heatHtml(heatModel(v.flags));
+    const founder = v.founder;
+    const founderNote = founder
+      ? `<p class="slim-brief"><b>${esc(founder.handle || "founder")}</b> · net flow ${founder.net_flow_ada == null ? "–" : (founder.net_flow_ada > 0 ? "+" : "") + fmt(founder.net_flow_ada, 0) + " ADA"}</p><p class="slim-brief">${tx(founder.summary)}</p><p class="slim-brief">${tx(founder.line)}</p>`
+      : "";
+    const sankey = sankeyHtml(sankeyFlows(v.whale, v.big, v.log));
+    const flow = flowMapHtml(v.log, v.liq);
+    const devCards = v.devs.length ? `<div class="dev-cards">${v.devs.slice(0, 16).map(e => {
+      const name = tickerName(e.ticker) || "–";
+      const tone = suriTone(e.risk);
+      return `<article class="dev-card"><b class="mono">${esc(name)}</b><span class="suri ${tone}">${esc(sanitize(e.risk) || "unscored")}</span> ${freshFunded(e) ? chip("fresh funded", "caution") : ""}${tagChip(e.dev_tag) || ""}<div class="dim">${esc(e.serial_3h == null && e.serial_7d == null ? "" : "serial " + (e.serial_3h ?? "–") + " / " + (e.serial_7d ?? "–"))}</div></article>`;
+    }).join("")}</div>` : empty("Dev checks not published", "dev_checks.json is missing.");
+    const books = [paperBoard(v.paper), paperBoard(v.pump)];
+    const bookHtml = `<div class="donuts">${donut(books[0].wins, books[0].losses, "Solada " + (books[0].unit || "ADA"))}${donut(books[1].wins, books[1].losses, "Pump " + (books[1].unit || ""))}</div><p class="dim">Open ${books[0].open + books[1].open} · closed ${books[0].closed + books[1].closed} · paper pnl ${fmt(books[0].pnl, 1)} ${esc(books[0].unit)} and ${fmt(books[1].pnl, 1)} ${esc(books[1].unit)}</p>`;
+    const lessons = []
+      .concat((v.log && v.log.learned_or_changed) || [])
+      .concat((v.log && v.log.patterns) || [])
+      .concat(((v.log && v.log.followups) || []).slice(0, 4).map(f => ({ pattern: typeof f === "string" ? f : (f && (f.text || f.note || "")) })));
+    const lessonHtml = lessons.length ? lessons.slice(0, 6).map(item => {
+      if (typeof item === "string") return feedItem(chip("note", ""), item, []);
+      const title = item.pattern || item.rule || item.text || "";
+      const bits = [item.outcome, item.evidence].map(x => typeof x === "string" ? x : "").filter(Boolean);
+      return feedItem(chip(item.outcome ? "pattern" : "follow-up", ""), title, bits);
+    }).join("") : empty("No lessons yet", "Patterns, learned notes, and follow-ups land here.");
+    const recentFlags = v.flags.slice(0, 16).map(f => {
+      const tags = flagTags(f).slice(0, 2).map(tagChip).join("");
+      return `<span class="chip ${/exit|rug|dump/i.test(f.kind || "") ? "bad" : ""}">${esc(String(f.kind || "").replace(/_/g, " "))}${f.ticker ? " · " + esc(tickerName(f.ticker)) : ""}</span>${tags}`;
+    }).join(" ");
     const topRows = v.top.map(r => {
-      const tk = String(r.ticker || "").toUpperCase();
-      const kinds = Array.from(new Set(v.byTicker[tk] || [])).slice(0, 4);
-      const pol = /^[0-9a-f]{6,12}$/.test(String(r.policy_short || "")) ? r.policy_short : "";
+      const name = tickerName(r.ticker) || "–";
+      const suri = suriBy[name.toUpperCase()];
+      const depth = num(r.ada_side_depth);
       return {
-        rank: esc(r.rank ?? ""),
-        ticker: `<b>${tx(r.ticker) || "–"}</b>${pol ? ` <span class="dim mono">${esc(pol)}</span>` : ""}`,
-        level: r.level != null && r.level !== "" ? chip(String(r.level), "") : "–",
-        flags: kinds.length ? kinds.map(k => chip(k, /rug|dump|pull|exit/i.test(k) ? "bad" : "")).join("") : "–",
-        ada: esc(r.ada_side_depth == null ? "–" : fmt(r.ada_side_depth, 0)),
-        holders: esc(r.holders == null ? "–" : fmt(r.holders, 0))
+        rank: `<span data-v="${esc(r.rank ?? "")}">${esc(r.rank ?? "")}</span>`,
+        ticker: `<b>${esc(name)}</b> ${suri ? suriBadge(suri) : ""}`,
+        depth: `<span data-v="${depth == null ? "" : depth}">${esc(depth == null ? "–" : fmt(depth, 0))}</span>`,
+        holders: `<span data-v="${num(r.holders) == null ? "" : num(r.holders)}">${esc(num(r.holders) == null ? "–" : fmt(r.holders, 0))}</span>`,
+        delta: `<span data-v="${num(r.holders_delta) == null ? "" : num(r.holders_delta)}">${esc(num(r.holders_delta) == null ? "–" : fmt(r.holders_delta, 0))}</span>`
       };
     });
-    const topHtml = topRows.length ? table(
-      [{ key: "rank", label: "#" }, { key: "ticker", label: "Ticker" }, { key: "level", label: "Lvl" }, { key: "flags", label: "Flags" }, { key: "ada", label: "ADA side", num: true }, { key: "holders", label: "Holders", num: true }],
+    const topTable = topRows.length ? table(
+      [{ key: "rank", label: "#" }, { key: "ticker", label: "Ticker" }, { key: "depth", label: "ADA side", num: true }, { key: "holders", label: "Holders", num: true }, { key: "delta", label: "Holder Δ", num: true }],
       topRows
-    ) : empty("Top 10 not published yet", "Waiting for cardano_top10, a liquidity token list, or the Cardano pulse.");
-    const vetoRows = [];
-    v.vetoTokens.forEach(t => (t.vetoes || []).forEach(code => {
-      const c = code && code.code;
-      const ev = (code && code.evidence) || {};
-      vetoRows.push({
-        ticker: tx(t.ticker) || "–",
-        code: chip(c || "veto", c === "lp_pulled" ? "bad" : "caution"),
-        count: "1",
-        reason: `${esc(VETO_REASON[c] || "Research veto")} ${tagChip(ev.dev_tag) || tagChip(ev.actor_tag) || ""}`.trim()
-      });
-    }));
-    v.dumpMoves.forEach(m => vetoRows.push({
-      ticker: tx(m.ticker) || "–",
-      code: chip("ahead_of_dump", "bad"),
-      count: "1",
-      reason: `${esc(VETO_REASON.ahead_of_dump)} ${tagChip(m.actor_tag)}`.trim()
-    }));
-    const countLine = `<div class="filters">${chip("lp_pulled " + v.counts.lp_pulled, "bad")}${chip("ahead_of_dump " + v.counts.ahead_of_dump, "bad")}${chip("dev_sold " + v.counts.dev_sold, "caution")}${chip("serial_launcher " + v.counts.serial_launcher, "caution")}</div>`;
-    const vetoHtml = vetoRows.length ? countLine + table(
-      [{ key: "ticker", label: "Ticker" }, { key: "code", label: "Code" }, { key: "count", label: "Count", num: true }, { key: "reason", label: "Reason" }],
-      vetoRows.slice(0, 40)
-    ) : countLine + empty("No hard vetoes", "vetoes.json and ahead-of-dump marks are empty.");
-    const devRows = v.devs.map(e => ({
-      ticker: tx(e.ticker) || "–",
-      risk: e.risk ? chip(e.risk, e.risk === "high" ? "bad" : e.risk === "low" ? "ok" : "caution") : "–",
-      tag: tagChip(e.dev_tag) || "–",
-      fresh: freshFunded(e) ? chip("fresh funded", "caution") : "–",
-      serial: esc([e.serial_3h, e.serial_7d].every(x => x == null) ? "–" : `${e.serial_3h ?? "–"} / ${e.serial_7d ?? "–"}`),
-      sold: esc(e.dev_sold_ada == null ? "–" : fmt(e.dev_sold_ada, 0))
-    }));
-    const devHtml = devRows.length ? table(
-      [{ key: "ticker", label: "Ticker" }, { key: "risk", label: "Risk" }, { key: "tag", label: "Dev" }, { key: "fresh", label: "Fresh funded" }, { key: "serial", label: "3h / 7d" }, { key: "sold", label: "Sold ADA", num: true }],
-      devRows.slice(0, 40)
-    ) : empty("Dev checks not published", "solada-prefilter/dev_checks.json is missing.");
-    const whaleRows = ((v.whale && v.whale.rows) || []).slice(-30).reverse().map(r => {
-      const token = String(r.token || "");
-      const name = token && token.length <= 24 && !/(?:stake|addr)(?:_test)?1|0x[0-9a-f]{8,}/i.test(token) ? token : "";
-      const flow = num(r.ada_leg);
-      return {
-        when: esc(when(r.time) || "–"),
-        kind: chip(r.kind || "move", ""),
-        token: tx(name) || "–",
-        flow: flow == null ? "–" : esc((flow > 0 ? "+" : "") + fmt(flow, 0) + " ADA"),
-        tag: tagChip(r.counterparty_tag) || tagChip(v.whale && v.whale.whale_tag) || "–"
-      };
-    });
-    const whaleHtml = whaleRows.length ? table(
-      [{ key: "when", label: "When" }, { key: "kind", label: "Kind" }, { key: "token", label: "Token" }, { key: "flow", label: "ADA flow", num: true }, { key: "tag", label: "Tag" }],
-      whaleRows
-    ) : empty("Whale ledger not published", "Moves show as role labels or w- hashes. Balances stay off this page.");
-    const pools = {};
-    ((v.liq && v.liq.pools) || []).forEach(p => { if (p && p.ticker) pools[String(p.ticker).toUpperCase()] = p.asof || p.last_checked; });
-    const moves = ((v.liq && v.liq.moves) || []).slice().reverse();
-    const moveRows = moves.slice(0, 40).map(m => {
-      const checked = m.last_checked || m.asof || pools[String(m.ticker || "").toUpperCase()] || (v.liq && v.liq.at);
-      return {
-        when: esc(when(m.time) || "–"),
-        ticker: tx(m.ticker) || "–",
-        kind: chip(m.kind || "move", m.ahead_of_dump ? "bad" : ""),
-        dex: tx(m.dex) || "–",
-        ada: esc(m.ada == null ? "–" : fmt(m.ada, 0)),
-        checked: esc(when(checked) || "–"),
-        tag: tagChip(m.actor_tag) || "–"
-      };
-    });
-    const moveHtml = moveRows.length ? table(
-      [{ key: "when", label: "When" }, { key: "ticker", label: "Ticker" }, { key: "kind", label: "Kind" }, { key: "dex", label: "DEX" }, { key: "ada", label: "ADA", num: true }, { key: "checked", label: "Last checked" }, { key: "tag", label: "Tag" }],
-      moveRows
-    ) : empty("No liquidity moves", "solada-prefilter/liquidity_moves.json is missing.");
-    const swaps = [];
-    moves.filter(m => m && /swap/i.test(m.kind || "")).forEach(m => swaps.push({ time: m.time, ticker: m.ticker, direction: m.direction || m.kind, ada: m.ada, tag: m.actor_tag }));
-    ((v.big && v.big.moves) || []).forEach(m => swaps.push({ time: m.time, ticker: m.ticker, direction: m.direction, ada: m.ada, tag: m.tag }));
-    swaps.sort((a, b) => (num(b.ada) || 0) - (num(a.ada) || 0));
-    const swapRows = swaps.slice(0, 20).map(m => ({
-      when: esc(when(m.time) || "–"),
-      ticker: tx(m.ticker) || "–",
-      dir: chip(m.direction || "swap", /out|sell/i.test(m.direction || "") ? "bad" : "ok"),
-      ada: esc(m.ada == null ? "–" : fmt(m.ada, 0)),
-      tag: tagChip(m.tag) || "–"
-    }));
-    const swapHtml = swapRows.length ? table(
-      [{ key: "when", label: "When" }, { key: "ticker", label: "Ticker" }, { key: "dir", label: "Direction" }, { key: "ada", label: "ADA", num: true }, { key: "tag", label: "Tag" }],
-      swapRows
-    ) : empty("No big swaps", "Pool swaps and big_moves.json are empty.");
-    return `<div class="stack">${briefHtml}${head}${panel("Snek top 10", "flag chips", topHtml, "table")}${panel("Hard vetoes", "not a buy signal", vetoHtml, "flag")}<div class="split">${panel("Dev checks", "fresh funded", devHtml, "flag")}${panel("Whale ledger", safeTag(v.whale && v.whale.whale_tag) || "tag only", whaleHtml, "feed")}</div>${panel("Liquidity moves", "last checked", moveHtml, "chart")}${panel("Big swaps", "pool prints", swapHtml, "chart")}</div>`;
+    ) : "";
+    const sortable = topTable
+      .replace(">#</th>", ' data-sort="rank">#</th>')
+      .replace(">Ticker</th>", ' data-sort="t">Ticker</th>')
+      .replace(">ADA side</th>", ' data-sort="d">ADA side</th>')
+      .replace(">Holders</th>", ' data-sort="h">Holders</th>');
+    return `<div class="stack">
+      <div class="pagehead"><div><h1>Cardano</h1><div class="sub">Visuals first · paper research · w- tags only</div>${briefBar}</div>${headChips}</div>
+      <div class="viz-grid">${panel("Snek depth", "Suri on the name", (v.suri.length ? `<div>${v.suri.map(suriBadge).join("")}</div>` : "") + depthBars, "chart")}${panel("Flag hit rate", "pump vs rug", donuts, "flag")}</div>
+      ${panel("Pool depth", "dashed kill line", `<div class="killsparks">${sparkBlock}</div>${gaugeBlock}`, "chart")}
+      ${panel("Cluster heat", "early buyers", (recentFlags ? `<div class="filters">${recentFlags}</div>` : "") + heat, "flag")}
+      <div class="viz-grid">${panel("Whale rotation", founder && founder.handle ? founder.handle : "tag only", founderNote + sankey, "chart")}${panel("Liquidity map", "enter / exit", flow, "chart")}</div>
+      ${panel("Dev risk", "fresh funded", devCards, "flag")}
+      ${panel("Paper books", "not orders", bookHtml, "layers")}
+      ${panel("Lessons", "follow-ups", lessonHtml, "feed")}
+      <details class="fold"><summary>Tables</summary>${sortable || empty("No top 10 table", "")}<div class="filters">${chip("lp_pulled " + (v.counts.lp_pulled || 0), "bad")}${chip("ahead_of_dump " + (v.counts.ahead_of_dump || 0), "bad")}${chip("dev_sold " + (v.counts.dev_sold || 0), "caution")}${chip("serial_launcher " + (v.counts.serial_launcher || 0), "caution")}</div></details>
+    </div>`;
   }
 
   function nftRows(pulse, log) {
@@ -740,7 +980,7 @@
       tile("NFT names", String(nftCount), { count: nftCount, digits: 0, hint: nftCount ? "KING watch" : "no file yet" })
     ]);
     const cards = `<div class="cards">
-      <a class="card" data-desk="solada" href="#/cardano"><h3>Cardano</h3><p>${tx((pack.cardanoBrief && pack.cardanoBrief.headline) || "Brief-first Snek feed.")}</p><span class="go">Open tab</span></a>
+      <a class="card" data-desk="solada" href="#/cardano"><h3>Cardano</h3><p>${tx((pack.cardanoBrief && pack.cardanoBrief.headline) || "Charts first. Snek depth, heat, and the whale rotation.")}</p>${(ada.suri || []).slice(0, 6).map(suriBadge).join("")}<span class="go">Open tab</span></a>
       <a class="card" data-desk="solana" href="#/solana"><h3>Solana</h3><p>Calm terminal · F / R / S paper books${sol ? ` · ${sol.openCount} open` : ""}.</p><span class="go">Open tab</span></a>
       <a class="card" data-desk="nft" href="#/nft"><h3>NFT</h3><p>KING · multichain · coming soon. ${nftCount ? nftCount + " names on the watchlist." : "Placeholder until a pulse file lands."}</p><span class="go">Open tab</span></a>
     </div>`;
@@ -765,7 +1005,7 @@
 
   const store = { ready: false, nftChain: "all" };
   async function loadPack() {
-    const [health, paper, positions, tradesText, log, pulse, sPaper, flags, vetoes, devs, whale, liq, big, sIdx, nPulse, nLog, nIdx] = await Promise.all([
+    const [health, paper, positions, tradesText, log, pulse, sPaper, flags, vetoes, devs, whale, liq, big, kills, pump, sIdx, nPulse, nLog, nIdx] = await Promise.all([
       get("solana-desk/health.json"),
       get("solana-desk/paper.json"),
       get("solana-desk/positions.json"),
@@ -779,6 +1019,8 @@
       get("solada-prefilter/whale_ledger.json"),
       get("solada-prefilter/liquidity_moves.json"),
       get("solada-prefilter/big_moves.json"),
+      get("solada-prefilter/kill_status.json"),
+      get("solada/pumpfun/paper.json"),
       get("solada/briefs/index.json"),
       get("nft/pulse.json"),
       get("nft/log.json"),
@@ -795,7 +1037,7 @@
       latestBrief(nIdx, "nft/briefs/", "NFT")
     ]);
     const briefs = [cBrief, nBrief].filter(Boolean);
-    const cardano = { log, pulse, paper: sPaper, flags, vetoes, devs, whale, liq, big, brief: cBrief && { date: cBrief.date, headline: cBrief.headline, learned: cBrief.learned, scoreboard: cBrief.score } };
+    const cardano = { log, pulse, paper: sPaper, pump, flags, vetoes, devs, whale, liq, big, kills, brief: cBrief && { date: cBrief.date, headline: cBrief.headline, learned: cBrief.learned, scoreboard: cBrief.score } };
     return {
       health, paper, positions, trades: parseCsv(tradesText),
       cardano, cardanoView: cardanoView(cardano), cardanoBrief: cBrief,
@@ -901,6 +1143,27 @@
     const draw = () => render(routeOf(location.hash));
     window.addEventListener("hashchange", draw);
     document.addEventListener("click", e => {
+      const th = e.target.closest && e.target.closest("th[data-sort]");
+      if (th && th.closest("table")) {
+        const tableEl = th.closest("table");
+        const idx = [...th.parentNode.children].indexOf(th);
+        const tbody = tableEl.tBodies && tableEl.tBodies[0];
+        if (!tbody) return;
+        const dir = th.getAttribute("data-dir") === "1" ? -1 : 1;
+        th.setAttribute("data-dir", dir === 1 ? "1" : "");
+        const value = el => {
+          const node = el.querySelector && el.querySelector("[data-v]");
+          const raw = node ? node.getAttribute("data-v") : el.innerText;
+          const n = Number(raw);
+          return raw !== "" && isFinite(n) ? n : (el.innerText || "");
+        };
+        [...tbody.rows].sort((a, b) => {
+          const av = value(a.cells[idx]), bv = value(b.cells[idx]);
+          const c = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv));
+          return c * dir;
+        }).forEach(row => tbody.appendChild(row));
+        return;
+      }
       const btn = e.target.closest && e.target.closest("[data-chain-filter]");
       if (!btn) return;
       store.nftChain = btn.getAttribute("data-chain-filter") || "all";

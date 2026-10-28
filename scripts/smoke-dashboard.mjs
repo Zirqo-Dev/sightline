@@ -574,6 +574,19 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   ] });
   assert(dev.includes("fresh funded") && dev.includes(">dev<"), "fresh funded chip and dev role render");
   assert(!dev.includes("stake1"), "dev tag that is a stake key is not rendered");
+  const cardano = P.cardanoHtml({
+    log: {
+      founder_whale: { handle: "$cockwhale", address: addr, stake_prefix: "uylu74g0", net_flow_ada: 12, summary: "sold SNEK", line: "ASCEND flat", cock_order: "order " + addr + " " + stake },
+      whale_watch: { wallets: [{ label: "dev", prefix: stake, role: "Long note", latest: "pool " + addr }] },
+      suri: { SNEK: { risk: "High risk", tags: ["Dev sold"], source: "desk" } },
+      cardano_top10: [{ rank: 1, ticker: "SNEK", ada_side_depth: 1000, whale_tags: ["w-0123abcd", stake] }],
+      flag_outcomes: { sniper_full_exit: { pump: 2, rug: 1 } },
+      trigger: "manual"
+    }
+  });
+  assert(!cardano.includes("addr1") && !cardano.includes("stake1") && !cardano.includes("uylu74g0") && !cardano.includes("cock_order"), "founder whale address, stake prefix, and order stay off the page");
+  assert(cardano.includes("cockwhale") && cardano.includes("w-0123abcd") && cardano.includes("fresh") === false || cardano.includes("SNEK"), "public handle, w- tag, and ticker remain");
+  assert(cardano.includes("heat") || cardano.includes("Cluster") || cardano.includes("donut") || cardano.includes("pump"), "Cardano view leads with the visual scoreboard");
   const paper = load("scripts/fixtures/solana-desk/paper-fills.json");
   const trades = P.parseCsv(fs.readFileSync(path.join(root, "scripts/fixtures/solana-desk/trades-fills.csv"), "utf8"));
   const model = P.solanaModel(paper, trades, null);
