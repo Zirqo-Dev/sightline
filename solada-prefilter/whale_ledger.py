@@ -15,11 +15,11 @@ Token labels are the display name plus the policy, not arrival order. Every entr
 (first 8 hex). One unit keeps the bare name; several units with that name are each name~policy
 (first 6 hex, or 8 when those prefixes collide), so a later Koios or Blockfrost page cannot swap
 which unit is unsuffixed. A name that is not printable is policy6 plus an asset-name hex prefix,
-not the policy id. Same-name holdings on different policies with the same quantity are marked
-dup_of / same_qty_as and left out of positions_counted (information only, not a second total).
-Units of one policy are never marked as copies. A renamed key is remembered in key_alias. The key
-ADA is lovelace only. position_deltas can map an old key onto the new one, but it has no production
-caller yet.
+not the policy id. A holding is a duplicate only when the full unit (policy id + asset name)
+matches: that repeat is marked dup_of / same_qty_as and left out of positions_counted. A different
+policy id is a different asset, even when the ticker and the quantity match. A renamed key is
+remembered in key_alias. The key ADA is lovelace only. position_deltas can map an old key onto the
+new one, but it has no production caller yet.
 
 DEX orders (batcher-style: Splash/Spectrum/Minswap/Genius etc.): a whale tx that sends a token (or 10+ ADA)
 to a script address without getting value back opens an order (ref = tx#index). A later tx that spends
@@ -92,6 +92,18 @@ def policy_short(unit, n=8):
 def _policy_id(unit):
     pol = unit[:56] if isinstance(unit, str) else ""
     return "".join(c for c in pol if c in "0123456789abcdefABCDEF").lower()
+
+
+def full_unit(unit):
+    """Asset identity: policy id + asset name, lowercase hex.
+
+    Ticker and quantity are not part of it. Two policies never collapse to one asset.
+    """
+    if not isinstance(unit, str) or not unit:
+        return ""
+    if unit == "lovelace":
+        return "lovelace"
+    return _policy_id(unit) + _asset_hex(unit)
 
 
 def _base_name(key):
@@ -358,10 +370,10 @@ def sync_token_keys(ledger, extra_rows=None):
 def token_view(ledger):
     """Published holdings. policy is the first 8 hex of every entry, including a bare-name one.
 
-    Two entries with the same display name, the same qty, and different policies are the same
-    balance twice (a copy or a copycat). same_qty_as lists the other policies; dup_of is set
-    only on a unit whose policy is not the lowest one. Units of one policy are never marked.
-    positions lists every unit; positions_counted does not add the cross-policy copy.
+    Two entries are the same asset only when the full unit matches (policy id + asset name).
+    same_qty_as lists the other key; dup_of is set on every repeat after the first spelling.
+    positions lists every entry; positions_counted does not add the repeat. A different policy
+    id is a different asset, even when the ticker and the quantity match.
     """
     _prepare_ledger(ledger)
     names = ledger.get("token_names") or {}
@@ -370,40 +382,26 @@ def token_view(ledger):
         if not isinstance(unit, str) or not qty:
             continue
         entries.append({"token": names.get(unit) or token_name(unit), "name": token_name(unit),
-                        "policy": policy_short(unit, 8), "qty": qty, "unit": unit})
+                        "policy": policy_short(unit, 8), "qty": qty, "unit": unit,
+                        "full": full_unit(unit)})
     groups = {}
     for e in entries:
-        groups.setdefault(e["name"], []).append(e)
+        groups.setdefault(e["full"], []).append(e)
     for group in groups.values():
-        if len(group) < 2:
+        if len(group) < 2 or not group[0]["full"]:
             continue
-        by_qty = {}
+        group.sort(key=lambda e: (e["unit"], e["token"]))
+        canon = group[0]["token"]
         for e in group:
-            by_qty.setdefault(e["qty"], []).append(e)
-        for same in by_qty.values():
-            if len(same) < 2:
-                continue
-            same.sort(key=lambda e: (e["policy"], e["unit"]))
-            policies = []
-            for e in same:
-                pid = _policy_id(e["unit"])
-                if pid not in policies:
-                    policies.append(pid)
-            if len(policies) < 2:
-                continue
-            canon_pol = _policy_id(same[0]["unit"])
-            canon = same[0]["token"]
-            for e in same:
-                epol = _policy_id(e["unit"])
-                others = []
-                for o in same:
-                    if _policy_id(o["unit"]) == epol or o["token"] in others:
-                        continue
-                    others.append(o["token"])
-                if others:
-                    e["same_qty_as"] = others
-                if epol != canon_pol:
-                    e["dup_of"] = canon
+            others = []
+            for o in group:
+                if o["token"] == e["token"] or o["token"] in others:
+                    continue
+                others.append(o["token"])
+            if others and all(o["qty"] == e["qty"] for o in group):
+                e["same_qty_as"] = others
+            if e is not group[0]:
+                e["dup_of"] = canon
     public = []
     for e in sorted(entries, key=lambda e: (e["token"], e["policy"], e["unit"])):
         row = {"token": e["token"], "policy": e["policy"], "qty": e["qty"]}
@@ -418,12 +416,15 @@ def token_view(ledger):
 
 
 def omit_dup_drift(drift, tokens):
-    """Drop a copy's drift when it equals the canonical token's drift, so the two are not added."""
+    """Drop a repeated unit's drift when it equals the canonical token's drift, so the two are not added.
+
+    A different policy id is not a repeat. dup_of is set only when the full unit matches.
+    """
     dup_of = {t["token"]: t["dup_of"] for t in tokens or [] if isinstance(t, dict) and t.get("dup_of")}
     out = {}
     for k, v in (drift or {}).items():
         canon = dup_of.get(k)
-        if canon is not None and (drift or {}).get(canon) == v:
+        if canon is not None and canon != k and (drift or {}).get(canon) == v:
             continue
         out[k] = v
     return out
@@ -433,8 +434,7 @@ def position_deltas(prev, cur, aliases=None):
     """Counted qty change per current token key.
 
     aliases maps a renamed key onto the key used now, so a migration is not a move.
-    Same-name keys that shared a qty and then changed by the same amount count once
-    (the lowest key). A copy whose qty diverges is its own change.
+    Different policy ids stay separate: a matching ticker and quantity is not one change.
 
     No production caller yet: run() does not call this.
     """
@@ -451,21 +451,6 @@ def position_deltas(prev, cur, aliases=None):
         d = cur_r.get(k, 0) - prev_r.get(k, 0)
         if d:
             deltas[k] = d
-    groups = {}
-    for k in set(prev_r) | set(cur_r):
-        groups.setdefault(_base_name(k), []).append(k)
-    for keys in groups.values():
-        clusters = {}
-        for k in keys:
-            sig = (prev_r.get(k, 0), cur_r.get(k, 0) - prev_r.get(k, 0))
-            clusters.setdefault(sig, []).append(k)
-        for members in clusters.values():
-            if len(members) < 2:
-                continue
-            if len({prev_r.get(k, 0) for k in members}) != 1:
-                continue
-            for k in sorted(members)[1:]:
-                deltas.pop(k, None)
     return deltas
 
 
@@ -739,9 +724,10 @@ def public_doc(ledger, whale_tag, now_s, wc, extra):
         alias = {}
     doc = {"at": iso(now_s), "whale_tag": whale_tag, "basis": extra.pop("basis", "koios"),
            "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). "
-                   "tokens[].policy is the first 8 hex of the policy. Same-name holdings on different policies "
-                   "with the same qty are dup_of / same_qty_as and are left out of positions_counted. "
-                   "Units of one policy are never marked as copies.",
+                   "tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the "
+                   "full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left "
+                   "out of positions_counted. Different policy ids are different assets, even when the ticker "
+                   "and the quantity match.",
            "height": ledger.get("height"), "baseline_at": ledger.get("baseline_at"),
            "ada_balance": round(ledger.get("lovelace", 0) / 1e6, 6),
            "positions": view["positions"], "positions_counted": view["positions_counted"], "tokens": view["tokens"],

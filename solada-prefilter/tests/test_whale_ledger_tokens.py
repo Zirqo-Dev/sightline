@@ -1,4 +1,4 @@
-"""Same-name whale holdings: policy labels, duplicate quantities, and key migration.
+"""Same-name whale holdings: policy labels, full-unit duplicates, and key migration.
 
 Offline. Policy ids are public asset data. These tests never put a wallet address or stake key
 in a ledger row, and they check the published file does not contain one.
@@ -75,46 +75,113 @@ class PolicyLabels(unittest.TestCase):
 
 
 class DuplicateQty(unittest.TestCase):
-    def test_identical_qty_is_marked_and_counted_once(self):
-        a, b = unit("aa"), unit("daa59d")
+    def test_fada_same_ticker_and_qty_different_policy_are_both_kept(self):
+        # Oct 27 10:07 PM ET: fADA~daa59d was dropped because its quantity matched fADA~47c42d.
+        a, b = unit("47c42d"), unit("daa59d")
+        self.assertNotEqual(a[:56], b[:56])
+        self.assertEqual(WL.full_unit(a)[:56], a[:56])
+        self.assertNotEqual(WL.full_unit(a), WL.full_unit(b))
         view, _ = view_of({a: 1000, b: 1000})
+        ka, kb = "fADA~47c42d", "fADA~daa59d"
+        self.assertEqual(ka, "fADA~" + a[:6])
+        self.assertEqual(kb, "fADA~" + b[:6])
         by = {t["token"]: t for t in view["tokens"]}
-        canon, copy = "fADA~" + a[:6], "fADA~" + b[:6]  # aa0123... sorts before daa59d...
-        self.assertEqual(by[copy]["dup_of"], canon)
-        self.assertEqual(by[canon]["same_qty_as"], [copy])
-        self.assertEqual(by[copy]["same_qty_as"], [canon])
-        self.assertNotIn("dup_of", by[canon])
-        self.assertEqual(view["positions"], {canon: 1000, copy: 1000})  # both stay visible
-        self.assertEqual(view["positions_counted"], {canon: 1000})
+        self.assertEqual(set(by), {ka, kb})
+        for key, u in ((ka, a), (kb, b)):
+            self.assertNotIn("dup_of", by[key])
+            self.assertNotIn("same_qty_as", by[key])
+            self.assertEqual(by[key]["qty"], 1000)
+            self.assertEqual(by[key]["policy"], u[:8])
+            self.assertEqual(len(by[key]["policy"]), 8)
+        self.assertNotEqual(by[ka]["policy"], by[kb]["policy"])
+        self.assertEqual(view["positions"], {ka: 1000, kb: 1000})
+        self.assertEqual(view["positions_counted"], {ka: 1000, kb: 1000})
+        self.assertEqual(sum(view["positions_counted"].values()), 2000)
+        # a matching quantity change on two policies is two moves
+        self.assertEqual(WL.position_deltas({ka: 1000, kb: 1000}, {ka: 1800, kb: 1800}), {ka: 800, kb: 800})
+        self.assertEqual(WL.omit_dup_drift({ka: 5, kb: 5}, view["tokens"]), {ka: 5, kb: 5})
+        summary, doc = run_state(None, {a: 1000, b: 1000})
+        self.assertNotIn("error", summary)
+        self.assertEqual(doc["positions_counted"], {ka: 1000, kb: 1000})
+        self.assertTrue(all("dup_of" not in t and "same_qty_as" not in t for t in doc["tokens"]))
+        blob = json.dumps(doc)
+        self.assertNotIn(a, blob)
+        self.assertNotIn(b, blob)
+        self.assertNotIn(STAKE, blob)
+        self.assertNotIn(addr("whale"), blob)
+        for row in doc["rows"]:
+            cp = row.get("counterparty_tag")
+            if cp is not None:
+                self.assertRegex(cp, r"^w-[0-9a-f]{8}$")
+        F.assert_public(doc)
+
+    def test_same_unit_duplicate_is_counted_once(self):
+        raw = unit("47c42d")
+        other = raw.upper()
+        self.assertNotEqual(raw, other)
+        self.assertEqual(WL.full_unit(raw), WL.full_unit(other))
+        self.assertNotEqual(WL.full_unit(raw), WL.full_unit(unit("daa59d")))
+        view, _ = view_of({raw: 1000, other: 1000})
+        counted = [t for t in view["tokens"] if "dup_of" not in t]
+        copies = [t for t in view["tokens"] if "dup_of" in t]
+        self.assertEqual(len(view["tokens"]), 2)
+        self.assertEqual(len(counted), 1)
+        self.assertEqual(len(copies), 1)
+        self.assertEqual(copies[0]["dup_of"], counted[0]["token"])
+        self.assertNotEqual(copies[0]["token"], counted[0]["token"])
+        self.assertEqual(copies[0]["policy"], counted[0]["policy"])
+        self.assertEqual(counted[0]["policy"], raw[:8])
+        self.assertEqual(copies[0]["same_qty_as"], [counted[0]["token"]])
+        self.assertEqual(counted[0]["same_qty_as"], [copies[0]["token"]])
+        self.assertEqual(view["positions_counted"], {counted[0]["token"]: 1000})
         self.assertEqual(sum(view["positions_counted"].values()), 1000)
+        self.assertEqual(sum(view["positions"].values()), 2000)  # both spellings stay visible
+        canon, copy = counted[0]["token"], copies[0]["token"]
+        self.assertEqual(WL.omit_dup_drift({canon: 5, copy: 5}, view["tokens"]), {canon: 5})
+        self.assertEqual(WL.omit_dup_drift({canon: 5, copy: 9}, view["tokens"]), {canon: 5, copy: 9})
+        summary, doc = run_state(None, {raw: 1000, other: 1000})
+        self.assertNotIn("error", summary)
+        self.assertEqual(sum(doc["positions_counted"].values()), 1000)
+        self.assertEqual(sum(1 for t in doc["tokens"] if "dup_of" in t), 1)
+        blob = json.dumps(doc)
+        self.assertNotIn(raw, blob)
+        self.assertNotIn(other, blob)
+        self.assertNotIn(STAKE, blob)
+        self.assertNotIn(addr("whale"), blob)
+        for row in doc["rows"]:
+            cp = row.get("counterparty_tag")
+            if cp is not None:
+                self.assertRegex(cp, r"^w-[0-9a-f]{8}$")
+        F.assert_public(doc)
 
     def test_different_qty_is_not_a_duplicate(self):
-        a, b = unit("aa"), unit("daa59d")
+        a, b = unit("47c42d"), unit("daa59d")
         view, _ = view_of({a: 1000, b: 1001})
         self.assertTrue(all("dup_of" not in t and "same_qty_as" not in t for t in view["tokens"]))
         self.assertEqual(set(view["positions_counted"]), set(view["positions"]))
         self.assertEqual(sum(view["positions_counted"].values()), 2001)
 
     def test_a_third_name_is_not_folded_into_the_pair(self):
-        a, b, c = unit("aa"), unit("daa59d"), unit("bb", "COCK")
+        a, b, c = unit("47c42d"), unit("daa59d"), unit("bb", "COCK")
         view, _ = view_of({a: 1000, b: 1000, c: 7})
         self.assertEqual(view["positions_counted"]["COCK"], 7)
-        self.assertEqual(sum(q for k, q in view["positions_counted"].items() if k.startswith("fADA")), 1000)
+        self.assertEqual(view["positions_counted"]["fADA~47c42d"], 1000)
+        self.assertEqual(view["positions_counted"]["fADA~daa59d"], 1000)
+        self.assertEqual(sum(q for k, q in view["positions_counted"].items() if k.startswith("fADA")), 2000)
 
-    def test_same_change_counts_once_and_a_divergence_does_not(self):
-        # This is the big-move comparison: two copycat balances moving together are one move.
-        a, b = unit("aa"), unit("daa59d")
+    def test_same_change_on_different_policies_counts_twice(self):
+        a, b = unit("47c42d"), unit("daa59d")
         ka, kb = "fADA~" + a[:6], "fADA~" + b[:6]
-        self.assertEqual(WL.position_deltas({ka: 1000, kb: 1000}, {ka: 1800, kb: 1800}), {ka: 800})
+        self.assertEqual(WL.position_deltas({ka: 1000, kb: 1000}, {ka: 1800, kb: 1800}), {ka: 800, kb: 800})
         self.assertEqual(WL.position_deltas({ka: 1000, kb: 1000}, {ka: 1000, kb: 1800}), {kb: 800})
         self.assertEqual(WL.position_deltas({"COCK": 1, "fADA": 1}, {"COCK": 2, "fADA": 2}),
                          {"COCK": 1, "fADA": 1})
 
-    def test_matching_drift_is_not_reported_twice(self):
-        a, b = unit("aa"), unit("daa59d")
+    def test_matching_drift_on_different_policies_is_kept(self):
+        a, b = unit("47c42d"), unit("daa59d")
         view, _ = view_of({a: 1000, b: 1000})
         ka, kb = "fADA~" + a[:6], "fADA~" + b[:6]
-        self.assertEqual(WL.omit_dup_drift({ka: 5, kb: 5}, view["tokens"]), {ka: 5})
+        self.assertEqual(WL.omit_dup_drift({ka: 5, kb: 5}, view["tokens"]), {ka: 5, kb: 5})
         self.assertEqual(WL.omit_dup_drift({ka: 5, kb: 9}, view["tokens"]), {ka: 5, kb: 9})
 
 
@@ -182,7 +249,10 @@ class Migration(unittest.TestCase):
         self.assertEqual(doc["rows"][1]["token"], "fADA~daa59d")
         self.assertEqual(doc["key_alias"], {"fADA": ka})
         self.assertEqual(WL.position_deltas(prev_positions, doc["positions"], doc["key_alias"]), {})
-        self.assertEqual(sum(doc["positions_counted"].values()), 1000)
+        self.assertEqual(doc["positions_counted"][ka], 1000)
+        self.assertEqual(doc["positions_counted"]["fADA~daa59d"], 1000)
+        self.assertEqual(sum(doc["positions_counted"].values()), 2000)
+        self.assertTrue(all("dup_of" not in t for t in doc["tokens"]))
         self.assertEqual({t["policy"] for t in doc["tokens"]}, {a[:8], b[:8]})
         self.assertEqual(doc["orders"]["abcdef0123#0"]["status"], "open")
         self.assertEqual(doc["orders"]["abcdef0123#0"]["token"], ka)
