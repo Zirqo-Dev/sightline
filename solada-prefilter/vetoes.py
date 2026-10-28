@@ -6,9 +6,11 @@ Codes are standing research flags, not buy signals and not webhook triggers.
 
 dev_sold: that file's dev_sold_ada is at least its min_sell_ada, or late_rug is true.
 serial_launcher: serial_3h / serial_7d reached the existing caution floors, or prior_rugs >= 1.
-lp_pulled: a liquidity lp_remove that is ahead_of_dump, or whose actor_tag is a role label
-or that token's dev tag. A third-party pull is not a veto. LP-token rows are not vetoes.
-Adds and swaps are not vetoes.
+lp_pulled: a liquidity lp_remove whose ahead_of_dump meets the Balanced floors
+(AHEAD_OF_DUMP: pull at least 20% of the pool reserve and 2,000 ADA, and same-party
+sells inside 6h total at least 25% of that pull), or whose actor_tag is a role label
+or that token's dev tag. A loose ahead_of_dump flag does not count. A third-party pull
+is not a veto. LP-token rows are not vetoes. Adds and swaps are not vetoes.
 
 A source whose `at` is older than vetoes.max_age_h (default 5, about two 2h runs) is
 skipped and listed under `stale`. A corrupt source keeps the previous vetoes.json.
@@ -23,6 +25,7 @@ from datetime import datetime, timezone
 import dev_checks as DC
 import flags as F
 import koios_tx as KT
+import liquidity_moves as LM
 
 NOTE = (
     "Research vetoes for the Cardano desk. Never a buy signal. They do not change desk rules, "
@@ -194,7 +197,7 @@ def _actor_is_dev(actor, ticker, policy, dev_index):
     return False
 
 
-def from_liquidity(doc, roles, loaded, tokens, dev_index):
+def from_liquidity(doc, roles, loaded, tokens, dev_index, floors):
     if not isinstance(doc, dict):
         return
     for move in doc.get("moves") or []:
@@ -207,7 +210,7 @@ def from_liquidity(doc, roles, loaded, tokens, dev_index):
         if not ticker and not policy:
             continue
         tag = keep_tag(move.get("actor_tag"), roles, loaded)
-        ahead = move.get("ahead_of_dump") is True
+        ahead = LM.tight_ahead(move, floors)
         role = bool(tag) and tag in roles
         if not (ahead or role or _actor_is_dev(tag, ticker, policy, dev_index)):
             continue
@@ -220,7 +223,7 @@ def build(dev_doc, liq_doc, cfg, owner_env, at, stale=None):
     tokens = _Tokens()
     dev_index = []
     from_dev_checks(dev_doc, cfg, roles, loaded, tokens, dev_index)
-    from_liquidity(liq_doc, roles, loaded, tokens, dev_index)
+    from_liquidity(liq_doc, roles, loaded, tokens, dev_index, LM.resolve_floors(liq_doc, cfg))
     rows = [r for r in tokens.rows if r.get("vetoes")]
     for row in rows:
         row["vetoes"] = sorted(row["vetoes"], key=lambda v: CODES.index(v["code"]))
