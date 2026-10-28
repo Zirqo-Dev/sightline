@@ -96,6 +96,30 @@ def sell_tx():
             "outputs": [_row(POOL, s["pool_out_lov"], _assets(s["tok_out"], {LP: s["lp_pool"]}))]}
 
 
+def _hx(label):
+    return hashlib.sha256(("liq-party/" + label).encode()).hexdigest()
+
+
+def party_pull_tx():
+    """30_000 ADA out of a 100_000 ADA pool (30%), by the lp wallet."""
+    user, st = addr("lp"), stake("lp")
+    return {"hash": _hx("pull"), "time": NOW - 3600, "height": 999400,
+            "inputs": [_row(POOL, 100_000_000_000, _assets(1_200_000, {LP: 4000})),
+                       _row(user, 2_000_000, {LP: 1000}, st)],
+            "outputs": [_row(POOL, 70_000_000_000, _assets(800_000, {LP: 5000})),
+                        _row(user, 32_000_000_000, {}, st)]}
+
+
+def party_sell_tx(label="lp", age_s=1800):
+    """10_000 ADA sell. label names the key wallet that spent the token."""
+    user, st = addr(label), stake(label)
+    return {"hash": _hx("sell-" + label + "-" + str(age_s)), "time": NOW - age_s, "height": 999600,
+            "inputs": [_row(POOL, 70_000_000_000, _assets(800_000, {LP: 5000})),
+                       _row(user, 2_000_000, {UNIT: 400_000}, st)],
+            "outputs": [_row(POOL, 60_000_000_000, _assets(1_200_000, {LP: 5000})),
+                        _row(user, 12_000_000_000, {}, st)]}
+
+
 def book(which):
     return {"swap": swap_tx, "add": add_tx, "pull": pull_tx, "sell": sell_tx}[which]()
 
@@ -165,22 +189,27 @@ class Pure(unittest.TestCase):
 
     def test_pull_then_sell_is_ahead_of_dump_and_the_other_way_is_not(self):
         bc = LM.lm_cfg({})
+        tag = "w-0123abcd"
+        # 20_000 of a 40_000 pool (20_000 left) is 50% and above 2_000 ADA. The sell is 60% of that.
         pull = {"kind": "lp_remove", "time": NOW - 3600, "pool_key": "minswap_v2~41edcb63", "unit": UNIT,
                 "hash": FX["pull"]["hash"], "tx_short": FX["pull"]["hash"][:10], "ada": FX["pull"]["expect_ada"],
-                "reserve_ada": 90000.0}
+                "reserve_ada": 20000.0, "actor_tag": tag}
         sell = {"kind": "swap", "direction": "sell", "time": NOW - 1800, "pool_key": pull["pool_key"], "unit": UNIT,
-                "hash": FX["sell"]["hash"], "tx_short": FX["sell"]["hash"][:10], "ada": FX["sell"]["expect_ada"]}
+                "hash": FX["sell"]["hash"], "tx_short": FX["sell"]["hash"][:10], "ada": FX["sell"]["expect_ada"],
+                "actor_tag": tag}
         waiting, flagged = LM.mark_dumps([pull, sell], [], bc, NOW)
         self.assertEqual(waiting, [])
         self.assertTrue(pull["ahead_of_dump"])
         self.assertEqual(pull["dump_tx_short"], sell["tx_short"])
-        early = dict(sell, time=NOW - 7200)
-        later = dict(pull, ahead_of_dump=False, dump_tx_short=None)
+        early = dict(sell, time=NOW - 7200, hash="ee" * 32, tx_short="ee" * 5)
+        later = dict(pull, ahead_of_dump=False, dump_tx_short=None, dump_ada=None, sold_ada=0,
+                     hash="ff" * 32, tx_short="ff" * 5)
         waiting, flagged = LM.mark_dumps([early, later], [], bc, NOW)
         self.assertFalse(later.get("ahead_of_dump"))
         self.assertEqual(flagged, [])
-        dust = dict(sell, ada=10, time=NOW - 1000)
-        quiet = dict(pull, ahead_of_dump=False, dump_tx_short=None, reserve_ada=90000.0)
+        dust = dict(sell, ada=10, time=NOW - 1000, hash="ab" * 32, tx_short="ab" * 5)
+        quiet = dict(pull, ahead_of_dump=False, dump_tx_short=None, dump_ada=None, sold_ada=0,
+                     hash="cd" * 32, tx_short="cd" * 5)
         LM.mark_dumps([quiet, dust], [], bc, NOW)
         self.assertFalse(quiet.get("ahead_of_dump"))
 
@@ -281,9 +310,11 @@ class Run(unittest.TestCase):
         self.assertIsNone(buy["actor_tag"])
         self.assertEqual(buy["token"], WL.assign_token_keys([UNIT])[UNIT])
         pull = next(r for r in doc["moves"] if r["kind"] == "lp_remove")
-        self.assertTrue(pull["ahead_of_dump"])
-        self.assertEqual(pull["dump_tx_short"], FX["sell"]["hash"][:10])
+        # Fixture pull is 20_000 ADA of a 110_000 pool (about 18%), and the sell has no key wallet.
+        self.assertFalse(pull["ahead_of_dump"])
+        self.assertIsNone(pull["dump_tx_short"])
         self.assertEqual(pull["actor_tag"], F.tag(stake("lp")))
+        self.assertEqual(doc["thresholds"]["ahead_of_dump"], dict(LM.AHEAD_OF_DUMP))
         self.assertTrue(pull["actor_tag"].startswith("w-") and len(pull["actor_tag"]) == 10)
         self.assertEqual(len(doc2["moves"]), len(doc["moves"]))
         self.assertEqual(summary2["moves_new"], 0)
@@ -323,8 +354,8 @@ class Run(unittest.TestCase):
             self._run([pull_tx(), sell_tx()], d, c)
             second = json.load(open(os.path.join(d, "liquidity_moves.json")))
         pull = next(r for r in second["moves"] if r["kind"] == "lp_remove")
-        self.assertTrue(pull["ahead_of_dump"])
-        self.assertEqual(pull["dump_tx_short"], FX["sell"]["hash"][:10])
+        self.assertFalse(pull["ahead_of_dump"])
+        self.assertIsNone(pull["dump_tx_short"])
 
     def test_unresolved_and_policy_mismatch_make_no_calls(self):
         http = P.Http({"koios": 0})
@@ -443,10 +474,11 @@ class ReviewFixes(unittest.TestCase):
                 "outputs": [_row(POOL, 499_000_000, _assets(900, {LP: 1}))]}
         self.assertEqual(LM.events_from_tx(dust, UNIT, scripts, splash, 500 * 1_000_000), [])
         bc = LM.lm_cfg({})
+        tag = "w-0123abcd"
         pull = {"kind": "lp_remove", "time": NOW - 10 * 3600, "pool_key": "p1", "unit": UNIT,
-                "ada": 20000, "reserve_ada": 90000, "hash": "aa" * 32, "tx_short": "aa" * 5}
+                "ada": 20000, "reserve_ada": 20000, "actor_tag": tag, "hash": "aa" * 32, "tx_short": "aa" * 5}
         sell = {"kind": "swap", "direction": "sell", "time": NOW - 3600, "pool_key": "p1", "unit": UNIT,
-                "ada": 12000, "hash": "bb" * 32, "tx_short": "bb" * 5}
+                "ada": 12000, "actor_tag": tag, "hash": "bb" * 32, "tx_short": "bb" * 5}
         waiting, flagged = LM.mark_dumps([pull, sell], [], bc, NOW)
         self.assertEqual(flagged, [])
         self.assertFalse(pull.get("ahead_of_dump"))
@@ -624,6 +656,124 @@ class ReviewFixes(unittest.TestCase):
         text = err.getvalue()
         self.assertIn("liquidity_moves: skipped: owner patterns unusable", text)
         self.assertNotIn("dev_checks: skipped", text)
+
+
+def _pair(pull_ada, reserve_after, sell_ada, pull_age, sell_age, pull_tag, sell_tag, sell_hash="bb"):
+    pull = {"kind": "lp_remove", "time": NOW - pull_age, "pool_key": "minswap_v2~41edcb63", "unit": UNIT,
+            "hash": "aa" * 32, "tx_short": "a" * 10, "ada": pull_ada, "reserve_ada": reserve_after,
+            "actor_tag": pull_tag}
+    sell = {"kind": "swap", "direction": "sell", "time": NOW - sell_age, "pool_key": pull["pool_key"],
+            "unit": UNIT, "hash": sell_hash * 32, "tx_short": sell_hash * 5, "ada": sell_ada,
+            "actor_tag": sell_tag}
+    return pull, sell
+
+
+class AheadOfDump(unittest.TestCase):
+    """S5 Balanced floors. The four knobs live in one block."""
+
+    def test_floors_are_one_block(self):
+        self.assertEqual(LM.AHEAD_OF_DUMP, {
+            "pull_reserve_pct": 20, "pull_min_ada": 2000, "sell_of_pull_pct": 25, "window_h": 6,
+        })
+        with open(os.path.join(os.path.dirname(HERE), "config.json")) as fh:
+            raw = json.load(fh)
+        block = raw["liquidity_moves"]["ahead_of_dump"]
+        self.assertEqual({k: block[k] for k in LM.AHEAD_OF_DUMP}, LM.AHEAD_OF_DUMP)
+        tuned = LM.lm_cfg({"liquidity_moves": {"ahead_of_dump": {"pull_min_ada": 5000}}})
+        self.assertEqual(tuned["ahead_of_dump"]["pull_min_ada"], 5000)
+        self.assertEqual(tuned["ahead_of_dump"]["window_h"], 6)
+        self.assertEqual(tuned["ahead_of_dump"]["pull_reserve_pct"], 20)
+        self.assertNotIn("dump_ada", tuned)
+
+    def _flagged(self, pull, sell, extra=None):
+        waiting, flagged = LM.mark_dumps([pull, sell] + (extra or []), [], LM.lm_cfg({}), NOW)
+        return waiting, flagged, bool(pull.get("ahead_of_dump"))
+
+    def test_pull_below_20_percent_is_not_flagged(self):
+        # 3_000 of a 20_000 pool is 15%, and it clears 2_000 ADA. The sell is the whole pull.
+        pull, sell = _pair(3000, 17000, 3000, 3600, 1800, "w-0123abcd", "w-0123abcd")
+        _, flagged, hit = self._flagged(pull, sell)
+        self.assertFalse(hit)
+        self.assertEqual(flagged, [])
+
+    def test_pull_below_2000_ada_is_not_flagged(self):
+        # 1_999 ADA is about two thirds of that pool, under the ADA floor. The sell is the whole pull.
+        pull, sell = _pair(1999, 1000, 1999, 3600, 1800, "w-0123abcd", "w-0123abcd")
+        _, flagged, hit = self._flagged(pull, sell)
+        self.assertFalse(hit)
+        self.assertEqual(flagged, [])
+
+    def test_sell_under_25_percent_is_not_flagged(self):
+        # 10_000 of a 20_000 pool clears both pull floors. 2_499 ADA is 24.99% of the pull.
+        pull, sell = _pair(10000, 10000, 2499, 3600, 1800, "w-0123abcd", "w-0123abcd")
+        waiting, flagged, hit = self._flagged(pull, sell)
+        self.assertFalse(hit)
+        self.assertEqual(flagged, [])
+        self.assertEqual(waiting[0]["sold_ada"], 2499)
+
+    def test_sell_after_6h_is_not_flagged(self):
+        # Same qualifying pull and a 50% sell, one second outside the 6h window.
+        pull, sell = _pair(10000, 10000, 5000, 7 * 3600, 3600 - 1, "w-0123abcd", "w-0123abcd")
+        self.assertEqual(sell["time"] - pull["time"], 6 * 3600 + 1)
+        _, flagged, hit = self._flagged(pull, sell)
+        self.assertFalse(hit)
+        self.assertEqual(flagged, [])
+
+    def test_pull_that_meets_all_four_floors_is_flagged(self):
+        # Exactly 20% (2_000 of 10_000), exactly 2_000 ADA, exactly 25% sold, exactly 6h, same w- hash.
+        pull, sell = _pair(2000, 8000, 500, 6 * 3600, 0, "w-0123abcd", "w-0123abcd")
+        self.assertEqual(sell["time"] - pull["time"], 6 * 3600)
+        waiting, flagged, hit = self._flagged(pull, sell)
+        self.assertTrue(hit)
+        self.assertEqual(waiting, [])
+        self.assertEqual(flagged[0]["dump_tx_short"], sell["tx_short"])
+        self.assertEqual(pull["dump_ada"], 500)
+        # A dev/role tag matches the same way.
+        role_pull, role_sell = _pair(2000, 8000, 500, 6 * 3600, 0, "repeat_launcher", "repeat_launcher", "cc")
+        _, _, role_hit = self._flagged(role_pull, role_sell)
+        self.assertTrue(role_hit)
+        # A different tag, even for the whole pull, does not.
+        other_pull, other_sell = _pair(2000, 8000, 2000, 3600, 1800, "w-0123abcd", "w-89abcdef", "dd")
+        _, _, other_hit = self._flagged(other_pull, other_sell)
+        self.assertFalse(other_hit)
+        # Two sells from the pulling party add up. 10% then 15% crosses 25%.
+        base, first = _pair(2000, 8000, 200, 3600, 3000, "w-0123abcd", "w-0123abcd", "ee")
+        waiting, _, hit = self._flagged(base, first)
+        self.assertFalse(hit)
+        second = dict(first, ada=300, time=NOW - 1800, hash="ff" * 32, tx_short="f" * 10)
+        _, flagged = LM.mark_dumps([second], waiting, LM.lm_cfg({}), NOW)
+        self.assertEqual(len(flagged), 1)
+        self.assertEqual(flagged[0]["dump_ada"], 500)
+        self.assertEqual(flagged[0]["dump_tx_short"], second["tx_short"])
+
+    def test_same_party_sell_flags_across_runs(self):
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            Run()._run([party_pull_tx()], d, c)
+            first = json.load(open(os.path.join(d, "liquidity_moves.json")))
+            cache = json.load(open(os.path.join(c, "liquidity-moves-cache.json")))
+            self.assertFalse(first["moves"][0]["ahead_of_dump"])
+            self.assertEqual(cache["open_pulls"][0]["actor_tag"], F.tag(stake("lp")))
+            self.assertNotIn(stake("lp"), json.dumps(cache))
+            Run()._run([party_pull_tx(), party_sell_tx()], d, c)
+            second = json.load(open(os.path.join(d, "liquidity_moves.json")))
+            cache2 = json.load(open(os.path.join(c, "liquidity-moves-cache.json")))
+        pull = next(r for r in second["moves"] if r["kind"] == "lp_remove")
+        sell = next(r for r in second["moves"] if r.get("direction") == "sell")
+        self.assertTrue(pull["ahead_of_dump"])
+        self.assertEqual(pull["dump_tx_short"], sell["tx_short"])
+        self.assertGreaterEqual(pull["dump_ada"], 0.25 * pull["ada"])
+        self.assertEqual(pull["actor_tag"], sell["actor_tag"])
+        self.assertTrue(pull["actor_tag"].startswith("w-") and len(pull["actor_tag"]) == 10)
+        blob = json.dumps(second) + json.dumps(cache2)
+        self.assertNotIn(stake("lp"), blob)
+        self.assertNotIn(addr("lp"), blob)
+        F.assert_public(second)
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            Run()._run([party_pull_tx(), party_sell_tx("other")], d, c)
+            doc = json.load(open(os.path.join(d, "liquidity_moves.json")))
+        stranger = next(r for r in doc["moves"] if r["kind"] == "lp_remove")
+        self.assertFalse(stranger["ahead_of_dump"])
+        self.assertNotEqual(stranger["actor_tag"], next(r["actor_tag"] for r in doc["moves"] if r.get("direction") == "sell"))
 
 
 class FileGuard(unittest.TestCase):

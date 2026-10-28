@@ -32,9 +32,11 @@ def _dev(ticker="RUG", **kw):
 
 
 def _move(kind="lp_remove", **kw):
+    # 8_000 ADA is 40% of a 20_000 pool and dump_ada is 25% of the pull.
     row = {
         "kind": kind, "ticker": "RUG", "policy_short": "abcdef01",
         "actor_tag": "w-89abcdef", "lp": False, "ahead_of_dump": True,
+        "ada": 8000, "reserve_ada_after": 12000, "dump_ada": 2000,
     }
     row.update(kw)
     return {"moves": [row]}
@@ -155,6 +157,23 @@ class Derive(unittest.TestCase):
                       _move(ahead_of_dump=False, actor_tag="w-0123abcd"))
         self.assertEqual([v["code"] for v in dev["tokens"][0]["vetoes"]], ["lp_pulled"])
         self.assertEqual(dev["tokens"][0]["vetoes"][0]["evidence"], {"actor_tag": "w-0123abcd"})
+
+    def test_lp_pulled_uses_the_tightened_ahead_of_dump(self):
+        held = _derive(_dev(dev_sold_ada=0), _move())
+        self.assertEqual([v["code"] for v in held["tokens"][0]["vetoes"]], ["lp_pulled"])
+        # Under 2_000 ADA. The flag alone is not enough.
+        small = _derive(_dev(dev_sold_ada=0), _move(ada=1500, reserve_ada_after=500, dump_ada=1500))
+        self.assertEqual(small["tokens"], [])
+        # Under 20% of the pool reserve.
+        thin = _derive(_dev(dev_sold_ada=0), _move(ada=3000, reserve_ada_after=17000, dump_ada=3000))
+        self.assertEqual(thin["tokens"], [])
+        # Same-party sell total under 25% of the pull.
+        shy = _derive(_dev(dev_sold_ada=0), _move(dump_ada=1000))
+        self.assertEqual(shy["tokens"], [])
+        cfg = json.loads(json.dumps(CFG))
+        cfg["liquidity_moves"]["ahead_of_dump"]["sell_of_pull_pct"] = 90
+        raised = _derive(_dev(dev_sold_ada=0), _move(), cfg=cfg)
+        self.assertEqual(raised["tokens"], [])
 
     def test_two_units_under_one_policy_stay_separate(self):
         policy = "ab" * 6

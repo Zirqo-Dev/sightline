@@ -2,12 +2,12 @@
 
 Writes desk-data:solada-prefilter/liquidity_moves.json for Snek's cardano_top10 (desk log, current
 row, else the newest history row). Tracks Minswap, SundaeSwap and Splash pool reserves: liquidity
-adds, liquidity pulls, and big swaps. An LP pull followed by a sell into the same pool is flagged
-ahead_of_dump.
+adds, liquidity pulls, and big swaps. ahead_of_dump uses the Balanced floors in AHEAD_OF_DUMP.
 
-Swaps are the pool's own reserve change. The batcher signs the transaction, so the trader is not
-named until per-DEX order decoders exist. actor_tag is set only on an add or a pull, and only when
-a key wallet moved the LP token. It is a w- hash or a role label, never an address or a stake key.
+Swaps are the pool's own reserve change. The batcher signs the transaction. actor_tag is a w- hash
+or a role label, never an address or a stake key. It is set on an add or a pull when a key wallet
+moved the LP token, and on a sell when a key wallet in that transaction spent the token. A
+batcher-only swap stays untagged and cannot set ahead_of_dump.
 
 ADA is the pool reserve's ADA leg (lovelace in versus out), never raw quantity times price.
 Token display keys are policy-based (whale_ledger.assign_token_keys, PR #37). LP tokens are
@@ -49,18 +49,29 @@ TRACKED_DEX = ("minswap_v1", "minswap_v2", "sundaeswap_v1", "sundaeswap_v3", "sp
 # Minswap V2 auth tokens share one name across every pool (MSP, factory, global setting).
 SHARED_AUTH_NAMES = {"4d5350", "4d5346", "4d534753"}
 
+# Balanced ahead_of_dump floors. One block, four knobs. config.json liquidity_moves.ahead_of_dump
+# overrides these. A pull counts only at or above pull_reserve_pct of the pool reserve (ADA in the
+# pool before the pull) and pull_min_ada. The flag is set only when sells from that same party
+# (same w- hash or same dev/role tag), inside window_h, total at least sell_of_pull_pct of the pull.
+AHEAD_OF_DUMP = {
+    "pull_reserve_pct": 20,
+    "pull_min_ada": 2000,
+    "sell_of_pull_pct": 25,
+    "window_h": 6,
+}
+
 DEFAULTS = {
     "enabled": True, "budget_s": 50, "max_calls": 36, "max_bf_calls": 12, "utxo_batch": 10,
     "max_tokens": 10, "max_txs_per_pool": 15, "discover_txs": 12, "discover_every_h": 24,
     "min_swap_ada": 5000, "min_lp_ada": 1000, "min_pool_ada": 500,
-    "dump_window_h": 6, "dump_ada": 5000, "dump_reserve_pct": 8,
+    "ahead_of_dump": dict(AHEAD_OF_DUMP),
     "keep_h": 72, "keep_rows": 400, "keep_seen": 4000,
 }
 
 NOTE = (
-    "Research only, for Snek. Swaps are read at pool level only: the batcher signs the transaction, "
-    "so the trader is not named until per-DEX order decoders exist. actor_tag is set on a liquidity "
-    "add or pull when a key wallet moved the LP token, as a w- hash or a role label. ADA is the pool "
+    "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, "
+    "so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a "
+    "w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool "
     "reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP."
 )
 LIMITS = [
@@ -71,9 +82,51 @@ LIMITS = [
 ]
 
 
+def _ada(v):
+    """A real number, or None. Booleans are not ADA."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return None
+    return float(v)
+
+
+def _overlay_floors(floors, block):
+    out = dict(floors)
+    if not isinstance(block, dict):
+        return out
+    for k in AHEAD_OF_DUMP:
+        if k not in block or str(k).startswith("_"):
+            continue
+        n = _ada(block.get(k))
+        if n is not None:
+            out[k] = n
+    return out
+
+
+def floors_of(bc=None):
+    """The Balanced block. Accepts lm_cfg(), a raw ahead_of_dump dict, or None."""
+    if isinstance(bc, dict) and "pull_min_ada" in bc and "window_h" in bc and "ahead_of_dump" not in bc:
+        return _overlay_floors(AHEAD_OF_DUMP, bc)
+    block = bc.get("ahead_of_dump") if isinstance(bc, dict) else None
+    return _overlay_floors(AHEAD_OF_DUMP, block)
+
+
+def resolve_floors(liq_doc, cfg=None):
+    """Floors for a veto read. The file's thresholds win, then config, then AHEAD_OF_DUMP."""
+    floors = _overlay_floors(AHEAD_OF_DUMP, ((cfg or {}).get("liquidity_moves") or {}).get("ahead_of_dump"))
+    th = liq_doc.get("thresholds") if isinstance(liq_doc, dict) else None
+    block = th.get("ahead_of_dump") if isinstance(th, dict) else None
+    return _overlay_floors(floors, block)
+
+
 def lm_cfg(cfg=None):
     out = dict(DEFAULTS)
-    out.update({k: v for k, v in ((cfg or {}).get("liquidity_moves") or {}).items() if not str(k).startswith("_")})
+    out["ahead_of_dump"] = dict(AHEAD_OF_DUMP)
+    block = (cfg or {}).get("liquidity_moves") or {}
+    for k, v in block.items():
+        if str(k).startswith("_") or k in ("ahead_of_dump", "dump_window_h", "dump_ada", "dump_reserve_pct"):
+            continue
+        out[k] = v
+    out["ahead_of_dump"] = _overlay_floors(AHEAD_OF_DUMP, block.get("ahead_of_dump"))
     return out
 
 
@@ -232,6 +285,29 @@ def lp_mover(tx, dex, marker, splash_pols):
     return st, addrs.get(st) or ""
 
 
+def token_spender(tx, token_unit):
+    """(stake, addr) of the key wallet that spent this token, or (None, None).
+
+    A sell tag uses this. Script addresses are not a party. The stake and address are for
+    the tag only and are not stored.
+    """
+    acc, addrs = {}, {}
+    for side, sign in (("inputs", -1), ("outputs", 1)):
+        for u in tx.get(side) or []:
+            st = _key_stake(u)
+            if not st:
+                continue
+            qty = int((u.get("assets") or {}).get(token_unit) or 0)
+            if qty:
+                acc[st] = acc.get(st, 0) + sign * qty
+                addrs.setdefault(st, u.get("addr") or "")
+    spent = {s: q for s, q in acc.items() if q < 0}
+    if not spent:
+        return None, None
+    st = min(spent, key=lambda s: spent[s])
+    return st, addrs.get(st) or ""
+
+
 def events_from_tx(tx, token_unit, scripts, splash_pols, min_pool_lovelace):
     """Pool reserve deltas for one transaction. Pure: no network, no tags.
 
@@ -325,45 +401,118 @@ def pool_key(dex, marker, token_unit):
     return f"{dex}~{hashlib.sha256(raw.encode()).hexdigest()[:8]}"
 
 
-def mark_dumps(events, open_pulls, bc, now_s):
-    """Flag an LP pull that is followed by a sell into the same pool.
+def _reserve_after(row):
+    """ADA left in the pool after the pull. Public rows say reserve_ada_after; events say reserve_ada."""
+    if not isinstance(row, dict):
+        return None
+    if row.get("reserve_ada_after") is not None:
+        return row.get("reserve_ada_after")
+    return row.get("reserve_ada")
 
-    events and open_pulls use time (unix), pool_key, kind, direction, ada (ADA), reserve_ada,
-    tx_short. Returns (pulls still waiting, pulls that were flagged). Does not copy stakes.
+
+def pull_is_material(row, floors=None):
+    """True when the pull is at least pull_reserve_pct of the pre-pull reserve and pull_min_ada.
+
+    reserve_ada / reserve_ada_after is the ADA left after the pull. The pool reserve the
+    percentage uses is that remainder plus the ADA removed.
     """
-    window = float(bc["dump_window_h"]) * 3600
+    floors = floors_of(floors)
+    if not isinstance(row, dict):
+        return False
+    ada, after = _ada(row.get("ada")), _ada(_reserve_after(row))
+    if ada is None or after is None or ada <= 0 or after < 0:
+        return False
+    before = after + ada
+    if before <= 0:
+        return False
+    return ada >= float(floors["pull_min_ada"]) and 100.0 * ada / before >= float(floors["pull_reserve_pct"])
+
+
+def sells_cover_pull(dump_ada, pull_ada, floors=None):
+    """True when dump_ada is at least sell_of_pull_pct of the pulled ADA."""
+    floors = floors_of(floors)
+    dumped, ada = _ada(dump_ada), _ada(pull_ada)
+    if dumped is None or ada is None or ada <= 0 or dumped < 0:
+        return False
+    return 100.0 * dumped / ada >= float(floors["sell_of_pull_pct"])
+
+
+def tight_ahead(move, floors=None):
+    """True when a public lp_remove carries a Balanced ahead_of_dump, not a loose flag.
+
+    The party match and the window are applied before the flag is set. The amounts on the
+    row still have to meet the pull floors and the sell-of-pull floor.
+    """
+    if not isinstance(move, dict) or move.get("ahead_of_dump") is not True:
+        return False
+    return pull_is_material(move, floors) and sells_cover_pull(move.get("dump_ada"), move.get("ada"), floors)
+
+
+def _party_tag(tag):
+    """A w- hash or a known dev/role label, else None."""
+    if not isinstance(tag, str) or not tag or not DC.dev_tag_ok(tag):
+        return None
+    return tag
+
+
+def _same_party(pull, sell):
+    """Same pulling party: one w- hash, or one dev/role tag, on both rows."""
+    a, b = _party_tag(pull.get("actor_tag")), _party_tag(sell.get("actor_tag"))
+    return bool(a) and a == b
+
+
+def mark_dumps(events, open_pulls, bc, now_s):
+    """Flag a material LP pull followed by same-party sells into the same pool.
+
+    A pull counts only when pull_is_material is true. ahead_of_dump is set only when sells
+    from that same w- hash or dev/role tag, inside window_h, total at least sell_of_pull_pct
+    of the pulled ADA. events and open_pulls use time (unix), pool_key, kind, direction,
+    ada (ADA), reserve_ada, actor_tag, tx_short. Returns (pulls still waiting, pulls that
+    were flagged). Does not copy stakes.
+    """
+    floors = floors_of(bc)
+    window = float(floors["window_h"]) * 3600
     pulls = []
     for p in open_pulls or []:
         cleaned = _pull_state(p)
-        if not cleaned:
+        if not cleaned or not pull_is_material(cleaned, floors):
             continue
         if now_s - cleaned["time"] <= window:
             pulls.append(cleaned)
-    for ev in sorted(events, key=lambda e: (e.get("time") or 0, e.get("tx_short") or "")):
+    for ev in sorted(events or [], key=lambda e: (e.get("time") or 0, e.get("tx_short") or "")):
         if ev.get("kind") == "lp_remove":
-            pulls.append(ev)
-        elif ev.get("kind") == "swap" and ev.get("direction") == "sell":
-            for p in pulls:
-                if p.get("ahead_of_dump") or not _same_pool(p, ev):
-                    continue
-                if not (int(p.get("time") or 0) < int(ev.get("time") or 0) <= int(p["time"]) + window):
-                    continue
-                ada = abs(float(ev.get("ada") or 0))
-                reserve = float(p.get("reserve_ada") or 0)
-                pct = (100.0 * ada / reserve) if reserve else 0
-                if ada >= bc["dump_ada"] or pct >= bc["dump_reserve_pct"]:
-                    p["ahead_of_dump"] = True
-                    p["dump_tx_short"] = ev.get("tx_short")
-                    p["dump_ada"] = round(ada, 2)
-                    ev_hash = p.get("hash")
-                    for src in events:
-                        if src is p or (ev_hash and src.get("hash") == ev_hash and src.get("kind") == "lp_remove"):
-                            src["ahead_of_dump"] = True
-                            src["dump_tx_short"] = ev.get("tx_short")
-                            src["dump_ada"] = round(ada, 2)
+            if pull_is_material(ev, floors):
+                ev["sold_ada"] = float(ev.get("sold_ada") or 0)
+                pulls.append(ev)
+            continue
+        if ev.get("kind") != "swap" or ev.get("direction") != "sell":
+            continue
+        for p in pulls:
+            if p.get("ahead_of_dump") or not _same_pool(p, ev) or not _same_party(p, ev):
+                continue
+            if not (int(p.get("time") or 0) < int(ev.get("time") or 0) <= int(p["time"]) + window):
+                continue
+            total = float(p.get("sold_ada") or 0) + abs(float(ev.get("ada") or 0))
+            p["sold_ada"] = total
+            if sells_cover_pull(total, p.get("ada"), floors):
+                _stamp_dump(p, ev, events, total)
     flagged = [p for p in pulls if p.get("ahead_of_dump")]
     waiting = [p for p in pulls if not p.get("ahead_of_dump") and now_s - int(p["time"]) <= window]
     return waiting, flagged
+
+
+def _stamp_dump(pull, sell, events, total):
+    short = sell.get("tx_short")
+    dumped = round(float(total), 2)
+    pull["ahead_of_dump"] = True
+    pull["dump_tx_short"] = short
+    pull["dump_ada"] = dumped
+    ev_hash = pull.get("hash")
+    for src in events or []:
+        if src is pull or (ev_hash and src.get("hash") == ev_hash and src.get("kind") == "lp_remove"):
+            src["ahead_of_dump"] = True
+            src["dump_tx_short"] = short
+            src["dump_ada"] = dumped
 
 
 def _same_pool(a, b):
@@ -627,6 +776,9 @@ def _apply_tx(tx, token_row, scripts, splash_pols, bc, lp_pols, watch, loaded, e
         ev["actor_tag"] = None
         if kind in ("lp_add", "lp_remove"):
             ev["actor_tag"] = _safe_tag(ev.get("lp_stake"), ev.get("lp_addr"), watch, loaded, ex_tags)
+        elif kind == "swap" and direction == "sell":
+            st, who = token_spender(tx, token_row["unit"])
+            ev["actor_tag"] = _safe_tag(st, who, watch, loaded, ex_tags)
         ev.pop("lp_stake", None)
         ev.pop("lp_addr", None)
         out.append(ev)
@@ -800,7 +952,10 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
     doc = {
         "at": iso(now_s), "phase": 1, "source": "snek_cardano_top10",
         "note": NOTE, "limits": LIMITS, "level": "pool",
-        "thresholds": {k: bc[k] for k in ("min_swap_ada", "min_lp_ada", "dump_window_h", "dump_ada", "dump_reserve_pct")},
+        "thresholds": {
+            "min_swap_ada": bc["min_swap_ada"], "min_lp_ada": bc["min_lp_ada"],
+            "ahead_of_dump": {k: floors_of(bc)[k] for k in AHEAD_OF_DUMP},
+        },
         "budget": {"max_calls": bc["max_calls"], "max_bf_calls": bc["max_bf_calls"], "budget_s": bc["budget_s"]},
         "actor_tags": bool(loaded),
         "moves": merged[-int(bc["keep_rows"]):],
@@ -880,6 +1035,20 @@ def _pull_state(p):
     for k in ("hash", "tx_short", "reserve_ada", "ticker", "unit", "token"):
         if k in p:
             out[k] = p.get(k)
+    ada = _ada(p.get("ada"))
+    if ada is not None and ada > 0:
+        out["ada"] = ada
+    after = _ada(p.get("reserve_ada"))
+    if after is None:
+        after = _ada(p.get("reserve_ada_after"))
+    if after is not None and after >= 0:
+        out["reserve_ada"] = after
+    tag = _party_tag(p.get("actor_tag"))
+    if tag:
+        out["actor_tag"] = tag
+    sold = _ada(p.get("sold_ada"))
+    if sold is not None and sold >= 0:
+        out["sold_ada"] = sold
     return out
 
 
