@@ -1,5 +1,5 @@
 {
- "at": "2026-10-28T18:15:03Z",
+ "at": "2026-10-28T20:14:23Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -192,7 +192,8 @@
    "pool_key": "minswap_v2~c9d8143f",
    "reserve_ada": 1001352.92,
    "reserve_qty": 963144530090,
-   "asof": "2026-10-26T08:59:50Z"
+   "asof": "2026-10-26T08:59:50Z",
+   "stale": true
   },
   {
    "ticker": "NIGHT",
@@ -202,7 +203,8 @@
    "pool_key": "minswap_v2~8d92b947",
    "reserve_ada": 3527395.41,
    "reserve_qty": 19291279990745,
-   "asof": "2026-10-25T18:46:26Z"
+   "asof": "2026-10-25T18:46:26Z",
+   "stale": true
   },
   {
    "ticker": "STRIKE",
@@ -254,7 +256,7 @@
    "policy_short": "279c909f",
    "rank": 4,
    "unit_source": "cache",
-   "last_checked": null
+   "last_checked": "2026-10-28T20:14:23Z"
   },
   {
    "ticker": "MIN",
@@ -301,25 +303,10 @@
  ],
  "skipped": [],
  "coverage": {
-  "ASCEND": {
-   "read": 15,
-   "complete": false,
-   "pools": 1
-  },
-  "NIGHT": {
-   "read": 15,
-   "complete": false,
-   "pools": 1
-  },
-  "STRIKE": {
-   "read": 0,
-   "complete": false,
-   "pools": 0
-  },
   "SNEK": {
    "read": 0,
    "complete": false,
-   "skipped": "budget"
+   "pools": 0
   },
   "MIN": {
    "read": 0,
@@ -350,21 +337,36 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "ASCEND": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
+  },
+  "NIGHT": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
+  },
+  "STRIKE": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "ASCEND",
-  "NIGHT",
-  "STRIKE",
   "SNEK",
   "MIN",
   "SOLADA",
   "IAG",
   "COCK",
   "CLOVE",
-  "BOLT"
+  "BOLT",
+  "ASCEND",
+  "NIGHT",
+  "STRIKE"
  ],
- "koios_calls": 8,
+ "koios_calls": 3,
  "blockfrost_calls": 0,
  "blockfrost_fallbacks": 0,
  "blockfrost_available": true,
