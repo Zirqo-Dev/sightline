@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793215825,
+ "last_run_ts": 1793217628,
  "voids": [],
  "books": {
   "F": {
@@ -224,7 +224,7 @@
    "realized_gross": -0.030990180666529393
   },
   "S": {
-   "cash": 7.209257134788793,
+   "cash": 8.044183910699111,
    "open": {
     "S-20261028T1800-56xZpump": {
      "entry": 0.00029607201994493,
@@ -233,7 +233,7 @@
      "liq0": 53.9703,
      "opened": 1793210429,
      "frac": 1.0,
-     "last_mark": 0.0002661927934920961,
+     "last_mark": 0.00026595546571377246,
      "stale": 0,
      "no_route_count": 0,
      "mint": "56xZsxJkoEyVisFtDFcK9TQ3GxDUHLUGi1kyDnbNpump",
@@ -246,7 +246,7 @@
      "gross_pnl": 0.0,
      "entry_haircut": 0.029973268735820683,
      "entry_cost": 0.5149966343679103,
-     "exit_haircut": 0.017993240579601135
+     "exit_haircut": 0.015366549427306359
     },
     "S-20261028T1900-BLAypump": {
      "entry": 0.0016256825499667297,
@@ -255,7 +255,7 @@
      "liq0": 148.2672,
      "opened": 1793214029,
      "frac": 1.0,
-     "last_mark": 0.0020069166795423183,
+     "last_mark": 0.001930043753856459,
      "stale": 0,
      "no_route_count": 0,
      "mint": "BLAytV5xTVEkYJYS1RoFR5Ypgm3JZ44CvVdZHTExpump",
@@ -268,16 +268,16 @@
      "gross_pnl": 0.0,
      "entry_haircut": 0.02746345431991389,
      "entry_cost": 0.5137417271599569,
-     "exit_haircut": 0.016440459372287757
+     "exit_haircut": 0.026254847658314418
     },
     "S-20261028T1930-AHtLXhot": {
      "entry": 0.0013022292882669797,
-     "peak": 0.0013022292882669797,
-     "steps": 0,
+     "peak": 0.005403795656669812,
+     "steps": 2,
      "liq0": 126.08266,
      "opened": 1793215825,
-     "frac": 1.0,
-     "last_mark": 0.0013022292882669797,
+     "frac": 0.3333333333333334,
+     "last_mark": 0.005403795656669812,
      "stale": 0,
      "no_route_count": 0,
      "mint": "AHtLsp84S3ThHeNgcqg1jXaE9M6FSXKW8oj7WjYkXhot",
@@ -286,10 +286,11 @@
      "run_id": "20261028T1930",
      "why": "safety:dev_holds",
      "book": "S",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
+     "pnl": 1.0041522356510213,
+     "gross_pnl": 1.0498833053333332,
      "entry_haircut": 0.02581803933324502,
-     "entry_cost": 0.5129190196666225
+     "entry_cost": 0.5129190196666225,
+     "exit_haircut": 0.026820375686287368
     },
     "S-20261028T1930-BGcmpump": {
      "entry": 0.0006304767035195106,
@@ -298,7 +299,7 @@
      "liq0": 33.9343,
      "opened": 1793215825,
      "frac": 1.0,
-     "last_mark": 0.0006304767035195106,
+     "last_mark": 0.0005975847931617078,
      "stale": 0,
      "no_route_count": 0,
      "mint": "BGcmzUjj995eWAFxBhN4w4BatbJQnDDA73Bkop9Epump",
@@ -310,12 +311,34 @@
      "pnl": 0.0,
      "gross_pnl": 0.0,
      "entry_haircut": 0.024178668538506667,
-     "entry_cost": 0.5120993342692532
+     "entry_cost": 0.5120993342692532,
+     "exit_haircut": 0.017621785844390694
+    },
+    "S-20261028T2000-2RyCpump": {
+     "entry": 0.0005425227040957472,
+     "peak": 0.0005425227040957472,
+     "steps": 0,
+     "liq0": 99.1621,
+     "opened": 1793217628,
+     "frac": 1.0,
+     "last_mark": 0.0005425227040957472,
+     "stale": 0,
+     "no_route_count": 0,
+     "mint": "2RyCCRenDtquADusNUfwFpvTaDkam82imh46SL2mpump",
+     "symbol": "ANSEM",
+     "tokens": 921620415561,
+     "run_id": "20261028T2000",
+     "why": "safety:top10_heavy",
+     "book": "S",
+     "pnl": 0.0,
+     "gross_pnl": 0.0,
+     "entry_haircut": 0.022322945703569592,
+     "entry_cost": 0.5111714728517848
     }
    },
    "fills_day": "2026-10-28",
-   "fills_today": 9,
-   "realized_pnl": -0.7369861497474636,
+   "fills_today": 10,
+   "realized_pnl": 0.2671660859035577,
    "closed": [
     {
      "id": "S-20261028T1330-5Zjdpump",
@@ -392,8 +415,8 @@
     }
    ],
    "would_halt": [],
-   "peak_equity": 10.043404528660002,
-   "realized_gross": -0.7021646139989879
+   "peak_equity": 10.695520074893473,
+   "realized_gross": 0.3477186913343453
   }
  }
 }
