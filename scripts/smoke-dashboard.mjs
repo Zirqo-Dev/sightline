@@ -567,7 +567,7 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
     rows: [{ time: "2026-10-28T00:00:00Z", kind: "swap", token: "SNEK", ada_leg: 12, qty: 1000, counterparty_tag: addr }]
   });
   assert(!whale.includes("123456") && !whale.includes("SECRETBAG") && !whale.includes("addr1") && !whale.includes("999"), "whale ledger hides balances, bags, and addresses");
-  assert(whale.includes("founder_whale") && whale.includes("SNEK"), "whale ledger keeps the role and the token");
+  assert(!whale.includes("founder") && whale.includes("SNEK"), "whale chart keeps the token and drops founder wording");
   const dev = P.devHtml({ entries: [
     { ticker: "SNEK", risk: "caution", dev_tag: "dev", fresh_funded: true, dev_sold_ada: 10 },
     { ticker: "NOPE", dev_tag: stake, fresh_funded: false }
@@ -576,17 +576,25 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(!dev.includes("stake1"), "dev tag that is a stake key is not rendered");
   const cardano = P.cardanoHtml({
     log: {
-      founder_whale: { handle: "$cockwhale", address: addr, stake_prefix: "uylu74g0", net_flow_ada: 12, summary: "sold SNEK", line: "ASCEND flat", cock_order: "order " + addr + " " + stake },
-      whale_watch: { wallets: [{ label: "dev", prefix: stake, role: "Long note", latest: "pool " + addr }] },
-      suri: { SNEK: { risk: "High risk", tags: ["Dev sold"], source: "desk" } },
-      cardano_top10: [{ rank: 1, ticker: "SNEK", ada_side_depth: 1000, whale_tags: ["w-0123abcd", stake] }],
-      flag_outcomes: { sniper_full_exit: { pump: 2, rug: 1 } },
+      founder_whale: { handle: "$cockwhale", address: "w-f3186187", stake_prefix: "uylu74g0", net_flow_ada: 12, summary: "the founder sold SNEK founder_pct", line: "ASCEND flat " + "B".repeat(44), cock_order: "order " + addr + " " + stake },
+      whale_watch: { wallets: [{ tag: "w-f3186187", codename: "Grumpy Walrus", prefix: stake, label: "$cockwhale", latest: "pool " + addr }] },
+      suri: { SNEK: { risk: "High risk", tags: ["Dev sold"], source: "desk" }, ASCEND: { risk: "Low risk", tags: [], source: "desk" } },
+      cardano_top10: [{ rank: 1, ticker: "SNEK", ada_side_depth: 9000, whale_tags: ["w-0123abcd", stake] }, { rank: 2, ticker: "NIGHT", ada_side_depth: 5000 }],
+      flag_outcomes: { sniper_full_exit: { pump: 2, rug: 1 }, founder_whale_move: { pump: 0, rug: 0 } },
+      kill_hits: ["BOLT holders under 265"],
       trigger: "manual"
-    }
+    },
+    flags: { new: [{ kind: "coordinated_buys", ticker: "COOKED" }, { kind: "sniper_full_exit", ticker: "COOKED" }] },
+    kills: { BOLT: { hit: true, line: 265, value: 200, metric: "holders" } },
+    pump: { open: [], closed: [{ ticker: "X", mint: "C".repeat(44), result: { pnl: -1, pct: -1 } }], unit: "ADA-equivalent" }
   });
-  assert(!cardano.includes("addr1") && !cardano.includes("stake1") && !cardano.includes("uylu74g0") && !cardano.includes("cock_order"), "founder whale address, stake prefix, and order stay off the page");
-  assert(cardano.includes("cockwhale") && cardano.includes("w-0123abcd") && cardano.includes("fresh") === false || cardano.includes("SNEK"), "public handle, w- tag, and ticker remain");
-  assert(cardano.includes("heat") || cardano.includes("Cluster") || cardano.includes("donut") || cardano.includes("pump"), "Cardano view leads with the visual scoreboard");
+  assert(!cardano.includes("addr1") && !cardano.includes("stake1") && !cardano.includes("uylu74g0") && !cardano.includes("cock_order"), "address, stake prefix, and order stay off the page");
+  assert(!/founder|cockwhale|Lead whale|COCK LP|Suri on the name|Snek depth/i.test(cardano), "identifying whale wording and old panel names stay off the page");
+  assert(cardano.includes("Grumpy Walrus") && cardano.includes("Pool ADA") && !cardano.includes(stake), "codename and pool label render, and the stake key stays hidden");
+  assert(cardano.indexOf("ASCEND") < cardano.indexOf("NIGHT") && cardano.includes(">Core<"), "core names are pinned and badged");
+  assert(cardano.includes("Flagged this run") && cardano.includes("COOKED") && cardano.includes("Suri risk"), "flag row and Suri legend render");
+  assert(cardano.includes("Grumpy Walrus move") && !/founder_whale|founder_whale_move|founder_pct|\bfounder\b/i.test(cardano), "whale-move flag uses the codename, not the data key");
+  assert(!cardano.includes("B".repeat(32)) && !cardano.includes("C".repeat(32)), "forensics and pumpfun address-like values stay hidden");
   const paper = load("scripts/fixtures/solana-desk/paper-fills.json");
   const trades = P.parseCsv(fs.readFileSync(path.join(root, "scripts/fixtures/solana-desk/trades-fills.csv"), "utf8"));
   const model = P.solanaModel(paper, trades, null);
