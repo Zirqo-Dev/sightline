@@ -1,16 +1,17 @@
 {
- "at": "2026-10-27T22:11:11Z",
+ "at": "2026-10-28T00:11:38Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash).",
- "height": 14124444,
+ "height": 14124831,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 214.158039,
+ "ada_balance": 258.856649,
  "positions": {
   "DEXY": 25502885697865,
   "FEED": 59000000099015,
   "BTN": 5,
   "BTC": 41670288833610,
+  "NightBringer": 11158478,
   "SOLABLUE": 1438534570029,
   "NIGHT": 915000179380,
   "WJB": 110000000,
@@ -69,7 +70,7 @@
   "SUNDAE": 65,
   "ATLAS": 220785,
   "SHARKY": 22522019087399,
-  "CRAWJU": 8000000,
+  "CRAWJU": 7000000,
   "PAWS-2": 40000000795084,
   "STABLE": 40331687668046,
   "CAMP": 34632631851536,
@@ -103,7 +104,7 @@
   "SOLADA": 38676910,
   "ATM": 19024975734573,
   "Puffle": 21000000,
-  "ASCEND": 303450551846,
+  "ASCEND": 303628263914,
   "TOOLS": 11173430291327,
   "cock-whale": 1,
   "cockwhale": 1,
@@ -2039,6 +2040,47 @@
    "closed_tx": "f097591333",
    "closed_at": "2026-10-27T22:04:06Z",
    "filled_ada": 88.40526
+  },
+  "42de79400f#0": {
+   "ref_short": "42de79400f#0",
+   "token": "CRAWJU",
+   "qty_raw": 1000000,
+   "ada": 4.5,
+   "status": "filled",
+   "opened_tx": "42de79400f",
+   "opened_at": "2026-10-27T23:29:53Z",
+   "own_stake": true,
+   "closed_tx": "789661ba61",
+   "closed_at": "2026-10-27T23:30:01Z",
+   "filled_ada": 554.461605
+  },
+  "7d39220e2b#0": {
+   "ref_short": "7d39220e2b#0",
+   "token": "ADA",
+   "qty_raw": 254000000,
+   "ada": 254.0,
+   "status": "filled",
+   "opened_tx": "7d39220e2b",
+   "opened_at": "2026-10-27T23:55:21Z",
+   "own_stake": true,
+   "closed_tx": "714ad85012",
+   "closed_at": "2026-10-27T23:55:21Z",
+   "filled_token": "ASCEND",
+   "filled_qty": 177712068
+  },
+  "88f7f82736#0": {
+   "ref_short": "88f7f82736#0",
+   "token": "ADA",
+   "qty_raw": 252600000,
+   "ada": 252.6,
+   "status": "filled",
+   "opened_tx": "88f7f82736",
+   "opened_at": "2026-10-28T00:05:47Z",
+   "own_stake": true,
+   "closed_tx": "7650f1a62f",
+   "closed_at": "2026-10-28T00:07:23Z",
+   "filled_token": "NightBringer",
+   "filled_qty": 11158478
   }
  },
  "rows": [
@@ -5849,6 +5891,92 @@
    "counterparty_tag": null,
    "order_ref_short": "2f46bea1b7#0",
    "order_status": "filled"
+  },
+  {
+   "time": "2026-10-27T23:29:53Z",
+   "tx_short": "42de79400f",
+   "kind": "order_open",
+   "token": "CRAWJU",
+   "qty": 1000000,
+   "ada_leg": 4.5,
+   "counterparty_tag": null,
+   "order_ref_short": "42de79400f#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-10-27T23:29:53Z",
+   "tx_short": "42de79400f",
+   "kind": "transfer_out",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 1.243905,
+   "counterparty_tag": "w-71447d92"
+  },
+  {
+   "time": "2026-10-27T23:30:01Z",
+   "tx_short": "789661ba61",
+   "kind": "order_fill",
+   "token": "CRAWJU",
+   "qty": 1000000,
+   "ada_leg": 554.461605,
+   "counterparty_tag": null,
+   "order_ref_short": "42de79400f#0",
+   "order_status": "filled"
+  },
+  {
+   "time": "2026-10-27T23:55:21Z",
+   "tx_short": "7d39220e2b",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 254000000,
+   "ada_leg": 254.0,
+   "counterparty_tag": null,
+   "order_ref_short": "7d39220e2b#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-10-27T23:55:21Z",
+   "tx_short": "714ad85012",
+   "kind": "order_fill",
+   "token": "ASCEND",
+   "qty": 177712068,
+   "ada_leg": 254.0,
+   "counterparty_tag": null,
+   "order_ref_short": "7d39220e2b#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-10-28T00:05:47Z",
+   "tx_short": "88f7f82736",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 252600000,
+   "ada_leg": 252.6,
+   "counterparty_tag": null,
+   "order_ref_short": "88f7f82736#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-10-28T00:05:47Z",
+   "tx_short": "88f7f82736",
+   "kind": "transfer_out",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 5.204177,
+   "counterparty_tag": "w-0b1b3053"
+  },
+  {
+   "time": "2026-10-28T00:07:23Z",
+   "tx_short": "7650f1a62f",
+   "kind": "order_fill",
+   "token": "NightBringer",
+   "qty": 11158478,
+   "ada_leg": 252.6,
+   "counterparty_tag": null,
+   "order_ref_short": "88f7f82736#0",
+   "order_status": "filled",
+   "sold": "ADA"
   }
  ],
  "capped": false,
@@ -5859,7 +5987,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 9,
+ "koios_calls": 7,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
