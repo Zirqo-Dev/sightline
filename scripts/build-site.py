@@ -40,6 +40,33 @@ def bust(html):
     return re.sub(r'((?:href|src)="dashboard/[^"?]+\.(?:css|js))"', lambda m: f'{m.group(1)}?v={v}"', html)
 
 
+def preview_version():
+    """Content hash of the preview stylesheet and script.
+
+    Kept off asset_version() so publishing the preview does not change the live
+    dashboard's cache-bust query on index.html.
+    """
+    import hashlib
+    h = hashlib.sha256()
+    for rel in ("preview/app.css", "preview/app.js"):
+        p = ROOT / rel
+        if not p.is_file():
+            continue
+        h.update(rel.encode())
+        h.update(p.read_bytes())
+    return h.hexdigest()[:10]
+
+
+def bust_preview(html):
+    """Append ?v=<hash> to preview/*.css|js in the published preview.html only."""
+    v = preview_version()
+    return re.sub(
+        r'((?:href|src)="preview/[^"?]+\.(?:css|js))"',
+        lambda m: f'{m.group(1)}?v={v}"',
+        html,
+    )
+
+
 def copy_desk(desk_id):
     src = ROOT / desk_id
     dest = DIST / desk_id
@@ -76,6 +103,16 @@ def main():
     if n != 1:
         sys.exit("build-site: index.html is missing <!-- panels:begin --> ... <!-- panels:end -->")
     (DIST / "index.html").write_text(bust(html2), encoding="utf-8")
+    preview = ROOT / "preview.html"
+    if preview.is_file():
+        (DIST / "preview.html").write_text(
+            bust_preview(preview.read_text(encoding="utf-8")),
+            encoding="utf-8",
+        )
+        src_preview = ROOT / "preview"
+        if src_preview.is_dir():
+            shutil.copytree(src_preview, DIST / "preview")
+        print(f"  preview assets ?v={preview_version()}")
     if html2 != html:
         (ROOT / "index.html").write_text(html2, encoding="utf-8")
         print("  refreshed index.html panel list")
