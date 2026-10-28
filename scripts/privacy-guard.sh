@@ -113,13 +113,13 @@ else
   [ ${#files[@]} -eq 0 ] && mapfile -t files < <(git ls-files)
 fi
 
-# desk-data publishes solada-prefilter/dev_checks.json and liquidity_moves.json.
+# desk-data publishes solada-prefilter/dev_checks.json, liquidity_moves.json and vetoes.json.
 # In --root mode (desk-data-guard and the prefilter push) those files are always
 # part of the scan, even if the caller passed a list that left them out. Pattern
-# and allowlist handling below is unchanged; neither file is in mask_files, so an
+# and allowlist handling below is unchanged; none of these files are in mask_files, so an
 # allowlisted key here still fails.
 if [ -n "${root_mode:-}" ]; then
-  for need in solada-prefilter/dev_checks.json solada-prefilter/liquidity_moves.json; do
+  for need in solada-prefilter/dev_checks.json solada-prefilter/liquidity_moves.json solada-prefilter/vetoes.json; do
     [ -f "$need" ] || continue
     have=0
     for f in "${files[@]}"; do
@@ -215,6 +215,56 @@ for i, e in enumerate(rows):
     bad.append(str(i))
 if bad:
     sys.stderr.write("PRIVACY GUARD: %s: actor_tag is not a role label or w- hash (entries %s)\n" % (path, ",".join(bad[:10])))
+    sys.exit(1)
+' "$f" "$script_dir/../solada-prefilter/config.json"; then
+      fail=1
+    fi
+  fi
+  # Veto evidence is tags only: dev_tag and actor_tag, each a w- hash or a role label.
+  # Indexes only: the value itself is never printed. Allowlist masking is not applied.
+  if [ "$f" = "solada-prefilter/vetoes.json" ] || [ "$(basename "$f")" = "vetoes.json" -a "$(basename "$(dirname "$f")")" = "solada-prefilter" ]; then
+    if ! python3 -c '
+import json, re, sys
+path, cfg_path = sys.argv[1], sys.argv[2]
+try:
+    cfg = json.load(open(cfg_path))
+    doc = json.load(open(path))
+except Exception:
+    sys.stderr.write("PRIVACY GUARD FAILED: cannot read vetoes.json\n")
+    sys.exit(1)
+roles = set()
+tags = ((cfg.get("flags") or {}).get("snek_prefix_tags") or {})
+role_re = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
+for k in tags:
+    if isinstance(k, str) and not k.startswith("_") and role_re.fullmatch(k):
+        roles.add(k)
+ok = re.compile(r"^w-[0-9a-f]{8}$")
+bad = []
+tokens = doc.get("tokens") if isinstance(doc, dict) else None
+if not isinstance(tokens, list):
+    sys.stderr.write("PRIVACY GUARD FAILED: vetoes.json has no tokens list\n")
+    sys.exit(1)
+for i, tok in enumerate(tokens):
+    if not isinstance(tok, dict):
+        bad.append(str(i))
+        continue
+    for v in tok.get("vetoes") or []:
+        if not isinstance(v, dict):
+            bad.append(str(i))
+            continue
+        if not isinstance(v.get("evidence"), dict):
+            bad.append(str(i))
+            continue
+        ev = v["evidence"]
+        if set(ev) - {"dev_tag", "actor_tag"}:
+            bad.append(str(i))
+            continue
+        for tag in ev.values():
+            if tag is None or (isinstance(tag, str) and (ok.fullmatch(tag) or tag in roles)):
+                continue
+            bad.append(str(i))
+if bad:
+    sys.stderr.write("PRIVACY GUARD: %s: veto evidence is not a role label or w- hash (tokens %s)\n" % (path, ",".join(bad[:10])))
     sys.exit(1)
 ' "$f" "$script_dir/../solada-prefilter/config.json"; then
       fail=1

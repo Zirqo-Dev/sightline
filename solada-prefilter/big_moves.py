@@ -28,7 +28,8 @@ import valuation as V
 KOIOS = "https://api.koios.rest/api/v1"
 BLOCKS_PER_HOUR = 180  # ~20 s blocks
 DEFAULTS = {"enabled": True, "min_ada": 5000, "min_pool_pct": 10, "window_h": 24, "keep_h": 72,
-            "max_units": 12, "max_txs_per_unit": 100, "max_pages_per_unit": 4, "utxo_batch": 10, "max_calls": 80}
+            "max_units": 12, "max_txs_per_unit": 100, "max_pages_per_unit": 4, "utxo_batch": 10, "max_calls": 80,
+            "budget_s": 150}
 
 
 def bm_cfg(cfg=None):

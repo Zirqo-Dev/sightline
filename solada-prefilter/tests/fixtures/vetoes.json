@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "at": "2026-10-28T02:07:00Z",
+  "desk": "solada",
+  "note": "Research vetoes for the Cardano desk. Never a buy signal. They do not change desk rules, kill lines, or thresholds. Evidence values are wallet tags only.",
+  "buy_signal": false,
+  "sources": ["dev_checks", "liquidity_moves"],
+  "tokens": [
+    {
+      "ticker": "RUG",
+      "policy_short": "abcdef012345",
+      "unit": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+      "vetoes": [
+        {"code": "dev_sold", "evidence": {"dev_tag": "w-0123abcd"}},
+        {"code": "serial_launcher", "evidence": {"dev_tag": "repeat_launcher"}},
+        {"code": "lp_pulled", "evidence": {"actor_tag": "w-89abcdef"}}
+      ]
+    }
+  ]
+}

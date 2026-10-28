@@ -19,6 +19,7 @@ import big_moves as BM  # noqa: E402  SPD-43 big-move detector (research rows, n
 import whale_ledger as WL  # noqa: E402  SPD-44 founder whale ledger (research rows, never triggers)
 import dev_checks as DC  # noqa: E402  phase-1 dev sells / serial / drawdown (own budget; may add a dev_sell trigger)
 import liquidity_moves as LM  # noqa: E402  SPD-55 pool reserves (research rows, never triggers)
+import vetoes as vetoes_mod  # noqa: E402  SPD-65 research vetoes from those files (never a buy signal)
 from datetime import datetime, timezone
 
 UA = "sightline-solada-prefilter/1.0"
@@ -180,23 +181,67 @@ class Http:
             self.trip(src, f"{self.failures[src]} failures")
 
 
-def research_deadline(cfg, t_start, now):
-    """Research budget (config research_budget_s, default 240 s), capped at run start + 720 s so the whole run
-    always fits the 780 s job limit."""
-    return min(now + float(cfg.get("research_budget_s", 240)), t_start + 720)
+# Chain work stops at run start + 720s. The step timeout is 780s and the workflow is 15 minutes,
+# which still leaves the commit and fits the 2h cadence. 720 is not a per-job budget.
+HARD_CAP_S = 720
+SLICE_ORDER = ("dev_checks", "whale_ledger", "big_moves", "liquidity_moves")
 
 
-def research_plan(cfg, t_start, now):
-    """(shared_end, whale_end).
+def slice_budgets(cfg):
+    """Configured seconds for each post-webhook slice. A disabled job reserves nothing.
 
-    big_moves has consumed the whole shared research deadline and left whale_ledger with no time (PR #31).
-    whale_ledger therefore runs first, for at most whale_ledger.budget_s seconds, and never past the shared
-    end. big_moves then uses whatever remains of that same shared end. dev_checks is not in this window:
-    it has its own dev_checks.budget_s and runs before the webhook.
+    dev_checks.budget_s is the dev-check wall clock (default 180). It does not raise Koios or
+    Blockfrost call caps. big_moves.budget_s is the slice earlier jobs must leave, not a ceiling:
+    big_moves may also use slack in front of the liquidity reserve. liquidity_moves.budget_s is reserved
+    at the end so a long dev check cannot take it.
     """
-    shared = research_deadline(cfg, t_start, now)
-    budget = float(WL.wl_cfg(cfg).get("budget_s", 90))
-    return shared, min(shared, now + max(0.0, budget))
+    specs = (
+        ("dev_checks", DC.dc_cfg, 180),
+        ("whale_ledger", WL.wl_cfg, 90),
+        ("big_moves", BM.bm_cfg, 150),
+        ("liquidity_moves", LM.lm_cfg, 50),
+    )
+    out = {}
+    for name, fn, default in specs:
+        block = fn(cfg)
+        out[name] = float(block.get("budget_s", default)) if block.get("enabled", True) else 0.0
+    return out
+
+
+def reserve_after(cfg, job):
+    budgets = slice_budgets(cfg)
+    idx = SLICE_ORDER.index(job)
+    return sum(budgets[name] for name in SLICE_ORDER[idx + 1:])
+
+
+def research_deadline(cfg, t_start, now):
+    """Hard end of chain work: run start + 720s. Keeps the run inside the 780s process timeout.
+
+    `cfg` and `now` are unused. Per-slice ends are job_deadline. The old now+research_budget_s
+    window is the reserved whale + big_moves + liquidity sum (config research_budget_s), not this cap.
+    """
+    del cfg, now
+    return float(t_start) + HARD_CAP_S
+
+
+def job_deadline(cfg, t_start, now, job):
+    """Wall-clock end for one slice, reserving the full budgets of the slices after it.
+
+    Shrinks from the front when the rules screen has already used the hard cap: dev_checks yields
+    first, then whale_ledger. big_moves keeps its budget plus any slack before the liquidity reserve.
+    liquidity_moves keeps its own budget until the hard cap itself is inside that slice.
+    """
+    now = float(now)
+    start = now if t_start is None else float(t_start)
+    end = start + HARD_CAP_S
+    room = end - now - reserve_after(cfg, job)
+    if job == "big_moves":
+        take = room
+    else:
+        take = min(slice_budgets(cfg)[job], room)
+    if take < 0:
+        take = 0.0
+    return now + take
 
 
 def note_koios_pause(http):
@@ -1198,10 +1243,83 @@ def main():
         new_flags = []
     print(f"flags: {len(new_flags)} new ({', '.join(sorted({f['kind'] for f in new_flags})) or 'none'}); calls {json.dumps(flag_calls)}")
 
-    # ---- phase-1 dev checks. Own wall-clock budget, before the webhook, so a new dev sell can join this
-    # payload. Does not set http.deadline (a Koios 429 here must not trip the breaker or close whale_ledger).
-    # Errors are swallowed: a failure here must not stop the webhook, state.json or kill_status.json.
+    # ---- primary webhook BEFORE the dev_checks budget. A kill line, launch, or whale move is not held
+    # for the 180s scan. Pending triggers from a failed earlier post are retried here. Vetoes are never
+    # included: they are not buy signals. dev_sell, if the scan finds one, is a separate post afterwards.
+    NOPUB = ("key", "kill_sig", "kill_entry")
+    fresh_all, sent_any, flags_attached = [], False, False
+
+    def settle(batch, retry_pending=True):
+        nonlocal sent_any, flags_attached
+        batch = [t for t in (batch or []) if isinstance(t, dict) and t.get("key")]
+        new_keys = {t["key"] for t in batch}
+        new_kill = {t["name"] for t in batch if t.get("kind") == "kill_line"}
+        # A failed post stays pending for the next run. The dev_sell post does not retry it in this same run.
+        pending = []
+        if retry_pending:
+            pending = [t for t in state["pending_triggers"] if t.get("key") and t["key"] not in state["fired"] and t["key"] not in new_keys
+                       and not (t.get("kind") == "kill_line" and t.get("name") in new_kill)]
+        fresh = pending + [t for t in batch if t["key"] not in state["fired"]]
+        fresh_all.extend(fresh)
+        if baseline:
+            print(f"baseline run: {len(fresh)} would-be trigger(s) recorded, not sent")
+        payload = {"reason": "threshold", "names": sorted({t["name"] for t in fresh}),
+                   "metrics": {"at": now_iso(), "triggers": [{k: v for k, v in t.items() if k not in NOPUB} for t in fresh]}}
+        if new_flags and not flags_attached:
+            payload["metrics"]["flags"] = new_flags[:40]
+        sent = False
+        url = os.environ.get("SOLADA_WEBHOOK_URL", "").strip()
+        key = os.environ.get("SOLADA_WEBHOOK_KEY", "").strip()
+        if fresh and not baseline:
+            if args.dry_run:
+                print("dry-run: webhook not sent")
+            elif not url:
+                print("SOLADA_WEBHOOK_URL not set: skipping webhook")
+            else:
+                hdr = {"Authorization": f"Bearer {key}"} if key else {}
+                hdr["Idempotency-Key"] = idempotency_key(cfg, [t["key"] for t in fresh])
+                sent = http.post_webhook(url, payload, hdr)
+                print(f"webhook {'sent' if sent else 'FAILED (queued for retry next run)'}")
+                if sent:
+                    flags_attached = True
+        if sent or baseline or (fresh and args.dry_run is False and not url):
+            for t in fresh:
+                state["fired"][t["key"]] = now_iso()
+                if t.get("kind") == "kill_line":
+                    state["kill_reported"][t["name"]] = {**(t.get("kill_entry") or {}), "at": now_iso()}
+            done = {t["key"] for t in fresh}
+            if retry_pending:
+                state["pending_triggers"] = []
+            else:
+                state["pending_triggers"] = [t for t in state["pending_triggers"] if t.get("key") not in done]
+        elif fresh and not args.dry_run:
+            if retry_pending:
+                state["pending_triggers"] = fresh[-200:]
+            else:
+                have = {t.get("key") for t in state["pending_triggers"]}
+                state["pending_triggers"] = (list(state["pending_triggers"]) + [t for t in fresh if t["key"] not in have])[-200:]
+        if sent:
+            sent_any = True
+        return fresh
+
+    def trim_fired():
+        if len(state["fired"]) > 2000:
+            state["fired"] = dict(sorted(state["fired"].items(), key=lambda x: x[1])[-2000:])
+
+    settle(triggers)
+    state["seen_launches"] = sorted({l["id"] for l in launches} | seen)
+    trim_fired()
+    if not args.dry_run:
+        write_json(state_path, state, indent=1, sort_keys=True)
+        # SPD-47: per-ticker kill-line status for Snek (desk-data only; lines from paper.json + log.json kill_lines)
+        write_json(ks_path, kill_status, indent=1, sort_keys=True)
+
+    # ---- phase-1 dev checks. Own wall-clock budget, AFTER the primary webhook, so that post does not
+    # wait on budget_s. Does not set http.deadline (a Koios 429 here must not trip the breaker).
+    # The deadline leaves the whale / big_moves / liquidity reserves inside run start + 720s.
+    # Errors are swallowed: a failure here must not undo the webhook, state.json or kill_status.json.
     dev_summary = None
+    dev_triggers = []
     if DC.dc_cfg(cfg).get("enabled", True):
         try:
             try:
@@ -1216,79 +1334,46 @@ def main():
                 http, cfg, solada_tracked, launches, flagmod.watch_map(cfg.get("flags") or {}, wkeys),
                 args.data_dir, args.cache_dir, args.dry_run, time.time(), bf_key=bf_key, baseline=baseline,
                 t_start=t_start, owner_env=os.environ.get("PRIVACY_GUARD_PATTERNS", ""),
-                top10=DC.cardano_top10(log), units_by_ticker=units_by_ticker)
-            if not baseline:
-                triggers.extend(dev_triggers or [])
+                top10=DC.cardano_top10(log), units_by_ticker=units_by_ticker,
+                deadline=job_deadline(cfg, t_start, time.time(), "dev_checks"))
             print(f"dev checks: {json.dumps(dev_summary)}")
         except (SystemExit, Exception) as e:
             http._fail("dev_checks", type(e).__name__)
-
-    # ---- dedupe + webhook
-    # pending triggers (webhook failed on an earlier run) are retried first; a newer trigger with the same
-    # key, or a newer kill trigger for the same ticker, supersedes the queued one
-    new_keys = {t["key"] for t in triggers}
-    new_kill = {t["name"] for t in triggers if t["kind"] == "kill_line"}
-    pending = [t for t in state["pending_triggers"] if t.get("key") and t["key"] not in state["fired"] and t["key"] not in new_keys
-               and not (t.get("kind") == "kill_line" and t.get("name") in new_kill)]
-    fresh = pending + [t for t in triggers if t["key"] not in state["fired"]]
-    NOPUB = ("key", "kill_sig", "kill_entry")
-    if baseline:
-        print(f"baseline run: {len(fresh)} would-be trigger(s) recorded, not sent")
-    payload = {"reason": "threshold", "names": sorted({t["name"] for t in fresh}),
-               "metrics": {"at": now_iso(), "triggers": [{k: v for k, v in t.items() if k not in NOPUB} for t in fresh]}}
-    if new_flags:  # ride along only; a payload is sent only when a threshold trigger is fresh
-        payload["metrics"]["flags"] = new_flags[:40]
-    sent = False
-    url, key = os.environ.get("SOLADA_WEBHOOK_URL", "").strip(), os.environ.get("SOLADA_WEBHOOK_KEY", "").strip()
-    if fresh and not baseline:
-        if args.dry_run:
-            print("dry-run: webhook not sent")
-        elif not url:
-            print("SOLADA_WEBHOOK_URL not set: skipping webhook")
-        else:
-            hdr = {"Authorization": f"Bearer {key}"} if key else {}
-            hdr["Idempotency-Key"] = idempotency_key(cfg, [t["key"] for t in fresh])
-            sent = http.post_webhook(url, payload, hdr)
-            print(f"webhook {'sent' if sent else 'FAILED (queued for retry next run)'}")
-    if sent or baseline or (fresh and args.dry_run is False and not url):
-        for t in fresh:
-            state["fired"][t["key"]] = now_iso()
-            if t["kind"] == "kill_line":
-                state["kill_reported"][t["name"]] = {**(t.get("kill_entry") or {}), "at": now_iso()}
-        state["pending_triggers"] = []
-    elif fresh and not args.dry_run:
-        state["pending_triggers"] = fresh[-200:]  # retried next run; whale snapshot / seen_launches may advance safely
-    state["seen_launches"] = sorted({l["id"] for l in launches} | seen)
-    # keep fired map bounded
-    if len(state["fired"]) > 2000:
-        state["fired"] = dict(sorted(state["fired"].items(), key=lambda x: x[1])[-2000:])
-
+            dev_triggers = []
+    if not baseline:
+        settle(dev_triggers, retry_pending=False)
+    trim_fired()
     if not args.dry_run:
         write_json(state_path, state, indent=1, sort_keys=True)
-        # SPD-47: per-ticker kill-line status for Snek (desk-data only; lines from paper.json + log.json kill_lines)
-        write_json(ks_path, kill_status, indent=1, sort_keys=True)
 
-    # ---- research sections (SPD-43/44): run AFTER the webhook and state writes, with a time budget, so a slow
-    # Koios or a research bug can never cost the webhook, state.json or kill_status.json (M1)
-    def build_summary(big_moves, whale_ledger, liquidity=None):
+    seen_keys = set()
+    fresh = []
+    for t in fresh_all:
+        if t["key"] in seen_keys:
+            continue
+        seen_keys.add(t["key"])
+        fresh.append(t)
+
+    # ---- research sections (SPD-43/44/55): after the webhook and state writes, each with its own slice,
+    # so a slow Koios or a research bug can never cost the webhook, state.json or kill_status.json (M1)
+    def build_summary(big_moves, whale_ledger, liquidity=None, veto_summary=None):
         return {
             "at": now_iso(), "basis": chain.basis, "dry_run": args.dry_run, "baseline": baseline,
             "launches": len(launches), "new_launches": 0 if baseline else len(new_ids), "candidates": len(cands),
             "passed_k_y": [r["ticker"] for r in passed], "thresholds": {k: v for k, v in th.items() if k != "source"},
             "market_age_min": market_age_min, "ada_usd": ada_usd, "whale": {k: v for k, v in (whale_summary or {}).items()},
             "first_block_hits": fb_hits, "triggers": [{k: v for k, v in t.items() if k not in NOPUB} for t in fresh],
-            "webhook_sent": sent, "flags_new": len(new_flags), "dev_checks": dev_summary,
+            "webhook_sent": sent_any, "flags_new": len(new_flags), "dev_checks": dev_summary,
             "big_moves": big_moves, "whale_ledger": whale_ledger, "liquidity_moves": liquidity,
+            "vetoes": veto_summary,
             "data_failures": http.failures, "api_calls": http.calls, "results": results,
         }
 
     summary_path = os.path.join(args.data_dir, "last-run.json" if not args.dry_run else "dry-run.json")
     write_json(summary_path, build_summary(None, None), indent=1)  # written before research too (nice-to-have)
     note_koios_pause(http)  # a 429 during dev checks: Koios stays paused ~60s, then resumes for research
-    shared_end, whale_end = research_plan(cfg, t_start, time.time())
-    # ---- SPD-44 founder whale ledger first, inside its own slice of the shared deadline, so big_moves
-    # cannot exhaust the 240s and skip it (PR #31). Still after the webhook and the state writes (M1).
-    http.deadline = whale_end
+    # ---- SPD-44 founder whale ledger first, for at most whale_ledger.budget_s, so big_moves cannot skip it.
+    http.deadline = job_deadline(cfg, t_start, time.time(), "whale_ledger")
     whale_ledger = None
     if WL.wl_cfg(cfg)["enabled"]:
         try:
@@ -1298,8 +1383,8 @@ def main():
         except (SystemExit, Exception) as e:  # research must never stop the webhook/state (M1)
             http._fail("whale_ledger", type(e).__name__)
 
-    # ---- SPD-43 big moves get the remainder of the same shared deadline (research rows; never triggers)
-    http.deadline = shared_end
+    # ---- SPD-43 big moves. Reserved slice, plus any slack before the liquidity reserve. Never a trigger.
+    http.deadline = job_deadline(cfg, t_start, time.time(), "big_moves")
     big_moves = None
     if BM.bm_cfg(cfg)["enabled"]:
         meta = {}
@@ -1314,15 +1399,13 @@ def main():
         except (SystemExit, Exception) as e:  # research must never stop the webhook/state (M1)
             http._fail("big_moves", type(e).__name__)
 
-    # ---- SPD-55 liquidity moves use only the time left in the same shared deadline, after whale_ledger
-    # and big_moves, so this job cannot take their budgets. A failure here does not touch the webhook.
-    # big_moves keeps shared_end. This slice is whatever remains, capped by liquidity_moves.budget_s.
+    # ---- SPD-55 liquidity moves. Own reserved budget_s, after whale_ledger and big_moves, never past the
+    # hard cap. A failure here does not touch the webhook.
     liquidity = None
     try:
         bc_lm = LM.lm_cfg(cfg)
         if bc_lm.get("enabled", True):
-            liq_budget = float(bc_lm.get("budget_s", 50))
-            http.deadline = min(shared_end, time.time() + max(0.0, liq_budget))
+            http.deadline = job_deadline(cfg, t_start, time.time(), "liquidity_moves")
             units_by_ticker = {}
             try:
                 pulse_doc, _ = load_desk_json("solada/pulse.json", desk, args.repo)
@@ -1350,7 +1433,16 @@ def main():
 
     http.deadline = None
 
-    summary = build_summary(big_moves, whale_ledger, liquidity)
+    # ---- SPD-65 vetoes. Local read of the two files above. No chain calls, no webhook, fail-soft.
+    veto_summary = None
+    try:
+        veto_summary = vetoes_mod.run(
+            args.data_dir, cfg, args.dry_run, owner_env=os.environ.get("PRIVACY_GUARD_PATTERNS", ""), now_s=time.time())
+        print(f"vetoes: {json.dumps(veto_summary)}")
+    except (SystemExit, Exception) as e:
+        http._fail("vetoes", type(e).__name__)
+
+    summary = build_summary(big_moves, whale_ledger, liquidity, veto_summary)
     write_json(summary_path, summary, indent=1)
     print(f"whale: {json.dumps(summary['whale'])[:300]}")
     print(json.dumps({k: summary[k] for k in ("launches", "new_launches", "candidates", "passed_k_y", "first_block_hits", "data_failures", "api_calls")}))

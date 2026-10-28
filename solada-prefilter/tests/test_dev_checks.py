@@ -556,14 +556,15 @@ class Fallback(unittest.TestCase):
 
 class Wiring(unittest.TestCase):
     def test_research_plan_gives_whale_a_slice_inside_the_shared_deadline(self):
-        shared, whale = P.research_plan({"research_budget_s": 240, "whale_ledger": {"budget_s": 90}}, 1_000, 1_000)
-        self.assertEqual(shared, 1_240)
-        self.assertEqual(whale, 1_090)
-        shared, whale = P.research_plan({"research_budget_s": 240}, 1_000, 1_600)
-        self.assertEqual(shared, 1_720)  # capped at start + 720
-        self.assertEqual(whale, 1_690)
-        shared, whale = P.research_plan({"whale_ledger": {"budget_s": 10_000}}, 1_000, 1_000)
-        self.assertEqual(whale, shared)
+        cfg = {"dev_checks": {"budget_s": 180}, "whale_ledger": {"budget_s": 90},
+               "big_moves": {"budget_s": 150}, "liquidity_moves": {"budget_s": 50}}
+        self.assertEqual(P.research_deadline(cfg, 1_000, 1_000), 1_720)
+        self.assertEqual(P.job_deadline(cfg, 1_000, 1_000, "whale_ledger"), 1_090)
+        # a late clock still stops at the hard cap, and whale cannot eat the big_moves + liquidity reserve
+        self.assertEqual(P.job_deadline(cfg, 1_000, 1_600, "whale_ledger"), 1_600)
+        huge = {"whale_ledger": {"budget_s": 10_000}, "big_moves": {"budget_s": 150},
+                "liquidity_moves": {"budget_s": 50}, "dev_checks": {"budget_s": 0}}
+        self.assertEqual(P.job_deadline(huge, 1_000, 1_000, "whale_ledger"), 1_520)
 
     def test_whale_runs_before_big_moves(self):
         order = []
@@ -1006,9 +1007,11 @@ class Review(unittest.TestCase):
         self.assertEqual(DC.serial_counts(launches, stake("dev"), now_ms, dc(), this_unit=mint_u), (1, 1))
         self.assertEqual(DC.serial_counts(launches, stake("dev"), now_ms, dc()), (0, 0))
 
-    def test_deadline_is_capped_at_run_start_plus_600s(self):
+    def test_deadline_is_capped_at_run_start_plus_720s(self):
         self.assertEqual(DC.dev_deadline(45, 10000, 10000), 10045)
-        self.assertEqual(DC.dev_deadline(45, 9000, 10000), 9600)
+        self.assertEqual(DC.dev_deadline(45, 9000, 10000), 9720)  # run start + 720, already behind `now`
+        self.assertEqual(DC.dev_deadline(180, 10000, 10000, reserve_after=290), 10180)
+        self.assertEqual(DC.dev_deadline(180, 10000, 10400, reserve_after=290), 10430)
         cu, ru, books, launches, tracked = world()
         with tempfile.TemporaryDirectory() as d:
             os.makedirs(os.path.join(d, "cache"))

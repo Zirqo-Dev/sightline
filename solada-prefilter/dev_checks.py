@@ -35,7 +35,7 @@ import koios_tx as KT
 KOIOS = "https://api.koios.rest/api/v1"
 BF = "https://cardano-mainnet.blockfrost.io/api/v0"
 DEFAULTS = {
-    "enabled": True, "budget_s": 45, "max_calls": 36, "max_bf_calls": 50,
+    "enabled": True, "budget_s": 180, "max_calls": 36, "max_bf_calls": 50,
     "max_txs_per_unit": 25, "max_pages_per_unit": 2, "utxo_batch": 13,
     "max_launches": 8, "max_prior": 3, "bf_per_unit": 8,
     "rug_bag_pct": 80, "late_min_minutes": 30, "rug_min_other_holders": 1,
@@ -1041,10 +1041,16 @@ def _basis(koios_calls, bf_calls):
     return "koios"
 
 
-def dev_deadline(budget_s, t_start, now):
-    """Wall-clock end for dev checks: min(now + budget, run start + 600s). A past `now_s` is not the clock."""
+def dev_deadline(budget_s, t_start, now, reserve_after=0.0, hard_cap=720.0):
+    """Wall-clock end for dev checks: min(now + budget, run start + hard_cap - reserve_after).
+
+    hard_cap is 720s so the process still fits the 780s step. reserve_after is the tail
+    (whale_ledger, big_moves, liquidity_moves) that this job must leave inside that cap.
+    A past `now_s` is not the clock. A cap already behind `now` is in the past, so the scan stops.
+    """
     start = float(now) if t_start is None else float(t_start)
-    return min(float(now) + max(0.0, float(budget_s)), start + 600.0)
+    cap = start + float(hard_cap) - max(0.0, float(reserve_after))
+    return min(float(now) + max(0.0, float(budget_s)), cap)
 
 
 _ADDR_IN_PATTERN = re.compile(r"addr1[02-9ac-hj-np-z]{50,}")
@@ -1256,7 +1262,7 @@ def _fallback_rows(cache, prev_rows, top10, units_by_ticker):
 
 
 def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s, bf_key=None, baseline=False,
-        t_start=None, owner_env=None, top10=None, units_by_ticker=None):
+        t_start=None, owner_env=None, top10=None, units_by_ticker=None, deadline=None):
     """Write dev_checks.json (unless dry_run). Returns (summary, triggers).
 
     `tracked` is a list of {ticker, unit, launch, mcap_ada, vol_h24_ada} for tracked Solada launches.
@@ -1303,9 +1309,12 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
         rows_in = rows_in[k:] + rows_in[:k]
         cache["rot"] = int(cache.get("rot") or 0) + 1
     # Wall clock, not the asof timestamp: a historical now_s must not make the budget look already spent.
-    # Capped at run start + 600s so a long rules screen cannot hand this job the rest of the process.
+    # The caller passes the shared-plan deadline (budget, and the tail reserved inside run start + 720s).
     wall = time.time()
-    deadline = dev_deadline(dc["budget_s"], t_start, wall)
+    if deadline is None:
+        deadline = dev_deadline(dc["budget_s"], t_start, wall)
+    else:
+        deadline = float(deadline)
     http.dev_checks = True
     try:
         chain = DevChain(http, dc, bf_key, deadline)
