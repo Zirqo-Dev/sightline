@@ -6,6 +6,7 @@
   "buy_signal": false,
   "sources": ["dev_checks", "liquidity_moves"],
   "stale": [],
+  "counts": {"dev_sold": 1, "serial_launcher": 1, "lp_pulled": 1, "ahead_of_dump": 1},
   "tokens": [
     {
       "ticker": "RUG",
@@ -14,7 +15,8 @@
       "vetoes": [
         {"code": "dev_sold", "evidence": {"dev_tag": "w-0123abcd"}},
         {"code": "serial_launcher", "evidence": {"dev_tag": "repeat_launcher"}},
-        {"code": "lp_pulled", "evidence": {"actor_tag": "w-89abcdef"}}
+        {"code": "lp_pulled", "evidence": {"actor_tag": "w-89abcdef"}},
+        {"code": "ahead_of_dump", "evidence": {"actor_tag": "w-89abcdef"}, "reason": "pull 8000 ADA is 40 percent of the reserve (>= 20 percent and >= 2000 ADA); same-party sell 2000 ADA is 25 percent of the pull inside 6h"}
       ]
     }
   ]

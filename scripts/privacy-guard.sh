@@ -263,6 +263,15 @@ for i, tok in enumerate(tokens):
             if tag is None or (isinstance(tag, str) and (ok.fullmatch(tag) or tag in roles)):
                 continue
             bad.append(str(i))
+        reason = v.get("reason")
+        if reason is None:
+            continue
+        # Amounts only. A stake key, address, or wallet tag in the reason is a leak.
+        # The value is not printed.
+        if (not isinstance(reason, str) or len(reason) > 240
+                or not re.fullmatch(r"[A-Za-z0-9 .,;%:()=<>+-]+", reason)
+                or re.search(r"stake|addr|w-", reason, re.I)):
+            bad.append(str(i))
 if bad:
     sys.stderr.write("PRIVACY GUARD: %s: veto evidence is not a role label or w- hash (tokens %s)\n" % (path, ",".join(bad[:10])))
     sys.exit(1)

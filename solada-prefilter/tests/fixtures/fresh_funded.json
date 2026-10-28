@@ -1,0 +1,25 @@
+{
+  "note": "Synthetic times only. No wallet, address, or stake key. launch_s is unix seconds.",
+  "hours": 24,
+  "launch_s": 1700000000,
+  "koios": {
+    "path": "/account_txs",
+    "query": ["order=block_height.asc", "limit=1"],
+    "funded_1h_before": [{"tx_hash": "aa", "block_height": 10, "block_time": 1699996400}]
+  },
+  "blockfrost": {
+    "path": "/transactions",
+    "query": ["order=asc", "count=1"],
+    "funded_1h_before": [{"tx_hash": "bb", "block_height": 11, "block_time": 1699996400}]
+  },
+  "cases": [
+    {"name": "funded_1h_before", "block_time": 1699996400, "expect": true},
+    {"name": "funded_24h_before", "block_time": 1699913600, "expect": true},
+    {"name": "funded_25h_before", "block_time": 1699910000, "expect": false},
+    {"name": "funded_1h_after", "block_time": 1700003600, "expect": true},
+    {"name": "funded_25h_after", "block_time": 1700090000, "expect": false},
+    {"name": "same_second", "block_time": 1700000000, "expect": true},
+    {"name": "missing_time", "block_time": null, "expect": null},
+    {"name": "zero_time", "block_time": 0, "expect": null}
+  ]
+}

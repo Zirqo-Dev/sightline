@@ -137,9 +137,15 @@ class Derive(unittest.TestCase):
         V.validate_doc(doc)
         self.assertIs(doc["buy_signal"], False)
         row = doc["tokens"][0]
-        self.assertEqual([v["code"] for v in row["vetoes"]], ["dev_sold", "serial_launcher", "lp_pulled"])
+        self.assertEqual([v["code"] for v in row["vetoes"]], ["dev_sold", "serial_launcher", "ahead_of_dump"])
         self.assertEqual(row["vetoes"][0]["evidence"], {"dev_tag": "w-0123abcd"})
         self.assertEqual(row["vetoes"][2]["evidence"], {"actor_tag": "w-89abcdef"})
+        self.assertEqual(
+            row["vetoes"][2]["reason"],
+            "pull 8000 ADA is 40 percent of the reserve (>= 20 percent and >= 2000 ADA); "
+            "same-party sell 2000 ADA is 25 percent of the pull inside 6h")
+        self.assertNotIn("w-", row["vetoes"][2]["reason"])
+        self.assertEqual(doc["counts"], {"dev_sold": 1, "serial_launcher": 1, "lp_pulled": 0, "ahead_of_dump": 1})
         self.assertEqual(row["policy_short"], "abcdef012345")
         quiet = _derive(_dev(dev_sold_ada=24, serial_3h=1, serial_7d=2), _move(kind="lp_add"))
         self.assertEqual(quiet["tokens"], [])
@@ -188,7 +194,9 @@ class Derive(unittest.TestCase):
         third = _derive(_dev(dev_sold_ada=0), _move(ahead_of_dump=False, actor_tag="w-89abcdef"))
         self.assertEqual(third["tokens"], [])
         dumped = _derive(_dev(dev_sold_ada=0), _move(ahead_of_dump=True, actor_tag="w-89abcdef"))
-        self.assertEqual([v["code"] for v in dumped["tokens"][0]["vetoes"]], ["lp_pulled"])
+        self.assertEqual([v["code"] for v in dumped["tokens"][0]["vetoes"]], ["ahead_of_dump"])
+        self.assertEqual(dumped["counts"]["lp_pulled"], 0)
+        self.assertEqual(dumped["counts"]["ahead_of_dump"], 1)
         role = _derive(_dev(dev_sold_ada=0), _move(ahead_of_dump=False, actor_tag="repeat_launcher"))
         self.assertEqual(role["tokens"][0]["vetoes"][0]["evidence"], {"actor_tag": "repeat_launcher"})
         dev = _derive(_dev(dev_tag="w-0123abcd", dev_sold_ada=0),
@@ -196,12 +204,14 @@ class Derive(unittest.TestCase):
         self.assertEqual([v["code"] for v in dev["tokens"][0]["vetoes"]], ["lp_pulled"])
         self.assertEqual(dev["tokens"][0]["vetoes"][0]["evidence"], {"actor_tag": "w-0123abcd"})
 
-    def test_lp_pulled_uses_the_tightened_ahead_of_dump(self):
+    def test_ahead_of_dump_is_its_own_veto_and_keeps_the_floors(self):
         held = _derive(_dev(dev_sold_ada=0), _move())
-        self.assertEqual([v["code"] for v in held["tokens"][0]["vetoes"]], ["lp_pulled"])
-        # Under 2_000 ADA. The flag alone is not enough.
+        self.assertEqual([v["code"] for v in held["tokens"][0]["vetoes"]], ["ahead_of_dump"])
+        self.assertTrue(V.reason_ok(held["tokens"][0]["vetoes"][0]["reason"]))
+        # Under 2_000 ADA. The flag alone is not enough, and it is not lp_pulled either.
         small = _derive(_dev(dev_sold_ada=0), _move(ada=1500, reserve_ada_after=500, dump_ada=1500))
         self.assertEqual(small["tokens"], [])
+        self.assertEqual(small["counts"]["ahead_of_dump"], 0)
         # Under 20% of the pool reserve.
         thin = _derive(_dev(dev_sold_ada=0), _move(ada=3000, reserve_ada_after=17000, dump_ada=3000))
         self.assertEqual(thin["tokens"], [])
@@ -212,6 +222,17 @@ class Derive(unittest.TestCase):
         cfg["liquidity_moves"]["ahead_of_dump"]["sell_of_pull_pct"] = 90
         raised = _derive(_dev(dev_sold_ada=0), _move(), cfg=cfg)
         self.assertEqual(raised["tokens"], [])
+        # A dev pull that also meets the floors is both codes. A loose role pull is only lp_pulled.
+        both = _derive(_dev(dev_tag="w-0123abcd", dev_sold_ada=0),
+                       _move(actor_tag="w-0123abcd"))
+        self.assertEqual([v["code"] for v in both["tokens"][0]["vetoes"]], ["lp_pulled", "ahead_of_dump"])
+        self.assertEqual(both["counts"], {"dev_sold": 0, "serial_launcher": 0, "lp_pulled": 1, "ahead_of_dump": 1})
+        self.assertNotIn("w-", both["tokens"][0]["vetoes"][1]["reason"])
+        loose = _derive(
+            _dev(dev_sold_ada=0),
+            _move(ahead_of_dump=True, ada=100, reserve_ada_after=100000, dump_ada=100, actor_tag="repeat_launcher"))
+        self.assertEqual([v["code"] for v in loose["tokens"][0]["vetoes"]], ["lp_pulled"])
+        self.assertNotIn("reason", loose["tokens"][0]["vetoes"][0])
 
     def test_two_units_under_one_policy_stay_separate(self):
         policy = "ab" * 6
@@ -233,7 +254,8 @@ class Derive(unittest.TestCase):
             _move(policy_short=u1[:8], ahead_of_dump=True))
         self.assertEqual(len(joined["tokens"]), 1)
         self.assertEqual(joined["tokens"][0]["unit"], u1)
-        self.assertIn("lp_pulled", [v["code"] for v in joined["tokens"][0]["vetoes"]])
+        self.assertIn("ahead_of_dump", [v["code"] for v in joined["tokens"][0]["vetoes"]])
+        self.assertNotIn("lp_pulled", [v["code"] for v in joined["tokens"][0]["vetoes"]])
 
     def test_schema_rejects_an_extra_evidence_field(self):
         doc = _derive(_dev(dev_sold_ada=100), {"moves": []})
@@ -243,6 +265,14 @@ class Derive(unittest.TestCase):
         doc["buy_signal"] = True
         with self.assertRaises(SystemExit):
             V.validate_doc(doc)
+        bare = _derive(_dev(dev_sold_ada=0), _move())
+        bare["tokens"][0]["vetoes"][0].pop("reason")
+        with self.assertRaises(SystemExit):
+            V.validate_doc(bare)
+        leaked = _derive(_dev(dev_sold_ada=0), _move())
+        leaked["tokens"][0]["vetoes"][0]["reason"] = "stake1abc funded the pull"
+        with self.assertRaises(SystemExit):
+            V.validate_doc(leaked)
 
     def test_fixture_matches_the_schema(self):
         doc = json.load(open(os.path.join(HERE, "fixtures", "vetoes.json")))
@@ -433,6 +463,15 @@ class FileGuard(unittest.TestCase):
         doc = json.load(open(os.path.join(HERE, "fixtures", "vetoes.json")))
         r = self._run(doc, [])
         self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_a_reason_with_a_stake_fails_and_the_value_is_not_printed(self):
+        doc = json.load(open(os.path.join(HERE, "fixtures", "vetoes.json")))
+        secret = "stake1" + "u" * 20
+        doc["tokens"][0]["vetoes"][3]["reason"] = "funded by " + secret
+        r = self._run(doc, [])
+        self.assertEqual(r.returncode, 1)
+        self.assertIn(b"veto evidence is not a role label or w- hash", r.stderr)
+        self.assertNotIn(secret.encode(), r.stdout + r.stderr)
 
 
 if __name__ == "__main__":
