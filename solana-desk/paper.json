@@ -7,30 +7,9 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-28T16:00:32Z",
+ "generated_at": "2026-10-28T16:30:24Z",
  "cfg_version": "v1-v6.5",
  "open": [
-  {
-   "id": "R-20261028T1530-8sooX9wP",
-   "ticker": "HYPERCAT",
-   "mint": "8sooQVq6sRjV1jHxdCk53VZ9fxna8WitKKzAFs1xX9wP",
-   "book": "R",
-   "status": "open",
-   "size": 0.5,
-   "opened_at": "2026-10-28T15:30:26Z",
-   "window_ends_at": "2026-10-28T17:30:26Z",
-   "entry": {
-    "px": 0.0005059530522125226
-   },
-   "frac": 0.333333,
-   "last_mark": 0.0013518053649014177,
-   "thesis": "random_match",
-   "result": {
-    "pnl": 0.551120333,
-    "pct": 167.18,
-    "unit": "SOL"
-   }
-  },
   {
    "id": "S-20261028T1600-6EKmpump",
    "ticker": "NVINU",
@@ -44,12 +23,36 @@
     "px": 0.001490807631491715
    },
    "frac": 1.0,
-   "last_mark": 0.001490807631491715,
+   "last_mark": 0.0015413568781869177,
+   "thesis": "safety:too_fresh",
+   "result": {
+    "pnl": 0.0,
+    "pct": 3.39,
+    "unit": "SOL",
+    "net_pnl": 0.0
+   }
+  },
+  {
+   "id": "S-20261028T1630-3fK5pump",
+   "ticker": "LevelGrok",
+   "mint": "3fK54p5SzHiPKB9JqPw893i1FNU5Xahf1QQbt4iPpump",
+   "book": "S",
+   "status": "open",
+   "size": 0.5,
+   "opened_at": "2026-10-28T16:30:24Z",
+   "window_ends_at": "2026-10-28T18:30:24Z",
+   "entry": {
+    "px": 0.0003518618380684813
+   },
+   "frac": 1.0,
+   "last_mark": 0.0003518618380684813,
    "thesis": "safety:too_fresh",
    "result": {
     "pnl": 0.0,
     "pct": 0.0,
-    "unit": "SOL"
+    "unit": "SOL",
+    "net_pnl": 0.0,
+    "gross_pnl": 0.0
    }
   }
  ],
@@ -73,7 +76,9 @@
    "result": {
     "pnl": -0.182759736,
     "pct": -36.37,
-    "unit": "SOL"
+    "unit": "SOL",
+    "net_pnl": -0.182759736,
+    "net_pct": -36.37
    },
    "thesis": "pass"
   },
@@ -96,7 +101,9 @@
    "result": {
     "pnl": -0.497323998,
     "pct": -98.97,
-    "unit": "SOL"
+    "unit": "SOL",
+    "net_pnl": -0.497323998,
+    "net_pct": -98.97
    },
    "thesis": "pass"
   },
@@ -119,7 +126,9 @@
    "result": {
     "pnl": -0.45929713,
     "pct": -91.4,
-    "unit": "SOL"
+    "unit": "SOL",
+    "net_pnl": -0.45929713,
+    "net_pct": -91.4
    },
    "thesis": "pass"
   },
@@ -142,7 +151,9 @@
    "result": {
     "pnl": -0.36914273,
     "pct": -73.46,
-    "unit": "SOL"
+    "unit": "SOL",
+    "net_pnl": -0.36914273,
+    "net_pct": -73.46
    },
    "thesis": "pass"
   },
@@ -165,7 +176,9 @@
    "result": {
     "pnl": -0.367398641,
     "pct": -73.11,
-    "unit": "SOL"
+    "unit": "SOL",
+    "net_pnl": -0.367398641,
+    "net_pct": -73.11
    },
    "thesis": "pass"
   },
@@ -188,7 +201,9 @@
    "result": {
     "pnl": -0.01994819,
     "pct": -3.97,
-    "unit": "SOL"
+    "unit": "SOL",
+    "net_pnl": -0.01994819,
+    "net_pct": -3.97
    },
    "thesis": "pass"
   },
@@ -211,7 +226,9 @@
    "result": {
     "pnl": -0.494652661,
     "pct": -98.44,
-    "unit": "SOL"
+    "unit": "SOL",
+    "net_pnl": -0.494652661,
+    "net_pct": -98.44
    },
    "thesis": "pass"
   },
@@ -234,7 +251,9 @@
    "result": {
     "pnl": -0.204068368,
     "pct": -40.61,
-    "unit": "SOL"
+    "unit": "SOL",
+    "net_pnl": -0.204068368,
+    "net_pct": -40.61
    },
    "thesis": "pass"
   },
@@ -257,7 +276,9 @@
    "result": {
     "pnl": -0.497323998,
     "pct": -98.97,
-    "unit": "SOL"
+    "unit": "SOL",
+    "net_pnl": -0.497323998,
+    "net_pct": -98.97
    },
    "thesis": "random_match"
   },
@@ -280,7 +301,9 @@
    "result": {
     "pnl": -0.459818464,
     "pct": -91.5,
-    "unit": "SOL"
+    "unit": "SOL",
+    "net_pnl": -0.459818464,
+    "net_pct": -91.5
    },
    "thesis": "random_match"
   },
@@ -303,7 +326,9 @@
    "result": {
     "pnl": -0.367398641,
     "pct": -73.11,
-    "unit": "SOL"
+    "unit": "SOL",
+    "net_pnl": -0.367398641,
+    "net_pct": -73.11
    },
    "thesis": "random_match"
   },
@@ -326,7 +351,9 @@
    "result": {
     "pnl": -0.368933806,
     "pct": -73.42,
-    "unit": "SOL"
+    "unit": "SOL",
+    "net_pnl": -0.368933806,
+    "net_pct": -73.42
    },
    "thesis": "random_match"
   },
@@ -349,7 +376,9 @@
    "result": {
     "pnl": 0.036905065,
     "pct": 7.34,
-    "unit": "SOL"
+    "unit": "SOL",
+    "net_pnl": 0.036905065,
+    "net_pct": 7.34
    },
    "thesis": "random_match"
   },
@@ -372,7 +401,36 @@
    "result": {
     "pnl": -0.494652661,
     "pct": -98.44,
-    "unit": "SOL"
+    "unit": "SOL",
+    "net_pnl": -0.494652661,
+    "net_pct": -98.44
+   },
+   "thesis": "random_match"
+  },
+  {
+   "id": "R-20261028T1530-8sooX9wP",
+   "ticker": "HYPERCAT",
+   "mint": "8sooQVq6sRjV1jHxdCk53VZ9fxna8WitKKzAFs1xX9wP",
+   "book": "R",
+   "status": "closed",
+   "size": 0.5,
+   "opened_at": "2026-10-28T15:30:26Z",
+   "closed_at": "2026-10-28T16:30:24Z",
+   "entry": {
+    "px": 0.0005059530522125226
+   },
+   "exit": {
+    "px": 0.00041187559323143427
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": 0.515972453,
+    "pct": 102.68,
+    "unit": "SOL",
+    "net_pnl": 0.515972453,
+    "net_pct": 102.68,
+    "gross_pnl": -0.030990181,
+    "gross_pct": -6.2
    },
    "thesis": "random_match"
   },
@@ -395,7 +453,9 @@
    "result": {
     "pnl": 0.036905065,
     "pct": 7.34,
-    "unit": "SOL"
+    "unit": "SOL",
+    "net_pnl": 0.036905065,
+    "net_pct": 7.34
    },
    "thesis": "safety:too_old"
   }
@@ -411,23 +471,37 @@
    "would_halt": []
   },
   "R": {
-   "cash": 8.232394496,
-   "equity": 8.675457996,
-   "realized_pnl": -1.600102171,
-   "open": 1,
-   "closed": 6,
+   "cash": 8.364749948,
+   "equity": 8.364749948,
+   "realized_pnl": -1.635250052,
+   "open": 0,
+   "closed": 7,
    "fills_today": 7,
-   "would_halt": []
+   "would_halt": [],
+   "realized_gross_pnl": -0.030990181
   },
   "S": {
-   "cash": 9.534395065,
-   "equity": 10.031885065,
+   "cash": 9.01994844,
+   "equity": 10.017399189,
    "realized_pnl": 0.036905065,
-   "open": 1,
+   "open": 2,
    "closed": 1,
-   "fills_today": 2,
+   "fills_today": 3,
    "would_halt": []
   }
+ },
+ "costs": {
+  "model": "slippage_mev_bps",
+  "note": "Assumption, not a measured constant. No source states the bps for a 0.5 SOL memecoin paper ticket. Jito IMC 2025 (Gerzon et al.) counted 521,903 sandwich bundles, at least $7.71M of victim losses, median about $5 on a sandwiched swap, and sandwiches were 0.038% of bundles (a lower bound: 28% had no SOL leg). Helius, Solana MEV Report (Jan 2025): memecoin flow sets a wide slippage tolerance and is filled at the worst price in that window; one bot averaged 0.0425 SOL profit per sandwich over 1.55M attacks. Those figures are not this haircut. The old flat 50 bps/side guess sat well inside the 300 bps slippage window the quote already requests. The default is half that window (150 bps/side) on a pool at or above 25 SOL with no extra impact term, rising to the full 300 bps window as quoted impact reaches the 3% execution check or the pool thins toward the 10 SOL floor. Charged on entry and on exit. Skip, exit, kill, void, and the v6.5 freeze are unchanged.",
+  "base_bps": 150,
+  "min_bps": 150,
+  "max_bps": 300,
+  "liq_ref_sol": 25.0,
+  "liq_scale_cap": 1.5,
+  "impact_weight": 0.5,
+  "network_fee_sol": 1e-05,
+  "haircut_per_side": 0.015,
+  "applied": "entry_and_exit"
  },
  "rules": [
   {
@@ -441,6 +515,10 @@
   {
    "id": "void",
    "rule": "No new entries when data failures > 10% today or after a loop outage > 2h"
+  },
+  {
+   "id": "costs",
+   "rule": "Assumption, not a measured constant. No source states the bps for a 0.5 SOL memecoin paper ticket. Jito IMC 2025 (Gerzon et al.) counted 521,903 sandwich bundles, at least $7.71M of victim losses, median about $5 on a sandwiched swap, and sandwiches were 0.038% of bundles (a lower bound: 28% had no SOL leg). Helius, Solana MEV Report (Jan 2025): memecoin flow sets a wide slippage tolerance and is filled at the worst price in that window; one bot averaged 0.0425 SOL profit per sandwich over 1.55M attacks. Those figures are not this haircut. The old flat 50 bps/side guess sat well inside the 300 bps slippage window the quote already requests. The default is half that window (150 bps/side) on a pool at or above 25 SOL with no extra impact term, rising to the full 300 bps window as quoted impact reaches the 3% execution check or the pool thins toward the 10 SOL floor. Charged on entry and on exit. Skip, exit, kill, void, and the v6.5 freeze are unchanged."
   }
  ],
  "summaries": []

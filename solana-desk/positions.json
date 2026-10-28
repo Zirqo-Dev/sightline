@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793203232,
+ "last_run_ts": 1793205024,
  "voids": [],
  "books": {
   "F": {
@@ -119,30 +119,11 @@
    "peak_equity": 10.0
   },
   "R": {
-   "cash": 8.232394495555003,
-   "open": {
-    "R-20261028T1530-8sooX9wP": {
-     "entry": 0.0005059530522125226,
-     "peak": 0.0013518053649014177,
-     "steps": 2,
-     "liq0": 21.5411,
-     "opened": 1793201426,
-     "frac": 0.3333333333333334,
-     "last_mark": 0.0013518053649014177,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "8sooQVq6sRjV1jHxdCk53VZ9fxna8WitKKzAFs1xX9wP",
-     "symbol": "HYPERCAT",
-     "tokens": 988233983002,
-     "run_id": "20261028T1530",
-     "why": "random_match",
-     "book": "R",
-     "pnl": 0.5511203333333332
-    }
-   },
+   "cash": 8.364749948374161,
+   "open": {},
    "fills_day": "2026-10-28",
    "fills_today": 7,
-   "realized_pnl": -1.6001021711116659,
+   "realized_pnl": -1.635250051625841,
    "closed": [
     {
      "id": "R-20261028T1400-Cd5npump",
@@ -221,22 +202,38 @@
      "pnl": -0.494652661,
      "pct": -98.44,
      "why_entered": "random_match"
+    },
+    {
+     "id": "R-20261028T1530-8sooX9wP",
+     "mint": "8sooQVq6sRjV1jHxdCk53VZ9fxna8WitKKzAFs1xX9wP",
+     "symbol": "HYPERCAT",
+     "opened": 1793201426,
+     "closed": 1793205024,
+     "entry": 0.0005059530522125226,
+     "exit_px": 0.00041187559323143427,
+     "why": "liquidity_pulled",
+     "pnl": 0.515972453,
+     "gross_pnl": -0.030990181,
+     "pct": 102.68,
+     "gross_pct": -6.2,
+     "why_entered": "random_match"
     }
    ],
    "would_halt": [],
-   "peak_equity": 10.0
+   "peak_equity": 10.0,
+   "realized_gross": -0.030990180666529393
   },
   "S": {
-   "cash": 9.534395065280002,
+   "cash": 9.019948440246136,
    "open": {
     "S-20261028T1600-6EKmpump": {
      "entry": 0.001490807631491715,
-     "peak": 0.001490807631491715,
+     "peak": 0.0015413568781869177,
      "steps": 0,
      "liq0": 163.5723,
      "opened": 1793203232,
      "frac": 1.0,
-     "last_mark": 0.001490807631491715,
+     "last_mark": 0.0015413568781869177,
      "stale": 0,
      "no_route_count": 0,
      "mint": "6EKmRQYzAXh5t6t1XNe2chYqmdSHgd32uA7xki9upump",
@@ -245,11 +242,33 @@
      "run_id": "20261028T1600",
      "why": "safety:too_fresh",
      "book": "S",
-     "pnl": 0.0
+     "pnl": 0.0,
+     "exit_haircut": 0.02317982731809584
+    },
+    "S-20261028T1630-3fK5pump": {
+     "entry": 0.0003518618380684813,
+     "peak": 0.0003518618380684813,
+     "steps": 0,
+     "liq0": 57.4194,
+     "opened": 1793205024,
+     "frac": 1.0,
+     "last_mark": 0.0003518618380684813,
+     "stale": 0,
+     "no_route_count": 0,
+     "mint": "3fK54p5SzHiPKB9JqPw893i1FNU5Xahf1QQbt4iPpump",
+     "symbol": "LevelGrok",
+     "tokens": 1421012300580,
+     "run_id": "20261028T1630",
+     "why": "safety:too_fresh",
+     "book": "S",
+     "pnl": 0.0,
+     "gross_pnl": 0.0,
+     "entry_haircut": 0.028873250067730685,
+     "entry_cost": 0.5144466250338653
     }
    },
    "fills_day": "2026-10-28",
-   "fills_today": 2,
+   "fills_today": 3,
    "realized_pnl": 0.03690506528000015,
    "closed": [
     {
