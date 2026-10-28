@@ -1,11 +1,11 @@
 {
- "at": "2026-10-28T16:12:09Z",
+ "at": "2026-10-28T18:12:20Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14127562,
+ "height": 14128009,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 123.46331,
+ "ada_balance": 3094.959566,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 305964043913,
@@ -84,7 +84,7 @@
   "SAD": 696969000000,
   "SER": 131448456026761,
   "SHARKY": 22522019087399,
-  "SNEK": 47000000,
+  "SNEK": 46000000,
   "SOLABLUE": 1438534570029,
   "SOLADA": 38676910,
   "STABLE": 40331687668046,
@@ -196,7 +196,7 @@
   "SAD": 696969000000,
   "SER": 131448456026761,
   "SHARKY": 22522019087399,
-  "SNEK": 47000000,
+  "SNEK": 46000000,
   "SOLABLUE": 1438534570029,
   "SOLADA": 38676910,
   "STABLE": 40331687668046,
@@ -619,7 +619,7 @@
   {
    "token": "SNEK",
    "policy": "279c909f",
-   "qty": 47000000
+   "qty": 46000000
   },
   {
    "token": "SOLABLUE",
@@ -2937,6 +2937,40 @@
    "closed_at": "2026-10-28T13:59:50Z",
    "filled_token": "ASCEND",
    "filled_qty": 73674482
+  },
+  "7f3f1e1347#0": {
+   "ref_short": "7f3f1e1347#0",
+   "token": "SNEK",
+   "qty_raw": 513819,
+   "ada": 4.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "7f3f1e1347",
+   "opened_at": "2026-10-28T18:05:07Z",
+   "own_stake": true,
+   "closed_at": "2026-10-28T18:12:20Z"
+  },
+  "7f3f1e1347#1": {
+   "ref_short": "7f3f1e1347#1",
+   "token": "SNEK",
+   "qty_raw": 282505,
+   "ada": 4.0,
+   "status": "filled",
+   "opened_tx": "7f3f1e1347",
+   "opened_at": "2026-10-28T18:05:07Z",
+   "own_stake": true,
+   "closed_tx": "8aec338d71",
+   "closed_at": "2026-10-28T18:05:26Z",
+   "filled_ada": 850.818034
+  },
+  "7f3f1e1347#2": {
+   "ref_short": "7f3f1e1347#2",
+   "token": "SNEK",
+   "qty_raw": 203676,
+   "ada": 4.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "7f3f1e1347",
+   "opened_at": "2026-10-28T18:05:07Z",
+   "closed_at": "2026-10-28T18:12:20Z"
   }
  },
  "rows": [
@@ -8312,6 +8346,79 @@
    "qty": 162529,
    "ada_leg": null,
    "counterparty_tag": "w-8733bb5a"
+  },
+  {
+   "time": "2026-10-28T18:05:07Z",
+   "tx_short": "6b79d37908",
+   "kind": "order_fill",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 614.849033,
+   "counterparty_tag": null,
+   "order_status": "filled_untracked"
+  },
+  {
+   "time": "2026-10-28T18:05:07Z",
+   "tx_short": "6e1c26ea96",
+   "kind": "swap",
+   "token": "SNEK",
+   "qty": 513819,
+   "ada_leg": 1540.135278,
+   "counterparty_tag": null,
+   "direction": "sell"
+  },
+  {
+   "time": "2026-10-28T18:05:07Z",
+   "tx_short": "7f3f1e1347",
+   "kind": "order_open",
+   "token": "SNEK",
+   "qty": 513819,
+   "ada_leg": 4.0,
+   "counterparty_tag": null,
+   "order_ref_short": "7f3f1e1347#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-10-28T18:05:07Z",
+   "tx_short": "7f3f1e1347",
+   "kind": "order_open",
+   "token": "SNEK",
+   "qty": 282505,
+   "ada_leg": 4.0,
+   "counterparty_tag": null,
+   "order_ref_short": "7f3f1e1347#1",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-10-28T18:05:07Z",
+   "tx_short": "7f3f1e1347",
+   "kind": "order_open",
+   "token": "SNEK",
+   "qty": 203676,
+   "ada_leg": 4.0,
+   "counterparty_tag": null,
+   "order_ref_short": "7f3f1e1347#2",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-10-28T18:05:26Z",
+   "tx_short": "8aec338d71",
+   "kind": "order_fill",
+   "token": "SNEK",
+   "qty": 282505,
+   "ada_leg": 850.818034,
+   "counterparty_tag": null,
+   "order_ref_short": "7f3f1e1347#1",
+   "order_status": "filled"
+  },
+  {
+   "time": "2026-10-28T18:12:17Z",
+   "tx_short": "03f8929397",
+   "kind": "transfer_out",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 26.78237,
+   "counterparty_tag": "w-8733bb5a"
   }
  ],
  "capped": false,
@@ -8322,7 +8429,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 9,
+ "koios_calls": 7,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
