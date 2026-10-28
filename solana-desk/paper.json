@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-28T14:30:25Z",
+ "generated_at": "2026-10-28T15:00:30Z",
  "cfg_version": "v1-v6.5",
  "open": [
   {
@@ -23,53 +23,11 @@
     "px": 3.2182986658858745e-05
    },
    "frac": 1.0,
-   "last_mark": 2.842011890332664e-05,
+   "last_mark": 2.970972297553793e-05,
    "thesis": "pass",
    "result": {
     "pnl": 0.0,
-    "pct": -11.69,
-    "unit": "SOL"
-   }
-  },
-  {
-   "id": "F-20261028T1430-4cgxXFwE",
-   "ticker": "ORBIT",
-   "mint": "4cgxw6qo2JC9BJ1D2rQfA35mCGMkReYc39nravbjXFwE",
-   "book": "F",
-   "status": "open",
-   "size": 0.5,
-   "opened_at": "2026-10-28T14:30:25Z",
-   "window_ends_at": "2026-10-28T16:30:25Z",
-   "entry": {
-    "px": 0.0013123518380136082
-   },
-   "frac": 1.0,
-   "last_mark": 0.0013123518380136082,
-   "thesis": "pass",
-   "result": {
-    "pnl": 0.0,
-    "pct": 0.0,
-    "unit": "SOL"
-   }
-  },
-  {
-   "id": "F-20261028T1430-6UvT1j8p",
-   "ticker": "LARP",
-   "mint": "6UvTTwtyLpJs1wPSBZem2skUMZg5NptWP8Er5m3k1j8p",
-   "book": "F",
-   "status": "open",
-   "size": 0.5,
-   "opened_at": "2026-10-28T14:30:25Z",
-   "window_ends_at": "2026-10-28T16:30:25Z",
-   "entry": {
-    "px": 0.0004928522399247303
-   },
-   "frac": 1.0,
-   "last_mark": 0.0004928522399247303,
-   "thesis": "pass",
-   "result": {
-    "pnl": 0.0,
-    "pct": 0.0,
+    "pct": -7.69,
     "unit": "SOL"
    }
   },
@@ -86,53 +44,11 @@
     "px": 0.001220549221100485
    },
    "frac": 1.0,
-   "last_mark": 0.0011903487567360605,
+   "last_mark": 0.0012644212696660204,
    "thesis": "random_match",
    "result": {
     "pnl": 0.0,
-    "pct": -2.47,
-    "unit": "SOL"
-   }
-  },
-  {
-   "id": "R-20261028T1430-6UvT1j8p",
-   "ticker": "LARP",
-   "mint": "6UvTTwtyLpJs1wPSBZem2skUMZg5NptWP8Er5m3k1j8p",
-   "book": "R",
-   "status": "open",
-   "size": 0.5,
-   "opened_at": "2026-10-28T14:30:25Z",
-   "window_ends_at": "2026-10-28T16:30:25Z",
-   "entry": {
-    "px": 0.0004928522399247303
-   },
-   "frac": 1.0,
-   "last_mark": 0.0004928522399247303,
-   "thesis": "random_match",
-   "result": {
-    "pnl": 0.0,
-    "pct": 0.0,
-    "unit": "SOL"
-   }
-  },
-  {
-   "id": "R-20261028T1430-4cgxXFwE",
-   "ticker": "ORBIT",
-   "mint": "4cgxw6qo2JC9BJ1D2rQfA35mCGMkReYc39nravbjXFwE",
-   "book": "R",
-   "status": "open",
-   "size": 0.5,
-   "opened_at": "2026-10-28T14:30:25Z",
-   "window_ends_at": "2026-10-28T16:30:25Z",
-   "entry": {
-    "px": 0.0013123518380136082
-   },
-   "frac": 1.0,
-   "last_mark": 0.0013123518380136082,
-   "thesis": "random_match",
-   "result": {
-    "pnl": 0.0,
-    "pct": 0.0,
+    "pct": 3.59,
     "unit": "SOL"
    }
   },
@@ -149,11 +65,11 @@
     "px": 0.001220549221100485
    },
    "frac": 1.0,
-   "last_mark": 0.0011903487567360605,
+   "last_mark": 0.0012644212696660204,
    "thesis": "safety:too_old",
    "result": {
     "pnl": 0.0,
-    "pct": -2.47,
+    "pct": 3.59,
     "unit": "SOL"
    }
   }
@@ -229,6 +145,52 @@
    "thesis": "pass"
   },
   {
+   "id": "F-20261028T1430-4cgxXFwE",
+   "ticker": "ORBIT",
+   "mint": "4cgxw6qo2JC9BJ1D2rQfA35mCGMkReYc39nravbjXFwE",
+   "book": "F",
+   "status": "closed",
+   "size": 0.5,
+   "opened_at": "2026-10-28T14:30:25Z",
+   "closed_at": "2026-10-28T15:00:30Z",
+   "entry": {
+    "px": 0.0013123518380136082
+   },
+   "exit": {
+    "px": 0.0003518349870098877
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": -0.36914273,
+    "pct": -73.46,
+    "unit": "SOL"
+   },
+   "thesis": "pass"
+  },
+  {
+   "id": "F-20261028T1430-6UvT1j8p",
+   "ticker": "LARP",
+   "mint": "6UvTTwtyLpJs1wPSBZem2skUMZg5NptWP8Er5m3k1j8p",
+   "book": "F",
+   "status": "closed",
+   "size": 0.5,
+   "opened_at": "2026-10-28T14:30:25Z",
+   "closed_at": "2026-10-28T15:00:30Z",
+   "entry": {
+    "px": 0.0004928522399247303
+   },
+   "exit": {
+    "px": 0.00013385902420287398
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": -0.367398641,
+    "pct": -73.11,
+    "unit": "SOL"
+   },
+   "thesis": "pass"
+  },
+  {
    "id": "R-20261028T1400-Cd5npump",
    "ticker": "Nipple",
    "mint": "Cd5n31W4nCxEXQwQCfHUNDZ3WMwurVTW3Zrsp5Xqpump",
@@ -273,30 +235,76 @@
     "unit": "SOL"
    },
    "thesis": "random_match"
+  },
+  {
+   "id": "R-20261028T1430-6UvT1j8p",
+   "ticker": "LARP",
+   "mint": "6UvTTwtyLpJs1wPSBZem2skUMZg5NptWP8Er5m3k1j8p",
+   "book": "R",
+   "status": "closed",
+   "size": 0.5,
+   "opened_at": "2026-10-28T14:30:25Z",
+   "closed_at": "2026-10-28T15:00:30Z",
+   "entry": {
+    "px": 0.0004928522399247303
+   },
+   "exit": {
+    "px": 0.00013385902420287398
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": -0.367398641,
+    "pct": -73.11,
+    "unit": "SOL"
+   },
+   "thesis": "random_match"
+  },
+  {
+   "id": "R-20261028T1430-4cgxXFwE",
+   "ticker": "ORBIT",
+   "mint": "4cgxw6qo2JC9BJ1D2rQfA35mCGMkReYc39nravbjXFwE",
+   "book": "R",
+   "status": "closed",
+   "size": 0.5,
+   "opened_at": "2026-10-28T14:30:25Z",
+   "closed_at": "2026-10-28T15:00:30Z",
+   "entry": {
+    "px": 0.0013123518380136082
+   },
+   "exit": {
+    "px": 0.00035238610391485415
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": -0.368933806,
+    "pct": -73.42,
+    "unit": "SOL"
+   },
+   "thesis": "random_match"
   }
  ],
  "books": {
   "F": {
-   "cash": 7.353089136,
-   "equity": 8.787390926,
-   "realized_pnl": -1.139380864,
-   "open": 3,
-   "closed": 3,
+   "cash": 7.621567765,
+   "equity": 8.080824872,
+   "realized_pnl": -1.875922235,
+   "open": 1,
+   "closed": 5,
    "fills_today": 6,
    "would_halt": []
   },
   "R": {
-   "cash": 7.535327539,
-   "equity": 9.015487727,
-   "realized_pnl": -0.957142461,
-   "open": 3,
-   "closed": 2,
+   "cash": 7.804015092,
+   "equity": 8.319387487,
+   "realized_pnl": -1.693474908,
+   "open": 1,
+   "closed": 4,
    "fills_today": 5,
    "would_halt": []
   },
   "S": {
    "cash": 9.49749,
-   "equity": 9.982670188,
+   "equity": 10.012862396,
    "realized_pnl": 0.0,
    "open": 1,
    "closed": 0,
