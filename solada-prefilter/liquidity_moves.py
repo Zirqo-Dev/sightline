@@ -1,7 +1,8 @@
 """SPD-55 liquidity moves, phase 1 (zero AI, free Koios public tier, no key).
 
 Writes desk-data:solada-prefilter/liquidity_moves.json for Snek's cardano_top10 (desk log, current
-row, else the newest history row). Tracks Minswap, SundaeSwap and Splash pool reserves: liquidity
+row, else the newest history row). A row's full unit comes from the row, pulse/config, the private
+cache, or known_units.json. Tracks Minswap, SundaeSwap and Splash pool reserves: liquidity
 adds, liquidity pulls, and big swaps. ahead_of_dump uses the Balanced floors in AHEAD_OF_DUMP.
 
 Swaps are the pool's own reserve change. The batcher signs the transaction. actor_tag is a w- hash
@@ -565,9 +566,39 @@ def public_move(ev, token, ticker, policy_short, decimals, lp):
     return row
 
 
+def known_units():
+    """ticker -> full unit from known_units.json. Empty when that file is missing or bad.
+
+    The file is a static map: Cardano token-registry subjects, Koios asset_info for the
+    one name the registry does not list (VAMP), and the desk pulse asset ids for the
+    Solada launches. It is not fetched at run time.
+    """
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "known_units.json")
+    doc = KT.read_json(path, {})
+    block = doc.get("units") if isinstance(doc, dict) else None
+    out = {}
+    if not isinstance(block, dict):
+        return out
+    for tk, row in block.items():
+        if not isinstance(tk, str) or tk.startswith("_"):
+            continue
+        unit = row.get("unit") if isinstance(row, dict) else row
+        h = _hex(unit) if isinstance(unit, str) else ""
+        if len(h) >= 56:
+            out[tk.upper()] = h
+    return out
+
+
 def resolve_tokens(top10, units_by_ticker, cached, max_tokens):
-    """[{ticker, unit, rank, policy_short}] from Snek's top 10. A policy_short that does not
-    prefix the resolved unit is skipped. Full units are not invented."""
+    """[{ticker, unit, rank, policy_short, unit_source}] from Snek's top 10.
+
+    A candidate is the row's unit or asset_id, then units_by_ticker (pulse, config, tracked),
+    then the private cache, then known_units(). The first full unit that starts with
+    policy_short wins. A candidate that fails the prefix is not used, so a different token
+    of the same ticker cannot block the verified unit. When every candidate fails the
+    prefix the row is policy_mismatch. When none is long enough it is unresolved.
+    Full units are not invented past that map.
+    """
     if not isinstance(top10, list):
         return [], []
     ordered = sorted(
@@ -578,28 +609,36 @@ def resolve_tokens(top10, units_by_ticker, cached, max_tokens):
         if isinstance(unit, str) and len(_hex(unit)) >= 56:
             rev[str(tk).upper()] = _hex(unit)
     cached = cached if isinstance(cached, dict) else {}
+    static = known_units()
     rows, skipped, seen = [], [], set()
     for r in ordered:
         if len(rows) >= int(max_tokens):
             break
         tk = str(r.get("ticker") or "").upper()
         short = _hex(r.get("policy_short") if isinstance(r.get("policy_short"), str) else "")
-        unit = None
-        for src in (r.get("unit"), r.get("asset_id"), rev.get(tk), cached.get(tk)):
+        unit, via, saw = None, None, False
+        for kind, src in (
+            ("row", r.get("unit")), ("row", r.get("asset_id")),
+            ("listed", rev.get(tk)), ("cache", cached.get(tk)), ("static", static.get(tk)),
+        ):
             h = _hex(src) if isinstance(src, str) else ""
-            if len(h) >= 56:
-                unit = h
-                break
+            if len(h) < 56:
+                continue
+            saw = True
+            if short and not h.startswith(short):
+                continue
+            unit, via = h, kind
+            break
         if not unit:
-            skipped.append({"ticker": tk, "skipped": "unresolved"})
-            continue
-        if short and not unit.startswith(short):
-            skipped.append({"ticker": tk, "skipped": "policy_mismatch"})
+            skipped.append({"ticker": tk, "skipped": "policy_mismatch" if saw else "unresolved"})
             continue
         if unit in seen:
             continue
         seen.add(unit)
-        rows.append({"ticker": tk, "unit": unit, "rank": r.get("rank"), "policy_short": WL.policy_short(unit, 8)})
+        rows.append({
+            "ticker": tk, "unit": unit, "rank": r.get("rank"),
+            "policy_short": WL.policy_short(unit, 8), "unit_source": via,
+        })
     return rows, skipped
 
 
@@ -628,10 +667,12 @@ class Reader:
         return self.h.req("blockfrost", BF + path, headers={"project_id": self.bf_key}, quiet404=False)
 
     def tip(self):
-        if self.late() or self.koios_left() <= 0:
+        if self.h is None or self.late() or self.koios_left() <= 0:
             return None
         r = self.h.req("koios", KOIOS + "/tip", quiet404=False)
-        if r:
+        # A bare list, or a list whose first row is not an object, is not a tip.
+        # r[0].get on that shape used to raise AttributeError and skip the whole job.
+        if isinstance(r, list) and r and isinstance(r[0], dict):
             return r[0].get("block_height"), r[0].get("block_time")
         b = self._bf("/blocks/latest")
         if not isinstance(b, dict):
@@ -841,6 +882,11 @@ def run(http, cfg, top10, units_by_ticker, meta, lp_pols, data_dir, cache_dir, d
     path = os.path.join(data_dir, "liquidity_moves.json")
     if not bc.get("enabled", True):
         return {"enabled": False}
+    # Reader.__init__ reads http.calls. A missing client (the offline crash probe) used to
+    # raise AttributeError here, which this swallow logged as "liquidity_moves: skipped (AttributeError)".
+    if http is None:
+        print("liquidity_moves: skipped (no http)")
+        return {"error": "no_http", "wrote": False}
     try:
         return _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, dry_run, now_s,
                     bf_key, deadline, owner_env, watch)
@@ -960,7 +1006,8 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
         "actor_tags": bool(loaded),
         "moves": merged[-int(bc["keep_rows"]):],
         "pools": merge_pools(prev_doc.get("pools"), [_pool_public(p) for p in pools]),
-        "tokens": [{"ticker": r["ticker"], "policy_short": r["policy_short"], "rank": r.get("rank")} for r in listed],
+        "tokens": [{"ticker": r["ticker"], "policy_short": r["policy_short"], "rank": r.get("rank"),
+                    "unit_source": r.get("unit_source")} for r in listed],
         "skipped": skipped, "coverage": coverage, "capped": capped,
         "koios_calls": koios_calls, "blockfrost_calls": bf_calls,
         "blockfrost_fallbacks": reader.fallbacks, "blockfrost_available": bool(reader.bf_key),

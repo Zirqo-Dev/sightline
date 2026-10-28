@@ -1,5 +1,5 @@
 """SPD-55 liquidity moves (offline, no secrets, no network). Frozen fixture, synthetic addresses."""
-import hashlib, json, os, shutil, subprocess, sys, tempfile, unittest
+import hashlib, io, json, os, shutil, subprocess, sys, tempfile, unittest
 from unittest import mock
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -409,7 +409,17 @@ class Run(unittest.TestCase):
             doc = json.load(open(os.path.join(d, "liquidity_moves.json")))
         self.assertTrue(doc["moves"])
         self.assertTrue(all(r["ticker"] == "LP" and r["lp"] for r in doc["moves"]))
-        self.assertEqual(LM.run(None, {}, [], {}, {}, {}, "/tmp", None, False, NOW)["wrote"], False)
+        # A missing client used to raise AttributeError in Reader.__init__ (http.calls).
+        buf = io.StringIO()
+        with mock.patch("sys.stdout", buf):
+            missing = LM.run(None, {}, [], {}, {}, {}, "/tmp", None, False, NOW)
+        self.assertEqual(missing, {"error": "no_http", "wrote": False})
+        self.assertNotIn("AttributeError", buf.getvalue())
+        http = P.Http({"koios": 0})
+        with mock.patch("sys.stdout", buf), mock.patch.object(LM, "_run", side_effect=AttributeError("calls")):
+            crashed = LM.run(http, {}, [], {}, {}, {}, "/tmp", None, False, NOW)
+        self.assertEqual(crashed["error"], "AttributeError")
+        self.assertFalse(crashed["wrote"])
 
     def test_a_liquidity_crash_does_not_stop_the_prefilter(self):
         with tempfile.TemporaryDirectory() as d:
@@ -811,6 +821,144 @@ class FileGuard(unittest.TestCase):
                 "pools": [{"pool_key": "minswap_v2~41edcb63", "reserve_ada": 1}]}
         r = self._run(good, [])
         self.assertEqual(r.returncode, 0, r.stderr)
+
+
+# Desk cardano_top10 from 2026-10-28 (ticker + policy prefix only). The six that were
+# unresolved are ASCEND, NIGHT, STRIKE, SNEK, MIN and IAG.
+DESK_TOP10 = [
+    {"rank": 1, "ticker": "ASCEND", "policy_short": "eb7a93ebc3"},
+    {"rank": 2, "ticker": "NIGHT", "policy_short": "0691b2fecc"},
+    {"rank": 3, "ticker": "STRIKE", "policy_short": "f13ac4d66b"},
+    {"rank": 4, "ticker": "SNEK", "policy_short": "279c909f34"},
+    {"rank": 5, "ticker": "MIN", "policy_short": "29d222ce76"},
+    {"rank": 6, "ticker": "SOLADA", "policy_short": "e7c77b2784"},
+    {"rank": 7, "ticker": "IAG", "policy_short": "5d16cc1a17"},
+    {"rank": 8, "ticker": "COCK", "policy_short": "49e423161e"},
+    {"rank": 9, "ticker": "CLOVE", "policy_short": "c1b89ed48d"},
+    {"rank": 10, "ticker": "BOLT", "policy_short": "14628c260a"},
+]
+# Published Minswap V2 SNEK/ADA pool (LP policy + derived asset name).
+SNEK_POOL = ("f5808c2c990d86da54bfc97d89cee6efa20cd8461616359478d96b4c"
+             "2ffadbb87144e875749122e0bbb9f535eeaa7f5660c6c4a91bcc4121e477f08d")
+
+
+def _asset_name(unit):
+    name = unit[56:]
+    if name[:8] in ("0014df10", "000de140", "000643b0"):
+        name = name[8:]
+    return bytes.fromhex(name).decode("ascii")
+
+
+class Top10Names(unittest.TestCase):
+    """Every current top-10 name maps to a verified unit and its Minswap V2 pool marker. No network."""
+
+    def test_static_map_matches_the_frozen_names(self):
+        doc = json.load(open(os.path.join(os.path.dirname(HERE), "known_units.json")))
+        units = LM.known_units()
+        self.assertEqual(set(units), set(doc["units"]))
+        for tk, row in doc["units"].items():
+            unit = units[tk]
+            self.assertEqual(unit, row["unit"])
+            self.assertEqual(len(unit[:56]), 56)
+            self.assertEqual(_asset_name(unit), row["name"])
+            self.assertTrue(row["name"] == tk or row["name"].startswith(tk))
+            self.assertIn(row["source"], ("cardano-token-registry", "koios-asset-info", "desk-pulse"))
+        self.assertEqual(units["MIN"], FX["known_min_unit"])
+        self.assertEqual(units["SNEK"][:10], "279c909f34")
+        self.assertEqual(LM.MINSWAP_V2_LP + LM.minswap_v2_lp_name(units["SNEK"]), SNEK_POOL)
+        self.assertTrue(units["SHARKY"].startswith("a9c3b13c"))
+        self.assertTrue(units["VAMP"].startswith("3f5a1f7a3b"))
+        cfg = json.load(open(os.path.join(os.path.dirname(HERE), "config.json")))
+        self.assertEqual(units["COCK"], cfg["units"]["COCK"])
+        self.assertEqual(units["SOLADA"], cfg["units"]["SOLADA"])
+
+    def test_desk_top10_resolves_without_pulse(self):
+        rows, skipped = LM.resolve_tokens(DESK_TOP10, {}, {}, 10)
+        self.assertEqual(skipped, [])
+        self.assertEqual([r["ticker"] for r in rows], [r["ticker"] for r in DESK_TOP10])
+        by = {r["ticker"]: r for r in rows}
+        for src in DESK_TOP10:
+            row = by[src["ticker"]]
+            self.assertTrue(row["unit"].startswith(src["policy_short"]))
+            self.assertEqual(row["unit_source"], "static")
+            self.assertEqual(len(row["unit"][:56]), 56)
+            self.assertGreaterEqual(len(row["unit"]), 58)
+        # A same-ticker unit from pulse that fails the prefix does not block the verified one.
+        wrong = "ab" * 28 + "534e454b"
+        rows, skipped = LM.resolve_tokens(
+            [{"rank": 4, "ticker": "SNEK", "policy_short": "279c909f34"}], {"SNEK": wrong}, {}, 10)
+        self.assertEqual(skipped, [])
+        self.assertEqual(rows[0]["unit_source"], "static")
+        self.assertNotEqual(rows[0]["unit"], wrong)
+        # An explicit unit on the row wins. The cache wins over the static map.
+        right = LM.known_units()["SNEK"]
+        rows, _ = LM.resolve_tokens(
+            [{"ticker": "SNEK", "policy_short": "279c909f34", "unit": right}], {"SNEK": wrong}, {}, 10)
+        self.assertEqual(rows[0]["unit_source"], "row")
+        rows, _ = LM.resolve_tokens(
+            [{"ticker": "SNEK", "policy_short": "279c909f34"}], {}, {"SNEK": right}, 10)
+        self.assertEqual(rows[0]["unit_source"], "cache")
+        # A prefix the verified unit does not match is still a mismatch, not a guess.
+        rows, skipped = LM.resolve_tokens([{"ticker": "SNEK", "policy_short": "ffff"}], {}, {}, 10)
+        self.assertEqual(rows, [])
+        self.assertEqual(skipped[0]["skipped"], "policy_mismatch")
+        with mock.patch.object(LM.KT, "read_json", return_value={}):
+            rows, skipped = LM.resolve_tokens([{"ticker": "SNEK", "policy_short": "279c909f34"}], {}, {}, 10)
+        self.assertEqual(rows, [])
+        self.assertEqual(skipped[0]["skipped"], "unresolved")
+
+    def test_resolved_names_request_their_minswap_pool(self):
+        calls = []
+
+        def req(self_, src, url, method="GET", body=None, headers=None, quiet404=True):
+            self_.calls[src] = self_.calls.get(src, 0) + 1
+            calls.append(url)
+            if url.endswith("/tip"):
+                return [{"block_height": 1000, "block_time": NOW}]
+            if "/asset_txs" in url:
+                return []
+            return None
+
+        http = P.Http({"koios": 0})
+        cfg = {"liquidity_moves": {"discover_every_h": 10 ** 9, "max_calls": 36}}
+        with mock.patch.object(P.Http, "req", req), tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            summary = LM.run(http, cfg, DESK_TOP10, {}, {}, V.lp_policies(), d, c, False, NOW, owner_env=OWNER)
+            doc = json.load(open(os.path.join(d, "liquidity_moves.json")))
+            cache = json.load(open(os.path.join(c, "liquidity-moves-cache.json")))
+        self.assertEqual(summary["tokens"], 10)
+        self.assertEqual(summary["koios_calls"], 11)
+        self.assertEqual(doc["skipped"], [])
+        self.assertTrue(all(t["unit_source"] == "static" for t in doc["tokens"]))
+        asked = [u for u in calls if "/asset_txs" in u]
+        units = LM.known_units()
+        for src in DESK_TOP10:
+            marker = LM.MINSWAP_V2_LP + LM.minswap_v2_lp_name(units[src["ticker"]])
+            self.assertTrue(any(f"_asset_policy={marker[:56]}" in u and f"_asset_name={marker[56:]}" in u
+                                for u in asked), src["ticker"])
+        self.assertTrue(any(f"_asset_policy={SNEK_POOL[:56]}" in u and f"_asset_name={SNEK_POOL[56:]}" in u
+                            for u in asked))
+        self.assertNotIn(units["SNEK"], json.dumps(doc))
+        self.assertEqual(cache["units"]["SNEK"], units["SNEK"])
+        self.assertNotIn("stake1", json.dumps(doc))
+        self.assertNotIn("addr1", json.dumps(doc))
+
+    def test_a_bad_tip_does_not_raise_attribute_error(self):
+        def req(self_, src, url, method="GET", body=None, headers=None, quiet404=True):
+            self_.calls[src] = self_.calls.get(src, 0) + 1
+            if url.endswith("/tip"):
+                return ["nope"]
+            return []
+
+        http = P.Http({"koios": 0})
+        buf = io.StringIO()
+        with mock.patch("sys.stdout", buf), mock.patch.object(P.Http, "req", req), \
+                tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
+            summary = LM.run(http, {}, DESK_TOP10, {}, {}, V.lp_policies(), d, c, False, NOW, owner_env=OWNER)
+            doc = json.load(open(os.path.join(d, "liquidity_moves.json")))
+        self.assertNotIn("error", summary)
+        self.assertNotIn("AttributeError", buf.getvalue())
+        self.assertEqual(summary["tokens"], 10)
+        self.assertTrue(all(v.get("skipped") == "tip" for v in doc["coverage"].values()))
 
 
 if __name__ == "__main__":

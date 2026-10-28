@@ -1,0 +1,65 @@
+{
+  "_note": "Full units (policy id + asset name) for Snek cardano_top10 names. A top-10 row often has only a ticker and a policy prefix, and pulse/config do not carry SNEK, NIGHT, MIN, IAG, ASCEND, STRIKE or VAMP. Registry entries were checked at tokens.cardano.org/metadata/<unit>. VAMP is not in the registry: Koios policy_asset_list for 3f5a1f7a3b... shows one fungible asset, CIP-68 label 222, asset_name_ascii VAMP. SOLADA, CLOVE, BOLT and SHARKY are the desk pulse asset ids; Koios asset_info asset_name_ascii matches. COCK is config.json units and the registry. Minswap V2 pools are derived from the unit (minswap_v2_lp_name), not stored here.",
+  "units": {
+    "ASCEND": {
+      "unit": "eb7a93ebc321647673490810f618b548d7c24aa64d30ae342dba70760014df10415343454e44",
+      "name": "ASCEND",
+      "source": "cardano-token-registry"
+    },
+    "NIGHT": {
+      "unit": "0691b2fecca1ac4f53cb6dfb00b7013e561d1f34403b957cbb5af1fa4e49474854",
+      "name": "NIGHT",
+      "source": "cardano-token-registry"
+    },
+    "STRIKE": {
+      "unit": "f13ac4d66b3ee19a6aa0f2a22298737bd907cc95121662fc971b5275535452494b45",
+      "name": "STRIKE",
+      "source": "cardano-token-registry"
+    },
+    "SNEK": {
+      "unit": "279c909f348e533da5808898f87f9a14bb2c3dfbbacccd631d927a3f534e454b",
+      "name": "SNEK",
+      "source": "cardano-token-registry"
+    },
+    "MIN": {
+      "unit": "29d222ce763455e3d7a09a665ce554f00ac89d2e99a1a83d267170c64d494e",
+      "name": "MIN",
+      "source": "cardano-token-registry"
+    },
+    "SOLADA": {
+      "unit": "e7c77b2784e52949b3f95f8f9f2d1668dd47d7ed56491eab588bb730534f4c414441",
+      "name": "SOLADA",
+      "source": "desk-pulse"
+    },
+    "IAG": {
+      "unit": "5d16cc1a177b5d9ba9cfa9793b07e60f1fb70fea1f8aef064415d114494147",
+      "name": "IAG",
+      "source": "cardano-token-registry"
+    },
+    "COCK": {
+      "unit": "49e423161ef818adc475c783571cb479d5f15ad52a01a240eacc0d3b434f434b",
+      "name": "COCK",
+      "source": "cardano-token-registry"
+    },
+    "CLOVE": {
+      "unit": "c1b89ed48dfc2b82167c1548b88942d367af1e517947c3dd8bdead0b0014df10434c4f56452d33",
+      "name": "CLOVE-3",
+      "source": "desk-pulse"
+    },
+    "BOLT": {
+      "unit": "14628c260a749e78e69e58acca32d0baa09808d50388c84fa7e1ae470014df10424f4c54",
+      "name": "BOLT",
+      "source": "desk-pulse"
+    },
+    "SHARKY": {
+      "unit": "a9c3b13c7bde8b2ca30699df632cc3cee103bf8d60b5aa3d575d910d0014df10534841524b59",
+      "name": "SHARKY",
+      "source": "desk-pulse"
+    },
+    "VAMP": {
+      "unit": "3f5a1f7a3ba788d40971ad05ecabb536c8bc8d766bcc98acd2583b0b0014df1056414d50",
+      "name": "VAMP",
+      "source": "koios-asset-info"
+    }
+  }
+}
