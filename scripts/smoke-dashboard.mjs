@@ -545,11 +545,15 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
 
 {
   const previewJs = path.join(root, "preview/app.js");
-  const parsed = spawnSync(process.execPath, ["--check", previewJs], { encoding: "utf8" });
-  if (parsed.status !== 0) throw new Error("preview/app.js failed to parse\n" + (parsed.stderr || parsed.stdout));
+  const boardJs = path.join(root, "preview/cardano-v2.js");
+  for (const file of [previewJs, boardJs]) {
+    const parsed = spawnSync(process.execPath, ["--check", file], { encoding: "utf8" });
+    if (parsed.status !== 0) throw new Error(file + " failed to parse\n" + (parsed.stderr || parsed.stdout));
+  }
   const pbox = { console, matchMedia: () => ({ matches: true }) };
   pbox.window = pbox;
   pbox.globalThis = pbox;
+  vm.runInNewContext(fs.readFileSync(boardJs, "utf8"), pbox);
   vm.runInNewContext(fs.readFileSync(previewJs, "utf8"), pbox);
   const P = pbox.Preview;
   assert(P && P.safeTag("w-0123abcd") === "w-0123abcd", "w- hash is kept");
@@ -593,7 +597,8 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(!/founder|cockwhale|Lead whale|COCK LP|Snek depth/i.test(cardano), "identifying whale wording and old panel names stay off the page");
   assert(!cardano.toLowerCase().includes(retired) && !cardano.includes("on the name"), "retired scanner name and old panel subtitle stay off the page");
   assert(cardano.includes("Grumpy Walrus") && cardano.includes("Pool ADA") && !cardano.includes(stake), "codename and pool label render, and the stake key stays hidden");
-  assert(cardano.indexOf("ASCEND") < cardano.indexOf("NIGHT") && cardano.includes(">Core<"), "core names are pinned and badged");
+  assert(cardano.indexOf("BOLT") < cardano.indexOf("SNEK") && cardano.includes("% under") && !cardano.includes(">Core<"), "closest kill line leads the board");
+  assert(cardano.includes("ASCEND") && cardano.includes("NIGHT") && cardano.includes("GOOD TOKENS BOARD"), "names and the kill-line board still render");
   assert(cardano.includes("Flagged this run") && cardano.includes("COOKED") && cardano.includes("Risk score") && cardano.includes("risk scanner") && cardano.includes("dev_checks"), "flag row, risk score legend, and both sources render");
   const legacyLog = {
     cardano_top10: [{ rank: 1, ticker: "SNEK", ada_side_depth: 1000 }]
@@ -608,6 +613,24 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(prefer.includes("Risk score: High risk") && !prefer.includes("Risk score: Low risk"), "risk_check wins when an old snapshot key is also present");
   assert(cardano.includes("Grumpy Walrus move") && !/founder_whale|founder_whale_move|founder_pct|\bfounder\b/i.test(cardano), "whale-move flag uses the codename, not the data key");
   assert(!cardano.includes("B".repeat(32)) && !cardano.includes("C".repeat(32)), "forensics and pumpfun address-like values stay hidden");
+  const v2 = load("scripts/fixtures/cardano-v2.json");
+  const full = P.cardanoHtml(v2);
+  const cock = full.split('data-tk="COCK"')[1].split("</article>")[0];
+  assert(cock.includes('data-fill="54"') && cock.includes('data-tick="50"') && cock.includes("only 9% above") && cock.includes("🔴 Pass"), "COCK kill bar matches the approved mockup");
+  assert(full.indexOf('data-tk="COCK"') < full.indexOf('data-tk="STRIKE"') && full.indexOf('data-tk="STRIKE"') < full.indexOf('data-tk="ASCEND"') && full.indexOf('data-tk="ASCEND"') < full.indexOf('data-tk="CLOVE"'), "board sorts by closeness to the kill line");
+  assert(full.includes("Lottery-size candidate") && full.includes('data-cv2-filter="g"') && full.includes("New launch other"), "verdict chips and launchpad badge render");
+  assert(full.includes("WHERE THE MONEY IS HEADING") && full.includes("MONEY OUT") && full.includes("MONEY IN") && full.includes("Selling SNEK") && full.includes("ASCEND accumulating") && full.includes("SNEK exiting"), "rotation card renders out, in, and trends");
+  assert(full.includes("Swarm group A") && full.includes("repeat early buyers") && full.includes("FOSHIZLE"), "swarm group card renders");
+  assert(full.includes("Sniper exits") && full.includes("CHEESE, INTEL"), "sniper card renders");
+  assert(full.includes("Hot right now") && full.includes("MEPE"), "hot overlap renders");
+  assert(full.includes("NEW LAUNCH RADAR") && full.includes("74 / 5") && full.includes("Getting traction") && full.includes("Swarm launch → Pass") && full.includes("65% of the way"), "launch radar stats, traction, and watching states render");
+  assert(full.includes("EARLY-BUYER CLUSTERS") && full.includes("show wallets (4)") && full.includes("w-8315deec") && full.includes("Coordinated buys"), "cluster cards group wallets behind a tap");
+  assert(full.includes("HEAT GRID") && full.includes("Show all wallets (10)") && full.includes("cv2-more") && full.includes("c66a") && full.includes("ring"), "heat grid pins labels and hides rows past the top 8");
+  assert(!/founder|suri|suriradar/i.test(full) && !full.includes("stake1") && !full.includes("addr1"), "fixture stays free of wallet ids and retired names");
+  const quiet = P.cardanoHtml({});
+  assert(quiet.includes("GOOD TOKENS BOARD") && quiet.includes("No data yet") && quiet.includes("NEW LAUNCH RADAR") && quiet.includes("HEAT GRID"), "missing fields render an empty state");
+  const partial = P.cardanoHtml({ log: { verdicts: [{ ticker: "COCK", verdict: "pass", launchpad: "minswap", pool_ada: 163300, kill_metric: "pool_ada", kill_value: 163300, kill_limit: 150000, reasons: ["swarm key uylu74g0 sold"], whale_activity: "none tracked" }] } });
+  assert(partial.includes("only 9% above") && partial.includes("New launch other") && !partial.includes("uylu74g0") && partial.includes("No data yet"), "a verdict renders its bar, and a stake-like token in a reason is dropped");
   const paper = load("scripts/fixtures/solana-desk/paper-fills.json");
   const trades = P.parseCsv(fs.readFileSync(path.join(root, "scripts/fixtures/solana-desk/trades-fills.csv"), "utf8"));
   const model = P.solanaModel(paper, trades, null);
@@ -622,7 +645,7 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   const legacyPage = fs.readFileSync(path.join(root, "legacy.html"), "utf8");
   const logo = '<a class="logo" href="#/">&gt;sight<span>line</span><i>_</i></a>';
   assert(index.includes(logo) && preview.includes(logo) && legacyPage.includes(logo), "logo markup stays on the live site, the preview, and the legacy dashboard");
-  assert(index.includes('href="preview/app.css"') && index.includes('src="preview/app.js"'), "live page serves the redesigned shell");
+  assert(index.includes('href="preview/app.css"') && index.includes('src="preview/app.js"') && index.includes('src="preview/cardano-v2.js"'), "live page serves the redesigned shell");
   assert(!index.includes("preview.html") && !index.includes("preview-tag"), "live page is not the design sandbox");
   assert(index.includes("legacy.html"), "live page points at the legacy fallback");
   assert(preview.includes('href="preview/app.css"') && preview.includes('src="preview/app.js"') && preview.includes("preview-tag"), "preview shell still iterates on its own");

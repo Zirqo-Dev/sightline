@@ -50,6 +50,93 @@ One file each in `dashboard/panels/`. Each calls `S.register`.
 | `solada-intel` | Solada intel: 24h flag strip from `solada-prefilter/flags.json`, Cardano top 10 from `log.cardano_top10`, founder whale card (ASCEND/STRIKE first, hidden when absent), per-ticker drill-down (pulse sparklines, kill-line bar, first-block buyers held/exited, cluster timeline), cluster heat grid, pattern scoreboard. Every part has an empty state. Wallets render as tags only. |
 | `coming-soon` | A reserved slot. `options.text` is the message. |
 
+## Cardano tab (v2)
+
+The live Cardano tab (`preview/cardano-v2.js`, route `#/cardano`) draws five sections. It reads the desk-data copies of `solada/log.json`, `solada/pulse.json`, `solada-prefilter/flags.json`, `solada-prefilter/kill_status.json`, and `solada-prefilter/whale_ledger.json`. A missing block is a "No data yet" line. The tab does not invent numbers.
+
+### Already published (reused)
+
+| Source | What the tab uses |
+|---|---|
+| `log.verdicts[]` | One board card per row. `ticker`, `verdict` (`watch` → 🟡 Watch, `pass` → 🔴 Pass, `lottery` / `call` → 🟢 Lottery-size candidate), `launchpad` (`solada` → Solada, `snek` → Snek.fun, anything else → New launch other), `reasons` (up to 3 bullets), `whale_activity` (hidden when it is "none tracked"), `pool_ada`, `holders`, `mcap_ada`. |
+| `log.verdicts[].kill_line` | Prose. Comparisons such as `ADA side under 750k` or `holders under 125` are parsed when the numeric fields below are absent. |
+| `solada-prefilter/kill_status.json` | Per ticker `{metric, value, line, hit, text}`. `metric` is `ada_side`, `holders`, or `mcap`. Used as the bar when the verdict has no explicit numbers. |
+| `log.cardano_top10[]` | Fallback pool / holder / mcap readings, and the whole board when `verdicts` is missing. |
+| `flags.json` `new` + `recent` | Cluster cards, the heat grid, sniper exits, and swarm groups. Tags render only as `w-` + 8 hex. The heat label is the first 4 hex of that tag. |
+| `whale_ledger.json` `rows[]` | Best-effort money out / money in for the newest 24h of rows: a fill paired with an open of the same token is money out; a fill paired with an open of ADA is money in. `ada_leg` is the bar size. Balances and positions are not shown. |
+
+The board sorts by percent from the kill line, smallest room first. The bar scale is `max(value, 2 × line)`, so the tick sits at 50% until the reading is more than twice the line. Percent under 15 is drawn in red ("only N% above"). Under the line is "N% under".
+
+### Optional `log.cardano_v2`
+
+Write this object on `solada/log.json` (desk-data). Do not put it in `panels.json`: that file is site config and is read from `main`, not from desk-data. Every key is optional. When a key is present it replaces the derived view for that section.
+
+```json
+{
+  "cardano_v2": {
+    "entry_bar": { "holders": 120, "pool_ada": 25000 },
+    "launchpads": [
+      { "id": "solada", "label": "Solada", "launches": 74, "graduated": 5 }
+    ],
+    "launches": [
+      {
+        "ticker": "GHOST", "launchpad": "snek", "graduated": false,
+        "age": "9h", "holders": 142, "pool_ada": 31200,
+        "swarm": false, "sniper": false, "example": false
+      }
+    ],
+    "rotation": {
+      "who": "Grumpy Walrus",
+      "window": "Last 24h",
+      "from": "2026-10-28T19:34:00-04:00",
+      "to": "2026-10-29T08:03:00-04:00",
+      "out": [{ "token": "SNEK", "detail": "sold 1M", "ada": 2978 }],
+      "in": [{ "token": "ASCEND", "ada": 1521 }],
+      "takeaway": "Selling SNEK → rotating into ASCEND.",
+      "trends": [{ "token": "ASCEND", "trend": "accumulating" }]
+    },
+    "swarms": [
+      {
+        "name": "Swarm group A", "label": "repeat early buyers", "wallets": 14,
+        "last_seen": ["FOSHIZLE", "MSNEK"],
+        "launches": [{ "ticker": "RTB", "at": "2026-10-29T06:10:00-04:00" }],
+        "note": "When this group jumps in, it's usually a swarm launch → Pass."
+      }
+    ],
+    "snipers": { "tickers": ["CHEESE", "INTEL"], "note": "first-block buyers fully exited." },
+    "hot": [{ "ticker": "MEPE", "line": "Whale added ADA and a swarm bought at launch.", "note": "" }],
+    "clusters": [
+      { "ticker": "TCM", "tone": "r", "pill": "coordinated buys", "summary": "Coordinated buys + 7 repeat early buyers", "wallets": ["w-8315deec"] }
+    ],
+    "heat": {
+      "tokens": ["SLIP", "CHEESE"],
+      "wallets": [{ "tag": "c66a", "cells": { "CHEESE": { "ada": 980, "sniper": true } } }]
+    }
+  }
+}
+```
+
+`launches` / `graduated` may also be named `launches_7d` / `graduated_7d`. `rotation.in` may be named `inn`. `trend` is `accumulating`, `trimming`, `exiting`, or `flat`. `wallets` on a swarm is a count. On a cluster it is a list of `w-` tags; anything else is dropped. Heat `tag` is 4 hex characters, or a `w-` tag (shown as its first 4 hex). A full address is dropped.
+
+Launch progress is the average of `holders / entry_bar.holders` and `pool_ada / entry_bar.pool_ada`, each capped at 1. Both at or above the bar, with `swarm` and `sniper` false, is "Getting traction". `swarm: true` is "Swarm launch → Pass". Otherwise the card says "Watching · N% of the way to the bar".
+
+### Optional fields on each `verdicts[]` row
+
+These override the parsed prose and `kill_status.json` for that ticker. `kill_line` stays the prose sentence the desk already writes. The numeric threshold is `kill_limit` (a number). A numeric `kill_line` is also accepted as the threshold.
+
+| Field | Meaning |
+|---|---|
+| `launchpad` | `solada`, `snek`, `minswap`, `unknown`, or a short label. |
+| `kill_metric` | `pool_ada` (alias `ada_side`), `holders`, `mcap` (alias `mcap_ada`), or `curve`. |
+| `kill_value` | Current reading of that metric. |
+| `kill_limit` | Threshold. Also accepted as `kill_threshold`. |
+| `pct_from_line` | Percent above the line. Negative means under it. Computed when omitted. |
+| `why` | Up to 3 bullets. Falls back to `reasons`. |
+| `whale_line` | Whale sentence. Falls back to `whale_activity`. |
+| `whale_trend` | Not drawn on the card. Put per-token trends on `cardano_v2.rotation.trends`. |
+
+A populated example lives in `scripts/fixtures/cardano-v2.json`. The desk does not need to write every block before the tab ships: each section hides itself behind "No data yet".
+
 ## P&L and distance to kill
 
 Realized P&L is summed **inside one unit only**. ADA, ADA-equivalent and USD each get their own total. The dashboard never adds those together.

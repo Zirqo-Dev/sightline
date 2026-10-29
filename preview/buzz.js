@@ -408,7 +408,10 @@
     const model = buzzModel(doc);
     const history = historyModel(historyText);
     if (routeId === "solana") out = insertInStack(out, solanaPanel(model));
-    else if (routeId === "cardano") out = insertBeforeSection(out, "Cluster heat</span>", cardanoPanel(model));
+    else if (routeId === "cardano") {
+      const marker = out.includes("Cluster heat</span>") ? "Cluster heat</span>" : 'data-cv2="heat"';
+      out = insertBeforeSection(out, marker, cardanoPanel(model));
+    }
     else if (routeId === "home") out = insertBeforeSection(out, "Latest briefs</span>", homePanel(model) + alertsPanel(history));
     else if (routeId === "briefs") out = insertInStack(out, briefsBanner(model));
     else return out;
