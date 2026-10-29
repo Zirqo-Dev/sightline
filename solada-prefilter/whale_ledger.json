@@ -1,11 +1,11 @@
 {
- "at": "2026-10-29T02:13:01Z",
+ "at": "2026-10-29T04:13:38Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14129198,
+ "height": 14129579,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 272.643472,
+ "ada_balance": 201.643472,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 308218567944,
@@ -67,7 +67,7 @@
   "KRAKEN": 4536305955503,
   "Kat coin": 11616622,
   "MEAT": 10396970868299,
-  "MEPE": 10579635638067,
+  "MEPE": 10852212623784,
   "MISS": 30000000,
   "NIGHT": 900044038786,
   "NIKY": 26285265786372,
@@ -180,7 +180,7 @@
   "KRAKEN": 4536305955503,
   "Kat coin": 11616622,
   "MEAT": 10396970868299,
-  "MEPE": 10579635638067,
+  "MEPE": 10852212623784,
   "MISS": 30000000,
   "NIGHT": 900044038786,
   "NIKY": 26285265786372,
@@ -536,7 +536,7 @@
   {
    "token": "MEPE",
    "policy": "50741124",
-   "qty": 10579635638067
+   "qty": 10852212623784
   },
   {
    "token": "MISS",
@@ -3375,10 +3375,14 @@
    "token": "ADA",
    "qty_raw": 73000000,
    "ada": 73.0,
-   "status": "open",
+   "status": "filled",
    "opened_tx": "14ed55c8be",
    "opened_at": "2026-10-28T23:45:40Z",
-   "own_stake": true
+   "own_stake": true,
+   "closed_tx": "a5941ad5cf",
+   "closed_at": "2026-10-29T02:43:21Z",
+   "filled_token": "MEPE",
+   "filled_qty": 272576985717
   },
   "a4fd177525#0": {
    "ref_short": "a4fd177525#0",
@@ -11305,6 +11309,18 @@
    "order_ref_short": "e9d6d912df#0",
    "order_status": "filled",
    "sold": "ADA"
+  },
+  {
+   "time": "2026-10-29T02:43:21Z",
+   "tx_short": "a5941ad5cf",
+   "kind": "order_fill",
+   "token": "MEPE",
+   "qty": 272576985717,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "14ed55c8be#0",
+   "order_status": "filled",
+   "sold": "ADA"
   }
  ],
  "capped": false,
@@ -11315,7 +11331,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 11,
+ "koios_calls": 7,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
