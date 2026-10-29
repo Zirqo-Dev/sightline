@@ -48,6 +48,7 @@ jobs:
           key: solana-desk-rugger-${{ github.run_id }}
           restore-keys: solana-desk-rugger-
       - name: Run scanner
+        id: scan
         env:
           JUPITER_API_KEY: ${{ secrets.JUPITER_API_KEY }}
           SOLANA_DESK_CACHE_DIR: ${{ runner.temp }}/solana-desk-cache
@@ -58,8 +59,9 @@ jobs:
           if [ -z "$JUPITER_API_KEY" ]; then echo "::warning::JUPITER_API_KEY secret not set; using keyless Jupiter (noted in health.json)"; fi
           mkdir -p "$SOLANA_DESK_CACHE_DIR"
           timeout 420 python3 -m desk.run --mode "$MODE" --data-dir "$GITHUB_WORKSPACE/data/solana-desk" --cache-dir "$SOLANA_DESK_CACHE_DIR"
+          if [ -f "$SOLANA_DESK_CACHE_DIR/HOLD" ]; then echo "rugger_hold=1" >> "$GITHUB_OUTPUT"; else echo "rugger_hold=0" >> "$GITHUB_OUTPUT"; fi
       - name: Save private rugger list
-        if: always()
+        if: always() && steps.scan.outputs.rugger_hold != '1'
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.temp }}/solana-desk-cache

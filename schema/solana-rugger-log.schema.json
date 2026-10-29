@@ -25,7 +25,7 @@
       "required": ["mint", "code", "rugger_id", "evidence_tags"],
       "properties": {
         "mint": {"type": "string", "minLength": 1, "maxLength": 64},
-        "code": {"enum": ["known_rugger", "known_rugger_funded"]},
+        "code": {"enum": ["known_rugger", "known_rugger_funded", "known_rugger_sibling"]},
         "rugger_id": {"type": "string", "pattern": "^w-[0-9a-f]{8}$"},
         "wallet_id": {"type": "string", "pattern": "^w-[0-9a-f]{8}$"},
         "evidence_tags": {
@@ -48,7 +48,7 @@
         },
         {
           "if": {
-            "properties": {"code": {"const": "known_rugger_funded"}},
+            "properties": {"code": {"enum": ["known_rugger_funded", "known_rugger_sibling"]}},
             "required": ["code"]
           },
           "then": {"required": ["wallet_id", "hop"]}

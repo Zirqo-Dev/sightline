@@ -41,14 +41,15 @@
     "counts": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["dev_sold", "serial_launcher", "lp_pulled", "ahead_of_dump", "known_rugger", "known_rugger_funded"],
+      "required": ["dev_sold", "serial_launcher", "lp_pulled", "ahead_of_dump", "known_rugger", "known_rugger_funded", "known_rugger_sibling"],
       "properties": {
         "dev_sold": {"type": "integer", "minimum": 0},
         "serial_launcher": {"type": "integer", "minimum": 0},
         "lp_pulled": {"type": "integer", "minimum": 0},
         "ahead_of_dump": {"type": "integer", "minimum": 0},
         "known_rugger": {"type": "integer", "minimum": 0},
-        "known_rugger_funded": {"type": "integer", "minimum": 0}
+        "known_rugger_funded": {"type": "integer", "minimum": 0},
+        "known_rugger_sibling": {"type": "integer", "minimum": 0}
       }
     },
     "token": {
@@ -71,7 +72,7 @@
       "additionalProperties": false,
       "required": ["code", "evidence"],
       "properties": {
-        "code": {"enum": ["dev_sold", "serial_launcher", "lp_pulled", "ahead_of_dump", "known_rugger", "known_rugger_funded"]},
+        "code": {"enum": ["dev_sold", "serial_launcher", "lp_pulled", "ahead_of_dump", "known_rugger", "known_rugger_funded", "known_rugger_sibling"]},
         "evidence": {
           "type": "object",
           "additionalProperties": false,
@@ -152,7 +153,7 @@
         },
         {
           "if": {
-            "properties": {"code": {"const": "known_rugger_funded"}},
+            "properties": {"code": {"enum": ["known_rugger_funded", "known_rugger_sibling"]}},
             "required": ["code"]
           },
           "then": {

@@ -24,7 +24,7 @@ last_checked time. That time moves only after a successful read. A budget skip, 
 opened before any page comes back, keeps its previous stamp, so later runs cover it first.
 budget_s and the Koios cap stay where they are.
 """
-import hashlib, os, sys, time
+import hashlib, json, os, sys, time
 from datetime import datetime, timezone
 
 import dev_checks as DC
@@ -944,32 +944,134 @@ def _basis(koios_calls, bf_calls):
     return "koios"
 
 
-def _feed_rugger(cache_dir, public_dir, events, now_s, cfg, dry_run):
-    """Record lp_pulled and ahead_of_dump actors on the private blacklist. No public wallet."""
+def _rb():
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    import rugger_blacklist as RB
+    return RB
+
+
+def _pull_key(ev):
+    if not isinstance(ev, dict):
+        return None
+    unit = ev.get("unit") or ev.get("_unit")
+    short = ev.get("tx_short") or ((ev.get("hash") or "")[:10] if isinstance(ev.get("hash"), str) else "")
+    pool = ev.get("pool_key")
+    if not unit or not short or not pool:
+        return None
+    return (str(short), str(pool), str(unit))
+
+
+def _load_pull_stakes(cache_dir, public_dir):
+    """Private pull rows. Empty when the file is missing or inside the public directory."""
+    RB = _rb()
+    if not cache_dir:
+        return []
+    path = os.path.join(cache_dir, RB.PULLS_NAME)
+    if RB._inside(path, public_dir) or not os.path.exists(path):
+        return []
+    try:
+        with open(path) as fh:
+            doc = json.load(fh)
+    except (OSError, ValueError):
+        return []
+    rows = doc.get("pulls") if isinstance(doc, dict) else None
+    return [r for r in rows if isinstance(r, dict)] if isinstance(rows, list) else []
+
+
+def _save_pull_stakes(cache_dir, public_dir, rows):
+    RB = _rb()
+    path = os.path.join(cache_dir, RB.PULLS_NAME)
+    if RB._inside(path, public_dir):
+        return False
+    os.makedirs(cache_dir, exist_ok=True)
+    kept = []
+    seen = set()
+    for row in rows or []:
+        key = _pull_key(row)
+        stake = row.get("stake")
+        if not key or not RB.public_id(stake) or key in seen:
+            continue
+        seen.add(key)
+        when = row.get("time")
+        if isinstance(when, bool) or not isinstance(when, (int, float)) or when <= 0:
+            continue
+        kept.append({
+            "tx_short": key[0], "pool_key": key[1], "unit": key[2], "stake": stake,
+            "time": float(when), "ada": row.get("ada"), "reserve_ada": row.get("reserve_ada"),
+        })
+    with open(path, "w") as fh:
+        json.dump({"pulls": kept[-2000:]}, fh)
+        fh.write("\n")
+    return True
+
+
+def _feed_rugger(cache_dir, public_dir, events, flagged, now_s, cfg, dry_run, prior=None):
+    """Record material deployer pulls and ahead_of_dump actors. Stakes stay in rugger-pulls.json.
+
+    liquidity-moves-cache.json stays stake-free. A pull flagged on a later run is joined
+    back to the stake saved when the pull was first seen. lp_pulled requires a material
+    pull by that token's deployer. A role label alone is not evidence.
+    """
     if dry_run or not cache_dir:
         return
     try:
-        root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-        if root not in sys.path:
-            sys.path.insert(0, root)
-        import rugger_blacklist as RB
-        book = RB.open_book(cache_dir, public_dir, cfg)
-        if book is None or not book.writable:
+        RB = _rb()
+        stored = _load_pull_stakes(cache_dir, public_dir)
+        fresh = []
+        for ev in events or []:
+            if not isinstance(ev, dict) or ev.get("kind") != "lp_remove" or not ev.get("_lp_stake"):
+                continue
+            fresh.append({
+                "tx_short": ev.get("tx_short"), "hash": ev.get("hash"), "pool_key": ev.get("pool_key"),
+                "unit": ev.get("unit") or ev.get("_unit"), "stake": ev.get("_lp_stake"),
+                "time": ev.get("time"), "ada": ev.get("ada"), "reserve_ada": ev.get("reserve_ada"),
+            })
+        if not RB._inside(os.path.join(cache_dir, RB.PULLS_NAME), public_dir):
+            _save_pull_stakes(cache_dir, public_dir, stored + fresh)
+            stored = _load_pull_stakes(cache_dir, public_dir)
+        by_key = {}
+        for row in stored:
+            key = _pull_key(row)
+            if key:
+                by_key[key] = row
+        book = RB.open_book(cache_dir, public_dir, cfg, prior=prior)
+        if book is None:
+            return
+        RB.mark_hold(cache_dir, book)
+        if not book.writable:
             return
         devs = RB.deployers_from_dev_cache(cache_dir, public_dir)
-        roles = set(DC.known_roles(cfg))
-        at = DC.iso(now_s)
-        for ev in events or []:
-            if not isinstance(ev, dict) or ev.get("kind") != "lp_remove":
+        owners = RB.owner_ids(os.environ.get("PRIVACY_GUARD_PATTERNS", ""), derive=lambda a: F.addr_info(a)[0])
+        rows = [ev for ev in (events or []) if isinstance(ev, dict)]
+        seen_ids = {id(ev) for ev in rows}
+        for ev in flagged or []:
+            if isinstance(ev, dict) and id(ev) not in seen_ids:
+                rows.append(ev)
+        for ev in rows:
+            kind = ev.get("kind")
+            if kind not in (None, "lp_remove"):
                 continue
-            stake = ev.get("_lp_stake")
+            if kind is None and ev.get("ahead_of_dump") is not True:
+                continue
             unit = ev.get("unit") or ev.get("_unit")
-            if not stake or not unit:
+            stake = ev.get("_lp_stake")
+            saved = by_key.get(_pull_key(ev))
+            if not stake and saved:
+                stake = saved.get("stake")
+            if not stake or not unit or RB.public_id(stake) in owners:
                 continue
+            when = ev.get("time")
+            if (isinstance(when, bool) or not isinstance(when, (int, float)) or when <= 0) and saved:
+                when = saved.get("time")
+            if isinstance(when, bool) or not isinstance(when, (int, float)) or when <= 0:
+                continue
+            at = RB.iso(when)
             if ev.get("ahead_of_dump") is True:
                 book.note_evidence(stake, "cardano", "ahead_of_dump", unit, at)
-            tag = ev.get("actor_tag")
-            if (isinstance(tag, str) and tag in roles) or devs.get(unit) == stake:
+            material = pull_is_material(ev) or (saved and pull_is_material(saved))
+            if material and devs.get(unit) == stake:
                 book.note_evidence(stake, "cardano", "lp_pulled", unit, at)
         book.save()
     except Exception as e:
@@ -1073,7 +1175,8 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
     sized = [e for e in events if e.get("kind")]
     waiting, flagged_pulls = mark_dumps(sized, cache.get("open_pulls"), bc, now_s)
     try:
-        _feed_rugger(cache_dir, os.path.dirname(path), sized, now_s, cfg, dry_run)
+        prior = _rb().read_prior(os.path.join(os.path.dirname(path), "last-run.json"))
+        _feed_rugger(cache_dir, os.path.dirname(path), sized, flagged_pulls, now_s, cfg, dry_run, prior)
     finally:
         for ev in sized:
             ev.pop("_lp_stake", None)

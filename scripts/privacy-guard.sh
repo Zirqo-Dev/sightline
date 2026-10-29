@@ -282,7 +282,7 @@ for i, tok in enumerate(tokens):
             continue
         ev = v["evidence"]
         code = v.get("code")
-        if code in ("known_rugger", "known_rugger_funded"):
+        if code in ("known_rugger", "known_rugger_funded", "known_rugger_sibling"):
             if not ok.fullmatch(ev.get("rugger_id") or ""):
                 bad.append(str(i))
                 continue
@@ -295,7 +295,8 @@ for i, tok in enumerate(tokens):
                     bad.append(str(i))
                 continue
             hop = ev.get("hop")
-            if (set(ev) != {"rugger_id", "wallet_id", "evidence_tags", "hop"}
+            if (code not in ("known_rugger_funded", "known_rugger_sibling")
+                    or set(ev) != {"rugger_id", "wallet_id", "evidence_tags", "hop"}
                     or not ok.fullmatch(ev.get("wallet_id") or "")
                     or isinstance(hop, bool) or not isinstance(hop, int) or not 1 <= hop <= 8):
                 bad.append(str(i))
@@ -335,6 +336,7 @@ except Exception:
     sys.stderr.write("PRIVACY GUARD FAILED: cannot read rugger_would_veto.json\n")
     sys.exit(1)
 ok = re.compile(r"^w-[0-9a-f]{8}$")
+b58 = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
 ev_tags = {"ahead_of_dump", "late_rug", "lp_pulled", "rugcheck_rugged"}
 banned = {"wallet", "stake", "address", "creator", "funder", "funded", "launcherAddress", "raw"}
 leak = re.compile(r"stake1[02-9ac-hj-np-z]{20,}|addr1[02-9ac-hj-np-z]{20,}")
@@ -369,13 +371,21 @@ for i, row in enumerate(rows):
         bad.append(str(i))
         continue
     if code == "known_rugger":
-        if set(row) - {"mint", "code", "rugger_id", "evidence_tags"}:
+        if set(row) != {"mint", "code", "rugger_id", "evidence_tags"}:
+            bad.append(str(i))
+        elif any(isinstance(v, str) and b58.fullmatch(v) for k, v in row.items() if k != "mint"):
             bad.append(str(i))
         continue
-    if code == "known_rugger_funded":
+    if code in ("known_rugger_funded", "known_rugger_sibling"):
         hop = row.get("hop")
+        if set(row) != {"mint", "code", "rugger_id", "wallet_id", "evidence_tags", "hop"}:
+            bad.append(str(i))
+            continue
         if (not ok.fullmatch(row.get("wallet_id") or "")
                 or isinstance(hop, bool) or not isinstance(hop, int) or not 1 <= hop <= 8):
+            bad.append(str(i))
+            continue
+        if any(isinstance(v, str) and b58.fullmatch(v) for k, v in row.items() if k != "mint"):
             bad.append(str(i))
         continue
     bad.append(str(i))
@@ -386,7 +396,55 @@ if bad:
       fail=1
     fi
   fi
+  # Private blacklist documents are detected by shape, not only by file name.
+  case "$f" in
+    *.json)
+      if ! python3 -c '
+import json, sys
+try:
+    doc = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(0)
+if (isinstance(doc, dict) and doc.get("schema") == 1
+        and isinstance(doc.get("entries"), dict) and isinstance(doc.get("edges"), list)
+        and "exclusions" in doc):
+    sys.exit(1)
+sys.exit(0)
+' "$f"; then
+        echo "PRIVACY GUARD: $f: private rugger document must not be published" >&2
+        fail=1
+      fi
+      ;;
+  esac
 done
+owner_hits=0
+if [ -n "${PRIVACY_GUARD_PATTERNS:-}" ]; then
+  owner_id_blob=$(python3 -c '
+import hashlib, os, re, sys
+text = os.environ.get("PRIVACY_GUARD_PATTERNS", "")
+ids = []
+for token in re.findall(r"stake1[02-9ac-hj-np-z]{20,}|addr1[02-9ac-hj-np-z]{20,}", text):
+    ids.append("w-" + hashlib.sha256(token.encode()).hexdigest()[:8])
+sys.stdout.write("\n".join(ids))
+')
+  if [ -n "$owner_id_blob" ]; then
+    for f in "${files[@]}"; do
+      [ -f "$f" ] || continue
+      case "$f" in "$self"|PRIVACY.md|.privacy-patterns|.github/workflows/privacy-guard.yml|.github/workflows/desk-data-guard.yml|scripts/privacy-public-keys.txt) continue;; esac
+      n=$(python3 -c '
+import sys
+ids = [ln.strip() for ln in sys.stdin.read().splitlines() if ln.strip()]
+data = open(sys.argv[1], errors="replace").read()
+sys.stdout.write(str(sum(data.count(i) for i in ids)))
+' "$f" <<< "$owner_id_blob")
+      owner_hits=$((owner_hits + n))
+    done
+  fi
+fi
+if [ "$owner_hits" -gt 0 ]; then
+  echo "PRIVACY GUARD: owner id matched ${owner_hits} time(s)" >&2
+  fail=1
+fi
 if [ $fail -ne 0 ]; then
   echo "PRIVACY GUARD FAILED: owner wallet data must not be committed. See PRIVACY.md." >&2
   exit 1

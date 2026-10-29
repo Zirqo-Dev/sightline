@@ -74,3 +74,6 @@ TRIM_PCT = 0.05
 OUTAGE_VOID_H = 2
 DATA_FAIL_VOID = 0.10
 SESSION_LOSS_HALT_PCT = 0.30  # logged as would_halt only
+# Not a v6.5 skip, entry, exit, or kill line. Full sha256 hex of shared funders.
+# Empty until those hashes are added. Raw wallets do not go here.
+RUGGER_EXCLUSION_SHA256 = ()

@@ -84,6 +84,7 @@ jobs:
           key: solada-prefilter-whale-${{ github.run_id }}
           restore-keys: solada-prefilter-whale-
       - name: Run prefilter
+        id: prefilter
         if: github.event.inputs.ping != 'true'
         env:
           BLOCKFROST_PROJECT_ID: ${{ secrets.BLOCKFROST_PROJECT_ID }}
@@ -104,8 +105,10 @@ jobs:
           # until 770s, leaving ~10s to flush JSON. The 20 min job then still has room
           # for cache save, the privacy guard, and the push retries below.
           timeout 780 python3 solada-prefilter/prefilter.py --repo . --data-dir "$GITHUB_WORKSPACE/data/solada-prefilter" --desk-data "$GITHUB_WORKSPACE/data" $flag
+          if [ -f "${{ runner.temp }}/prefilter-cache/HOLD" ]; then echo "rugger_hold=1" >> "$GITHUB_OUTPUT"; else echo "rugger_hold=0" >> "$GITHUB_OUTPUT"; fi
       - name: Save private whale snapshot
-        if: always() && github.event.inputs.ping != 'true'
+        id: save-cache
+        if: always() && github.event.inputs.ping != 'true' && steps.prefilter.outputs.rugger_hold != '1'
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.temp }}/prefilter-cache

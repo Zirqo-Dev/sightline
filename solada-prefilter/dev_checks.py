@@ -891,39 +891,63 @@ def _funded_out(dev, ordered):
                 st, script, _addr = _who(u)
                 out.append({"stake": st, "script": bool(script), "lovelace": u.get("lovelace"), "assets": u.get("assets")})
             return out
-        txs.append({"inputs": side(tx.get("inputs")), "outputs": side(tx.get("outputs"))})
+        txs.append({"time": tx.get("time"), "inputs": side(tx.get("inputs")), "outputs": side(tx.get("outputs"))})
     try:
         return _rb().ada_only_recipients(dev, txs)
     except Exception:
         return []
 
 
-def _feed_rugger(cache, scans, cache_dir, data_dir, now_s, loaded, dry_run):
-    """Copy late_rug stakes and funding hops into the private blacklist. Never a public file."""
+def _feed_rugger(cache, scans, cache_dir, data_dir, now_s, loaded, dry_run, cfg=None):
+    """Copy late_rug stakes and funding hops into the private blacklist. Never a public file.
+
+    Edge time is the tx time. A cache miss after a non-empty public status does not save.
+    """
     if dry_run or not cache_dir or not loaded:
         return
     try:
-        book = _rb().open_book(cache_dir, data_dir)
-        if book is None or not book.writable:
+        RB = _rb()
+        prior = RB.read_prior(os.path.join(data_dir, "last-run.json"))
+        book = RB.open_book(cache_dir, data_dir, cfg, prior=prior)
+        if book is None:
+            return
+        RB.mark_hold(cache_dir, book)
+        if not book.writable:
             return
         pats, stakes = loaded
-        at = iso(now_s)
+        owners = RB.owner_ids(os.environ.get("PRIVACY_GUARD_PATTERNS", ""), derive=lambda a: F.addr_info(a)[0])
         for unit, row in (cache.get("units") or {}).items():
             if not isinstance(row, dict) or row.get("late_rug") is not True:
                 continue
             stake = row.get("stake")
             if not stake or _hidden(pats, stakes, stake):
                 continue
+            if RB.public_id(stake) in owners:
+                continue
+            sc = (scans or {}).get(unit) or {}
+            stats = sc.get("stats") if isinstance(sc, dict) else None
+            sell_s = (stats or {}).get("first_sell_s") if isinstance(stats, dict) else None
+            if isinstance(sell_s, (int, float)) and not isinstance(sell_s, bool) and sell_s > 0:
+                at = iso(sell_s)
+            else:
+                at = iso(now_s)
             book.note_evidence(stake, "cardano", "late_rug", unit, at)
         for sc in (scans or {}).values():
             if not isinstance(sc, dict):
                 continue
             stake = sc.get("stake")
-            if not stake or _hidden(pats, stakes, stake):
+            if not stake or _hidden(pats, stakes, stake) or RB.public_id(stake) in owners:
                 continue
-            for other in sc.get("funded") or []:
-                if other and not _hidden(pats, stakes, other):
-                    book.note_edge(stake, other, "cardano", at)
+            for hop in sc.get("funded") or []:
+                other = hop.get("stake") if isinstance(hop, dict) else hop
+                when = hop.get("time") if isinstance(hop, dict) else None
+                if not other or _hidden(pats, stakes, other) or RB.public_id(other) in owners:
+                    continue
+                if isinstance(when, (int, float)) and not isinstance(when, bool) and when > 0:
+                    at = iso(when)
+                else:
+                    continue
+                book.note_edge(stake, other, "cardano", at)
         book.save()
     except Exception as e:
         print(f"dev_checks: rugger blacklist skipped ({type(e).__name__})", file=sys.stderr)
@@ -1619,7 +1643,7 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
                                           "fresh_funded_h")},
         "entries": entries, "coverage": coverage,
     })
-    _feed_rugger(cache, scans, cache_dir, data_dir, now_s, loaded, dry_run)
+    _feed_rugger(cache, scans, cache_dir, data_dir, now_s, loaded, dry_run, cfg)
     if not dry_run:
         if cpath:
             KT.write_json(cpath, cache)

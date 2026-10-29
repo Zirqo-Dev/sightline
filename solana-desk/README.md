@@ -55,13 +55,14 @@ All generated files (tasks/trades CSVs, state, daily summaries, `paper.json`,
 (folder `solana-desk/`) by the Actions bot, with pull-rebase retries and no force-push. `main` holds code only and changes only via PRs Bousky merges.
 
 ## Rugger list (log only)
-RugCheck `rugged` is remembered per deployer in the private Actions cache
+RugCheck `rugged` is remembered per deployer in this desk's private Actions cache
 (`--cache-dir`, workflow cache `solana-desk-rugger-`, file `rugger-blacklist.json`).
-A later lead from that deployer, or from a wallet they funded, is appended to
-`rugger_would_veto.json` on desk-data. That file is hashes and the public mint.
+That cache is not the Cardano prefilter cache. A rug recorded on one desk is not on the other.
+A later lead from that deployer is appended to `rugger_would_veto.json` on desk-data.
+The file is hashes and the public mint. This desk does not look up funding hops, so it
+does not by itself produce `known_rugger_funded`. The hook stops after 5 seconds total.
 It does not change skip reasons, paper entries, or exits. The v6.5 freeze is unchanged.
-The Solana desk has no LP-pull or dump event feed; `lp_unlocked` stays a per-token
-safety skip and is not blacklist evidence.
+There is no LP-pull or dump event feed; `lp_unlocked` stays a per-token safety skip.
 
 ## Tests
     cd solana-desk && python3 -m unittest discover -s tests -t .

@@ -80,26 +80,41 @@ def _rugger():
     return RB
 
 
-def rugger_book(cache_dir, data_dir):
+def _rugger_cfg():
+    """Exclusion hashes only. Does not read or change v6.5 skip, entry, or exit rules."""
+    raw = getattr(C, "RUGGER_EXCLUSION_SHA256", ()) or ()
+    return {"rugger_blacklist": {
+        "hops": 1, "sibling": False, "shared_funder_min": 25,
+        "exclusion_sha256": [h for h in raw if isinstance(h, str)],
+    }}
+
+
+def rugger_book(cache_dir, data_dir, prior=None):
     """Private book. No cache dir keeps this run in memory and writes no wallet file."""
     RB = _rugger()
+    cfg = _rugger_cfg()
     if not cache_dir:
-        return RB.Book(RB.MemoryStore(None), RB.settings_from(None))
-    return RB.open_book(cache_dir, data_dir)
+        return RB.Book(RB.MemoryStore(None), RB.settings_from(cfg), exclusion_sha=RB.exclusion_sha256(cfg))
+    return RB.open_book(cache_dir, data_dir, cfg, prior=prior)
 
 
-def observe_rugger(book, rc, mint, now):
-    """Record RugCheck rugged, then judge. Returns public verdicts only. Does not skip."""
+def observe_rugger(book, rc, mint, now, launch_s=None, owners=None):
+    """Record RugCheck rugged, then judge. Returns public verdicts only. Does not skip.
+
+    An owner w- id is dropped and not stored. This desk does not discover funding hops.
+    """
     if book is None or not isinstance(rc, dict):
         return []
     RB = _rugger()
     creator = rc.get("creator")
-    at = RB.iso(now)
-    if rc.get("rugged") is True and isinstance(mint, str) and mint:
-        book.note_evidence(creator, "solana", "rugcheck_rugged", mint, at)
     if not isinstance(creator, str) or not creator or not isinstance(mint, str) or not mint:
         return []
-    return book.judge(creator, mint, now)
+    if owners and RB.public_id(creator) in owners:
+        return []
+    at = RB.iso(now)
+    if rc.get("rugged") is True:
+        book.note_evidence(creator, "solana", "rugcheck_rugged", mint, at)
+    return book.judge(creator, mint, now, launch_s=launch_s)
 
 
 def _public_would(mint, verdict):
@@ -107,9 +122,9 @@ def _public_would(mint, verdict):
         "mint": mint,
         "code": verdict.get("code"),
         "rugger_id": verdict.get("rugger_id"),
-        "evidence_tags": list(verdict.get("tags") or []),
+        "evidence_tags": sorted(verdict.get("tags") or []),
     }
-    if verdict.get("code") == "known_rugger_funded":
+    if verdict.get("code") in ("known_rugger_funded", "known_rugger_sibling"):
         row["wallet_id"] = verdict.get("wallet_id")
         row["hop"] = verdict.get("hop")
     return row
@@ -149,7 +164,7 @@ def _would_ok(doc):
         if code == "known_rugger":
             if keys != {"mint", "code", "rugger_id", "evidence_tags"}:
                 return False
-        elif code == "known_rugger_funded":
+        elif code in ("known_rugger_funded", "known_rugger_sibling"):
             if keys != {"mint", "code", "rugger_id", "wallet_id", "evidence_tags", "hop"}:
                 return False
             hop = row.get("hop")
@@ -216,22 +231,27 @@ def load_state(d, day):
     return s
 
 def _touch_cache(cache_dir, data_dir):
-    """Make sure the private directory has a file so the Actions cache save has something to store.
+    """Keep the cache directory saveable without creating an empty blacklist.
 
-    A duplicate slot returns before the scan. An empty directory makes that save fail.
-    The file is the blacklist document, never copied into the public data directory.
+    An empty rugger-blacklist.json would look like a hit and replace a missed restore.
+    .keep has no wallets. data_dir is unused; the file is never written there.
     """
     if not cache_dir:
         return
     try:
+        RB = _rugger()
+        if data_dir and (RB._inside(cache_dir, data_dir) or os.path.abspath(cache_dir) == os.path.abspath(data_dir)):
+            return
         os.makedirs(cache_dir, exist_ok=True)
-        book = rugger_book(cache_dir, data_dir)
-        if book is not None and book.writable:
-            path = os.path.join(cache_dir, _rugger().PRIVATE_NAME)
-            if not os.path.exists(path):
-                book.save()
+        keep = os.path.join(cache_dir, ".keep")
+        if not os.path.exists(keep):
+            with open(keep, "a"):
+                pass
     except Exception as e:
         print(f"rugger log: skipped ({type(e).__name__})", file=sys.stderr)
+
+
+RUGGER_BUDGET_S = 5.0
 
 
 def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, cache_dir=None):
@@ -252,12 +272,21 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
     if not ls: notes.append("no leads (DexScreener empty or unreachable)")
     if sleep is None: sleep = time.sleep if get is http_json else (lambda s: None)
     st.setdefault("eligibility_skips", 0); run_leads = []
+    prior = None
     try:
-        book = rugger_book(cache_dir, data_dir)
+        prior = _rugger().read_prior(os.path.join(data_dir, "health.json"))
+    except Exception:
+        prior = None
+    rugger_t0 = time.monotonic()
+    try:
+        book = rugger_book(cache_dir, data_dir, prior=prior)
+        owners = _rugger().owner_ids(os.environ.get("PRIVACY_GUARD_PATTERNS", ""))
     except Exception as e:
         print(f"rugger log: skipped ({type(e).__name__})", file=sys.stderr)
         book = None
+        owners = set()
     would = []
+    rugger_stopped = False
     for i, mint in enumerate(m for m, _ in ls):
         src = ls[i][1]
         if i: sleep(QUOTE_GAP_S)  # pace Jupiter (and RugCheck) instead of bursting 12 calls
@@ -278,15 +307,28 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
                     source=src, check_delay_s=round(time.time() - t0, 2), cfg_version=C.CFG_VERSION, seed=seed,
                     error_src=";".join(sorted(ERR_NAMES[e] for e in errs))))
         # Log-only. stype, reason, and run_leads are already fixed. Fills do not read this.
+        # The whole hook, across every lead, stops after 5s. Skips and fills do not.
         try:
-            if book is not None:
-                for verdict in observe_rugger(book, rc, mint, now):
-                    would.append(_public_would(mint, verdict))
+            if book is not None and not rugger_stopped:
+                if time.monotonic() - rugger_t0 > RUGGER_BUDGET_S:
+                    rugger_stopped = True
+                    print("::warning::rugger log: 5s budget spent")
+                else:
+                    launch_s = None
+                    created = pair.get("pairCreatedAt") if isinstance(pair, dict) else None
+                    if isinstance(created, (int, float)) and not isinstance(created, bool) and created > 0:
+                        launch_s = float(created) / 1000.0
+                    for verdict in observe_rugger(book, rc, mint, now, launch_s=launch_s, owners=owners):
+                        would.append(_public_would(mint, verdict))
         except Exception as e:
             print(f"rugger log: skipped ({type(e).__name__})", file=sys.stderr)
     if book is not None:
         try:
-            book.save()
+            _rugger().mark_hold(cache_dir, book)
+            if book.writable and time.monotonic() - rugger_t0 <= RUGGER_BUDGET_S:
+                book.save()
+            elif book.writable:
+                print("::warning::rugger log: 5s budget spent")
         except Exception as e:
             print(f"rugger log: skipped ({type(e).__name__})", file=sys.stderr)
     try:
@@ -309,6 +351,11 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
              run_times_utc=st["run_times"], max_gap_min=max_gap_min(st["run_times"]),
              trigger=os.environ.get("GITHUB_EVENT_NAME", "local"))
     if fill: h.update(fill=fill)
+    if book is not None:
+        try:
+            h["rugger_status"] = book.status()
+        except Exception:
+            h["rugger_status"] = {"store": "miss", "entries": 0, "edges": 0}
     with open(os.path.join(data_dir, "health.json"), "w") as f: json.dump(h, f, indent=1)
     return h
 

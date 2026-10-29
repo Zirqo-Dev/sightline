@@ -110,8 +110,8 @@ class Veto(unittest.TestCase):
             os.makedirs(cache)
             with open(os.path.join(cache, "dev-checks-cache.json"), "w") as fh:
                 json.dump({"units": {
-                    UNIT_A: {"stake": dev, "late_rug": True, "live_at_ms": 1},
-                    UNIT_B: {"stake": dev, "late_rug": False, "live_at_ms": 2},
+                    UNIT_A: {"stake": dev, "late_rug": True, "live_at_ms": int(NOW * 1000) - 86_400_000},
+                    UNIT_B: {"stake": dev, "late_rug": False, "live_at_ms": int(NOW * 1000)},
                 }}, fh)
             with open(os.path.join(data, "dev_checks.json"), "w") as fh:
                 json.dump({"at": AT, "entries": [_dev(UNIT_B, "NEXT")["entries"][0]],
@@ -141,13 +141,23 @@ class Feeds(unittest.TestCase):
     def test_dev_checks_feed_records_late_rug_and_an_ada_only_hop(self):
         dev, child = stake("rugger"), stake("child")
         txs = [{
+            "time": NOW - 100,
             "inputs": [{"stake": dev, "addr": "", "lovelace": 10_000_000, "assets": {}}],
             "outputs": [
                 {"stake": child, "addr": "", "lovelace": 6_000_000, "assets": {}},
                 {"stake": stake("buyer"), "addr": "", "lovelace": 4_000_000, "assets": {UNIT_A: 1}},
             ],
         }]
-        self.assertEqual(DC._funded_out(dev, txs), [child])
+        self.assertEqual([row["stake"] for row in DC._funded_out(dev, txs)], [child])
+        party = [{
+            "time": NOW - 100,
+            "inputs": [
+                {"stake": dev, "addr": "", "lovelace": 1, "assets": {}},
+                {"stake": stake("pal"), "addr": "", "lovelace": 1, "assets": {}},
+            ],
+            "outputs": [{"stake": child, "addr": "", "lovelace": 6_000_000, "assets": {}}],
+        }]
+        self.assertEqual(DC._funded_out(dev, party), [])
         loaded = DC._patterns(OWNER)
         with tempfile.TemporaryDirectory() as d:
             data, cache = os.path.join(d, "data"), os.path.join(d, "cache")
@@ -155,7 +165,7 @@ class Feeds(unittest.TestCase):
             os.makedirs(cache)
             DC._feed_rugger(
                 {"units": {UNIT_A: {"stake": dev, "late_rug": True}}},
-                {UNIT_A: {"stake": dev, "funded": [child]}},
+                {UNIT_A: {"stake": dev, "funded": DC._funded_out(dev, txs)}},
                 cache, data, NOW, loaded, False)
             book = RB.open_book(cache, data)
             self.assertEqual([v["code"] for v in book.judge(dev, UNIT_B, NOW)], ["known_rugger"])
@@ -174,22 +184,63 @@ class Feeds(unittest.TestCase):
             with open(os.path.join(cache, "dev-checks-cache.json"), "w") as fh:
                 json.dump({"units": {UNIT_A: {"stake": dev}}}, fh)
             events = [
-                {"kind": "lp_remove", "unit": UNIT_A, "_lp_stake": dev, "actor_tag": "w-0123abcd",
-                 "ahead_of_dump": True},
-                {"kind": "lp_remove", "unit": UNIT_A, "_lp_stake": bystander, "actor_tag": "w-89abcdef",
-                 "ahead_of_dump": False},
-                {"kind": "lp_remove", "unit": UNIT_B, "_lp_stake": role_w, "actor_tag": "repeat_launcher",
-                 "ahead_of_dump": False},
+                {"kind": "lp_remove", "unit": UNIT_A, "tx_short": "aaaa", "pool_key": "pool",
+                 "_lp_stake": dev, "actor_tag": "w-0123abcd", "ahead_of_dump": True,
+                 "time": NOW - 10, "ada": 8000, "reserve_ada": 12000},
+                {"kind": "lp_remove", "unit": UNIT_A, "tx_short": "bbbb", "pool_key": "pool",
+                 "_lp_stake": bystander, "actor_tag": "w-89abcdef", "ahead_of_dump": False,
+                 "time": NOW - 10, "ada": 100, "reserve_ada": 100000},
+                {"kind": "lp_remove", "unit": UNIT_B, "tx_short": "cccc", "pool_key": "pool",
+                 "_lp_stake": role_w, "actor_tag": "repeat_launcher", "ahead_of_dump": False,
+                 "time": NOW - 10, "ada": 8000, "reserve_ada": 12000},
             ]
-            LM._feed_rugger(cache, data, events, NOW, CFG, False)
+            LM._feed_rugger(cache, data, events, [], NOW, CFG, False)
             book = RB.open_book(cache, data)
             dev_hit = book.judge(dev, UNIT_B, NOW)[0]
             self.assertEqual(dev_hit["code"], "known_rugger")
             self.assertEqual(dev_hit["tags"], ["ahead_of_dump", "lp_pulled"])
             self.assertEqual(book.judge(bystander, UNIT_A, NOW), [])
-            role = book.judge(role_w, "token-else", NOW)[0]
-            self.assertEqual(role["tags"], ["lp_pulled"])
+            self.assertEqual(book.judge(role_w, "token-else", NOW), [])
+            self.assertNotIn(dev, json.dumps(book.judge(dev, UNIT_B, NOW)))
+            pulls = json.load(open(os.path.join(cache, RB.PULLS_NAME)))
+            self.assertTrue(any(row.get("stake") == dev for row in pulls["pulls"]))
             self.assertFalse(os.path.exists(os.path.join(data, RB.PRIVATE_NAME)))
+            self.assertFalse(os.path.exists(os.path.join(data, RB.PULLS_NAME)))
+
+    def test_a_pull_flagged_on_a_later_run_still_feeds(self):
+        dev = stake("rugger")
+        with tempfile.TemporaryDirectory() as d:
+            data, cache = os.path.join(d, "data"), os.path.join(d, "cache")
+            os.makedirs(data)
+            os.makedirs(cache)
+            first = [{"kind": "lp_remove", "unit": UNIT_A, "tx_short": "dddd", "pool_key": "pool",
+                      "_lp_stake": dev, "ahead_of_dump": False, "time": NOW - 50,
+                      "ada": 8000, "reserve_ada": 12000}]
+            LM._feed_rugger(cache, data, first, [], NOW - 50, CFG, False)
+            later = [{"tx_short": "dddd", "pool_key": "pool", "unit": UNIT_A, "kind": "lp_remove",
+                      "ahead_of_dump": True, "time": NOW - 50, "ada": 8000, "reserve_ada": 12000}]
+            LM._feed_rugger(cache, data, [], later, NOW, CFG, False)
+            book = RB.open_book(cache, data)
+            hit = book.judge(dev, UNIT_B, NOW)[0]
+            self.assertIn("ahead_of_dump", hit["tags"])
+            self.assertNotIn(dev, json.dumps(hit))
+            self.assertIn(dev, open(os.path.join(cache, RB.PULLS_NAME)).read())
+
+
+class OwnerAndOutput(unittest.TestCase):
+    def test_owner_hash_is_dropped_and_public_text_has_no_raw_wallet(self):
+        dev = stake("owner")
+        owners = RB.owner_ids(dev)
+        self.assertIn(RB.public_id(dev), owners)
+        self.assertIsNone(V.keep_tag(RB.public_id(dev), V.DC.known_roles(), (["."], set()), owners))
+        book = RB.Book(RB.MemoryStore(None), RB.settings_from(CFG))
+        book.note_evidence(stake("rugger"), "cardano", "late_rug", UNIT_A, AT)
+        doc = V.build(_dev(UNIT_B, "NEXT", dev_tag=RB.public_id(dev)), {"moves": []}, CFG, OWNER, AT,
+                      book=book, deployers={UNIT_B: stake("rugger")})
+        # The owner id is not an evidence tag even if a caller put it on the row.
+        text = json.dumps(doc)
+        self.assertNotIn(dev, text)
+        self.assertNotIn(stake("rugger"), text)
 
 
 class Guard(unittest.TestCase):
@@ -256,6 +307,42 @@ class Guard(unittest.TestCase):
         clean = json.load(open(os.path.join(ROOT, "solana-desk", "tests", "fixtures", "rugger_would_veto.json")))
         ok = self._desk({"solana-desk/rugger_would_veto.json": clean})
         self.assertEqual(ok.returncode, 0, ok.stderr)
+        base58 = "1" * 32
+        extra = json.load(open(os.path.join(ROOT, "solana-desk", "tests", "fixtures", "rugger_would_veto.json")))
+        extra["rows"][1]["note"] = base58
+        leaked_b58 = self._desk({"solana-desk/rugger_would_veto.json": extra})
+        self.assertNotEqual(leaked_b58.returncode, 0)
+        self.assertNotIn(base58.encode(), leaked_b58.stdout + leaked_b58.stderr)
+        shaped = {"schema": 1, "entries": {}, "edges": [], "exclusions": []}
+        shaped_run = self._desk({"solada-prefilter/not-the-name.json": shaped})
+        self.assertNotEqual(shaped_run.returncode, 0)
+        self.assertIn(b"private rugger document", shaped_run.stderr)
+
+    def test_owner_id_match_prints_a_count_only(self):
+        dev = stake("guard-owner")
+        wid = RB.public_id(dev)
+        doc = {"note": wid}
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d, True)
+        main = os.path.join(d, "main")
+        os.makedirs(os.path.join(main, "scripts"))
+        shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), os.path.join(main, "scripts"))
+        shutil.copy(os.path.join(ROOT, "scripts", "privacy-public-keys.txt"), os.path.join(main, "scripts"))
+        shutil.copytree(SRC, os.path.join(main, "solada-prefilter"),
+                        ignore=shutil.ignore_patterns("tests", "__pycache__"))
+        data = os.path.join(d, "desk-data")
+        os.makedirs(data)
+        with open(os.path.join(data, "note.json"), "w") as fh:
+            json.dump(doc, fh)
+        subprocess.run(["git", "init", "-q"], cwd=data, check=True)
+        subprocess.run(["git", "add", "-A"], cwd=data, check=True)
+        env = dict(os.environ, PRIVACY_GUARD_PATTERNS=dev)
+        r = subprocess.run(["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data"],
+                           cwd=d, env=env, capture_output=True)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn(b"owner id matched", r.stderr)
+        self.assertNotIn(dev.encode(), r.stdout + r.stderr)
+        self.assertNotIn(wid.encode(), r.stdout + r.stderr)
 
 
 if __name__ == "__main__":
