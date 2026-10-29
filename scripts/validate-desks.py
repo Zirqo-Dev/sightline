@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validate every desk file listed in desks.json against schema/. Needs: pip install jsonschema
 Usage: validate-desks.py [DATA_DIR]  DATA_DIR (default: repo root) holds desks.json and desk files;
-schemas always come from this script's repo schema/."""
+schemas always come from this script's repo schema/. x_buzz.json is checked when present."""
 import json,os,sys,glob
 from jsonschema import Draft202012Validator
 ROOT=os.path.join(os.path.dirname(os.path.abspath(__file__)),"..")
@@ -27,7 +27,7 @@ def risk_maps(doc):
     return found
 
 os.chdir(sys.argv[1] if len(sys.argv)>1 else ROOT)
-S={k:Draft202012Validator(json.load(open(f"{SCHEMA}/{k}.schema.json"))) for k in("paper-book","run-log","brief","pulse","solada-vetoes")}
+S={k:Draft202012Validator(json.load(open(f"{SCHEMA}/{k}.schema.json"))) for k in("paper-book","run-log","brief","pulse","solada-vetoes","x-buzz")}
 for v in S.values(): v.check_schema(v.schema)
 jobs=[]
 for d in json.load(open("desks.json"))["desks"]:
@@ -45,6 +45,12 @@ for fix in ("scripts/fixtures/pulse-example.json", "scripts/fixtures/pulse-facto
     if os.path.exists(fix): jobs.append((fix,"pulse"))
 for fix in ("solada-prefilter/vetoes.json", "solada-prefilter/tests/fixtures/vetoes.json"):
     if os.path.exists(fix): jobs.append((fix,"solada-vetoes"))
+# Root of desk-data. Absent until a run writes it; the guard checks it when present.
+buzz="x_buzz.json"
+if os.path.exists(buzz): jobs.append((buzz,"x-buzz"))
+else: print(f"skip {buzz} (not written yet)")
+for fix in ("scripts/fixtures/x-buzz.json",):
+    if os.path.exists(fix): jobs.append((fix,"x-buzz"))
 bad=0
 risk_schema=S["run-log"].schema["properties"]["risk_check"]
 risk_check=Draft202012Validator(risk_schema)
