@@ -31,7 +31,7 @@ def risk_maps(doc):
     return found
 
 os.chdir(sys.argv[1] if len(sys.argv)>1 else ROOT)
-S={k:Draft202012Validator(json.load(open(f"{SCHEMA}/{k}.schema.json"))) for k in("paper-book","run-log","brief","pulse","solada-vetoes","solana-rugger-log","x-buzz","x-buzz-history","buzz-outcomes","buzz-outcomes-summary")}
+S={k:Draft202012Validator(json.load(open(f"{SCHEMA}/{k}.schema.json"))) for k in("paper-book","run-log","brief","pulse","solada-vetoes","solana-rugger-log","x-buzz","x-buzz-history","buzz-outcomes","buzz-outcomes-summary","whale-roster")}
 for v in S.values(): v.check_schema(v.schema)
 jobs=[]
 for d in json.load(open("desks.json"))["desks"]:
@@ -51,6 +51,11 @@ for fix in ("solada-prefilter/vetoes.json", "solada-prefilter/tests/fixtures/vet
     if os.path.exists(fix): jobs.append((fix,"solada-vetoes"))
 for fix in ("solana-desk/rugger_would_veto.json", "solana-desk/tests/fixtures/rugger_would_veto.json"):
     if os.path.exists(fix): jobs.append((fix,"solana-rugger-log"))
+roster="solada-prefilter/whale_roster.json"
+if os.path.exists(roster): jobs.append((roster,"whale-roster"))
+else: print(f"skip {roster} (not written yet)")
+for fix in ("scripts/fixtures/whale-roster.json",):
+    if os.path.exists(fix): jobs.append((fix,"whale-roster"))
 # Root of desk-data. Absent until a run writes it; the guard checks it when present.
 buzz="x_buzz.json"
 if os.path.exists(buzz): jobs.append((buzz,"x-buzz"))

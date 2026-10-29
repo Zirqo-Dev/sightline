@@ -1,17 +1,17 @@
-/* Solada intel: flag strip, Cardano top 10, founder whale, per-ticker drill-down,
+/* Solada intel: flag strip, Cardano top 10, whale card, per-ticker drill-down,
    cluster heat grid, pattern scoreboard. Zero AI, no dependencies.
    data: [log.json, pulse.json, paper.json, /solada-prefilter/flags.json] (any may be missing).
    Wallets render only as short tags (w-xxxxxxxx hashes or Snek stake-prefix tags <= 12 chars). */
 (function () {
   const SEV = {
-    high: ["identical_size_buys", "watch_tags_first_block", "sniper_full_exit", "ada_side_drop", "founder_whale_move", "koth_pile_in", "known_launcher_deploy"],
+    high: ["identical_size_buys", "watch_tags_first_block", "sniper_full_exit", "ada_side_drop", "founder_whale_move", "whale_move", "koth_pile_in", "known_launcher_deploy"],
     med: ["coordinated_buys", "fresh_wallet_swarm", "repeat_early_buyer", "holders_down_mcap_up", "volume_without_holders", "holder_concentration", "concentration_jump", "user_created_pool", "pool_preseeder_early"],
     pos: ["holders_doubled_ada_up"]
   };
   const EARLY = ["watch_tags_first_block", "watch_tags_early_buyers", "coordinated_buys", "identical_size_buys", "fresh_wallet_swarm", "pool_preseeder_early", "repeat_early_buyer"];
   const DAY = 864e5;
   const sevOf = f => f.severity || Object.keys(SEV).find(k => SEV[k].includes(f.kind)) || "low";
-  const label = k => String(k || "").replace(/_/g, " ");
+  const label = k => (k === "founder_whale_move" || k === "whale_move") ? "Whale move" : String(k || "").replace(/_/g, " ");
   /* Never let a full address or key through: tags only. */
   const safeTag = t => {
     const s = String(t || "").trim();
@@ -42,7 +42,7 @@
   function normalize(f) {
     const g = Object.assign({}, f);
     if (g.ticker != null) { const c = cleanName(g.ticker, g); g.ticker = c.name; if (c.lp) g.lp = true; }
-    if (g.kind === "founder_whale_move") {
+    if (g.kind === "founder_whale_move" || g.kind === "whale_move") {
       if (g.ada_equiv != null && !g.value_basis) { delete g.ada_equiv; g.raw_units = true; }
       if (g.lp || g.raw_units) g.severity = "low";
     }
@@ -80,16 +80,22 @@
       <td class="num si-dim">${S.fmt(x.mcap_ada, 0)}</td></tr>${x.note ? `<tr class="si-note"><td></td><td colspan="6" class="c-long"><span class="ell">${S.rich(x.note)}</span></td></tr>` : ""}`).join("")}</tbody></table>`;
   }
 
+  function whaleRecord(log) {
+    if (!log) return null;
+    if (Array.isArray(log.whales) && log.whales.length) return log.whales[0];
+    return log.founder_whale || null;
+  }
   function whale(log, flags) {
-    const w = log && log.founder_whale;
-    const moves = flags.filter(f => f.kind === "founder_whale_move");
+    const w = whaleRecord(log);
+    const moves = flags.filter(f => f.kind === "founder_whale_move" || f.kind === "whale_move");
     if ((!w || typeof w !== "object") && !moves.length) return "";
     const first = t => /ASCEND|STRIKE/i.test(String(t)) ? 0 : 1;
     const lines = w && w.line ? String(w.line).split(/(?<=\.)\s+(?=[A-Z$])/).sort((a, b) => first(a) - first(b)) : [];
     const mv = moves.slice().sort((a, b) => ((a.lp || a.raw_units) - (b.lp || b.raw_units)) || first(a.ticker) - first(b.ticker)).slice(0, 8);
     const net = w && typeof w.net_flow_ada === "number" ? w.net_flow_ada : null;
     const tagged = safeTag(w && w.stake_prefix) || safeTag(moves[0] && moves[0].tag);
-    return `<div class="si-whale"><div class="si-whead"><b>Founder whale</b> ${tagged ? chips([tagged]) : ""}${net != null ? ` <span class="${net >= 0 ? "up" : "down"} mono">net ${net > 0 ? "+" : ""}${S.fmt(net, 0)} ADA</span>` : ""}</div>
+    const who = (w && typeof w.codename === "string" && w.codename && !/founder|cockwhale|\$|@/i.test(w.codename)) ? w.codename : "Whale";
+    return `<div class="si-whale"><div class="si-whead"><b>${S.esc(who)}</b> ${tagged ? chips([tagged]) : ""}${net != null ? ` <span class="${net >= 0 ? "up" : "down"} mono">net ${net > 0 ? "+" : ""}${S.fmt(net, 0)} ADA</span>` : ""}</div>
       ${mv.length ? `<div class="si-moves">${mv.map(m => `<span class="si-move ${/ASCEND|STRIKE/i.test(m.ticker) ? "key" : ""}${m.lp || m.raw_units ? " dim" : ""}"><b>${S.esc(m.ticker)}</b> ${m.lp ? S.pill("LP", "pass") + " " : ""}<span class="${m.delta >= 0 ? "up" : "down"}">${m.delta > 0 ? "+" : ""}${S.fmt(m.delta, 0)}</span>${m.raw_units ? ` <span class="si-dim">raw units · unvalued</span>` : m.ada_equiv ? ` ≈${S.fmt(m.ada_equiv, 0)}₳` : ""}</span>`).join("")}</div>` : ""}
       ${lines.map(l => `<div class="si-wline ${first(l) ? "" : "key"}">${S.rich(l)}</div>`).join("")}</div>`;
   }
@@ -151,7 +157,7 @@
     const list = Object.entries(kinds).sort((a, b) => b[1].n - a[1].n);
     if (!list.length) return `<p class="muted si-empty">No flags fired yet.</p>`;
     const anyOut = list.some(([, v]) => v.pump || v.rug);
-    return `<table class="tbl si-board"><thead><tr><th>Flag</th><th class="num">Fired</th><th class="num">→Pump</th><th class="num">→Rug</th></tr></thead><tbody>${list.map(([k, v]) => `<tr><td>${S.pill(sevOf({ kind: k }), "sev-" + sevOf({ kind: k }))} ${S.esc(label(k))}</td><td class="num">${v.n}</td><td class="num up">${anyOut ? v.pump : "–"}</td><td class="num down">${anyOut ? v.rug : "–"}</td></tr>`).join("")}</tbody></table>${anyOut ? "" : `<p class="muted si-empty">Outcomes not tracked yet: pump/rug counts appear once Snek scores flags.</p>`}`;
+    return `<table class="tbl si-board"><thead><tr><th>Flag</th><th class="num">Fired</th><th class="num">→Pump</th><th class="num">→Rug</th></tr></thead><tbody>${list.map(([k, v]) => `<tr><td>${S.pill(sevOf({ kind: k }), "sev-" + sevOf({ kind: k }))} ${S.esc(label(k))}</td><td class="num">${v.n}</td><td class="num up">${anyOut ? v.pump : "–"}</td><td class="num down">${anyOut ? v.rug : "–"}</td></tr>`).join("")}</tbody></table>${anyOut ? "" : `<p class="muted si-empty">Outcomes not tracked yet: pump/rug counts appear once flags are scored.</p>`}`;
   }
 
   S.register("solada-intel", {

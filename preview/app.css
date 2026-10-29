@@ -340,7 +340,7 @@ button.chip[data-chain].on{background:var(--chain);color:#041018}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none !important;transition:none !important}
   .tile:hover,.card:hover{transform:none}
-  .chart .net,.chart .gross{stroke-dashoffset:0}
+  .chart .net,.chart .gross,.cv2-spark path{stroke-dashoffset:0}
 }
 
 /* Cardano tab v2. Phone-first, 390px, no page-level sideways scroll. */
@@ -438,3 +438,26 @@ body[data-desk="solada"] #view{overflow-x:clip}
 .cv2-fold summary{cursor:pointer;padding:10px 4px;color:var(--dim);font:700 10px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase}
 .cv2-fold[open] summary{color:#8fd8ff}
 .cv2-moreblock{margin:8px 0}
+.cv2-learned{margin:0 0 12px;padding:10px 12px;border:1px solid rgba(61,139,255,.35);border-radius:12px;background:rgba(61,139,255,.08)}
+.cv2-learned h2{margin:0 0 6px;font:700 12px/1.3 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#8fd8ff}
+.cv2-learned ul{margin:0;padding-left:16px}
+.cv2-learned li{margin:4px 0;color:var(--text);font:13px/1.45 var(--mono)}
+.cv2-nets{display:grid;gap:8px;margin:0 0 10px}
+.cv2-net{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:rgba(61,139,255,.08)}
+.cv2-net b{display:block;font:700 13px/1.2 var(--mono);color:#fff}
+.cv2-net .up{color:var(--up)}
+.cv2-net .dn{color:var(--down)}
+.cv2-spark{width:84px;height:28px;flex:0 0 auto}
+.cv2-spark path{fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:160;stroke-dashoffset:160;animation:cv2draw .7s ease forwards}
+.cv2-spark.up path{stroke:var(--up)}
+.cv2-spark.dn path{stroke:var(--down)}
+@keyframes cv2draw{to{stroke-dashoffset:0}}
+.cv2-outs{display:grid;gap:8px}
+.cv2-out{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;border:1px solid var(--line);border-radius:12px;background:var(--panel);min-width:0}
+.cv2-outn{display:flex;gap:8px;margin:0;font:11px/1.3 var(--mono)}
+.cv2-outn .up{color:var(--up)}
+.cv2-outn .dn{color:var(--down)}
+@media (min-width:800px){
+  .cv2-nets{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .cv2-outs{grid-template-columns:repeat(5,minmax(0,1fr))}
+}

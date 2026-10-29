@@ -25,7 +25,7 @@
     "handle_policy": "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a",
     "stake": "stake1uylu74g0f466kj7s7ptmy40sn7cwdt3zvnswccmhxkujmtq0zqllm",
     "stake_prefix": "uylu74g0",
-    "_stake_note": "Public third-party key of $cockwhale (founder whale), not the owner's. Listed in scripts/privacy-public-keys.txt so the privacy guard allows this exact value; output carries only its tag.",
+    "_stake_note": "Public third-party key of the lead whale (Grumpy Walrus), not the owner's. Listed in scripts/privacy-public-keys.txt so the privacy guard allows this exact value; output carries only its tag.",
     "min_ada_equiv": 2000,
     "min_position_pct": 10,
     "always_tickers": [
@@ -101,7 +101,7 @@
       "repeat_launcher",
       "swarm_launcher",
       "pool_preseeder",
-      "founder_whale"
+      "lead_whale"
     ],
     "snek_prefix_tags": {
       "_note": "Snek Sentinel's stake-prefix tags (partial stake keys after 'stake1', already public in desk data). Seed watchlist only; newly found wallets are published as w-xxxxxxxx hashes.",
@@ -142,7 +142,7 @@
       "wojaks_dumper": [
         "uylvsrhd"
       ],
-      "founder_whale": [
+      "lead_whale": [
         "uylu74g0"
       ],
       "watch": [
@@ -176,7 +176,7 @@
     "max_calls": 80
   },
   "whale_ledger": {
-    "_note": "SPD-44 founder whale ledger (whale_ledger.py). Research only, never triggers or the webhook. Free Koios public tier: max_calls per run, utxo_batch hashes per POST, max_txs per run (backlog resumes next run). budget_s is the slice it runs first inside the shared research deadline, so big_moves cannot exhaust that deadline before the ledger (PR #31).",
+    "_note": "SPD-44 lead whale ledger (whale_ledger.py) for Grumpy Walrus. Research only, never triggers or the webhook. Free Koios public tier: max_calls per run, utxo_batch hashes per POST, max_txs per run (backlog resumes next run). budget_s is the slice it runs first inside the shared research deadline, so big_moves cannot exhaust that deadline before the ledger (PR #31).",
     "enabled": true,
     "budget_s": 90,
     "max_txs": 100,

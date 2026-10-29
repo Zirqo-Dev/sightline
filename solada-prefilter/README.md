@@ -58,7 +58,7 @@
 | `holders_doubled_ada_up` | positive: holders x2 with a rising ADA side |
 | `volume_without_holders` | 24h volume >= 3x ADA side with flat/falling holders (wash) |
 | `holder_concentration` / `concentration_jump` | top stake cluster >= 25% of non-script supply / +10 pts (only where holder pages were already fetched) |
-| `founder_whale_move` | whale moves that passed the whale trigger, minus COCK/SOLADA team-support noise |
+| `whale_move` | whale moves that passed the whale trigger, minus COCK/SOLADA team-support noise. Readers still accept the previous kind name. |
 
 Wallets appear only as `w-xxxxxxxx` (sha256 of the stake key) or as Snek's existing prefix tags. Stake keys are derived from base addresses locally (bech32, no API call). Full keys, wallet ages and sniper positions stay in `--cache-dir/flags-cache.json` (Actions cache). `flags.assert_public` aborts the run before writing any full address or stake key. Cost: at most ~40 Koios calls per run (8 launch scans x 2, 15 wallet-age lookups, 3 KotH scans x 2, 1-2 holdings batches), about 25 s at the configured pace; zero on baseline runs.
 

@@ -440,7 +440,7 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(def, "solada-intel panel registered");
   const data = j => [{ path: "log.json", json: j.log }, { path: "pulse.json", json: j.pulse }, { path: "paper.json", json: null }, { path: "/solada-prefilter/flags.json", json: j.flags }];
   const html = def.render({ data: data(si), opt: { now: si.now } });
-  for (const want of ["CLOVE", "ZKOWL", "identical size buys", "sev-high", "Founder whale", "Cluster heat grid", "Pattern scoreboard", "Research only, not advice.", "exited", "held", "▼6", "▲12", "net -4,536 ADA"])
+  for (const want of ["CLOVE", "ZKOWL", "identical size buys", "sev-high", "Whale", "Cluster heat grid", "Pattern scoreboard", "Research only, not advice.", "exited", "held", "▼6", "▲12", "net -4,536 ADA"])
     assert(html.includes(want), "solada-intel shows " + want);
   assert(html.indexOf(">1<") < html.indexOf("CLOVE") || html.indexOf("ZKOWL") < html.indexOf("CLOVE"), "top 10 sorted by rank");
   assert(html.indexOf("ASCEND: no trades") < html.indexOf("NIGHT: sold"), "whale card puts ASCEND/STRIKE first");
@@ -581,6 +581,11 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   const cardano = P.cardanoHtml({
     log: {
       founder_whale: { handle: "$cockwhale", address: "w-f3186187", stake_prefix: "uylu74g0", net_flow_ada: 12, summary: "the founder sold SNEK founder_pct", line: "ASCEND flat " + "B".repeat(44), cock_order: "order " + addr + " " + stake },
+      learned_or_changed: ["A gift from an outside wallet is not a buy."],
+      history: [
+        { asof: "2026-10-28T00:00:00Z", founder_whale: { net_flow_ada: -4, handle: "Grumpy Walrus" } },
+        { asof: "2026-10-29T00:00:00Z", founder_whale: { net_flow_ada: 12, handle: "Grumpy Walrus" } }
+      ],
       whale_watch: { wallets: [{ tag: "w-f3186187", codename: "Grumpy Walrus", prefix: stake, label: "$cockwhale", latest: "pool " + addr }] },
       risk_check: { SNEK: { risk: "High risk", tags: ["Dev sold"], source: "scanner" }, ASCEND: { risk: "Low risk", tags: [], source: "dev_checks" } },
       cardano_top10: [{ rank: 1, ticker: "SNEK", ada_side_depth: 9000, whale_tags: ["w-0123abcd", stake] }, { rank: 2, ticker: "NIGHT", ada_side_depth: 5000 }],
@@ -612,6 +617,14 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   const prefer = P.cardanoHtml({ log: both });
   assert(prefer.includes("Risk score: High risk") && !prefer.includes("Risk score: Low risk"), "risk_check wins when an old snapshot key is also present");
   assert(cardano.includes("Grumpy Walrus move") && !/founder_whale|founder_whale_move|founder_pct|\bfounder\b/i.test(cardano), "whale-move flag uses the codename, not the data key");
+  assert(cardano.includes("What changed this run") && cardano.includes("outside wallet is not a buy"), "learned lines render as their own block");
+  assert(cardano.includes("net +12 ADA") && cardano.includes("cv2-spark"), "net flow and its history render on the whale card");
+  assert(cardano.includes("FLAG OUTCOMES") && cardano.includes("2 pump") && cardano.includes("1 rug") && cardano.includes("coordinated buys"), "each flag outcome shows its counts");
+  const preferred = P.cardanoHtml({ log: {
+    whales: [{ codename: "Sleepy Otter", role: "watch", status: "candidate", net_flow_ada: -5 }],
+    founder_whale: { handle: "Grumpy Walrus", net_flow_ada: 99 }
+  }});
+  assert(preferred.includes("Sleepy Otter") && preferred.includes("net -5 ADA") && !preferred.includes("net +99") && !/founder/i.test(preferred), "whales[] wins and the old object is not required");
   assert(!cardano.includes("B".repeat(32)) && !cardano.includes("C".repeat(32)), "forensics and pumpfun address-like values stay hidden");
   const v2 = load("scripts/fixtures/cardano-v2.json");
   const full = P.cardanoHtml(v2);

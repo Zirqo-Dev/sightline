@@ -119,7 +119,7 @@ fi
 # and allowlist handling below is unchanged; none of these files are in mask_files, so an
 # allowlisted key here still fails.
 if [ -n "${root_mode:-}" ]; then
-  for need in solada-prefilter/dev_checks.json solada-prefilter/liquidity_moves.json solada-prefilter/vetoes.json solana-desk/rugger_would_veto.json; do
+  for need in solada-prefilter/dev_checks.json solada-prefilter/liquidity_moves.json solada-prefilter/vetoes.json solana-desk/rugger_would_veto.json solada-prefilter/whale_roster.json; do
     [ -f "$need" ] || continue
     have=0
     for f in "${files[@]}"; do
@@ -140,6 +140,11 @@ for f in "${files[@]}"; do
   case "$(basename "$f")" in
     rugger-blacklist.json|rugger-blacklist.json.enc|rugger-pulls.json)
       echo "PRIVACY GUARD: $f: private cache file must not be published" >&2
+      fail=1
+      continue
+      ;;
+    roster.json)
+      echo "PRIVACY GUARD: $f: private roster must not be published" >&2
       fail=1
       continue
       ;;
@@ -172,6 +177,8 @@ role_re = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
 for k in tags:
     if isinstance(k, str) and not k.startswith("_") and role_re.fullmatch(k):
         roles.add(k)
+if "lead_whale" in roles or "founder_whale" in roles:
+    roles.update(("lead_whale", "founder_whale"))
 ok = re.compile(r"^w-[0-9a-f]{8}$")
 bad = []
 for i, e in enumerate(doc.get("entries") or []):
@@ -206,6 +213,8 @@ role_re = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
 for k in tags:
     if isinstance(k, str) and not k.startswith("_") and role_re.fullmatch(k):
         roles.add(k)
+if "lead_whale" in roles or "founder_whale" in roles:
+    roles.update(("lead_whale", "founder_whale"))
 ok = re.compile(r"^w-[0-9a-f]{8}$")
 bad = []
 rows = []
@@ -246,6 +255,8 @@ role_re = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
 for k in tags:
     if isinstance(k, str) and not k.startswith("_") and role_re.fullmatch(k):
         roles.add(k)
+if "lead_whale" in roles or "founder_whale" in roles:
+    roles.update(("lead_whale", "founder_whale"))
 ok = re.compile(r"^w-[0-9a-f]{8}$")
 ev_tags = {"ahead_of_dump", "late_rug", "lp_pulled", "rugcheck_rugged"}
 banned = {"wallet", "stake", "address", "creator", "funder", "funded", "launcherAddress", "raw"}
@@ -403,8 +414,8 @@ if bad:
   # Private blacklist documents are detected by shape, not only by file name.
   case "$f" in
     *.json)
-      if ! python3 -c '
-import json, sys
+      python3 -c '
+import json, os, sys
 try:
     doc = json.load(open(sys.argv[1]))
 except Exception:
@@ -413,9 +424,25 @@ if (isinstance(doc, dict) and doc.get("schema") == 1
         and isinstance(doc.get("entries"), dict) and isinstance(doc.get("edges"), list)
         and "exclusions" in doc):
     sys.exit(1)
+if isinstance(doc, dict) and doc.get("kind") == "whale_roster" and doc.get("private") is True:
+    sys.exit(2)
+whales = doc.get("whales") if isinstance(doc, dict) else None
+if isinstance(whales, list) and any(isinstance(w, dict) and "wallets" in w for w in whales):
+    sys.exit(2)
+if isinstance(doc, dict) and (doc.get("kind") == "whale_roster_public" or os.path.basename(sys.argv[1]) == "whale_roster.json"):
+    import pathlib
+    sys.path.insert(0, str(pathlib.Path(sys.argv[2])))
+    import whale_roster as W
+    if not W.public_text_ok(doc):
+        sys.exit(3)
 sys.exit(0)
-' "$f"; then
+' "$f" "$script_dir/.."
+      rc=$?
+      if [ "$rc" -eq 1 ]; then
         echo "PRIVACY GUARD: $f: private rugger document must not be published" >&2
+        fail=1
+      elif [ "$rc" -ne 0 ]; then
+        echo "PRIVACY GUARD: $f: private roster must not be published" >&2
         fail=1
       fi
       ;;

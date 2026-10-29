@@ -375,13 +375,16 @@ def metric_flags(ticker, cur, prev, cfg):
 
 
 def whale_flags(whale_summary, cfg):
-    """Founder-whale moves as flags, COCK/SOLADA team-support activity dropped as noise."""
+    """Lead-whale moves as flags, COCK/SOLADA team-support activity dropped as noise.
+
+    kind is whale_move. Readers still accept the previous kind name.
+    """
     out = []
     for mv in (whale_summary or {}).get("moves") or []:
         nm = str(mv.get("asset", "")).upper()
         if any(n in nm for n in cfg["whale_noise_tickers"]):
             continue
-        out.append({"kind": "founder_whale_move", "ticker": nm, "tag": whale_summary.get("tag"), **{k: mv[k] for k in mv if k != "asset"}})
+        out.append({"kind": "whale_move", "ticker": nm, "tag": whale_summary.get("tag"), **{k: mv[k] for k in mv if k != "asset"}})
     return out
 
 
@@ -393,9 +396,17 @@ def repeat_buyers(appear, cfg):
 # ---------------------------------------------------------------- orchestration
 def watch_map(cfg, log_keys):
     w = {}
+    merged = {}
     for role, tags in (cfg.get("snek_prefix_tags") or {}).items():
-        if role.startswith("_"):
+        if not isinstance(role, str) or role.startswith("_"):
             continue
+        # Readers and this map accept the previous role name. New flags use lead_whale.
+        out_role = "lead_whale" if role == "founder_whale" else role
+        bucket = merged.setdefault(out_role, [])
+        for t in tags or []:
+            if t not in bucket:
+                bucket.append(t)
+    for role, tags in merged.items():
         for t in tags:
             w[t] = role
     for k in log_keys:
