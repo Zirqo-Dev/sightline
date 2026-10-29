@@ -4,9 +4,9 @@
  "measured_factor": true,
  "veto": false,
  "buy_signal": false,
- "asof": "2026-10-29T02:29:00Z",
+ "asof": "2026-10-29T04:33:00Z",
  "window": {
-  "h24_start": "2026-10-28T03:00:00Z"
+  "h24_start": "2026-10-28T05:00:00Z"
  },
  "definitions": {
   "bot_like": "account under 30 days old OR under 50 followers",
@@ -18,12 +18,12 @@
  },
  "shortlist_sources": {
   "cardano": "desk-data:solada/log.json -> cardano_top10[] (ticker, policy_short) minus desk-data:solada-prefilter/vetoes.json tokens[] (empty this run)",
-  "solana": "desk-data:solana-desk/tasks.csv rows agent=scanner,task=scan,result=pass for the latest two run_ids 20261029T0130 and 20261029T0200 (mint)"
+  "solana": "desk-data:solana-desk/tasks.csv rows agent=scanner,task=scan,result=pass for the latest two run_ids 20261029T0400 and 20261029T0430 (mint)"
  },
  "x_calls": {
-  "counts": 17,
-  "search": 15,
-  "total": 32
+  "counts": 11,
+  "search": 10,
+  "total": 21
  },
  "tokens": [
   {
@@ -32,43 +32,43 @@
    "id_short": "eb7a93ebc3",
    "query": "ASCEND (cardano OR ADA OR minswap OR snekfun) -is:retweet",
    "query_basis": "ticker+context",
-   "mentions_24h": 12,
-   "mentions_1h": 1,
+   "mentions_24h": 11,
+   "mentions_1h": 2,
    "hourly_24h": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
     1,
     2,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    1,
-    1,
-    1,
-    0,
-    1,
-    0,
-    0,
-    1,
-    0,
-    1,
-    0,
-    0,
-    1,
-    0,
-    1
+    0
    ],
    "velocity": {
     "per_5m_sample": 0,
-    "per_1h": 1,
-    "ratio_1h_vs_prev_hr": 0.0
+    "per_1h": 2,
+    "ratio_1h_vs_prev_hr": 2.0
    },
    "sample": {
     "posts": 10,
     "unique_authors": 6,
-    "median_followers": 302.5,
+    "median_followers": 466.5,
     "bot_like_share": 0.17,
     "authors_over_10k": 0
    },
@@ -81,11 +81,9 @@
    "id_short": "0691b2fecc",
    "query": "NIGHT (cardano OR ADA OR midnight OR minswap) -is:retweet",
    "query_basis": "ticker+context",
-   "mentions_24h": 1137,
-   "mentions_1h": 52,
+   "mentions_24h": 1135,
+   "mentions_1h": 35,
    "hourly_24h": [
-    43,
-    36,
     33,
     39,
     28,
@@ -107,18 +105,20 @@
     67,
     43,
     49,
-    27
+    49,
+    37,
+    18
    ],
    "velocity": {
-    "per_5m_sample": 7,
-    "per_1h": 52,
-    "ratio_1h_vs_prev_hr": 1.14
+    "per_5m_sample": 0,
+    "per_1h": 35,
+    "ratio_1h_vs_prev_hr": 0.76
    },
    "sample": {
     "posts": 25,
-    "unique_authors": 24,
-    "median_followers": 188.0,
-    "bot_like_share": 0.29,
+    "unique_authors": 23,
+    "median_followers": 707,
+    "bot_like_share": 0.17,
     "authors_over_10k": 2
    },
    "false_positive_risk": "high: raw word NIGHT = 208,826 posts/24h; even with cardano/midnight context, sample had 0 $NIGHT cashtags (mostly Midnight-network chatter, not token talk)",
@@ -130,11 +130,9 @@
    "id_short": "f13ac4d66b",
    "query": "STRIKE (cardano OR ADA OR minswap OR snekfun) -is:retweet",
    "query_basis": "ticker+context",
-   "mentions_24h": 17,
-   "mentions_1h": 0,
+   "mentions_24h": 19,
+   "mentions_1h": 2,
    "hourly_24h": [
-    1,
-    1,
     0,
     0,
     1,
@@ -156,18 +154,20 @@
     0,
     0,
     0,
+    0,
+    4,
     0
    ],
    "velocity": {
     "per_5m_sample": 0,
-    "per_1h": 0,
+    "per_1h": 2,
     "ratio_1h_vs_prev_hr": null
    },
    "sample": {
     "posts": 13,
     "unique_authors": 13,
-    "median_followers": 601,
-    "bot_like_share": 0.38,
+    "median_followers": 618,
+    "bot_like_share": 0.23,
     "authors_over_10k": 2
    },
    "false_positive_risk": "medium: common word; context filter keeps 18",
@@ -179,11 +179,9 @@
    "id_short": "29d222ce76",
    "query": "MIN (cardano OR ADA OR minswap) -is:retweet",
    "query_basis": "ticker+context",
-   "mentions_24h": 656,
-   "mentions_1h": 35,
+   "mentions_24h": 664,
+   "mentions_1h": 37,
    "hourly_24h": [
-    38,
-    31,
     34,
     38,
     31,
@@ -205,19 +203,21 @@
     16,
     25,
     31,
-    19
+    40,
+    34,
+    22
    ],
    "velocity": {
-    "per_5m_sample": 2,
-    "per_1h": 35,
-    "ratio_1h_vs_prev_hr": 1.24
+    "per_5m_sample": 8,
+    "per_1h": 37,
+    "ratio_1h_vs_prev_hr": 0.85
    },
    "sample": {
     "posts": 25,
-    "unique_authors": 17,
-    "median_followers": 78,
-    "bot_like_share": 0.35,
-    "authors_over_10k": 0
+    "unique_authors": 21,
+    "median_followers": 25,
+    "bot_like_share": 0.52,
+    "authors_over_10k": 1
    },
    "false_positive_risk": "high: raw MIN = 57,326/24h; context-filtered 649 still dominated by 'min' as minutes/minimum, 0 $MIN cashtags in sample",
    "confidence": "low"
@@ -229,10 +229,8 @@
    "query": "SNEK (cardano OR ADA OR minswap OR snekfun) -is:retweet",
    "query_basis": "ticker+context",
    "mentions_24h": 43,
-   "mentions_1h": 4,
+   "mentions_1h": 0,
    "hourly_24h": [
-    2,
-    0,
     1,
     0,
     4,
@@ -254,17 +252,19 @@
     0,
     0,
     3,
-    2
+    4,
+    0,
+    0
    ],
    "velocity": {
-    "per_5m_sample": 1,
-    "per_1h": 4,
-    "ratio_1h_vs_prev_hr": null
+    "per_5m_sample": 0,
+    "per_1h": 0,
+    "ratio_1h_vs_prev_hr": 0.0
    },
    "sample": {
-    "posts": 25,
+    "posts": 24,
     "unique_authors": 15,
-    "median_followers": 877,
+    "median_followers": 1678,
     "bot_like_share": 0.13,
     "authors_over_10k": 1
    },
@@ -316,7 +316,7 @@
     "median_followers": null,
     "bot_like_share": null,
     "authors_over_10k": 0,
-    "skipped": "too few mentions to sample"
+    "skipped": "under 3 posts in 24h"
    },
    "false_positive_risk": "low",
    "confidence": "medium"
@@ -327,7 +327,7 @@
    "id_short": "5d16cc1a17",
    "query": "IAG (cardano OR ADA OR iagon OR minswap) -is:retweet",
    "query_basis": "ticker+context",
-   "mentions_24h": 2,
+   "mentions_24h": 3,
    "mentions_1h": 0,
    "hourly_24h": [
     0,
@@ -335,8 +335,6 @@
     0,
     0,
     0,
-    0,
-    0,
     1,
     0,
     0,
@@ -353,6 +351,8 @@
     0,
     0,
     0,
+    0,
+    1,
     0
    ],
    "velocity": {
@@ -361,12 +361,11 @@
     "ratio_1h_vs_prev_hr": null
    },
    "sample": {
-    "posts": 0,
-    "unique_authors": 0,
-    "median_followers": null,
-    "bot_like_share": null,
-    "authors_over_10k": 0,
-    "skipped": "too few mentions to sample"
+    "posts": 3,
+    "unique_authors": 3,
+    "median_followers": 161,
+    "bot_like_share": 0.33,
+    "authors_over_10k": 1
    },
    "false_positive_risk": "medium: IAG = airline group ticker",
    "confidence": "low"
@@ -377,11 +376,9 @@
    "id_short": "49e423161e",
    "query": "COCK (cardano OR ADA OR minswap OR snekfun) -is:retweet",
    "query_basis": "ticker+context",
-   "mentions_24h": 11,
-   "mentions_1h": 1,
+   "mentions_24h": 10,
+   "mentions_1h": 0,
    "hourly_24h": [
-    1,
-    0,
     0,
     1,
     0,
@@ -403,18 +400,20 @@
     0,
     1,
     0,
-    1
+    1,
+    0,
+    0
    ],
    "velocity": {
     "per_5m_sample": 0,
-    "per_1h": 1,
+    "per_1h": 0,
     "ratio_1h_vs_prev_hr": 0.0
    },
    "sample": {
-    "posts": 11,
-    "unique_authors": 10,
-    "median_followers": 404.0,
-    "bot_like_share": 0.2,
+    "posts": 9,
+    "unique_authors": 9,
+    "median_followers": 640,
+    "bot_like_share": 0.11,
     "authors_over_10k": 3
    },
    "false_positive_risk": "medium: common word, adult-content spam risk",
@@ -426,11 +425,9 @@
    "id_short": "e7c77b2784",
    "query": "SOLADA -is:retweet",
    "query_basis": "ticker+context",
-   "mentions_24h": 59,
-   "mentions_1h": 0,
+   "mentions_24h": 52,
+   "mentions_1h": 3,
    "hourly_24h": [
-    0,
-    10,
     3,
     4,
     5,
@@ -452,18 +449,20 @@
     1,
     3,
     0,
-    0
+    0,
+    1,
+    2
    ],
    "velocity": {
     "per_5m_sample": 0,
-    "per_1h": 0,
-    "ratio_1h_vs_prev_hr": 0.0
+    "per_1h": 3,
+    "ratio_1h_vs_prev_hr": null
    },
    "sample": {
     "posts": 25,
     "unique_authors": 21,
-    "median_followers": 202,
-    "bot_like_share": 0.29,
+    "median_followers": 307,
+    "bot_like_share": 0.24,
     "authors_over_10k": 0
    },
    "false_positive_risk": "low: unique word, no context filter",
@@ -475,11 +474,9 @@
    "id_short": "c1b89ed48d",
    "query": "CLOVE (cardano OR ADA OR minswap OR snekfun) -is:retweet",
    "query_basis": "ticker+context",
-   "mentions_24h": 6,
-   "mentions_1h": 0,
+   "mentions_24h": 8,
+   "mentions_1h": 2,
    "hourly_24h": [
-    1,
-    0,
     0,
     0,
     0,
@@ -501,30 +498,32 @@
     0,
     1,
     0,
-    0
+    0,
+    2,
+    1
    ],
    "velocity": {
     "per_5m_sample": 0,
-    "per_1h": 0,
-    "ratio_1h_vs_prev_hr": 0.0
+    "per_1h": 2,
+    "ratio_1h_vs_prev_hr": null
    },
    "sample": {
-    "posts": 5,
-    "unique_authors": 3,
+    "posts": 7,
+    "unique_authors": 5,
     "median_followers": 102,
-    "bot_like_share": 0.33,
+    "bot_like_share": 0.4,
     "authors_over_10k": 0
    },
    "false_positive_risk": "low-medium",
    "confidence": "low"
   },
   {
-   "ticker": "RDOG",
+   "ticker": "unknown",
    "chain": "solana",
-   "id_short": "5kUx…nbwo",
-   "query": "5kUxYJi5ekgoYTHNxSkTtKRC5cntYBWhCbwpc6GEnbwo -is:retweet",
+   "id_short": "8bAC…pump",
+   "query": "8bACbj9AZHdV9VLzzcoS3pzC597fvGQMJ2wpzppipump -is:retweet",
    "query_basis": "contract_address",
-   "mentions_24h": 7,
+   "mentions_24h": 58,
    "mentions_1h": 3,
    "hourly_24h": [
     0,
@@ -547,316 +546,22 @@
     0,
     0,
     0,
-    0,
-    2,
-    5,
-    0
+    1,
+    26,
+    29,
+    2
    ],
    "velocity": {
     "per_5m_sample": 0,
     "per_1h": 3,
-    "ratio_1h_vs_prev_hr": 2.5
-   },
-   "sample": {
-    "posts": 7,
-    "unique_authors": 7,
-    "median_followers": 1178,
-    "bot_like_share": 0.0,
-    "authors_over_10k": 1
-   },
-   "false_positive_risk": "low: contract address search",
-   "confidence": "high"
-  },
-  {
-   "ticker": "FLOATER",
-   "chain": "solana",
-   "id_short": "J7cq…pump",
-   "query": "J7cqsaTuXUavwA3sp238tSpartUfYwDrJAaHuDvypump -is:retweet",
-   "query_basis": "contract_address",
-   "mentions_24h": 32,
-   "mentions_1h": 6,
-   "hourly_24h": [
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    10,
-    22,
-    0
-   ],
-   "velocity": {
-    "per_5m_sample": 0,
-    "per_1h": 6,
-    "ratio_1h_vs_prev_hr": 2.2
+    "ratio_1h_vs_prev_hr": 1.12
    },
    "sample": {
     "posts": 25,
-    "unique_authors": 16,
-    "median_followers": 1738.0,
-    "bot_like_share": 0.06,
-    "authors_over_10k": 1
-   },
-   "false_positive_risk": "low: contract address search",
-   "confidence": "high"
-  },
-  {
-   "ticker": "YIELDMOS",
-   "chain": "solana",
-   "id_short": "7tLn…rray",
-   "query": "7tLnH6ZsUKm5e8nNaBxd4YbLNd5pYFvSf35exRDsrray -is:retweet",
-   "query_basis": "contract_address",
-   "mentions_24h": 3,
-   "mentions_1h": 0,
-   "hourly_24h": [
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    3,
-    0,
-    0
-   ],
-   "velocity": {
-    "per_5m_sample": 0,
-    "per_1h": 0,
-    "ratio_1h_vs_prev_hr": 0.0
-   },
-   "sample": {
-    "posts": 3,
-    "unique_authors": 3,
-    "median_followers": 1178,
-    "bot_like_share": 0.33,
-    "authors_over_10k": 0
-   },
-   "false_positive_risk": "low: contract address search",
-   "confidence": "high"
-  },
-  {
-   "ticker": "RSTR",
-   "chain": "solana",
-   "id_short": "9QT2…pump",
-   "query": "9QT2ue258kE1NYr7U9f3uGpcRNQHPB45ikxmmCdGpump -is:retweet",
-   "query_basis": "contract_address",
-   "mentions_24h": 32,
-   "mentions_1h": 4,
-   "hourly_24h": [
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    16,
-    16,
-    0
-   ],
-   "velocity": {
-    "per_5m_sample": 0,
-    "per_1h": 4,
-    "ratio_1h_vs_prev_hr": 1.0
-   },
-   "sample": {
-    "posts": 25,
-    "unique_authors": 15,
-    "median_followers": 2122,
-    "bot_like_share": 0.2,
-    "authors_over_10k": 0
-   },
-   "false_positive_risk": "low: contract address search",
-   "confidence": "high"
-  },
-  {
-   "ticker": "BAJRANGI",
-   "chain": "solana",
-   "id_short": "BZut…pump",
-   "query": "BZutpnKFLjLqQ8XRP1Ny7RnVNBvZ4NgoEn4QBAxVpump -is:retweet",
-   "query_basis": "contract_address",
-   "mentions_24h": 17,
-   "mentions_1h": 15,
-   "hourly_24h": [
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    17,
-    0
-   ],
-   "velocity": {
-    "per_5m_sample": 0,
-    "per_1h": 15,
-    "ratio_1h_vs_prev_hr": null
-   },
-   "sample": {
-    "posts": 16,
-    "unique_authors": 14,
-    "median_followers": 2616.0,
-    "bot_like_share": 0.07,
+    "unique_authors": 19,
+    "median_followers": 2121,
+    "bot_like_share": 0.05,
     "authors_over_10k": 2
-   },
-   "false_positive_risk": "low: contract address search",
-   "confidence": "high"
-  },
-  {
-   "ticker": "PVE",
-   "chain": "solana",
-   "id_short": "B3gs…pump",
-   "query": "B3gsiynnGCcAdGPwigWyCnjy6t1hf8vR62ZDBwngpump -is:retweet",
-   "query_basis": "contract_address",
-   "mentions_24h": 72,
-   "mentions_1h": 19,
-   "hourly_24h": [
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    4,
-    67,
-    1
-   ],
-   "velocity": {
-    "per_5m_sample": 0,
-    "per_1h": 19,
-    "ratio_1h_vs_prev_hr": 16.75
-   },
-   "sample": {
-    "posts": 25,
-    "unique_authors": 17,
-    "median_followers": 1840,
-    "bot_like_share": 0.12,
-    "authors_over_10k": 1
-   },
-   "false_positive_risk": "low: contract address search",
-   "confidence": "high"
-  },
-  {
-   "ticker": "unknown",
-   "chain": "solana",
-   "id_short": "AgUY…uyVG",
-   "query": "AgUYDkA7T3XeD6VEoeChuchxdfcXmksPmWLrfVgVuyVG -is:retweet",
-   "query_basis": "contract_address",
-   "mentions_24h": 3,
-   "mentions_1h": 0,
-   "hourly_24h": [
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    3,
-    0
-   ],
-   "velocity": {
-    "per_5m_sample": 0,
-    "per_1h": 0,
-    "ratio_1h_vs_prev_hr": null
-   },
-   "sample": {
-    "posts": 3,
-    "unique_authors": 3,
-    "median_followers": 260,
-    "bot_like_share": 0.0,
-    "authors_over_10k": 0
    },
    "false_positive_risk": "low: contract address search",
    "confidence": "high"
