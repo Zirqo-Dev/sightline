@@ -52,6 +52,9 @@ jobs:
         env:
           JUPITER_API_KEY: ${{ secrets.JUPITER_API_KEY }}
           SOLANA_DESK_CACHE_DIR: ${{ runner.temp }}/solana-desk-cache
+          # Empty until the owner creates them. The run warns and uses the Actions cache.
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
           # Mode: manual input > repo variable SOLANA_DESK_MODE (set to 'scan' to pause fills without a PR) > auto
           MODE: ${{ github.event.inputs.mode || vars.SOLANA_DESK_MODE || 'auto' }}
         working-directory: code/solana-desk

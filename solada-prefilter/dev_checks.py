@@ -908,7 +908,7 @@ def _feed_rugger(cache, scans, cache_dir, data_dir, now_s, loaded, dry_run, cfg=
     try:
         RB = _rb()
         prior = RB.read_prior(os.path.join(data_dir, "last-run.json"))
-        book = RB.open_book(cache_dir, data_dir, cfg, prior=prior)
+        book = RB.open_book(cache_dir, data_dir, cfg, prior=prior, desk="cardano")
         if book is None:
             return
         RB.mark_hold(cache_dir, book)

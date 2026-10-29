@@ -22,12 +22,12 @@
     "row": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mint", "code", "rugger_id", "evidence_tags"],
+      "required": ["mint", "code", "evidence_tags"],
       "properties": {
         "mint": {"type": "string", "minLength": 1, "maxLength": 64},
         "code": {"enum": ["known_rugger", "known_rugger_funded", "known_rugger_sibling"]},
-        "rugger_id": {"type": "string", "pattern": "^w-[0-9a-f]{8}$"},
-        "wallet_id": {"type": "string", "pattern": "^w-[0-9a-f]{8}$"},
+        "rugger_id": {"type": "string", "pattern": "^r-[0-9a-f]{12}$"},
+        "wallet_id": {"type": "string", "pattern": "^r-[0-9a-f]{12}$"},
         "evidence_tags": {
           "type": "array",
           "minItems": 1,
@@ -51,7 +51,7 @@
             "properties": {"code": {"enum": ["known_rugger_funded", "known_rugger_sibling"]}},
             "required": ["code"]
           },
-          "then": {"required": ["wallet_id", "hop"]}
+          "then": {"required": ["hop"]}
         }
       ]
     }

@@ -79,8 +79,8 @@
           "properties": {
             "dev_tag": {"$ref": "#/$defs/tag"},
             "actor_tag": {"$ref": "#/$defs/tag"},
-            "rugger_id": {"type": "string", "pattern": "^w-[0-9a-f]{8}$"},
-            "wallet_id": {"type": "string", "pattern": "^w-[0-9a-f]{8}$"},
+            "rugger_id": {"type": "string", "pattern": "^r-[0-9a-f]{12}$", "description": "HMAC rugger id. Not a w- dev tag."},
+            "wallet_id": {"type": "string", "pattern": "^r-[0-9a-f]{12}$"},
             "evidence_tags": {
               "type": "array",
               "minItems": 1,
@@ -139,7 +139,7 @@
           "then": {
             "properties": {
               "evidence": {
-                "required": ["rugger_id", "evidence_tags"],
+                "required": ["evidence_tags"],
                 "properties": {
                   "dev_tag": false,
                   "actor_tag": false,
@@ -159,7 +159,7 @@
           "then": {
             "properties": {
               "evidence": {
-                "required": ["rugger_id", "wallet_id", "evidence_tags", "hop"],
+                "required": ["evidence_tags", "hop"],
                 "properties": {
                   "dev_tag": false,
                   "actor_tag": false

@@ -96,6 +96,9 @@ jobs:
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
           # existing secret (no new one): big_moves.py drops owner wallets matching these patterns in memory, never printed
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          # Empty until the owner creates them. The run warns and uses the Actions cache.
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
         working-directory: code
         run: |
           [ -z "$BLOCKFROST_PROJECT_ID" ] && echo "::warning::BLOCKFROST_PROJECT_ID not set; using Koios"

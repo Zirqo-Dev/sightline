@@ -1036,7 +1036,7 @@ def _feed_rugger(cache_dir, public_dir, events, flagged, now_s, cfg, dry_run, pr
             key = _pull_key(row)
             if key:
                 by_key[key] = row
-        book = RB.open_book(cache_dir, public_dir, cfg, prior=prior)
+        book = RB.open_book(cache_dir, public_dir, cfg, prior=prior, desk="cardano")
         if book is None:
             return
         RB.mark_hold(cache_dir, book)

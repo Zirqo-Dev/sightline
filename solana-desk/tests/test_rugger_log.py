@@ -1,9 +1,12 @@
 """SPD-77 Solana log-only path. Offline. Does not change skips, entries, or exits."""
+import base64
 import json
 import os
 import sys
 import tempfile
 import unittest
+
+os.environ.setdefault("RUGGER_ID_PEPPER", base64.b64encode(b"t" * 32).decode())
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 if ROOT not in sys.path:

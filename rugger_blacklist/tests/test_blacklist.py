@@ -1,8 +1,11 @@
 """Offline tests for the shared rugger blacklist. No network, no secrets, no raw addresses in assertions."""
+import base64
 import json
 import os
 import tempfile
 import unittest
+
+os.environ.setdefault("RUGGER_ID_PEPPER", base64.b64encode(b"t" * 32).decode())
 
 import rugger_blacklist as RB
 
@@ -321,6 +324,52 @@ class WindowAndPrune(unittest.TestCase):
             self.assertEqual(book.status()["store"], "miss")
             RB.mark_hold(cache, book)
             self.assertTrue(os.path.exists(os.path.join(cache, RB.HOLD_NAME)))
+
+
+class PepperAndPrivate(unittest.TestCase):
+    def test_id_is_r_and_does_not_match_a_dev_tag(self):
+        rid = RB.public_id("wallet-rugger")
+        self.assertTrue(RB._ID_RE.fullmatch(rid))
+        self.assertNotEqual(rid, RB.unsalted_id("wallet-rugger"))
+        self.assertTrue(rid.startswith("r-") and len(rid) == 14)
+
+    def test_missing_pepper_keeps_the_row_and_drops_the_id(self):
+        old = os.environ.pop("RUGGER_ID_PEPPER", None)
+        RB._pepper_warned = False
+        try:
+            self.assertIsNone(RB.public_id("wallet-rugger"))
+            book = _book()
+            self.assertTrue(book.note_evidence("wallet-rugger", "cardano", "late_rug", "token-a", AT))
+            hit = book.judge("wallet-rugger", "token-b", NOW)
+            self.assertEqual(hit[0]["code"], "known_rugger")
+            self.assertIsNone(hit[0]["rugger_id"])
+        finally:
+            if old:
+                os.environ["RUGGER_ID_PEPPER"] = old
+
+    def test_readable_private_file_round_trip(self):
+        book = _book()
+        book.note_evidence("wallet-rugger", "cardano", "late_rug", "token-a", AT)
+        book.note_edge("wallet-rugger", "wallet-child", "cardano", AT)
+        out = RB.export_readable(book.doc, "cardano")
+        row = out["entries"][0]
+        self.assertEqual(row["wallet"], "wallet-rugger")
+        self.assertEqual(row["evidence_tags"], ["late_rug"])
+        self.assertEqual(row["tokens"]["late_rug"], ["token-a"])
+        self.assertEqual(row["first_seen"], AT)
+        self.assertEqual(row["last_seen"], AT)
+        self.assertEqual(row["funded"], ["wallet-child"])
+        loaded = RB._clean_doc(out)
+        self.assertEqual(loaded["entries"]["wallet-rugger"]["evidence"]["late_rug"], ["token-a"])
+
+    def test_missing_token_does_not_call_the_network(self):
+        os.environ.pop("SIGHTLINE_PRIVATE_TOKEN", None)
+        RB._token_warned = False
+        RB._remote_read.clear()
+        status, doc = RB.read_private("cardano")
+        self.assertEqual(status, "unset")
+        self.assertIsNone(doc)
+        self.assertFalse(RB.push_private({"entries": {}, "edges": [], "exclusions": []}, "cardano"))
 
 
 class SealFaults(unittest.TestCase):

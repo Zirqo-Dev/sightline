@@ -1,28 +1,29 @@
 """Cross-run rugger blacklist for the Cardano and Solana research desks.
 
-Raw wallets stay in a private store. Public vetoes and the Solana would-veto log
-publish a w- id (sha256, 8 hex digits), the same shape as the desks' other wallet tags.
+Raw wallets stay in a private store. New rugger public ids are r- plus 12 hex
+digits of HMAC-SHA256 under RUGGER_ID_PEPPER. They do not match the desks' w-
+dev tags. If the pepper is missing, public rugger rows keep counts and evidence
+tags and omit the ids.
 
-Working store: a JSON file in the Actions cache directory (rugger-blacklist.json).
-The file is refused when that directory is the public desk-data directory.
-A missing file is an empty list (cache miss): nothing is vetoed from history, and
-this run's evidence is recorded only when the private path is writable.
-
-Durable option, not wired: EncryptedFileStore seals the same document with
-HMAC-SHA256 (keystream + MAC). The key would be a repo secret the owner creates
-(RUGGER_BLACKLIST_KEY). This module does not create secrets, schedules, or crons.
-The default open_book() path does not read that variable and does not encrypt.
+Working store: rugger-blacklist.json in the Actions cache (fallback read and write).
+Durable copy: a human-readable JSON file in the private repo named by
+SIGHTLINE_PRIVATE_REPO (default Zirqo-Dev/sightline-private), pushed with
+SIGHTLINE_PRIVATE_TOKEN. If that token is unset, the cache is used and a warning
+is printed. Ciphertext is not written to a public branch.
 
 Defaults: hops 1, expiry_days null (no expiry), shared_funder_min 25.
 buy_signal is never produced here. Research / paper only.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
 import json
 import os
 import re
+import shutil
+import subprocess
 import tempfile
 from datetime import datetime, timezone
 
@@ -37,22 +38,73 @@ DEFAULTS = {"hops": 1, "expiry_days": None, "shared_funder_min": 25, "sibling": 
 FUND_WINDOW_H = 72
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 
-_ID_RE = re.compile(r"^w-[0-9a-f]{8}$")
+_ID_RE = re.compile(r"^r-[0-9a-f]{12}$")
+_W_RE = re.compile(r"^w-[0-9a-f]{8}$")
 _STAKE_RE = re.compile(r"stake1[02-9ac-hj-np-z]{20,}")
 _ADDR_RE = re.compile(r"addr1[02-9ac-hj-np-z]{20,}")
+_REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 _ISO = "%Y-%m-%dT%H:%M:%SZ"
+PEPPER_ENV = "RUGGER_ID_PEPPER"
+TOKEN_ENV = "SIGHTLINE_PRIVATE_TOKEN"
+REPO_ENV = "SIGHTLINE_PRIVATE_REPO"
+DEFAULT_PRIVATE_REPO = "Zirqo-Dev/sightline-private"
+_pepper_warned = False
+_token_warned = False
+_remote_read = {}
+
+
+def wallet_ok(wallet):
+    """True for a raw wallet string. A public tag is not a wallet."""
+    if not isinstance(wallet, str):
+        return False
+    wallet = wallet.strip()
+    if not wallet or len(wallet) > 200 or _ID_RE.fullmatch(wallet) or _W_RE.fullmatch(wallet):
+        return False
+    return not any(ord(c) < 32 for c in wallet)
+
+
+def load_pepper():
+    """32-byte key from RUGGER_ID_PEPPER (base64), or None. The value is not printed."""
+    raw = os.environ.get(PEPPER_ENV, "")
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    try:
+        key = base64.b64decode(raw.strip(), validate=True)
+    except Exception:
+        return None
+    if len(key) != 32:
+        return None
+    return key
+
+
+def pepper_ready():
+    return load_pepper() is not None
+
+
+def warn_no_pepper():
+    global _pepper_warned
+    if _pepper_warned:
+        return
+    _pepper_warned = True
+    print("::warning::rugger blacklist: RUGGER_ID_PEPPER missing or not 32 bytes; publishing counts only")
+
+
+def unsalted_id(wallet):
+    """The desks' existing w- tag. Not a rugger id. Used only to recognise an owner tag."""
+    if not wallet_ok(wallet):
+        return None
+    return "w-" + hashlib.sha256(wallet.strip().encode()).hexdigest()[:8]
 
 
 def public_id(wallet):
-    """w- hash of a wallet. None when the value is empty, a tag, or not a string."""
-    if not isinstance(wallet, str):
+    """r- id. None when the pepper is missing or the wallet is not usable."""
+    if not wallet_ok(wallet):
         return None
-    wallet = wallet.strip()
-    if not wallet or len(wallet) > 200 or _ID_RE.fullmatch(wallet):
+    key = load_pepper()
+    if not key:
         return None
-    if any(ord(c) < 32 for c in wallet):
-        return None
-    return "w-" + hashlib.sha256(wallet.encode()).hexdigest()[:8]
+    digest = hmac.new(key, wallet.strip().encode(), hashlib.sha256).hexdigest()[:12]
+    return "r-" + digest
 
 
 def iso(ts):
@@ -95,29 +147,36 @@ def settings_from(cfg):
 
 def wallet_sha256(wallet):
     """Full sha256 hex of a wallet string. None when the wallet is not usable."""
-    if not public_id(wallet):
+    if not wallet_ok(wallet):
         return None
-    return hashlib.sha256(wallet.encode()).hexdigest()
+    return hashlib.sha256(wallet.strip().encode()).hexdigest()
+
+
+def _add_owner(ids, wallet):
+    wid = unsalted_id(wallet)
+    if wid:
+        ids.add(wid)
+    rid = public_id(wallet)
+    if rid:
+        ids.add(rid)
 
 
 def owner_ids(owner_env, derive=None):
-    """w- ids of literal stake keys and addresses in owner pattern text.
+    """Owner tags that must not be published. w- tags always; r- ids when the pepper is set.
 
     `derive`, when set, maps an address to its stake key. Nothing is printed.
+    An r- id does not equal that wallet's w- dev tag.
     """
     ids = set()
     for token in _STAKE_RE.findall(owner_env or "") + _ADDR_RE.findall(owner_env or ""):
-        pid = public_id(token)
-        if pid:
-            ids.add(pid)
+        _add_owner(ids, token)
         if derive is not None and token.startswith("addr1"):
             try:
                 stake = derive(token)
             except Exception:
                 stake = None
-            pid = public_id(stake) if stake else None
-            if pid:
-                ids.add(pid)
+            if stake:
+                _add_owner(ids, stake)
     return ids
 
 
@@ -264,7 +323,10 @@ class JsonFileStore(Store):
 
 
 class EncryptedFileStore(Store):
-    """Optional seal. Not used by open_book().
+    """Local seal kept for tests. Not the durable store.
+
+    Do not commit a ciphertext file to a public branch. The durable copy is the
+    human-readable JSON in the private repo. Not used by open_book().
 
     The key is bytes the caller already holds (a repo secret the owner would create).
     Layout: magic RG1, 16-byte nonce, 32-byte MAC, ciphertext.
@@ -368,9 +430,24 @@ def _clean_doc(raw):
     if not isinstance(raw, dict):
         return doc
     entries = raw.get("entries")
+    if isinstance(entries, list):
+        mapped = {}
+        for row in entries:
+            if not isinstance(row, dict) or not wallet_ok(row.get("wallet")):
+                continue
+            ev = row.get("tokens") if isinstance(row.get("tokens"), dict) else row.get("evidence")
+            mapped[row["wallet"].strip()] = {
+                "chain": row.get("chain"),
+                "evidence": ev if isinstance(ev, dict) else {},
+                "first_seen": row.get("first_seen"),
+                "last_seen": row.get("last_seen"),
+                "funded": row.get("funded") if isinstance(row.get("funded"), list) else [],
+            }
+        entries = mapped
+        raw = dict(raw, entries=entries)
     if isinstance(entries, dict):
         for wallet, row in entries.items():
-            if not public_id(wallet) or not isinstance(row, dict):
+            if not wallet_ok(wallet) or not isinstance(row, dict):
                 continue
             evidence = {}
             ev = row.get("evidence")
@@ -398,7 +475,7 @@ def _clean_doc(raw):
             if not isinstance(edge, dict):
                 continue
             funder, funded = edge.get("funder"), edge.get("funded")
-            if not public_id(funder) or not public_id(funded) or funder == funded:
+            if not wallet_ok(funder) or not wallet_ok(funded) or funder == funded:
                 continue
             chain = edge.get("chain") if edge.get("chain") in CHAINS else "cardano"
             at = edge.get("at") if parse_iso(edge.get("at")) else None
@@ -406,7 +483,7 @@ def _clean_doc(raw):
     exclusions = raw.get("exclusions")
     if isinstance(exclusions, list):
         for wallet in exclusions:
-            if public_id(wallet) and wallet not in doc["exclusions"]:
+            if wallet_ok(wallet) and wallet not in doc["exclusions"]:
                 doc["exclusions"].append(wallet)
     _dedupe_edges(doc)
     _attach_all(doc)
@@ -505,7 +582,7 @@ class Book:
         }
 
     def exclude(self, wallet):
-        if not public_id(wallet):
+        if not wallet_ok(wallet):
             return
         if wallet not in self.doc["exclusions"]:
             self.doc["exclusions"].append(wallet)
@@ -519,7 +596,7 @@ class Book:
         """Record rug evidence on a deployer. False when the row is dropped."""
         if tag not in TAGS or chain not in CHAINS or not _token_ok(token):
             return False
-        if not public_id(wallet) or self._blocked(wallet):
+        if not wallet_ok(wallet) or self._blocked(wallet):
             return False
         if parse_iso(at) is None:
             return False
@@ -546,7 +623,7 @@ class Book:
         """One funding hop: funder sent funds to funded. Excluded endpoints are dropped."""
         if chain not in CHAINS or parse_iso(at) is None:
             return False
-        if not public_id(funder) or not public_id(funded) or funder == funded:
+        if not wallet_ok(funder) or not wallet_ok(funded) or funder == funded:
             return False
         if self._blocked(funder) or self._blocked(funded):
             return False
@@ -563,6 +640,7 @@ class Book:
         self.store.save(self.doc)
         if getattr(self.store, "kind", "") == "miss":
             self.store.kind = "hit"
+        push_private(self.doc, getattr(self, "desk", None))
         return True
 
     def _expired(self, at, now_s):
@@ -606,7 +684,7 @@ class Book:
         inside FUND_WINDOW_H before that launch, and not after it.
         known_rugger_sibling: caution only, and only when settings sibling is true.
         """
-        if not public_id(wallet) or self._blocked(wallet):
+        if not wallet_ok(wallet) or self._blocked(wallet):
             return []
         if not _token_ok(token):
             token = ""
@@ -694,10 +772,9 @@ class Book:
             if not tags:
                 return
             rid = public_id(rugger)
-            if not rid:
-                return
-            if best is None or hop < best[0] or (hop == best[0] and rid < best[1]):
-                best = (hop, rid, tags)
+            rank = rid or ""
+            if best is None or hop < best[0] or (hop == best[0] and rank < best[1]):
+                best = (hop, rank, rid, tags)
 
         if sibling:
             for rugger in ruggers:
@@ -713,7 +790,7 @@ class Book:
                     consider(rugger, 1)
             if best is None:
                 return None
-            return {"hop": best[0], "rugger_id": best[1], "tags": best[2]}
+            return {"hop": best[0], "rugger_id": best[2], "tags": best[3]}
 
         for rugger in ruggers:
             if rugger == wallet or self._blocked(rugger):
@@ -737,10 +814,171 @@ class Book:
                         frontier.append((nxt, dist + 1))
         if best is None:
             return None
-        return {"hop": best[0], "rugger_id": best[1], "tags": best[2]}
+        return {"hop": best[0], "rugger_id": best[2], "tags": best[3]}
 
 
-def open_book(cache_dir, public_dir, cfg=None, exclusions=(), prior=None):
+def export_readable(doc, desk):
+    """Owner-facing private file. Raw wallets, tags, tokens, tx times, funded links."""
+    entries = []
+    for wallet, row in sorted((doc.get("entries") or {}).items()):
+        if not isinstance(row, dict):
+            continue
+        ev = row.get("evidence") if isinstance(row.get("evidence"), dict) else {}
+        entries.append({
+            "wallet": wallet,
+            "chain": row.get("chain"),
+            "evidence_tags": sorted(ev),
+            "tokens": ev,
+            "first_seen": row.get("first_seen"),
+            "last_seen": row.get("last_seen"),
+            "funded": list(row.get("funded") or []),
+        })
+    edges = []
+    for edge in doc.get("edges") or []:
+        if isinstance(edge, dict):
+            edges.append({
+                "funder": edge.get("funder"),
+                "funded": edge.get("funded"),
+                "chain": edge.get("chain"),
+                "at": edge.get("at"),
+            })
+    return {
+        "schema": SCHEMA,
+        "private": True,
+        "desk": desk,
+        "note": "Private. Raw wallets for the owner. Do not commit this file to a public branch.",
+        "entries": entries,
+        "edges": edges,
+        "exclusions": list(doc.get("exclusions") or []),
+    }
+
+
+def warn_no_token():
+    global _token_warned
+    if _token_warned:
+        return
+    _token_warned = True
+    print("::warning::rugger blacklist: SIGHTLINE_PRIVATE_TOKEN unset; using the Actions cache only")
+
+
+def _private_repo():
+    repo = os.environ.get(REPO_ENV, DEFAULT_PRIVATE_REPO)
+    if not isinstance(repo, str):
+        return None
+    repo = repo.strip() or DEFAULT_PRIVATE_REPO
+    return repo if _REPO_RE.fullmatch(repo) else None
+
+
+def _git(args, cwd, token):
+    """Run git. The token is passed through askpass, not argv, and is not printed."""
+    fd, ask = tempfile.mkstemp(prefix="rugger-ask-")
+    try:
+        with os.fdopen(fd, "w") as fh:
+            fh.write("#!/bin/sh\nprintf '%s\\n' \"$SIGHTLINE_PRIVATE_TOKEN\"\n")
+        os.chmod(ask, 0o700)
+        env = dict(os.environ)
+        env["SIGHTLINE_PRIVATE_TOKEN"] = token
+        env["GIT_ASKPASS"] = ask
+        env["GIT_TERMINAL_PROMPT"] = "0"
+        subprocess.run(args, cwd=cwd, env=env, timeout=20, check=True, capture_output=True)
+    finally:
+        try:
+            os.unlink(ask)
+        except OSError:
+            pass
+
+
+def _clone_private(repo, token):
+    tmp = tempfile.mkdtemp(prefix="rugger-private-")
+    url = "https://x-access-token@github.com/%s.git" % repo
+    try:
+        _git(["git", "clone", "--depth", "1", url, tmp], None, token)
+    except Exception:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise
+    return tmp
+
+
+def read_private(desk):
+    """(status, doc). status is unset, error, absent, or ok. Does not print the token."""
+    if desk in _remote_read:
+        return _remote_read[desk]
+    if desk not in ("cardano", "solana"):
+        return "unset", None
+    token = os.environ.get(TOKEN_ENV, "")
+    token = token.strip() if isinstance(token, str) else ""
+    if not token:
+        warn_no_token()
+        _remote_read[desk] = ("unset", None)
+        return _remote_read[desk]
+    repo = _private_repo()
+    if not repo:
+        print("::warning::rugger blacklist: private repo name rejected; using the Actions cache")
+        _remote_read[desk] = ("error", None)
+        return _remote_read[desk]
+    tmp = None
+    try:
+        tmp = _clone_private(repo, token)
+        path = os.path.join(tmp, "rugger", desk, PRIVATE_NAME)
+        if not os.path.exists(path):
+            _remote_read[desk] = ("absent", None)
+            return _remote_read[desk]
+        with open(path) as fh:
+            doc = json.load(fh)
+        if not isinstance(doc, dict):
+            raise ValueError("shape")
+        _remote_read[desk] = ("ok", doc)
+        return _remote_read[desk]
+    except Exception:
+        print("::warning::rugger blacklist: private repo unread; using the Actions cache")
+        _remote_read[desk] = ("error", None)
+        return _remote_read[desk]
+    finally:
+        if tmp:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+def push_private(doc, desk):
+    """Write the readable file to the private repo. False when the token is unset or the push fails."""
+    if desk not in ("cardano", "solana"):
+        return False
+    token = os.environ.get(TOKEN_ENV, "")
+    token = token.strip() if isinstance(token, str) else ""
+    if not token:
+        warn_no_token()
+        return False
+    repo = _private_repo()
+    if not repo:
+        print("::warning::rugger blacklist: private repo name rejected; using the Actions cache")
+        return False
+    tmp = None
+    try:
+        tmp = _clone_private(repo, token)
+        rel = os.path.join(tmp, "rugger", desk)
+        os.makedirs(rel, exist_ok=True)
+        path = os.path.join(rel, PRIVATE_NAME)
+        with open(path, "w") as fh:
+            json.dump(export_readable(doc, desk), fh, indent=2)
+            fh.write("\n")
+        _git(["git", "add", "--", os.path.join("rugger", desk, PRIVATE_NAME)], tmp, token)
+        quiet = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=tmp, capture_output=True)
+        if quiet.returncode == 0:
+            _remote_read[desk] = ("ok", export_readable(doc, desk))
+            return True
+        _git(["git", "-c", "user.email=rugger-bot@users.noreply.github.com", "-c", "user.name=rugger-bot",
+              "commit", "-q", "-m", "rugger %s" % desk], tmp, token)
+        _git(["git", "push", "origin", "HEAD"], tmp, token)
+        _remote_read[desk] = ("ok", export_readable(doc, desk))
+        return True
+    except Exception:
+        print("::warning::rugger blacklist: private repo not updated; the Actions cache still has this run")
+        return False
+    finally:
+        if tmp:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+def open_book(cache_dir, public_dir, cfg=None, exclusions=(), prior=None, desk=None):
     """Private book for this run. None when no cache directory was given.
 
     A cache directory inside public_dir still returns a book, but it does not
@@ -759,6 +997,13 @@ def open_book(cache_dir, public_dir, cfg=None, exclusions=(), prior=None):
     if isinstance(block, dict) and isinstance(block.get("exclusions"), list):
         extra.extend(block["exclusions"])
     book = Book(store, settings_from(cfg), extra, exclusion_sha256(cfg))
+    book.desk = desk if desk in ("cardano", "solana") else None
+    if book.desk:
+        status, remote = read_private(book.desk)
+        if status == "ok" and isinstance(remote, dict):
+            book.doc = _clean_doc(remote)
+            if getattr(book.store, "kind", "") == "miss":
+                book.store.kind = "hit"
     book.hold_for_miss(prior)
     return book
 
@@ -792,7 +1037,7 @@ def ada_only_recipients(dev, txs, min_lovelace=5_000_000):
             if not isinstance(out, dict) or out.get("script"):
                 continue
             stake = out.get("stake")
-            if not stake or stake == dev or not public_id(stake) or stake in seen:
+            if not stake or stake == dev or not wallet_ok(stake) or stake in seen:
                 continue
             assets = out.get("assets") or {}
             if assets:
@@ -900,7 +1145,7 @@ def deployers_from_dev_cache(cache_dir, public_dir):
         return {}
     out = {}
     for unit, row in units.items():
-        if isinstance(row, dict) and public_id(row.get("stake")) and _token_ok(str(unit)):
+        if isinstance(row, dict) and wallet_ok(row.get("stake")) and _token_ok(str(unit)):
             out[str(unit)] = row["stake"]
     return out
 

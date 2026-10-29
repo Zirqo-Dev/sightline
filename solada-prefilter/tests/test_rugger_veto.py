@@ -1,4 +1,5 @@
 """SPD-77 Cardano hard veto. Offline. Synthetic wallets. No secrets."""
+import base64
 import json
 import os
 import shutil
@@ -6,6 +7,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+
+os.environ.setdefault("RUGGER_ID_PEPPER", base64.b64encode(b"t" * 32).decode())
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -53,7 +56,8 @@ class Veto(unittest.TestCase):
         self.assertEqual(codes, ["known_rugger"])
         ev = doc["tokens"][0]["vetoes"][0]["evidence"]
         self.assertEqual(ev["evidence_tags"], ["late_rug", "lp_pulled"])
-        self.assertTrue(DC.TAG_RE.fullmatch(ev["rugger_id"]))
+        self.assertTrue(RB._ID_RE.fullmatch(ev["rugger_id"]))
+        self.assertFalse(DC.TAG_RE.fullmatch(ev["rugger_id"]))
         self.assertNotIn(dev, json.dumps(doc))
         # The token that is the only evidence does not gain known_rugger by itself.
         same = V.build(_dev(UNIT_A, "RUG", late_rug=True), {"moves": []}, CFG, OWNER, AT,
@@ -269,7 +273,7 @@ class Guard(unittest.TestCase):
         good = json.load(open(os.path.join(HERE, "fixtures", "vetoes.json")))
         good["tokens"][0]["vetoes"].append({
             "code": "known_rugger",
-            "evidence": {"rugger_id": "w-0123abcd", "evidence_tags": ["late_rug"]},
+            "evidence": {"rugger_id": "r-0123abcd0123", "evidence_tags": ["late_rug"]},
         })
         good["counts"]["known_rugger"] = 1
         ok = self._desk({"solada-prefilter/vetoes.json": good})
@@ -296,7 +300,7 @@ class Guard(unittest.TestCase):
             "schema_version": 1, "desk": "solana", "mode": "log_only", "buy_signal": False,
             "note": "log only", "at": AT,
             "rows": [{
-                "mint": "mintok", "code": "known_rugger", "rugger_id": "w-0123abcd",
+                "mint": "mintok", "code": "known_rugger", "rugger_id": "r-0123abcd0123",
                 "evidence_tags": ["rugcheck_rugged"], "creator": raw,
             }],
         }

@@ -283,7 +283,7 @@ for i, tok in enumerate(tokens):
         ev = v["evidence"]
         code = v.get("code")
         if code in ("known_rugger", "known_rugger_funded", "known_rugger_sibling"):
-            if not ok.fullmatch(ev.get("rugger_id") or ""):
+            if "rugger_id" in ev and not re.fullmatch(r"r-[0-9a-f]{12}", ev.get("rugger_id") or ""):
                 bad.append(str(i))
                 continue
             tags_v = ev.get("evidence_tags")
@@ -291,13 +291,15 @@ for i, tok in enumerate(tokens):
                 bad.append(str(i))
                 continue
             if code == "known_rugger":
-                if set(ev) != {"rugger_id", "evidence_tags"}:
+                if set(ev) - {"rugger_id", "evidence_tags"} or "evidence_tags" not in ev:
                     bad.append(str(i))
                 continue
             hop = ev.get("hop")
             if (code not in ("known_rugger_funded", "known_rugger_sibling")
-                    or set(ev) != {"rugger_id", "wallet_id", "evidence_tags", "hop"}
-                    or not ok.fullmatch(ev.get("wallet_id") or "")
+                    or set(ev) - {"rugger_id", "wallet_id", "evidence_tags", "hop"}
+                    or "evidence_tags" not in ev or "hop" not in ev
+                    or ("rugger_id" in ev) != ("wallet_id" in ev)
+                    or ("wallet_id" in ev and not re.fullmatch(r"r-[0-9a-f]{12}", ev.get("wallet_id") or ""))
                     or isinstance(hop, bool) or not isinstance(hop, int) or not 1 <= hop <= 8):
                 bad.append(str(i))
             continue
@@ -363,7 +365,7 @@ for i, row in enumerate(rows):
         bad.append(str(i))
         continue
     code = row.get("code")
-    if not ok.fullmatch(row.get("rugger_id") or ""):
+    if "rugger_id" in row and not re.fullmatch(r"r-[0-9a-f]{12}", row.get("rugger_id") or ""):
         bad.append(str(i))
         continue
     tags_v = row.get("evidence_tags")
@@ -371,17 +373,19 @@ for i, row in enumerate(rows):
         bad.append(str(i))
         continue
     if code == "known_rugger":
-        if set(row) != {"mint", "code", "rugger_id", "evidence_tags"}:
+        if set(row) - {"mint", "code", "rugger_id", "evidence_tags"} or "evidence_tags" not in row:
             bad.append(str(i))
         elif any(isinstance(v, str) and b58.fullmatch(v) for k, v in row.items() if k != "mint"):
             bad.append(str(i))
         continue
     if code in ("known_rugger_funded", "known_rugger_sibling"):
         hop = row.get("hop")
-        if set(row) != {"mint", "code", "rugger_id", "wallet_id", "evidence_tags", "hop"}:
+        if (set(row) - {"mint", "code", "rugger_id", "wallet_id", "evidence_tags", "hop"}
+                or "hop" not in row or "evidence_tags" not in row
+                or ("rugger_id" in row) != ("wallet_id" in row)):
             bad.append(str(i))
             continue
-        if (not ok.fullmatch(row.get("wallet_id") or "")
+        if (("wallet_id" in row and not re.fullmatch(r"r-[0-9a-f]{12}", row.get("wallet_id") or ""))
                 or isinstance(hop, bool) or not isinstance(hop, int) or not 1 <= hop <= 8):
             bad.append(str(i))
             continue
@@ -420,11 +424,22 @@ done
 owner_hits=0
 if [ -n "${PRIVACY_GUARD_PATTERNS:-}" ]; then
   owner_id_blob=$(python3 -c '
-import hashlib, os, re, sys
+import base64, hashlib, hmac, os, re, sys
 text = os.environ.get("PRIVACY_GUARD_PATTERNS", "")
 ids = []
+pepper = None
+raw = os.environ.get("RUGGER_ID_PEPPER", "").strip()
+if raw:
+    try:
+        key = base64.b64decode(raw, validate=True)
+        if len(key) == 32:
+            pepper = key
+    except Exception:
+        pepper = None
 for token in re.findall(r"stake1[02-9ac-hj-np-z]{20,}|addr1[02-9ac-hj-np-z]{20,}", text):
     ids.append("w-" + hashlib.sha256(token.encode()).hexdigest()[:8])
+    if pepper is not None:
+        ids.append("r-" + hmac.new(pepper, token.encode(), hashlib.sha256).hexdigest()[:12])
 sys.stdout.write("\n".join(ids))
 ')
   if [ -n "$owner_id_blob" ]; then

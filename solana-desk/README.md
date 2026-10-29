@@ -59,7 +59,10 @@ RugCheck `rugged` is remembered per deployer in this desk's private Actions cach
 (`--cache-dir`, workflow cache `solana-desk-rugger-`, file `rugger-blacklist.json`).
 That cache is not the Cardano prefilter cache. A rug recorded on one desk is not on the other.
 A later lead from that deployer is appended to `rugger_would_veto.json` on desk-data.
-The file is hashes and the public mint. This desk does not look up funding hops, so it
+Rugger ids there are `r-` plus 12 hex digits (HMAC-SHA256 under `RUGGER_ID_PEPPER`).
+They are not `w-` dev tags. If the pepper is missing, the log keeps the row and omits the id.
+The raw list is pushed to the private repo when `SIGHTLINE_PRIVATE_TOKEN` is set.
+This desk does not look up funding hops, so it
 does not by itself produce `known_rugger_funded`. The hook stops after 5 seconds total.
 It does not change skip reasons, paper entries, or exits. The v6.5 freeze is unchanged.
 There is no LP-pull or dump event feed; `lp_unlocked` stays a per-token safety skip.

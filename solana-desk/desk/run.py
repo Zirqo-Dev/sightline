@@ -67,7 +67,7 @@ ERR_NAMES = {"dex": "dexscreener", "rug": "rugcheck", "jup": "jupiter"}
 WOULD_NAME = "rugger_would_veto.json"
 WOULD_NOTE = (
     "Log only. A known rugger or a wallet they funded would have been vetoed. "
-    "This file does not change entries, exits, skips, or books. Wallet ids are w- hashes. "
+    "This file does not change entries, exits, skips, or books. Rugger ids are r- hashes, not w- dev tags. "
     "buy_signal is false. The Solana desk has no LP-pull or dump event; the feed is RugCheck rugged."
 )
 
@@ -95,7 +95,7 @@ def rugger_book(cache_dir, data_dir, prior=None):
     cfg = _rugger_cfg()
     if not cache_dir:
         return RB.Book(RB.MemoryStore(None), RB.settings_from(cfg), exclusion_sha=RB.exclusion_sha256(cfg))
-    return RB.open_book(cache_dir, data_dir, cfg, prior=prior)
+    return RB.open_book(cache_dir, data_dir, cfg, prior=prior, desk="solana")
 
 
 def observe_rugger(book, rc, mint, now, launch_s=None, owners=None):
@@ -121,12 +121,16 @@ def _public_would(mint, verdict):
     row = {
         "mint": mint,
         "code": verdict.get("code"),
-        "rugger_id": verdict.get("rugger_id"),
         "evidence_tags": sorted(verdict.get("tags") or []),
     }
+    if verdict.get("rugger_id"):
+        row["rugger_id"] = verdict["rugger_id"]
     if verdict.get("code") in ("known_rugger_funded", "known_rugger_sibling"):
-        row["wallet_id"] = verdict.get("wallet_id")
+        if verdict.get("wallet_id"):
+            row["wallet_id"] = verdict["wallet_id"]
         row["hop"] = verdict.get("hop")
+    if not _rugger().pepper_ready():
+        _rugger().warn_no_pepper()
     return row
 
 
@@ -162,21 +166,21 @@ def _would_ok(doc):
         code = row.get("code")
         keys = set(row)
         if code == "known_rugger":
-            if keys != {"mint", "code", "rugger_id", "evidence_tags"}:
+            if keys - {"mint", "code", "rugger_id", "evidence_tags"}:
                 return False
         elif code in ("known_rugger_funded", "known_rugger_sibling"):
-            if keys != {"mint", "code", "rugger_id", "wallet_id", "evidence_tags", "hop"}:
+            if keys - {"mint", "code", "rugger_id", "wallet_id", "evidence_tags", "hop"} or "hop" not in keys:
                 return False
             hop = row.get("hop")
             if isinstance(hop, bool) or not isinstance(hop, int) or not 1 <= hop <= 8:
                 return False
-            if not id_re.fullmatch(row.get("wallet_id") or ""):
+            if "wallet_id" in row and not id_re.fullmatch(row.get("wallet_id") or ""):
                 return False
         else:
             return False
         if not isinstance(row.get("mint"), str) or not row["mint"] or len(row["mint"]) > 64:
             return False
-        if not id_re.fullmatch(row.get("rugger_id") or ""):
+        if "rugger_id" in row and not id_re.fullmatch(row.get("rugger_id") or ""):
             return False
         ev = row.get("evidence_tags")
         if not isinstance(ev, list) or not ev or any(t not in tags for t in ev):

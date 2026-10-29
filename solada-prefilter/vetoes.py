@@ -292,6 +292,19 @@ def _id_ok(value):
     return isinstance(value, str) and DC.TAG_RE.fullmatch(value)
 
 
+def _rug_id_ok(value, owners=None):
+    """An r- rugger id. Not a w- dev tag. An owner id is dropped."""
+    try:
+        ok = _rugger()._ID_RE.fullmatch(value or "")
+    except Exception:
+        return False
+    if not ok:
+        return False
+    if owners and value in owners:
+        return False
+    return True
+
+
 def _tags_ok(value):
     if not isinstance(value, list) or not value or len(value) > len(RUGGER_TAGS):
         return False
@@ -299,17 +312,34 @@ def _tags_ok(value):
 
 
 def _verdict_evidence(verdict, roles, loaded, owners=None):
-    """Public evidence, or None when a wallet id cannot be published."""
-    rid = keep_tag(verdict.get("rugger_id"), roles, loaded, owners)
+    """Public evidence. Without the pepper this is tags and hop only, no rugger id."""
+    del roles, loaded
     tags = verdict.get("tags")
-    if not rid or not _tags_ok(tags):
+    if not _tags_ok(tags):
+        return None
+    code = verdict.get("code")
+    hop = verdict.get("hop")
+    try:
+        ready = _rugger().pepper_ready()
+    except Exception:
+        ready = False
+    if not ready:
+        _rugger().warn_no_pepper()
+        ev = {"evidence_tags": sorted(tags)}
+        if code == "known_rugger":
+            return ev
+        if isinstance(hop, bool) or not isinstance(hop, int) or not 1 <= hop <= 8:
+            return None
+        ev["hop"] = hop
+        return ev
+    rid = verdict.get("rugger_id")
+    if not _rug_id_ok(rid, owners):
         return None
     ev = {"rugger_id": rid, "evidence_tags": sorted(tags)}
-    if verdict.get("code") == "known_rugger":
+    if code == "known_rugger":
         return ev
-    wid = keep_tag(verdict.get("wallet_id"), roles, loaded, owners)
-    hop = verdict.get("hop")
-    if not wid or isinstance(hop, bool) or not isinstance(hop, int) or not 1 <= hop <= 8:
+    wid = verdict.get("wallet_id")
+    if not _rug_id_ok(wid, owners) or isinstance(hop, bool) or not isinstance(hop, int) or not 1 <= hop <= 8:
         return None
     ev["wallet_id"] = wid
     ev["hop"] = hop
@@ -403,19 +433,27 @@ def code_counts(rows):
 
 
 def _verdict_shape(code, ev):
-    """True when a rugger veto's evidence is ids and tags only."""
-    if not isinstance(ev, dict) or not _id_ok(ev.get("rugger_id")) or not _tags_ok(ev.get("evidence_tags")):
+    """True when a rugger veto's evidence is tags, and r- ids when they are present."""
+    if not isinstance(ev, dict) or not _tags_ok(ev.get("evidence_tags")):
         return False
     if list(ev.get("evidence_tags")) != sorted(ev.get("evidence_tags")):
         return False
+    if "rugger_id" in ev and not _rug_id_ok(ev.get("rugger_id")):
+        return False
     if code == "known_rugger":
-        return set(ev) == {"rugger_id", "evidence_tags"}
+        allowed = {"evidence_tags", "rugger_id"}
+        return set(ev) <= allowed and "evidence_tags" in ev and ("rugger_id" in ev or set(ev) == {"evidence_tags"})
     if code not in ("known_rugger_funded", "known_rugger_sibling"):
         return False
     hop = ev.get("hop")
     if isinstance(hop, bool) or not isinstance(hop, int) or not 1 <= hop <= 8:
         return False
-    return set(ev) == {"rugger_id", "wallet_id", "evidence_tags", "hop"} and _id_ok(ev.get("wallet_id"))
+    if "wallet_id" in ev and not _rug_id_ok(ev.get("wallet_id")):
+        return False
+    base = {"evidence_tags", "hop"}
+    if "rugger_id" in ev or "wallet_id" in ev:
+        return set(ev) == {"rugger_id", "wallet_id", "evidence_tags", "hop"}
+    return set(ev) == base
 
 
 def reason_ok(reason):
@@ -539,7 +577,7 @@ def _open_rugger(cache_dir, data_dir, cfg, at, dry_run):
     try:
         RB = _rugger()
         prior = RB.read_prior(os.path.join(data_dir, "last-run.json"))
-        book = RB.open_book(cache_dir, data_dir, cfg, prior=prior)
+        book = RB.open_book(cache_dir, data_dir, cfg, prior=prior, desk="cardano")
         if book is None:
             return None, {}, {}, empty
         RB.mark_hold(cache_dir, book)
