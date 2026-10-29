@@ -43,7 +43,10 @@ class Fills(unittest.TestCase):
         buys = [t for t in trades(self.d) if t["action"] == "buy"]
         self.assertTrue(all(float(t["sol"]) == C.TICKET_SOL for t in buys))
         cost, h = fills.entry_cost(100.0, lead(1)["quote"])
-        self.assertAlmostEqual(h, 0.02)  # 150 bps + half of the 1% quoted impact
+        curve = 10000 * 0.5 / 100.5
+        self.assertAlmostEqual(h, (60 + 0.25 * curve) / 10000)  # curve impact, not the 1% Jupiter field
+        other, h2 = fills.entry_cost(100.0, dict(lead(1)["quote"], priceImpactPct="0.09"))
+        self.assertEqual((cost, h), (other, h2))
         self.assertAlmostEqual(s["books"]["F"]["cash"], C.START_BALANCE_SOL - cost)
         self.assertEqual(r["opened"], 3)
 
@@ -193,39 +196,58 @@ class CostHaircut(unittest.TestCase):
         self.assertEqual(C.OUTAGE_VOID_H, 2)
         self.assertEqual(C.COST["network_fee_sol"], 0.00001)
         self.assertEqual(C.COST["legacy_haircut_per_side"], 0.005)
-        self.assertEqual(C.COST["base_bps"], 150)
-        self.assertEqual(C.COST["max_bps"], 300)
+        self.assertEqual(C.COST["base_bps"], 60)
+        self.assertEqual(C.COST["impact_weight"], 0.25)
+        self.assertEqual(C.COST["stress_exit_bps"], 150)
+        self.assertEqual(C.COST["stress_exit_reasons"], ("hard_stop", "trailing_stop", "liquidity_pulled"))
+        self.assertEqual(C.COST["max_bps"], 600)
         self.assertEqual(C.COST["haircut_per_side"], C.COST["base_bps"] / 10000)
+        self.assertEqual(C.COST_MODEL, "v3-exit-aware")
 
-    def test_haircut_scales_with_liquidity_and_impact_then_caps(self):
-        self.assertAlmostEqual(fills.haircut_frac(100, 0), 0.015)          # reference: 150 bps
-        self.assertAlmostEqual(fills.haircut_frac(100, 100), 0.020)        # + half of 1% impact
-        self.assertAlmostEqual(fills.haircut_frac(10, 0), 0.0225)           # 10 SOL floor, scale cap 1.5
-        self.assertAlmostEqual(fills.haircut_frac(10, 300), 0.030)          # 225 + 150 -> capped at 300 bps
-        self.assertAlmostEqual(fills.haircut_frac(25, 300), 0.030)          # 150 + half of 3% == the window
-        self.assertAlmostEqual(fills.haircut_frac(None, None), 0.015)       # missing data: base only
-        self.assertAlmostEqual(fills.haircut_frac(0, None), 0.015)
+    def test_haircut_uses_curve_impact_then_caps(self):
+        for pool, pct in ((148.2672, 0.3361), (179.7921, 0.2773), (257.1357, 0.1941)):
+            self.assertAlmostEqual(fills.verified_impact_bps(pool) / 100, pct, places=3)
+        v = fills.verified_impact_bps(148.2672)
+        self.assertAlmostEqual(fills.haircut_frac(148.2672), (60 + 0.25 * v) / 10000)
+        self.assertAlmostEqual(fills.haircut_frac(100, 0), 0.006)            # explicit zero impact: base only
+        self.assertAlmostEqual(fills.haircut_frac(100), (60 + 0.25 * fills.verified_impact_bps(100)) / 10000)
+        self.assertAlmostEqual(fills.haircut_frac(None, None), 0.006)        # missing reserve: no invented impact
+        self.assertAlmostEqual(fills.haircut_frac(0, None), 0.006)
+        self.assertAlmostEqual(fills.haircut_frac(float("nan"), None), 0.006)
+        self.assertAlmostEqual(fills.haircut_frac(0.5), 0.06)                 # curve term runs into the 600 bps cap
+        base = fills.haircut_frac(100)
+        self.assertAlmostEqual(fills.haircut_frac(100, None, "time_stop"), base)
+        self.assertAlmostEqual(fills.haircut_frac(100, None, "take_profit_40"), base)
+        self.assertAlmostEqual(fills.haircut_frac(100, None, "hard_stop"), base + 0.015)
+        self.assertAlmostEqual(fills.haircut_frac(100, None, "trailing_stop"), base + 0.015)
+        self.assertAlmostEqual(fills.haircut_frac(100, None, "liquidity_pulled"), base + 0.015)
+        self.assertAlmostEqual(fills.haircut_frac(0.5, None, "hard_stop"), 0.06)
+        self.assertIsNone(fills.verified_impact_bps(None))
+        self.assertIsNone(fills.verified_impact_bps(0))
         self.assertIsNone(fills.impact_bps({}))
         self.assertIsNone(fills.impact_bps({"priceImpactPct": "nan"}))
         self.assertAlmostEqual(fills.impact_bps({"priceImpactPct": "0.01"}), 100)
-        self.assertAlmostEqual(fills.liq_scale(float("nan")), 1.0)
-        self.assertAlmostEqual(fills.haircut_frac(float("nan"), None), 0.015)
 
     def test_both_sides_on_the_fill_gross_and_net(self):
         m = self._one()
         buy = [t for t in trades(self.d) if t["action"] == "buy" and t["book"] == "F"][-1]
         self.assertAlmostEqual(float(buy["sol"]), C.TICKET_SOL)
-        self.assertAlmostEqual(float(buy["entry_haircut_pct"]), 2.0, places=4)
+        self.assertAlmostEqual(float(buy["impact_pct"]), 1.0, places=4)  # Jupiter field is logged
+        self.assertAlmostEqual(float(buy["entry_haircut_pct"]), 0.7244, places=4)  # not half of that 1%
+        self.assertEqual(buy["cost_model"], "v3-exit-aware")
+        self.assertTrue(buy["cost_model_started_at"].endswith("Z"))
         self.assertEqual(buy["pnl"], ""); self.assertEqual(buy["gross_pnl"], ""); self.assertEqual(buy["net_pnl"], "")
         self.mk.ratio[m] = 1.0
         self.step(T0 + 120 * 60)
         s = self._sells()[-1]
         self.assertEqual(s["why"], "time_stop")
         self.assertAlmostEqual(float(s["gross_pnl"]), 0.0, places=6)
-        self.assertAlmostEqual(float(s["entry_haircut_pct"]), 2.0, places=4)
-        self.assertAlmostEqual(float(s["exit_haircut_pct"]), 1.5, places=4)
-        cost, _ = fills.entry_cost(100.0, lead(1)["quote"])
-        pro = C.TICKET_SOL * (1 - 0.015) - C.COST["network_fee_sol"]
+        self.assertAlmostEqual(float(s["entry_haircut_pct"]), 0.7244, places=4)
+        self.assertAlmostEqual(float(s["exit_haircut_pct"]), 0.7244, places=4)  # time_stop: no stress add-on
+        self.assertEqual(s["cost_model"], buy["cost_model"])
+        self.assertEqual(s["cost_model_started_at"], buy["cost_model_started_at"])
+        cost, h = fills.entry_cost(100.0, lead(1)["quote"])
+        pro = C.TICKET_SOL * (1 - h) - C.COST["network_fee_sol"]
         self.assertAlmostEqual(float(s["net_pnl"]), pro - cost, places=6)
         self.assertAlmostEqual(float(s["pnl"]), float(s["net_pnl"]), places=9)
         self.assertLess(float(s["net_pnl"]), float(s["gross_pnl"]))
@@ -235,21 +257,31 @@ class CostHaircut(unittest.TestCase):
         self.assertLess(closed["result"]["net_pnl"], closed["result"]["gross_pnl"])
         self.assertEqual(paper["books"]["F"]["realized_pnl"], closed["result"]["net_pnl"])
         self.assertEqual(paper["books"]["F"]["realized_gross_pnl"], closed["result"]["gross_pnl"])
-        self.assertEqual(paper["costs"]["base_bps"], 150)
+        self.assertEqual(paper["costs"]["base_bps"], 60)
+        self.assertEqual(paper["costs"]["model"], "v3-exit-aware")
         self.assertIn("Assumption, not a measured constant", paper["costs"]["note"])
+        self.assertEqual(paper["stats"]["model"], "v3-exit-aware")
+        self.assertGreaterEqual(paper["stats"]["windows"]["7"]["counted_closes"], 1)
+        self.assertEqual(paper["stats"]["windows"]["7"]["older_closes"], 0)
+        self.assertEqual(paper["closed"][0]["cost_model"], "v3-exit-aware")
 
-    def test_thin_pool_and_impact_raise_the_recorded_haircut(self):
+    def test_thin_pool_raises_curve_impact_and_a_stop_adds_stress(self):
         deep = lead(1, liq=100.0); deep["quote"] = dict(deep["quote"], priceImpactPct="0")
         thin = lead(2, liq=10.0); thin["quote"] = dict(thin["quote"], priceImpactPct="0.03")
         self.step(T0, [deep, thin])
         buys = {t["symbol"]: t for t in trades(self.d) if t["action"] == "buy" and t["book"] == "F"}
-        self.assertAlmostEqual(float(buys["T1"]["haircut_pct"]), 1.5, places=4)
-        self.assertAlmostEqual(float(buys["T2"]["haircut_pct"]), 3.0, places=4)
+        self.assertAlmostEqual(float(buys["T1"]["haircut_pct"]), 0.7244, places=4)
+        self.assertAlmostEqual(float(buys["T2"]["haircut_pct"]), 1.7905, places=4)  # 10 SOL curve, not the 3% Jupiter field
+        self.assertAlmostEqual(float(buys["T2"]["impact_pct"]), 3.0, places=4)
         m = M(1); self.mk.liq[m] = 10.0; self.mk.impact[m] = "0.03"; self.mk.ratio[m] = 1.0
-        self.step(T0 + 120 * 60)
+        self.step(T0 + 1800)
         s = [t for t in self._sells() if t["symbol"] == "T1"][-1]
-        self.assertAlmostEqual(float(s["entry_haircut_pct"]), 1.5, places=4)
-        self.assertAlmostEqual(float(s["exit_haircut_pct"]), 3.0, places=4)
+        self.assertEqual(s["why"], "liquidity_pulled")
+        self.assertAlmostEqual(float(s["entry_haircut_pct"]), 0.7244, places=4)
+        v = fills.verified_impact_bps(10.0, C.TICKET_SOL)
+        self.assertAlmostEqual(float(s["exit_haircut_pct"]), round((60 + 0.25 * v + 150) / 100, 4), places=4)
+        self.assertAlmostEqual(float(s["impact_pct"]), 3.0, places=4)
+        self.assertGreater(float(s["exit_haircut_pct"]), 3.0)
 
     def test_price_stop_ignores_the_haircut(self):
         """A mark inside the -25% price stop stays open even when net-of-cost is past -25% of the ticket."""
@@ -279,8 +311,10 @@ class CostHaircut(unittest.TestCase):
         rows = list(csv.DictReader(open(p)))
         self.assertEqual(list(rows[0].keys()), ledger.TRADE_COLS)
         self.assertEqual((rows[0]["pnl"], rows[0]["gross_pnl"], rows[0]["net_pnl"]), ("-0.1", "", ""))
+        self.assertEqual(rows[0]["cost_model"], "")
         s = self._sells()[-1]
-        pro = C.TICKET_SOL * (1 - 0.015) - C.COST["network_fee_sol"]
+        h = fills.haircut_frac(100.0)
+        pro = C.TICKET_SOL * (1 - h) - C.COST["network_fee_sol"]
         self.assertAlmostEqual(float(s["net_pnl"]), pro - old_cost, places=6)
         self.assertAlmostEqual(float(s["gross_pnl"]), 0.0, places=6)
         self.assertAlmostEqual(float(s["entry_haircut_pct"]), 0.5, places=4)
@@ -290,7 +324,37 @@ class CostHaircut(unittest.TestCase):
                                             entry=0.5, exit_px=0.3, why="hard_stop", pnl=-0.2, pct=-40.0), closed=True)
         self.assertEqual(legacy["result"]["pnl"], -0.2)
         self.assertEqual(legacy["result"]["net_pnl"], -0.2)
+        self.assertEqual(legacy["cost_model"], "pre-v3")
         self.assertNotIn("gross_pnl", legacy["result"])
+        self.assertEqual(s["cost_model"], "v3-exit-aware")
+
+    def test_window_stats_label_older_fills_and_leave_them_unchanged(self):
+        from desk import ledger
+        self._one()
+        p = os.path.join(self.d, "trades.csv")
+        with open(p, "a", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=ledger.TRADE_COLS)
+            row = {k: "" for k in ledger.TRADE_COLS}
+            row.update(time=str(T0 + 10), book="F", action="sell", pnl="-0.2", why="hard_stop", symbol="OLD")
+            w.writerow(row)
+        self.mk.ratio[M(1)] = 1.0
+        self.step(T0 + 120 * 60)
+        rows = list(csv.DictReader(open(p)))
+        old = [r for r in rows if r["symbol"] == "OLD"][0]
+        self.assertEqual((old["pnl"], old["cost_model"], old["gross_pnl"]), ("-0.2", "", ""))
+        new = [r for r in rows if r["action"] == "sell" and r["symbol"] == "T1"][-1]
+        self.assertEqual(new["cost_model"], "v3-exit-aware")
+        started = [r["cost_model_started_at"] for r in rows if r["cost_model"] == "v3-exit-aware"]
+        self.assertTrue(started and len(set(started)) == 1)
+        paper = json.load(open(os.path.join(self.d, "paper.json")))
+        for days in ("7", "28"):
+            wdw = paper["stats"]["windows"][days]
+            self.assertEqual(wdw["older_closes"], 1)
+            self.assertEqual(wdw["older_labels"], {"pre-v3": 1})
+            self.assertAlmostEqual(wdw["older_net_pnl"], -0.2)
+            self.assertGreaterEqual(wdw["counted_closes"], 1)
+            self.assertNotAlmostEqual(wdw["net_pnl"], -0.2)
+        self.assertIn("v3-exit-aware", [t["cost_model"] for t in paper["closed"]])
 
 class RunFill(unittest.TestCase):
     def test_scan_fill_end_to_end_offline(self):

@@ -4,7 +4,9 @@ TASK_COLS = ["time","run_id","agent","task","mint","book","result","skip_type","
 # pnl stays the net SOL result (sells and partial exits). gross_pnl / net_pnl are appended so
 # older trades.csv files (header is a prefix of this list) keep their pnl cell and gain blank cells.
 # haircut_pct is the haircut on this fill, in percent. entry_haircut_pct / exit_haircut_pct split the two sides.
-TRADE_COLS = ["time","book","agent","mint","symbol","action","frac","sol","quote_px","impact_pct","fee_sol","haircut_pct","why","pnl","check_delay_s","stale","gross_pnl","net_pnl","entry_haircut_pct","exit_haircut_pct"]
+# cost_model / cost_model_started_at / verified_impact_bps are appended. Older files keep their pnl;
+# the new cells stay blank and those rows are labelled pre-v3 when the stats are read.
+TRADE_COLS = ["time","book","agent","mint","symbol","action","frac","sol","quote_px","impact_pct","fee_sol","haircut_pct","why","pnl","check_delay_s","stale","gross_pnl","net_pnl","entry_haircut_pct","exit_haircut_pct","verified_impact_bps","cost_model","cost_model_started_at"]
 
 def _append(path, cols, row):
     new = not os.path.exists(path)
