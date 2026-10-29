@@ -1,5 +1,5 @@
 {
- "at": "2026-10-28T22:15:38Z",
+ "at": "2026-10-29T00:17:38Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -8,7 +8,7 @@
   "Blockfrost runs only after a Koios read returns nothing, and only up to max_bf_calls (default 12). An empty BLOCKFROST_PROJECT_ID skips it.",
   "Minswap V2 markers are the derived LP asset name. Sundae and Splash pools are recognized when a continuing pool UTxO is inside a transaction this job already read. Discovery of those pools rechecks the newest token transactions at most every discover_every_h.",
   "The job gets budget_s from the moment it starts (default 50s), and still stops before the process kill. A capped pool resumes next run. Nothing here changes desk rules, kill lines, or the webhook.",
-  "Tokens are scanned least-recently-checked first. The private cache stores each ticker's last_checked time. A token skipped for budget is not stamped, so the next run reads it before tokens this run already read. budget_s and max_calls do not change. tokens[].last_checked is that time in UTC, or null."
+  "Tokens are scanned least-recently-checked first. The private cache stores each ticker's last_checked time. That time is set only after a successful read. A token skipped for budget, or opened before any page comes back, keeps its previous stamp, so the next run reads it first. budget_s and max_calls do not change. tokens[].last_checked is that time in UTC, or null."
  ],
  "level": "pool",
  "thresholds": {
@@ -28,28 +28,6 @@
  },
  "actor_tags": true,
  "moves": [
-  {
-   "time": "2026-10-25T22:49:50Z",
-   "tx_short": "aa22090945",
-   "kind": "swap",
-   "ticker": "ASCEND",
-   "token": "ASCEND",
-   "policy_short": "eb7a93eb",
-   "dex": "minswap_v2",
-   "pool_key": "minswap_v2~c9d8143f",
-   "direction": "sell",
-   "ada": 5140.97,
-   "ada_basis": "ada_leg",
-   "qty": 5000000000,
-   "qty_basis": "raw",
-   "reserve_ada_after": 994376.61,
-   "lp": false,
-   "actor_tag": null,
-   "ahead_of_dump": false,
-   "dump_tx_short": null,
-   "dump_ada": null,
-   "level": "pool"
-  },
   {
    "time": "2026-10-26T08:17:02Z",
    "tx_short": "65db45a1e6",
@@ -252,32 +230,25 @@
    "last_checked": "2026-10-28T18:15:03Z"
   },
   {
-   "ticker": "SNEK",
-   "policy_short": "279c909f",
-   "rank": 4,
-   "unit_source": "cache",
-   "last_checked": "2026-10-28T20:14:23Z"
-  },
-  {
    "ticker": "MIN",
    "policy_short": "29d222ce",
-   "rank": 5,
-   "unit_source": "static",
+   "rank": 4,
+   "unit_source": "cache",
    "last_checked": "2026-10-28T22:15:38Z"
   },
   {
-   "ticker": "SOLADA",
-   "policy_short": "e7c77b27",
-   "rank": 6,
-   "unit_source": "listed",
-   "last_checked": null
+   "ticker": "SNEK",
+   "policy_short": "279c909f",
+   "rank": 5,
+   "unit_source": "cache",
+   "last_checked": "2026-10-28T20:14:23Z"
   },
   {
    "ticker": "IAG",
    "policy_short": "5d16cc1a",
    "rank": 7,
    "unit_source": "static",
-   "last_checked": null
+   "last_checked": "2026-10-29T00:17:38Z"
   },
   {
    "ticker": "COCK",
@@ -287,48 +258,43 @@
    "last_checked": null
   },
   {
-   "ticker": "CLOVE",
-   "policy_short": "c1b89ed4",
+   "ticker": "SOLADA",
+   "policy_short": "e7c77b27",
    "rank": 9,
    "unit_source": "listed",
    "last_checked": null
   },
   {
-   "ticker": "BOLT",
-   "policy_short": "14628c26",
+   "ticker": "CLOVE",
+   "policy_short": "c1b89ed4",
    "rank": 10,
    "unit_source": "listed",
    "last_checked": null
   }
  ],
- "skipped": [],
+ "skipped": [
+  {
+   "ticker": "FLDT",
+   "skipped": "unresolved"
+  }
+ ],
  "coverage": {
-  "MIN": {
-   "read": 0,
-   "complete": false,
-   "pools": 0
-  },
-  "SOLADA": {
-   "read": 0,
-   "complete": false,
-   "skipped": "budget"
-  },
   "IAG": {
    "read": 0,
    "complete": false,
-   "skipped": "budget"
+   "pools": 0
   },
   "COCK": {
    "read": 0,
    "complete": false,
    "skipped": "budget"
   },
-  "CLOVE": {
+  "SOLADA": {
    "read": 0,
    "complete": false,
    "skipped": "budget"
   },
-  "BOLT": {
+  "CLOVE": {
    "read": 0,
    "complete": false,
    "skipped": "budget"
@@ -352,19 +318,23 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "MIN": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "MIN",
-  "SOLADA",
   "IAG",
   "COCK",
+  "SOLADA",
   "CLOVE",
-  "BOLT",
   "ASCEND",
   "NIGHT",
   "STRIKE",
-  "SNEK"
+  "SNEK",
+  "MIN"
  ],
  "koios_calls": 4,
  "blockfrost_calls": 0,
