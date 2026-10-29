@@ -3,37 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
 <title>Sightline · Research Desks</title>
-<link rel="stylesheet" href="dashboard/app.css">
-<link rel="stylesheet" href="dashboard/radar-rules.css">
+<link rel="stylesheet" href="preview/app.css">
 </head>
-<body>
-<div class="banner">PAPER TRADING / RESEARCH ONLY · no real positions · not financial advice</div>
+<body data-desk="home">
+<div class="banner">PAPER TRADING / RESEARCH ONLY · no real positions</div>
+<div class="banner banner-nfa">NOT FINANCIAL ADVICE · role labels and w- tags only · no wallets, stake keys, or holdings</div>
 <header class="top">
   <a class="logo" href="#/">&gt;sight<span>line</span><i>_</i></a>
-  <nav id="nav"></nav>
-  <span id="stamp" class="muted small"></span>
+  <nav id="nav" aria-label="Desks"></nav>
+  <div class="status" id="status" aria-label="Desk status"></div>
 </header>
-<main id="view"><div class="loading">Loading desks…</div></main>
-<footer class="foot">Built from <code>desks.json</code> and each desk's <code>panels.json</code>. Paper books, run logs and briefs. Icons are local files in <code>dashboard/icons/</code>.</footer>
-<script src="dashboard/core.js"></script>
-<!-- panels:begin -->
-<script src="dashboard/panels/briefs.js"></script>
-<script src="dashboard/panels/chart.js"></script>
-<script src="dashboard/panels/closed.js"></script>
-<script src="dashboard/panels/coming-soon.js"></script>
-<script src="dashboard/panels/embed.js"></script>
-<script src="dashboard/panels/headline.js"></script>
-<script src="dashboard/panels/notes.js"></script>
-<script src="dashboard/panels/radar.js"></script>
-<script src="dashboard/panels/rules.js"></script>
-<script src="dashboard/panels/scoreboard.js"></script>
-<script src="dashboard/panels/solada-intel.js"></script>
-<script src="dashboard/panels/solana-desk.js"></script>
-<script src="dashboard/panels/stat-cards.js"></script>
-<script src="dashboard/panels/table.js"></script>
-<script src="dashboard/panels/tickets.js"></script>
-<!-- panels:end -->
-<script src="dashboard/pages.js"></script>
+<main id="view" aria-live="polite">
+  <div class="skel-block" aria-hidden="true">
+    <div class="tiles"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+    <div class="skel skel-panel"></div>
+  </div>
+</main>
+<footer class="foot">Paper trading and research only. Previous dashboard: <a href="legacy.html">legacy.html</a>.</footer>
+<script src="preview/app.js"></script>
 </body>
 </html>

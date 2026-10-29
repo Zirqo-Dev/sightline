@@ -259,8 +259,10 @@ button.chip[data-chain].on{background:var(--chain);color:#041018}
   .tile .v{font-size:24px}
 }
 @media (max-width:420px){
-  .tiles{grid-template-columns:1fr}
-  .banner{letter-spacing:.06em}
+  .tiles,.cards{grid-template-columns:1fr}
+  .banner{letter-spacing:.04em;white-space:normal}
+  main{padding:var(--space-3) var(--space-3) var(--space-5)}
+  .top{padding:8px 10px}
 }
 
 /* Cardano visuals. Accent stays the desk blue; motion is decorative. */

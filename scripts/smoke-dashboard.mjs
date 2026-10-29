@@ -619,17 +619,27 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(desk.includes("hard stop") && (desk.includes("take profit") || desk.includes("pass")), "trade reasons render");
   const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
   const preview = fs.readFileSync(path.join(root, "preview.html"), "utf8");
+  const legacyPage = fs.readFileSync(path.join(root, "legacy.html"), "utf8");
   const logo = '<a class="logo" href="#/">&gt;sight<span>line</span><i>_</i></a>';
-  assert(index.includes(logo) && preview.includes(logo), "preview keeps the live Sightline logo markup");
-  assert(!index.includes("preview.html") && !index.includes("preview/app"), "live page does not link to the preview");
+  assert(index.includes(logo) && preview.includes(logo) && legacyPage.includes(logo), "logo markup stays on the live site, the preview, and the legacy dashboard");
+  assert(index.includes('href="preview/app.css"') && index.includes('src="preview/app.js"'), "live page serves the redesigned shell");
+  assert(!index.includes("preview.html") && !index.includes("preview-tag"), "live page is not the design sandbox");
+  assert(index.includes("legacy.html"), "live page points at the legacy fallback");
+  assert(preview.includes('href="preview/app.css"') && preview.includes('src="preview/app.js"') && preview.includes("preview-tag"), "preview shell still iterates on its own");
+  assert(legacyPage.includes("dashboard/core.js") && legacyPage.includes("<!-- panels:begin -->") && legacyPage.includes("dashboard/pages.js"), "legacy dashboard keeps the old shell");
+  assert(!legacyPage.includes("preview/app.js"), "legacy page does not load the redesigned shell");
   const css = fs.readFileSync(path.join(root, "preview/app.css"), "utf8");
   assert(css.includes(".logo span{color:var(--accent)") && css.includes(".logo i{font-style:normal;color:var(--accent)"), "logo color still follows --accent");
   assert(css.includes('body[data-desk="nft"]') && css.includes("#ff4fd8"), "NFT accent reaches the logo token");
   assert(css.includes("#14F195") && css.includes("#9945FF") && css.includes("#3d8bff"), "Solana and Cardano palettes stay");
   assert(css.includes("prefers-reduced-motion"), "reduced motion is respected");
+  assert(css.includes("@keyframes blink") && css.includes("@keyframes pulse") && css.includes("@keyframes shimmer"), "logo blink and shell motion stay");
   const build = fs.readFileSync(path.join(root, "scripts/build-site.py"), "utf8");
+  assert(build.includes("def bust(") && build.includes("?v="), "build adds cache-busting asset versions");
   assert(build.includes("def bust_preview(") && build.includes("def preview_version("), "preview assets are cache-busted on their own");
-  assert(build.includes("Kept off asset_version()"), "preview hash does not retint the live dashboard assets");
+  assert(build.includes("Kept off asset_version()"), "preview hash does not retint the legacy dashboard assets");
+  assert(build.includes("bust_preview(index)"), "published index cache-busts the redesigned assets");
+  assert(build.includes("legacy.html"), "build publishes the legacy dashboard");
 }
 
 console.log("smoke-dashboard: OK");

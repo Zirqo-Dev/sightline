@@ -913,9 +913,6 @@
     const heat = heatHtml(heatModel(v.flags));
     const whaleTag = (v.whale && safeTag(v.whale.whale_tag)) || (v.founder && v.founder.tag) || "";
     const whaleName = labelTag(whaleTag) || "Whale";
-    const whaleNote = v.founder
-      ? `<p class="slim-brief"><b>${esc(whaleName)}</b> · net flow ${v.founder.net_flow_ada == null ? "–" : (v.founder.net_flow_ada > 0 ? "+" : "") + fmt(v.founder.net_flow_ada, 0) + " ADA"}</p>${v.founder.summary ? `<p class="slim-brief">${tx(v.founder.summary)}</p>` : ""}${v.founder.line ? `<p class="slim-brief">${tx(v.founder.line)}</p>` : ""}`
-      : "";
     const sankey = sankeyHtml(sankeyFlows(v.whale, v.big, v.log));
     const flow = flowMapHtml(v.log, v.liq);
     const devCards = v.devs.length ? `<div class="dev-cards">${v.devs.slice(0, 16).map(e => {
@@ -968,7 +965,7 @@
       <div class="viz-grid">${panel("Pool ADA (one side)", "", flagRow + riskLegend + depthBars, "chart", "ADA in the token's deepest pool (Minswap); total TVL is ~2x.")}${panel("Flag hit rate", "pump vs rug", donuts, "flag")}</div>
       ${panel("Pool depth", "dashed kill line", `<div class="killsparks">${sparkBlock}</div>${gaugeBlock}`, "chart")}
       ${panel("Cluster heat", "early buyers", (recentFlags ? `<div class="filters">${recentFlags}</div>` : "") + heat, "flag")}
-      <div class="viz-grid">${panel(whaleName, /^w-[0-9a-f]{8}$/.test(whaleTag) && whaleName !== whaleTag ? whaleTag : "", whaleNote + sankey, "chart")}${panel("Liquidity map", "enter / exit", flow, "chart")}</div>
+      <div class="viz-grid">${panel(whaleName, "", sankey, "chart")}${panel("Liquidity map", "enter / exit", flow, "chart")}</div>
       ${panel("Dev risk", "fresh funded", devCards, "flag")}
       ${panel("Paper books", "not orders", bookHtml, "layers")}
       ${panel("Lessons", "follow-ups", lessonHtml, "feed")}
@@ -1119,7 +1116,7 @@
     </div>`;
     const feed = briefs.slice(0, 3).map(b => feedItem(`${chip(b.desk || "", "")}<span>${esc(when(b.date) || "")}</span>`, b.headline, (b.learned || []).slice(0, 2))).join("")
       || empty("No briefs yet", "Daily notes from Cardano and NFT show up here.");
-    return `<div class="stack"><div class="pagehead"><div><h1>All desks</h1><div class="sub">Preview · paper books · one accent per desk</div></div></div>${head}${cards}${panel("Latest briefs", "feed", feed, "book")}</div>`;
+    return `<div class="stack"><div class="pagehead"><div><h1>All desks</h1><div class="sub">Paper books · one accent per desk</div></div></div>${head}${cards}${panel("Latest briefs", "feed", feed, "book")}</div>`;
   }
 
   function routeOf(hash) {
@@ -1159,17 +1156,19 @@
       get("nft/log.json"),
       get("nft/briefs/index.json")
     ]);
-    async function latestBrief(idx, dir, desk) {
-      if (!Array.isArray(idx) || !idx.length) return null;
+    async function briefsIn(idx, dir, desk) {
+      if (!Array.isArray(idx) || !idx.length) return [];
       const names = idx.map(n => String(n).endsWith(".json") ? String(n) : String(n) + ".json").sort();
-      const file = await get(dir + names[names.length - 1]);
-      return briefBits(file, desk);
+      const files = await Promise.all(names.map(name => get(dir + name)));
+      return files.map(file => briefBits(file, desk)).filter(Boolean);
     }
-    const [cBrief, nBrief] = await Promise.all([
-      latestBrief(sIdx, "solada/briefs/", "Cardano"),
-      latestBrief(nIdx, "nft/briefs/", "NFT")
+    const [cBriefs, nBriefs] = await Promise.all([
+      briefsIn(sIdx, "solada/briefs/", "Cardano"),
+      briefsIn(nIdx, "nft/briefs/", "NFT")
     ]);
-    const briefs = [cBrief, nBrief].filter(Boolean);
+    const cBrief = cBriefs.length ? cBriefs[cBriefs.length - 1] : null;
+    const nBrief = nBriefs.length ? nBriefs[nBriefs.length - 1] : null;
+    const briefs = cBriefs.concat(nBriefs).sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
     const cardano = { log, pulse, paper: sPaper, pump, flags, vetoes, devs, whale, liq, big, kills, brief: cBrief && { date: cBrief.date, headline: cBrief.headline, learned: cBrief.learned, scoreboard: cBrief.score } };
     return {
       health, paper, positions, trades: parseCsv(tradesText),
@@ -1262,7 +1261,7 @@
       else if (route.id === "nft") html = `<div class="pagehead"><div><h1>NFT</h1><div class="sub">KING · multichain · coming soon</div></div></div>` + nftHtml(p.nftPulse, p.nftLog, store.nftChain);
       else html = `<div class="pagehead"><div><h1>Briefs</h1><div class="sub">Cardano and NFT daily notes</div></div></div>` + briefsHtml(p.briefs);
     } catch (err) {
-      html = empty("This tab couldn't render", "The preview hit a display error and kept the raw feed off the page.");
+      html = empty("This tab couldn't render", "This view hit a display error and kept the raw feed off the page.");
     }
     view.innerHTML = html;
     const visible = view.innerText || "";
