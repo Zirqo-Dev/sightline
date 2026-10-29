@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zirqo-dev.github.io/sightline/schema/x-buzz.schema.json",
+  "title": "X buzz measured factor",
+  "description": "Shortlist mention counts. A measured factor. veto and buy_signal are always false.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "kind", "veto", "buy_signal", "asof", "definitions", "shortlist_sources", "x_calls", "tokens"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "x_buzz"},
+    "measured_factor": {"type": "boolean"},
+    "veto": {"const": false},
+    "buy_signal": {"const": false},
+    "asof": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "window": {"$ref": "#/$defs/window"},
+    "definitions": {"$ref": "#/$defs/definitions"},
+    "shortlist_sources": {"$ref": "#/$defs/shortlist_sources"},
+    "x_calls": {"$ref": "#/$defs/x_calls"},
+    "tokens": {"type": "array", "items": {"$ref": "#/$defs/token"}}
+  },
+  "$defs": {
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["h24_start"],
+      "properties": {
+        "h24_start": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"}
+      }
+    },
+    "definitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bot_like", "big_account", "sample", "mentions_1h", "cashtag_note"],
+      "properties": {
+        "bot_like": {"type": "string", "minLength": 1},
+        "big_account": {"type": "string", "minLength": 1},
+        "sample": {"type": "string", "minLength": 1},
+        "mentions_1h": {"type": "string", "minLength": 1},
+        "cashtag_note": {"type": "string", "minLength": 1},
+        "confidence": {"type": "string", "minLength": 1}
+      }
+    },
+    "shortlist_sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cardano", "solana"],
+      "properties": {
+        "cardano": {"type": "string", "minLength": 1},
+        "solana": {"type": "string", "minLength": 1}
+      }
+    },
+    "x_calls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["counts", "search", "total"],
+      "properties": {
+        "counts": {"type": "integer", "minimum": 0},
+        "search": {"type": "integer", "minimum": 0},
+        "total": {"type": "integer", "minimum": 0}
+      }
+    },
+    "token": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ticker", "chain", "id_short", "query", "query_basis",
+        "mentions_24h", "mentions_1h", "hourly_24h", "velocity",
+        "sample", "false_positive_risk", "confidence"
+      ],
+      "properties": {
+        "ticker": {"type": "string", "minLength": 1},
+        "chain": {"enum": ["solana", "cardano"]},
+        "id_short": {"type": "string", "minLength": 1},
+        "query": {"type": "string", "minLength": 1},
+        "query_basis": {"type": "string", "minLength": 1},
+        "mentions_24h": {"type": "integer", "minimum": 0},
+        "mentions_1h": {"type": "integer", "minimum": 0},
+        "hourly_24h": {
+          "type": "array",
+          "minItems": 24,
+          "maxItems": 24,
+          "items": {"type": "integer", "minimum": 0}
+        },
+        "velocity": {"$ref": "#/$defs/velocity"},
+        "sample": {"$ref": "#/$defs/sample"},
+        "false_positive_risk": {"type": "string", "minLength": 1},
+        "confidence": {"enum": ["high", "medium", "low"]}
+      }
+    },
+    "velocity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["per_5m_sample", "per_1h", "ratio_1h_vs_prev_hr"],
+      "properties": {
+        "per_5m_sample": {"type": "integer", "minimum": 0},
+        "per_1h": {"type": "integer", "minimum": 0},
+        "ratio_1h_vs_prev_hr": {"type": ["number", "null"]}
+      }
+    },
+    "sample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["posts", "unique_authors", "median_followers", "bot_like_share", "authors_over_10k"],
+      "properties": {
+        "posts": {"type": ["integer", "null"], "minimum": 0},
+        "unique_authors": {"type": ["integer", "null"], "minimum": 0},
+        "median_followers": {"type": ["number", "null"]},
+        "bot_like_share": {"type": ["number", "null"]},
+        "authors_over_10k": {"type": ["integer", "null"], "minimum": 0},
+        "skipped": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

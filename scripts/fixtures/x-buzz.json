@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "kind": "x_buzz",
+  "measured_factor": true,
+  "veto": false,
+  "buy_signal": false,
+  "asof": "2026-10-29T01:49:00Z",
+  "window": {
+    "h24_start": "2026-10-28T02:00:00Z"
+  },
+  "definitions": {
+    "bot_like": "account under 30 days old OR under 50 followers",
+    "big_account": "over 10k followers",
+    "sample": "25 most recent non-retweet posts (fewer if fewer exist)",
+    "mentions_1h": "trailing 60 min",
+    "cashtag_note": "cashtag queries are plain-word queries",
+    "confidence": "low = ticker collides with a common word; high = contract-address query; medium = ticker plus context"
+  },
+  "shortlist_sources": {
+    "cardano": "synthetic cardano shortlist",
+    "solana": "synthetic solana shortlist"
+  },
+  "x_calls": {
+    "counts": 2,
+    "search": 1,
+    "total": 3
+  },
+  "tokens": [
+    {
+      "ticker": "SAMPLE",
+      "chain": "cardano",
+      "id_short": "abcdef0123",
+      "query": "SAMPLE (cardano OR ADA) -is:retweet",
+      "query_basis": "ticker+context",
+      "mentions_24h": 2,
+      "mentions_1h": 0,
+      "hourly_24h": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0
+      ],
+      "velocity": {
+        "per_5m_sample": 0,
+        "per_1h": 0,
+        "ratio_1h_vs_prev_hr": null
+      },
+      "sample": {
+        "posts": 2,
+        "unique_authors": 2,
+        "median_followers": 120,
+        "bot_like_share": 0.0,
+        "authors_over_10k": 0
+      },
+      "false_positive_risk": "low",
+      "confidence": "low"
+    },
+    {
+      "ticker": "QUIET",
+      "chain": "cardano",
+      "id_short": "0123abcdef",
+      "query": "QUIET (cardano OR ADA) -is:retweet",
+      "query_basis": "ticker+context",
+      "mentions_24h": 0,
+      "mentions_1h": 0,
+      "hourly_24h": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "velocity": {
+        "per_5m_sample": 0,
+        "per_1h": 0,
+        "ratio_1h_vs_prev_hr": null
+      },
+      "sample": {
+        "posts": 0,
+        "unique_authors": 0,
+        "median_followers": null,
+        "bot_like_share": null,
+        "authors_over_10k": 0,
+        "skipped": "too few mentions to sample"
+      },
+      "false_positive_risk": "medium: common word",
+      "confidence": "medium"
+    },
+    {
+      "ticker": "MINTX",
+      "chain": "solana",
+      "id_short": "Abcd\u2026wxyz",
+      "query": "MintExampleAddress -is:retweet",
+      "query_basis": "contract_address",
+      "mentions_24h": 7,
+      "mentions_1h": 5,
+      "hourly_24h": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        5
+      ],
+      "velocity": {
+        "per_5m_sample": 1,
+        "per_1h": 5,
+        "ratio_1h_vs_prev_hr": 2.5
+      },
+      "sample": {
+        "posts": 7,
+        "unique_authors": 6,
+        "median_followers": 1178.5,
+        "bot_like_share": 0.14,
+        "authors_over_10k": 1
+      },
+      "false_positive_risk": "low: contract address search",
+      "confidence": "high"
+    }
+  ]
+}

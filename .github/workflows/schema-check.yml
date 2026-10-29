@@ -19,3 +19,5 @@ jobs:
         run: python3 -m unittest discover -s solada-prefilter/tests
       - name: Solana desk tests
         run: python3 -m unittest discover -s solana-desk/tests -t solana-desk
+      - name: X buzz schema tests
+        run: python3 -m unittest discover -s scripts/tests
