@@ -48,7 +48,18 @@
     }).join("")}</tbody></table>`;
   }
 
-  function book(trades, paper) {
+  function modelOf(t) { const m = String((t && t.cost_model) || "").trim(); return m || "pre-v3"; }
+  function windowStat(trades, nowMs, days) {
+    const cut = nowMs / 1000 - days * 86400;
+    const sells = trades.filter(t => t.action === "sell" && num(t.pnl) != null && num(t.time) != null && num(t.time) >= cut);
+    const counted = sells.filter(t => modelOf(t) === "v3-exit-aware");
+    const older = sells.filter(t => modelOf(t) !== "v3-exit-aware");
+    const sum = xs => xs.reduce((a, t) => a + num(t.pnl), 0);
+    const labels = {};
+    older.forEach(t => { const k = modelOf(t); labels[k] = (labels[k] || 0) + 1; });
+    return { closes: counted.length, net: sum(counted), wins: counted.filter(t => num(t.pnl) > 0).length, older: older.length, olderNet: sum(older), labels };
+  }
+  function book(trades, paper, now) {
     const sells = trades.filter(t => /sell|exit|close/i.test(t.action));
     const pos = {};
     for (const t of trades) {
@@ -63,10 +74,15 @@
     const total = pnls.reduce((a, b) => a + b, 0), wins = pnls.filter(x => x > 0).length;
     if (!trades.length && !(paper && ((paper.open || []).length || (paper.closed || []).length)))
       return `<p class="muted sd-empty">No paper fills yet. Config v1-v6.5 frozen Oct 26; paper fills start once the fill step ships (plan v6.5). Open positions, closed trades, P&amp;L and win rate show here once <code>trades.csv</code> has rows.</p>`;
+    const w7 = windowStat(trades, now, 7), w28 = windowStat(trades, now, 28);
+    const stat = (k, v, cls) => `<div class="card"><div class="k">${S.esc(k)}</div><div class="v ${cls || ""}">${v}</div></div>`;
+    const winLine = (st, days) => `${stat(days + "-day P&L", `${sol(st.net)} <span class="sd-dim">${st.closes} v3 closes</span>`, st.net < 0 ? "down" : "up")}${stat(days + "-day older", `${st.older} <span class="sd-dim">${Object.entries(st.labels).map(([k, n]) => S.esc(k) + " " + n).join(", ") || "none"}</span>`)}`;
     return `<div class="cards"><div class="card"><div class="k">Open</div><div class="v">${open.length}</div></div><div class="card"><div class="k">Closed</div><div class="v">${pnls.length}</div></div>
-      <div class="card"><div class="k">P&amp;L (SOL)</div><div class="v ${S.pnlClass(total)}">${sol(total)}</div></div><div class="card"><div class="k">Win rate</div><div class="v">${pnls.length ? Math.round(wins / pnls.length * 100) + "%" : "–"}</div></div></div>
+      <div class="card"><div class="k">P&amp;L (SOL)</div><div class="v ${S.pnlClass(total)}">${sol(total)}</div></div><div class="card"><div class="k">Win rate</div><div class="v">${pnls.length ? Math.round(wins / pnls.length * 100) + "%" : "–"}</div></div>
+      ${winLine(w7, 7)}${winLine(w28, 28)}</div>
+      <p class="muted">7-day and 28-day P&amp;L count only <code>v3-exit-aware</code> closes. Older closes stay in the table, labelled.</p>
       ${open.length ? `<div class="sd-h">Open positions</div><table class="tbl"><thead><tr><th>Token</th><th>Book</th><th class="num">Size SOL</th><th class="num">Entry px</th><th>Links</th></tr></thead><tbody>${open.map(p => `<tr><td><b>${S.esc(p.symbol || short(p.mint))}</b></td><td class="c-meta">${S.esc(p.book)}</td><td class="num">${S.fmt(p.sol, 3)}</td><td class="num">${p.px == null ? "–" : S.esc(p.px)}</td><td>${links(p.mint)}</td></tr>`).join("")}</tbody></table>` : ""}
-      ${sells.length ? `<div class="sd-h">Closed trades</div><table class="tbl"><thead><tr><th>Token</th><th>When</th><th>Why</th><th class="num">P&amp;L SOL</th></tr></thead><tbody>${sells.slice(-20).reverse().map(t => `<tr><td><b>${S.esc(t.symbol || short(t.mint))}</b></td><td class="c-meta">${S.esc(S.when(new Date(+t.time * 1000).toISOString()))}</td><td class="c-meta">${S.esc(t.why)}</td><td class="num ${S.pnlClass(num(t.pnl) || 0)}">${sol(num(t.pnl))}</td></tr>`).join("")}</tbody></table>` : ""}`;
+      ${sells.length ? `<div class="sd-h">Closed trades</div><table class="tbl"><thead><tr><th>Token</th><th>When</th><th>Why</th><th>Model</th><th class="num">P&amp;L SOL</th></tr></thead><tbody>${sells.slice(-20).reverse().map(t => `<tr><td><b>${S.esc(t.symbol || short(t.mint))}</b></td><td class="c-meta">${S.esc(S.when(new Date(+t.time * 1000).toISOString()))}</td><td class="c-meta">${S.esc(t.why)}</td><td class="c-meta">${S.esc(modelOf(t))}</td><td class="num ${S.pnlClass(num(t.pnl) || 0)}">${sol(num(t.pnl))}</td></tr>`).join("")}</tbody></table>` : ""}`;
   }
 
   function runs(tasks, h) {
@@ -104,7 +120,7 @@
       return `<div class="sd">
         <div class="sd-sec"><div class="sd-h">Health · ${S.esc(h && h.day || "today")}</div>${health(h, now)}</div>
         <div class="sd-sec"><div class="sd-h">Latest leads</div>${leads(tasks)}</div>
-        <div class="sd-row"><div class="sd-sec"><div class="sd-h">Paper book</div>${book(trades, paper)}</div><div class="sd-sec"><div class="sd-h">Recent runs</div>${runs(tasks, h)}</div></div>
+        <div class="sd-row"><div class="sd-sec"><div class="sd-h">Paper book</div>${book(trades, paper, now)}</div><div class="sd-sec"><div class="sd-h">Recent runs</div>${runs(tasks, h)}</div></div>
         <div class="si-foot">Paper trading only · plan v6.5 · token mints only, no wallets · Research only, not advice.</div></div>`;
     }
   });

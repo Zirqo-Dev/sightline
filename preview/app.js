@@ -326,7 +326,27 @@
     if (tradeNet(t) == null) return null;
     return grossOf(t, rows);
   }
-  function solanaModel(paper, trades, positions) {
+  function modelOf(t) { const m = String((t && t.cost_model) || "").trim(); return m || "pre-v3"; }
+  function solanaWindows(rows, nowMs) {
+    const out = {};
+    [7, 28].forEach(days => {
+      const cut = (nowMs || Date.now()) / 1000 - days * 86400;
+      const sells = (rows || []).filter(t => t.action === "sell" && tradeNet(t) != null && num(t.time) != null && num(t.time) >= cut);
+      const counted = sells.filter(t => modelOf(t) === "v3-exit-aware");
+      const older = sells.filter(t => modelOf(t) !== "v3-exit-aware");
+      const labels = {};
+      older.forEach(t => { const k = modelOf(t); labels[k] = (labels[k] || 0) + 1; });
+      out[days] = {
+        closes: counted.length,
+        net: counted.reduce((s, t) => s + (tradeNet(t) || 0), 0),
+        older: older.length,
+        olderNet: older.reduce((s, t) => s + (tradeNet(t) || 0), 0),
+        labels
+      };
+    });
+    return out;
+  }
+  function solanaModel(paper, trades, positions, nowMs) {
     const rows = Array.isArray(trades) ? trades : [];
     const sells = rows.filter(t => /sell|exit|close/i.test(t.action) && tradeNet(t) != null).slice().sort((a, b) => (num(a.time) || 0) - (num(b.time) || 0));
     const opens = [];
@@ -391,11 +411,11 @@
       };
     });
     const activity = rows.map(t => ({
-      time: timeOf(t.time), book: t.book || "", symbol: t.symbol || "", action: t.action || "", reason: (t.why || "").replace(/_/g, " "), pnl: tradeNet(t)
+      time: timeOf(t.time), book: t.book || "", symbol: t.symbol || "", action: t.action || "", reason: (t.why || "").replace(/_/g, " "), pnl: tradeNet(t), model: modelOf(t)
     }));
-    ((paper && paper.summaries) || []).forEach(s => activity.push({ time: s.at, book: "", symbol: "", action: s.type || "skip", reason: s.note || "", pnl: null }));
+    ((paper && paper.summaries) || []).forEach(s => activity.push({ time: s.at, book: "", symbol: "", action: s.type || "skip", reason: s.note || "", pnl: null, model: "" }));
     activity.sort((a, b) => String(b.time || "").localeCompare(String(a.time || "")));
-    return { net, gross, openCount: opens.length, winRate, netSeries, grossSeries, books, opens, activity: activity.slice(0, 24), closed: sells.length };
+    return { net, gross, openCount: opens.length, winRate, netSeries, grossSeries, books, opens, activity: activity.slice(0, 24), closed: sells.length, windows: solanaWindows(rows, nowMs) };
   }
   function solanaHtml(model) {
     const m = model || solanaModel(null, [], null);
@@ -423,6 +443,7 @@
       token: tx(a.symbol) || "–",
       action: chip(a.action || "skip", /skip|void|halt/i.test(a.action) ? "caution" : ""),
       reason: tx(a.reason) || "–",
+      model: a.model ? esc(a.model) : "–",
       net: a.pnl == null ? "–" : `<span class="${signCls(a.pnl)}">${esc(money(a.pnl, 4))}</span>`
     }));
     const pos = posRows.length ? table(
@@ -430,10 +451,17 @@
       posRows
     ) : empty("No open paper positions", "positions.json and paper.json have no open tickets.");
     const act = actRows.length ? table(
-      [{ key: "when", label: "When" }, { key: "book", label: "Book" }, { key: "token", label: "Token" }, { key: "action", label: "Action" }, { key: "reason", label: "Reason" }, { key: "net", label: "Net", num: true }],
+      [{ key: "when", label: "When" }, { key: "book", label: "Book" }, { key: "token", label: "Token" }, { key: "action", label: "Action" }, { key: "reason", label: "Reason" }, { key: "model", label: "Model" }, { key: "net", label: "Net", num: true }],
       actRows
     ) : empty("No trades or skips yet", "trades.csv is empty. Reasons show up as one line per fill or skip.");
-    return `<div class="stack">${head}${panel("Net vs gross", "paper equity", lineChart(m.netSeries, m.grossSeries), "chart")}${panel("Books F / R / S", "0.5 SOL tickets", books, "layers")}${panel("Open positions", String(m.openCount), pos, "table")}${panel("Recent trades", "reason per fill", act, "feed")}</div>`;
+    const wins = m.windows || { 7: { net: 0, closes: 0, older: 0, labels: {} }, 28: { net: 0, closes: 0, older: 0, labels: {} } };
+    const winNote = days => {
+      const w = wins[days] || { net: 0, closes: 0, older: 0, labels: {} };
+      const older = Object.entries(w.labels || {}).map(([k, n]) => k + " " + n).join(", ") || "none";
+      return `<p>${days}-day net <b class="${signCls(w.net)}">${esc(money(w.net, 4))}</b> SOL on ${w.closes} v3-exit-aware closes. Older closes in the window: ${w.older} (${esc(older)}).</p>`;
+    };
+    const windows = `<div class="stack">${winNote(7)}${winNote(28)}<p class="dim">7-day and 28-day stats count only the v3-exit-aware model. Older fills stay in the table, labelled.</p></div>`;
+    return `<div class="stack">${head}${panel("7-day and 28-day", "v3-exit-aware only", windows, "chart")}${panel("Net vs gross", "paper equity", lineChart(m.netSeries, m.grossSeries), "chart")}${panel("Books F / R / S", "0.5 SOL tickets", books, "layers")}${panel("Open positions", String(m.openCount), pos, "table")}${panel("Recent trades", "reason per fill", act, "feed")}</div>`;
   }
 
   function flagsFor(flags) {

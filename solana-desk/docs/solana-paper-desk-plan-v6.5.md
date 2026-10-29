@@ -195,7 +195,7 @@ Either way:
 4. **Confirmed failure:** -100% only when the pool is confirmed gone, or there is no route for 3 consecutive checks. Otherwise exits fill at the quote when checked (gap-through).
 5. Open positions are reported at current mark; confirmed rugs count at -100% in expectancy.
 6. Time stop 120 min (about 4-12 checks) instead of 60, so the exit isn't decided by one or two samples.
-7. Unmodeled optimism remains: failed transactions, landing latency, priority fees/tips, competition for the same quote. The v6.5 freeze shipped a flat 0.5%/side haircut as a guess. That guess is replaced for PnL accounting only by the `COST` assumption in `config.py` (150 bps/side base, capped at the 300 bps quote slippage window, scaled by pool liquidity and quoted impact). It is still an assumption: the Jito study and the Helius report do not state this bps. Exits, kill lines, and the freeze are unchanged. Paper results are a ceiling on live results.
+7. Unmodeled optimism remains: failed transactions, landing latency, priority fees/tips, competition for the same quote. The v6.5 freeze shipped a flat 0.5%/side haircut as a guess. PnL accounting now uses `COST` in `config.py`: 60 bps per side plus 0.25 times the verified constant-product impact, plus 150 bps on hard_stop, trailing_stop and liquidity_pulled, capped at 600 bps. Jupiter `priceImpactPct` is not that impact. Exits, kill lines, and the freeze are unchanged. Paper results are a ceiling on live results.
 
 ## Data sources (checked Oct 24, 2026, unauthenticated, from the box)
 
@@ -232,7 +232,7 @@ Done on Oct 24, 2026 from the box (findings.md, raw responses in raw/). Jupiter 
 | MAX_OPEN | 4 for F (article); R and S capped by R_MATCH |
 | SESSION_LOSS_HALT_PCT | 30 (article) on the 10 SOL bankroll, logged as "would have halted" only, never stops a book; no more than 8 new F entries/day |
 | EXIT | hard_stop -25; ladder (+40, 1/3), (+100, 1/3); trail 25% after the first take; liq_drop 40; time stop 120 min unless up 10%; temporary error = stale + retry; pool confirmed gone or no route 3 checks in a row = -100% |
-| Modeled costs | Jupiter quote impact both sides, plus a slippage+MEV haircut on each side, plus the network fee. The frozen table's 0.5%/side guess is now the legacy entry cost for rows opened before `entry_cost` was stored. Live default: `COST` in config.py (150 bps/side, cap 300). PnL accounting only |
+| Modeled costs | Jupiter `outAmount` both sides (the curve is already in the quote), plus a slippage+MEV haircut on each side, plus the network fee. The frozen table's 0.5%/side guess is the legacy entry cost for rows opened before `entry_cost` was stored. Live default: `COST` in config.py (`v3-exit-aware`: 60 + 0.25 × curve impact bps, +150 bps on hard_stop / trailing_stop / liquidity_pulled, cap 600). PnL accounting only |
 | R_MATCH | R drawn from the same runs as F fills, about F daily count, cap 2x F |
 | RANDOM_SEED | Logged per run; R sample is reproducible |
 | TRIM_PCT | Top 5% of trades by return removed per book; report warning only |
@@ -277,7 +277,7 @@ Rules:
 | Safety-skip reasons | rugged, not_graduated, authority_open, danger:*, thin_pool, lp_unlocked, dev_holds, top10_heavy, risk_score, too_fresh, too_old |
 | Execution-skip reasons (all books) | no_route, impact, ticket_share, nobody_can_sell, max_open, void_day, void_outage |
 | Halt log | would_halt (timestamp, book, drawdown) recorded; no entries are blocked |
-| trades.csv | time, book, agent, mint, symbol, action (buy/sell/mark), frac, sol (0.5 per entry), quote_px, impact_pct, fee_sol, haircut_pct, why (take_profit_40, take_profit_100, hard_stop, trailing_stop, time_stop, liquidity_pulled, pool_gone, no_route_3x), pnl (net SOL), check_delay_s, stale (0/1), then gross_pnl, net_pnl, entry_haircut_pct, exit_haircut_pct. Older files whose header is a prefix of this list keep their pnl and get blank cells for the new columns |
+| trades.csv | time, book, agent, mint, symbol, action (buy/sell/mark), frac, sol (0.5 per entry), quote_px, impact_pct, fee_sol, haircut_pct, why (take_profit_40, take_profit_100, hard_stop, trailing_stop, time_stop, liquidity_pulled, pool_gone, no_route_3x), pnl (net SOL), check_delay_s, stale (0/1), then gross_pnl, net_pnl, entry_haircut_pct, exit_haircut_pct, verified_impact_bps, cost_model, cost_model_started_at. Older files whose header is a prefix of this list keep their pnl and get blank cells for the new columns. Blank cost_model is labelled pre-v3. 7-day and 28-day stats count only v3-exit-aware |
 | state.json | per book: cash, open{mint: entry, peak, steps, liq0, opened, last_mark, stale, no_route_count}, session start |
 | review.json (KING) | date, mints[at most 3], notes (forensics, bundle/sniper/cluster tags), no score |
 
@@ -339,7 +339,7 @@ Estimates back-solved from the pool hitting 82% mid-week with KING at about 3 ru
 | Most tokens go to zero | The base rate | Skip default, small size, time stop |
 | Rugs / LP pulls | Faster than any 10-30 min check | -100% on confirmed gone pool or 3 no-route checks; rugs in expectancy |
 | Bundles and snipers | Bundled supply passes top-10 checks | Curve/pool exclusion; KING notes (unscored) |
-| MEV, failed tx, latency | Live fills worse than quotes; the exact bps is unmeasured | `COST` haircut assumption (150 bps/side, cap 300) on entry and exit; paper treated as a ceiling |
+| MEV, failed tx, latency | Live fills worse than quotes; the exact bps is unmeasured | `COST` haircut assumption (v3-exit-aware: 60 + 0.25 × curve bps, +150 on stress exits, cap 600) on entry and exit; paper treated as a ceiling |
 | Noise / overfitting | 20-60 closes can't confirm anything; real edges can still be killed by chance | One real test at day 28 (lowers false kills vs v6); KILL = not shown; min 20 closes; config frozen end of day 3 |
 | Filters too strict | Stacked safety filters may produce under 20 F closes | Day-14 early stop needs 20 closes; STOP "filters too strict" at day 28 |
 | Infra change mid-test | Cadence change is a strategy change | Switch = new book; outage over 2h voids entries |

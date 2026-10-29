@@ -4,15 +4,17 @@ A **paper-only** trading desk for Solana tokens. It never holds keys, never sign
 transactions, and never touches a wallet: every "trade" is a simulated entry/exit
 recorded in a ledger with a fixed 0.5 SOL paper ticket.
 
-Paper fills are marked at the Jupiter quote. That quote already includes its price impact.
-Each side then pays a configurable slippage and sandwich-MEV haircut (`desk/config.py`
-`COST`, documented there as an assumption: nothing in the Jito sandwich study or the
-Helius MEV report is the bps for this ticket) plus the network fee. The default is
-**150 bps per side** on a pool of at least 25 SOL, rising toward **300 bps** (the quote's
-slippage window) when the pool is thinner or the quoted impact is higher. `trades.csv`
-and `paper.json` record gross and net PnL. `pnl` stays the net figure, so older rows
-still read. Skip, exit, kill, void, and the v6.5 freeze are unchanged; exits still use
-the raw quote price.
+Paper fills are marked at the Jupiter quote. That quote's `outAmount` already includes the
+pool's constant-product move. Each side then pays a slippage and sandwich-MEV haircut
+(`desk/config.py` `COST`, an assumption) plus the network fee. The haircut is **60 bps
+plus 0.25 times the verified curve impact** of that fill's SOL into the pool's SOL
+reserve, **plus 150 bps** on an exit whose reason is `hard_stop`, `trailing_stop` or
+`liquidity_pulled`, and it is **capped at 600 bps**. Jupiter's `priceImpactPct` is
+logged and is not an input: on the 148–257 SOL pools it read 1.1–2.5% while the curve
+and the quoted output are about 0.2–0.34%. New rows are stamped `v3-exit-aware` with
+the model's start time. The 7-day and 28-day stats count only those rows. Older rows
+keep their numbers and show up labelled `pre-v3`. Skip, exit, kill, void, and the v6.5
+freeze are unchanged; exits still use the raw quote price.
 
 - `desk/` — config, skip rules (`skips.py`), books F/R/S (`books.py`), exits, ledger, report.
 - `tests/` — unittest suite run against redacted fixtures (third-party holder wallets replaced with placeholders).

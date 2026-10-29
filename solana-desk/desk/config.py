@@ -42,35 +42,30 @@ EXIT = dict(hard_stop=-0.25, ladder=[(0.40, 1/3), (1.00, 1/3)], trail=0.25,
 # this block does not start a new book. Exits still key off the raw quote price, not net PnL.
 #
 # Slippage + sandwich-MEV haircut, applied on the entry and again on the exit, on top of the
-# Jupiter quote (that quote's price impact is already inside the fill price) and network_fee_sol.
-# COST_NOTE is the assumption. Nothing cited there is the bps for this 0.5 SOL paper ticket.
-#
-# On a pool at or above liq_ref_sol the haircut is base_bps plus impact_weight times the quoted
-# impact in bps, and it reaches max_bps exactly when quoted impact hits the 3% execution check
-# (150 + 0.5*300 = 300). Pools thinner than liq_ref_sol scale the base by ref/pool, capped at
-# liq_scale_cap, and the total still cannot exceed max_bps (the slippageBps=300 window in run.quote).
-# Missing liquidity or impact does not invent an extra penalty: scale 1, impact term 0.
+# Jupiter quote (the quote's own curve impact is already inside outAmount) and network_fee_sol.
+# verified impact is constant-product dx/(pool+dx), not Jupiter priceImpactPct. See COST_NOTE.
+COST_MODEL = "v3-exit-aware"  # stamped on each new fill, with the model's start time; older rows stay blank
 COST_NOTE = (
-    "Assumption, not a measured constant. No source states the bps for a 0.5 SOL memecoin paper ticket. "
-    "Jito IMC 2025 (Gerzon et al.) counted 521,903 sandwich bundles, at least $7.71M of victim losses, "
-    "median about $5 on a sandwiched swap, and sandwiches were 0.038% of bundles (a lower bound: 28% had no SOL leg). "
-    "Helius, Solana MEV Report (Jan 2025): memecoin flow sets a wide slippage tolerance and is filled at the worst price in that window; "
-    "one bot averaged 0.0425 SOL profit per sandwich over 1.55M attacks. Those figures are not this haircut. "
-    "The old flat 50 bps/side guess sat well inside the 300 bps slippage window the quote already requests. "
-    "The default is half that window (150 bps/side) on a pool at or above 25 SOL with no extra impact term, "
-    "rising to the full 300 bps window as quoted impact reaches the 3% execution check or the pool thins toward the 10 SOL floor. "
+    "Assumption, not a measured constant. Verified impact is the constant-product move of this fill's SOL "
+    "into the pool's SOL reserve: 10000 * dx / (pool + dx). Jupiter priceImpactPct is stored as impact_pct and is not used. "
+    "On 28 Oct 2026 the open pools of 148.27, 179.79 and 257.14 SOL carried Jupiter impacts of 2.49%, 1.24% and 1.09%. "
+    "The same 0.5 SOL ticket against those reserves is 0.336%, 0.277% and 0.194%. "
+    "Quoted outAmount across three sizes sits on that curve: the mid size predicted from the other two matched within 0.02% "
+    "on the pools whose vault did not move during the read. The Jupiter field is a gap versus a cached USD price. "
+    "Per side: base_bps + impact_weight * verified_impact_bps, plus stress_exit_bps on hard_stop, trailing_stop and liquidity_pulled, "
+    "capped at max_bps. A missing reserve adds no impact term. "
     "Charged on entry and on exit. Skip, exit, kill, void, and the v6.5 freeze are unchanged."
 )
 COST = dict(
     network_fee_sol=0.00001,         # base network-fee assumption per swap; unchanged
     legacy_haircut_per_side=0.005,   # entry cost already deducted for a position opened before entry_cost was stored
-    base_bps=150,                     # half of the 300 bps quote slippage window
-    min_bps=150,                      # liquidity and impact only increase the haircut
-    max_bps=300,                      # cap = run.quote slippageBps; do not charge more than the window
-    liq_ref_sol=25.0,                 # day-1 note's suggested floor; the frozen skip floor stays 10 SOL
-    liq_scale_cap=1.5,                # 10 SOL pool => 25/10, capped here so liquidity alone stays under max_bps
-    impact_weight=0.5,                # extra bps on top of the quote; the quote already contains its own impact
-    haircut_per_side=0.015,           # base_bps/10000, the unscaled per-side fraction (old key, reference case)
+    base_bps=60,                      # per side, before the verified-impact term
+    min_bps=60,                       # impact and the stress add-on only increase the haircut
+    max_bps=600,                      # cap on the whole per-side haircut
+    impact_weight=0.25,               # times verified curve impact in bps; the quote already contains its own curve move
+    stress_exit_bps=150,              # added on exits whose reason is in stress_exit_reasons
+    stress_exit_reasons=("hard_stop", "trailing_stop", "liquidity_pulled"),
+    haircut_per_side=0.006,           # base_bps/10000, the per-side fraction with no impact term
 )
 
 MIN_F_CLOSES = 20

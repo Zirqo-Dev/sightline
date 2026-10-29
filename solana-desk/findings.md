@@ -33,3 +33,19 @@ Sample: one pull of the DexScreener paid feed (30 profiles + 30 boosts; 23 and 2
 | Holder data from public RPC | **Replace** with RugCheck `topHolders` (RPC 429) |
 
 Honest read: on this snapshot the funnel is very narrow (about half the feed isn't graduated, and few pools have ≥ 25 SOL). Expect low F counts; "filters too strict" at day 28 is plausible, as the plan says. Re-measure pass rates over days 2-3 before the freeze.
+
+## Quoted impact vs the reserve curve (2026-10-28)
+
+Checked the three open paper positions whose SOL reserves were still on `positions.json` (`liq0`) against the buy rows in `trades.csv`. Ticket is 0.5 SOL. No mints are repeated here.
+
+| Pool SOL at entry | Jupiter `impact_pct` | Constant-product `0.5 / (pool + 0.5)` | Haircut then (150 + 0.5 × Jupiter bps, cap 300) | Haircut now (60 + 0.25 × curve bps) |
+|---|---|---|---|---|
+| 148.27 | 2.4927% | 0.3361% | 2.7463% | 0.6840% |
+| 179.79 | 1.2446% | 0.2773% | 2.1223% | 0.6693% |
+| 257.14 | 1.0882% | 0.1941% | 2.0441% | 0.6485% |
+
+The 2.0–2.7% band is not what these three pools reported. One of them is in it (2.49%). The other two are 1.09% and 1.24%. The constant-product band 0.19–0.34% matches the reserve sizes.
+
+A fresh Jupiter quote for 0.5 SOL, 0.05 SOL and 0.001 SOL on the same route was fit to one constant-product curve. On the two pools whose vault did not move during the read, the mid-size `outAmount` predicted from the other two sizes matched the quoted `outAmount` within 0.02%. That curve's impact for 0.5 SOL was 0.22% and 0.07%, against Jupiter fields of 0.28% and 0.64% on those same quotes. The third pool's vault was moving, so it was not used.
+
+`priceImpactPct` is the gap between the input's USD value and the output marked at a cached USD price. It is not `dx / (pool + dx)`, and it is not how far `outAmount` sits from the reserve curve. The haircut uses the curve. The Jupiter field stays on the row as `impact_pct`.

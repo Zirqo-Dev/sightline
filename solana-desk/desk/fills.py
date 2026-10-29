@@ -8,12 +8,15 @@ Each run (after the scan):
      0.5 SOL paper entries chosen by books.select_fills, priced from the scan's Jupiter BUY quote;
   3. persist positions per book in positions.json, append trades.csv rows, log would_halt, write paper.json.
 Prices are lamports per raw token unit, so returns are ratios and need no token decimals.
-Costs: Jupiter quote impact is already inside both quotes. On top of that, each side pays a
-slippage+MEV haircut (config.COST, an assumption; see COST_NOTE) that can scale with pool
-SOL liquidity and the quote's priceImpactPct, plus network_fee_sol per swap. Exits still
-use the raw quote price. Gross and net PnL are both recorded; pnl stays the net figure.
+Costs: the Jupiter outAmount already includes the pool's curve move. On top of that, each side
+pays a slippage+MEV haircut (config.COST, an assumption; see COST_NOTE): base_bps plus
+impact_weight times the verified constant-product impact of this fill's SOL into the pool,
+plus stress_exit_bps on hard_stop, trailing_stop and liquidity_pulled, capped at max_bps.
+Jupiter priceImpactPct is logged and is not an input. Exits still use the raw quote price.
+Gross and net PnL are both recorded; pnl stays the net figure. New rows carry cost_model
+v3-exit-aware and the time that model started. Older rows are not rewritten.
 """
-import json, os, time
+import csv, json, os, time
 from . import config as C, books, exits, ledger
 
 STATE = "positions.json"
@@ -47,23 +50,30 @@ def _f(x):
         return None
 
 def impact_bps(quote):
-    """Jupiter priceImpactPct is a fraction (0.01 = 1% = 100 bps). None when the quote has no impact field."""
+    """Jupiter priceImpactPct is a fraction (0.01 = 1% = 100 bps). Logged only. Not the haircut input."""
     if not isinstance(quote, dict): return None
     v = _f(quote.get("priceImpactPct")) if "priceImpactPct" in quote else None
     if v is None or v != v: return None  # missing or NaN: do not invent an impact term
     return abs(v) * 10000.0
 
-def liq_scale(pool_sol):
-    """1.0 when the pool is missing, non-positive, or at/above liq_ref_sol. Thinner pools scale up, capped."""
-    q = _f(pool_sol); c = C.COST; ref = _f(c["liq_ref_sol"]) or 0.0
-    if q is None or q != q or q <= 0 or ref <= 0: return 1.0  # missing, NaN, or non-positive -> no extra scale
-    return min(float(c["liq_scale_cap"]), max(1.0, ref / q))
+def verified_impact_bps(pool_sol, dx_sol=None):
+    """Constant-product impact of selling or buying dx_sol into a pool with pool_sol on the SOL side.
+    dx/(pool+dx), in bps. None when either side is missing or not positive. This is the figure the
+    haircut trusts: quoted outAmount fits this curve, and Jupiter priceImpactPct does not."""
+    x = _f(pool_sol)
+    dx = C.TICKET_SOL if dx_sol is None else _f(dx_sol)
+    if x is None or x != x or x <= 0 or dx is None or dx != dx or dx <= 0: return None
+    return 10000.0 * dx / (x + dx)
 
-def haircut_frac(pool_sol=None, impact_bps_v=None):
-    """One side's slippage+MEV fraction. See config.COST_NOTE. Never above max_bps or below min_bps."""
+def haircut_frac(pool_sol=None, impact_bps_v=None, exit_reason=None, dx_sol=None):
+    """One side's slippage+MEV fraction. See config.COST_NOTE.
+    impact_bps_v is the verified curve impact. None derives it from pool_sol and dx_sol.
+    stress_exit_bps is added only for the named exit reasons. Never above max_bps or below min_bps."""
     c = C.COST
-    raw = c["base_bps"] * liq_scale(pool_sol)
-    if impact_bps_v is not None: raw += c["impact_weight"] * float(impact_bps_v)
+    if impact_bps_v is None: impact_bps_v = verified_impact_bps(pool_sol, dx_sol)
+    raw = float(c["base_bps"])
+    if impact_bps_v is not None: raw += float(c["impact_weight"]) * float(impact_bps_v)
+    if exit_reason in c["stress_exit_reasons"]: raw += float(c["stress_exit_bps"])
     bps = min(float(c["max_bps"]), max(float(c["min_bps"]), raw))
     return bps / 10000.0
 
@@ -71,8 +81,9 @@ def _pct(frac):
     return "" if frac == "" or frac is None else round(float(frac) * 100, 4)
 
 def entry_cost(pool_sol=None, quote=None):
-    """SOL reserved at entry: ticket worsened by the entry haircut, plus one network fee."""
-    h = haircut_frac(pool_sol, impact_bps(quote))
+    """SOL reserved at entry: ticket worsened by the entry haircut, plus one network fee.
+    quote is ignored for the haircut. priceImpactPct stays on the trade row, not in this cost."""
+    h = haircut_frac(pool_sol, verified_impact_bps(pool_sol, C.TICKET_SOL))
     return C.TICKET_SOL * (1 + h) + C.COST["network_fee_sol"], h
 
 def legacy_entry_cost():
@@ -100,14 +111,24 @@ def slice_pnl(pos, frac, px, h_exit):
 
 def exit_haircut_of(pos):
     if pos.get("exit_haircut") is not None: return float(pos["exit_haircut"])
-    return haircut_frac(pos.get("liq0"), None)
+    return haircut_frac(pos.get("liq0"), verified_impact_bps(pos.get("liq0"), C.TICKET_SOL))
 
 def equity(b):
     return b["cash"] + sum(net_proceeds(p, p["frac"], p["last_mark"], exit_haircut_of(p)) for p in b["open"].values())
 
+def ensure_model(s, now):
+    """First new fill fixes the model's start time. Later fills copy it. Past rows are not touched."""
+    if not s.get("cost_model_started_at"): s["cost_model_started_at"] = iso(now)
+    s["cost_model"] = C.COST_MODEL
+    return C.COST_MODEL, s["cost_model_started_at"]
+
+def _bps(v):
+    return "" if v is None or v == "" else round(float(v), 4)
+
 def _trade(d, now, book, pos, action, frac, sol, px, why, pnl="", delay=0.0, stale=0, impact="",
-           gross="", net="", entry_h="", exit_h=""):
+           gross="", net="", entry_h="", exit_h="", model=("", ""), verified=""):
     side = exit_h if action == "sell" else entry_h
+    name, started = model if model else ("", "")
     ledger.trade(d, dict(time=int(now), book=book, agent="EXECUTE" if action == "buy" else "EXIT", mint=pos["mint"],
                          symbol=pos.get("symbol", ""), action=action, frac=round(frac, 6), sol=round(sol, 9),
                          quote_px=px, impact_pct=impact, fee_sol=C.COST["network_fee_sol"],
@@ -115,7 +136,8 @@ def _trade(d, now, book, pos, action, frac, sol, px, why, pnl="", delay=0.0, sta
                          pnl=pnl if pnl == "" else round(pnl, 9), check_delay_s=round(delay, 2), stale=stale,
                          gross_pnl="" if gross == "" else round(gross, 9),
                          net_pnl="" if net == "" else round(net, 9),
-                         entry_haircut_pct=_pct(entry_h), exit_haircut_pct=_pct(exit_h)))
+                         entry_haircut_pct=_pct(entry_h), exit_haircut_pct=_pct(exit_h),
+                         verified_impact_bps=_bps(verified), cost_model=name, cost_model_started_at=started))
 
 def mark_status(sell_quote, pos):
     """-> (status, mark_px, quote|None). Jupiter {} = no route; exception = temporary error (stale, retry next run)."""
@@ -129,12 +151,16 @@ def mark_status(sell_quote, pos):
 def close(b, pid, pos, now, why, pnl_total, gross_total):
     b["open"].pop(pid, None)
     cost = entry_cost_of(pos)
-    b["closed"].append(dict(id=pid, mint=pos["mint"], symbol=pos.get("symbol", ""), opened=pos["opened"], closed=int(now),
-                            entry=pos["entry"], exit_px=pos["last_mark"], why=why, pnl=round(pnl_total, 9),
-                            gross_pnl=round(gross_total, 9),
-                            pct=round(pnl_total / cost * 100, 2) if cost else 0.0,
-                            gross_pct=round(gross_total / C.TICKET_SOL * 100, 2) if C.TICKET_SOL else 0.0,
-                            why_entered=pos.get("why", "")))
+    rec = dict(id=pid, mint=pos["mint"], symbol=pos.get("symbol", ""), opened=pos["opened"], closed=int(now),
+               entry=pos["entry"], exit_px=pos["last_mark"], why=why, pnl=round(pnl_total, 9),
+               gross_pnl=round(gross_total, 9),
+               pct=round(pnl_total / cost * 100, 2) if cost else 0.0,
+               gross_pct=round(gross_total / C.TICKET_SOL * 100, 2) if C.TICKET_SOL else 0.0,
+               why_entered=pos.get("why", ""))
+    if pos.get("cost_model"):
+        rec["cost_model"] = pos["cost_model"]
+        rec["cost_model_started_at"] = pos.get("cost_model_started_at") or ""
+    b["closed"].append(rec)
     b["closed"] = b["closed"][-CLOSED_KEEP:]
 
 def manage(d, s, now, sell_quote, liquidity, sleep):
@@ -151,17 +177,24 @@ def manage(d, s, now, sell_quote, liquidity, sleep):
                 except Exception: liq = None
             acts = exits.check(pos, px, liq, now, status)  # raw quote price; the haircut is not an exit input
             delay = time.time() - t0
-            h_exit = 0.0
+            pool = liq if liq is not None else pos.get("liq0")
             if status == "ok" and px is not None and px > 0:
-                h_exit = haircut_frac(liq if liq is not None else pos.get("liq0"), impact_bps(q))
-                pos["exit_haircut"] = h_exit
+                # Open mark is not an exit, so it does not take the stress add-on.
+                pos["exit_haircut"] = haircut_frac(pool, verified_impact_bps(pool, gross_proceeds(pos, pos["frac"], px)))
             entry_h = pos.get("entry_haircut")
             if entry_h is None: entry_h = C.COST["legacy_haircut_per_side"]
+            stamped = None
+            def model():
+                nonlocal stamped
+                if stamped is None: stamped = ensure_model(s, now)
+                return stamped
             for action, frac, why, apx in acts:
                 if action == "mark":
                     _trade(d, now, name, pos, "mark", 0, 0, pos["last_mark"], why, delay=delay, stale=1,
-                           entry_h=entry_h); continue
-                h = 0.0 if apx <= 0 else h_exit
+                           entry_h=entry_h, model=model()); continue
+                dx = gross_proceeds(pos, frac, apx) if apx > 0 else 0.0
+                v = verified_impact_bps(pool, dx) if dx > 0 else None
+                h = 0.0 if dx <= 0 else haircut_frac(pool, 0.0 if v is None else v, why)
                 pro = net_proceeds(pos, frac, apx, h); gross, pnl = slice_pnl(pos, frac, apx, h)
                 b["cash"] += pro; b["realized_pnl"] += pnl
                 b["realized_gross"] = b.get("realized_gross", 0.0) + gross
@@ -172,7 +205,7 @@ def manage(d, s, now, sell_quote, liquidity, sleep):
                 if q and "priceImpactPct" in q and q.get("priceImpactPct") not in (None, ""):
                     imp = round(float(q.get("priceImpactPct") or 0) * 100, 4)
                 _trade(d, now, name, pos, "sell", frac, pro, apx, why, pnl=pnl, delay=delay, stale=pos.get("stale", 0),
-                       gross=gross, net=pnl, entry_h=entry_h, exit_h=h, impact=imp)
+                       gross=gross, net=pnl, entry_h=entry_h, exit_h=h, impact=imp, model=model(), verified=v)
                 full = not why.startswith("take_profit")
                 if full: pos["frac"] = 0.0
             if pos["frac"] <= 1e-9:
@@ -207,13 +240,17 @@ def enter(d, s, now, run_id, seed, leads, day):
             px = C.TICKET_SOL * LAMPORTS / tokens
             pos = exits.new_position(px, liq0, int(now))
             why = {"F": "pass", "R": "random_match", "S": "safety:" + (l["reason"] or "")}[name]
+            model = ensure_model(s, now)
+            v_entry = verified_impact_bps(liq0, C.TICKET_SOL)
             pos.update(mint=m, symbol=((l.get("pair") or {}).get("baseToken") or {}).get("symbol", ""), tokens=tokens,
                        run_id=run_id, why=why, book=name, pnl=0.0, gross_pnl=0.0,
-                       entry_haircut=h_entry, entry_cost=cost)
+                       entry_haircut=h_entry, entry_cost=cost,
+                       cost_model=model[0], cost_model_started_at=model[1])
             pid = f"{name}-{run_id}-{m[:4]}{m[-4:]}"
             b["open"][pid] = pos; b["cash"] -= cost; b["fills_today"] += 1; held.add(m); opened += 1
             imp = round(float(l["quote"].get("priceImpactPct", 0) or 0) * 100, 4)
-            _trade(d, now, name, pos, "buy", 1, C.TICKET_SOL, px, why, impact=imp, entry_h=h_entry)
+            _trade(d, now, name, pos, "buy", 1, C.TICKET_SOL, px, why, impact=imp, entry_h=h_entry,
+                   model=model, verified=v_entry)
     return opened
 
 def would_halt(s, now, day):
@@ -223,9 +260,50 @@ def would_halt(s, now, day):
         if dd >= C.SESSION_LOSS_HALT_PCT and not any(w["day"] == day for w in b["would_halt"]):
             b["would_halt"].append(dict(day=day, ts=iso(now), book=name, drawdown=round(dd, 4)))  # logged only, never blocks
 
+PRE_MODEL = "pre-v3"
+
+def model_label(row):
+    """Blank cost_model is an older fill. The cell is not rewritten; the label is applied when it is read."""
+    m = str((row or {}).get("cost_model") or "").strip()
+    return m or PRE_MODEL
+
+def read_trades(d):
+    p = os.path.join(d, "trades.csv")
+    if not os.path.exists(p): return []
+    with open(p, newline="") as f: return list(csv.DictReader(f))
+
+def window_stats(rows, now, started_at=""):
+    """7-day and 28-day close stats. Counted pnl is only cost_model v3-exit-aware.
+    Older closes in the same window stay in older_closes / older_labels and are not added in."""
+    windows = {}
+    for days in (7, 28):
+        cut = float(now) - days * 86400
+        sells = []
+        for r in rows or []:
+            if str(r.get("action") or "") != "sell": continue
+            if r.get("pnl") in ("", None): continue
+            try: ts = float(r.get("time") or "")
+            except (TypeError, ValueError): continue
+            if ts < cut: continue
+            try: pnl = float(r["pnl"])
+            except (TypeError, ValueError): continue
+            sells.append((r, pnl))
+        counted = [(r, p) for r, p in sells if model_label(r) == C.COST_MODEL]
+        older = [(r, p) for r, p in sells if model_label(r) != C.COST_MODEL]
+        labels = {}
+        for r, _ in older:
+            k = model_label(r); labels[k] = labels.get(k, 0) + 1
+        windows[str(days)] = dict(counted_closes=len(counted), net_pnl=round(sum(p for _, p in counted), 9),
+                                  wins=sum(1 for _, p in counted if p > 0),
+                                  older_closes=len(older), older_net_pnl=round(sum(p for _, p in older), 9),
+                                  older_labels=labels)
+    return dict(model=C.COST_MODEL, started_at=started_at or "", windows=windows)
+
 def ticket(pid, p, closed=False):
     t = dict(id=pid, ticker=p.get("symbol") or (p["mint"][:4] + "…" + p["mint"][-4:]), mint=p["mint"], book=p.get("book", pid[0]),
-             status="closed" if closed else ("stale" if p.get("stale") else "open"), size=C.TICKET_SOL)
+             status="closed" if closed else ("stale" if p.get("stale") else "open"), size=C.TICKET_SOL,
+             cost_model=model_label(p))
+    if p.get("cost_model_started_at"): t["cost_model_started_at"] = p["cost_model_started_at"]
     if closed:
         net = p["pnl"]
         res = dict(pnl=net, pct=p["pct"], unit="SOL", net_pnl=net, net_pct=p["pct"])
@@ -259,10 +337,13 @@ def paper_json(d, s, now):
                ticket_size=C.TICKET_SOL, default_window_hours=E["time_stop_min"] / 60, generated_at=iso(now),
                cfg_version=C.CFG_VERSION, open=opn, closed=cls,
                books={n: _book_public(b) for n, b in s["books"].items()},
-               costs=dict(model="slippage_mev_bps", note=C.COST_NOTE, base_bps=C.COST["base_bps"], min_bps=C.COST["min_bps"],
-                          max_bps=C.COST["max_bps"], liq_ref_sol=C.COST["liq_ref_sol"], liq_scale_cap=C.COST["liq_scale_cap"],
-                          impact_weight=C.COST["impact_weight"], network_fee_sol=C.COST["network_fee_sol"],
-                          haircut_per_side=C.COST["haircut_per_side"], applied="entry_and_exit"),
+               costs=dict(model=C.COST_MODEL, started_at=s.get("cost_model_started_at") or "", note=C.COST_NOTE,
+                          base_bps=C.COST["base_bps"], min_bps=C.COST["min_bps"], max_bps=C.COST["max_bps"],
+                          impact_weight=C.COST["impact_weight"], stress_exit_bps=C.COST["stress_exit_bps"],
+                          stress_exit_reasons=list(C.COST["stress_exit_reasons"]),
+                          network_fee_sol=C.COST["network_fee_sol"], haircut_per_side=C.COST["haircut_per_side"],
+                          verified_impact="constant_product_dx_over_pool_plus_dx", applied="entry_and_exit"),
+               stats=window_stats(read_trades(d), now, s.get("cost_model_started_at") or ""),
                rules=[dict(id="entry", rule=f"Fixed {C.TICKET_SOL} SOL paper entry from a Jupiter quote; F max {C.MAX_OPEN_F} open, {C.MAX_NEW_F_PER_DAY} new/day; R and S capped at {C.R_MATCH_CAP}x F fills"),
                       dict(id="exit", rule=f"Stop {int(E['hard_stop']*100)}%, take +40%/+100% (1/3 each), trail {int(E['trail']*100)}% after first take, time stop {E['time_stop_min']} min unless up {int(E['time_stop_keep_if_up']*100)}%, liquidity pull {int(E['liq_drop']*100)}%, -100% after {E['no_route_kill_checks']} no-route checks"),
                       dict(id="void", rule=f"No new entries when data failures > {int(C.DATA_FAIL_VOID*100)}% today or after a loop outage > {C.OUTAGE_VOID_H}h"),
