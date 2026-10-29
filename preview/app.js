@@ -24,6 +24,7 @@
     const p = String(path).replace(/^\/|^\.\//, "");
     if (/^(https?:)?\/\//.test(p) || !p.endsWith(".json")) return false;
     if (/(^|\/)forensics\/panel\.json$/.test(p)) return true;
+    if (p === "x_buzz.json") return true;
     if (!p.includes("/") || CONFIG_NAMES.test(p)) return false;
     if (/^(dashboard|schema|scripts|tools|preview|\.github)\//.test(p)) return false;
     return true;
@@ -62,6 +63,16 @@
     return jsonCache[u];
   }
   const textCache = {};
+  function getDeskRootText(name) {
+    const clean = String(name).replace(/^\/|^\.\//, "");
+    if (clean !== "x_buzz_history.jsonl") return Promise.resolve(null);
+    if (!(clean in textCache)) {
+      const getT = u => fetch(u, { cache: "no-cache" }).then(r => (r.ok ? r.text() : null)).catch(() => null);
+      const remote = DESK_DATA ? DESK_DATA.replace(/\/?$/, "/") + clean + "?ts=" + Date.now() : null;
+      textCache[clean] = (remote ? getT(remote) : Promise.resolve(null)).then(t => (t != null ? t : getT(originUrl(clean))));
+    }
+    return textCache[clean];
+  }
   function getText(path) {
     const clean = String(path).replace(/^\/|^\.\//, "");
     if (!(clean in textCache)) {
@@ -1162,8 +1173,12 @@
   }
 
   const store = { ready: false, nftChain: "all" };
+  function previewPage() {
+    return typeof document !== "undefined" && typeof document.querySelector === "function" && !!document.querySelector(".preview-tag");
+  }
   async function loadPack() {
-    const [health, paper, positions, tradesText, log, pulse, sPaper, flags, vetoes, devs, whale, liq, big, kills, pump, sIdx, nPulse, nLog, nIdx] = await Promise.all([
+    const wantBuzz = !!(root.SightlineBuzz && previewPage());
+    const [health, paper, positions, tradesText, log, pulse, sPaper, flags, vetoes, devs, whale, liq, big, kills, pump, sIdx, nPulse, nLog, nIdx, buzz, buzzHistory] = await Promise.all([
       get("solana-desk/health.json"),
       get("solana-desk/paper.json"),
       get("solana-desk/positions.json"),
@@ -1182,7 +1197,9 @@
       get("solada/briefs/index.json"),
       get("nft/pulse.json"),
       get("nft/log.json"),
-      get("nft/briefs/index.json")
+      get("nft/briefs/index.json"),
+      wantBuzz ? get("x_buzz.json") : Promise.resolve(null),
+      wantBuzz ? getDeskRootText("x_buzz_history.jsonl") : Promise.resolve(null)
     ]);
     async function briefsIn(idx, dir, desk) {
       if (!Array.isArray(idx) || !idx.length) return [];
@@ -1202,7 +1219,7 @@
       health, paper, positions, trades: parseCsv(tradesText),
       cardano, cardanoView: cardanoView(cardano), cardanoBrief: cBrief,
       solanaModel: solanaModel(paper, parseCsv(tradesText), positions),
-      nftPulse: nPulse, nftLog: nLog, briefs
+      nftPulse: nPulse, nftLog: nLog, briefs, buzz, buzzHistory
     };
   }
   function freshest(pack, route) {
@@ -1236,6 +1253,7 @@
       push(pack.nftLog && pack.nftLog.asof);
     }
     if (route === "briefs" || route === "home") (pack.briefs || []).forEach(b => push(b.date));
+    push(pack.buzz && pack.buzz.asof);
     if (!times.length) return null;
     return new Date(Math.max.apply(null, times)).toISOString();
   }
@@ -1291,6 +1309,10 @@
     } catch (err) {
       html = empty("This tab couldn't render", "This view hit a display error and kept the raw feed off the page.");
     }
+    if (root.SightlineBuzz && previewPage()) {
+      try { html = root.SightlineBuzz.decorate(route.id, html, p && p.buzz, p && p.buzzHistory) || html; }
+      catch (err) { /* desk html stays; a missing buzz file is an empty state inside decorate */ }
+    }
     view.innerHTML = html;
     const visible = view.innerText || "";
     if (/(?:stake|addr)(?:_test)?1[0-9a-z]{8,}/i.test(visible)) {
@@ -1298,6 +1320,10 @@
       return;
     }
     animateNumbers(view);
+    if (root.SightlineBuzz && previewPage()) {
+      try { root.SightlineBuzz.mount(view, route.id, p && p.buzz, p && p.buzzHistory); }
+      catch (err) { /* counts and the detail tap are optional on top of the desk */ }
+    }
   }
   function boot() {
     const draw = () => render(routeOf(location.hash));
@@ -1331,7 +1357,7 @@
     });
     draw();
     loadPack().then(pack => { store.pack = pack; store.ready = true; draw(); }).catch(() => {
-      store.pack = { solanaModel: solanaModel(null, [], null), cardano: {}, cardanoView: cardanoView({}), briefs: [], health: null, nftPulse: null, nftLog: null };
+      store.pack = { solanaModel: solanaModel(null, [], null), cardano: {}, cardanoView: cardanoView({}), briefs: [], health: null, nftPulse: null, nftLog: null, buzz: null, buzzHistory: null };
       store.ready = true;
       draw();
     });

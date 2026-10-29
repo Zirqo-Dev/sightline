@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zirqo-dev.github.io/sightline/schema/x-buzz-history.schema.json",
+  "title": "X buzz history line",
+  "description": "One append-only x_buzz_history.jsonl line: one token, one run. A measured factor. Not a buy signal. id_short stays a short id. paper_position is a book letter or null.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "asof", "ticker", "chain", "id_short",
+    "mentions_1h", "mentions_24h", "ratio_1h_vs_prev_hr",
+    "unique_authors", "bot_like_share", "authors_over_10k", "median_followers",
+    "confidence", "alert", "paper_position"
+  ],
+  "properties": {
+    "asof": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "ticker": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9]{0,15}$"},
+    "chain": {"enum": ["solana", "cardano"]},
+    "id_short": {"type": "string", "minLength": 1, "maxLength": 24},
+    "mentions_1h": {"type": "integer", "minimum": 0},
+    "mentions_24h": {"type": "integer", "minimum": 0},
+    "ratio_1h_vs_prev_hr": {"type": ["number", "null"]},
+    "unique_authors": {"type": ["integer", "null"], "minimum": 0},
+    "bot_like_share": {"type": ["number", "null"]},
+    "authors_over_10k": {"type": ["integer", "null"], "minimum": 0},
+    "median_followers": {"type": ["number", "null"]},
+    "confidence": {"enum": ["high", "medium", "low"]},
+    "alert": {"type": "boolean"},
+    "paper_position": {"type": ["string", "null"], "pattern": "^[A-Z]$"}
+  }
+}

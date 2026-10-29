@@ -24,6 +24,8 @@ Bots write daily briefs as `<desk>/briefs/YYYY-MM-DD.json` only. They do not mai
 
 `x_buzz.json` (desk-data root) is a measured factor (`schema/x-buzz.schema.json`). It is not a paper book. CI validates `scripts/fixtures/x-buzz.json`. desk-data-guard validates `x_buzz.json` when the branch has one. A missing file is normal. `kind` is `x_buzz`. `veto` and `buy_signal` are false. Each `tokens[]` row has `chain` `solana` or `cardano`, `hourly_24h` of 24 integers, and `confidence` `high`, `medium`, or `low`. Sample counts and `velocity.ratio_1h_vs_prev_hr` may be null.
 
+`x_buzz_history.jsonl` (desk-data root) is the append-only run log for that factor (`schema/x-buzz-history.schema.json` is one line). CI validates `scripts/fixtures/x-buzz-history.jsonl`. desk-data-guard validates the file when the branch has one. A missing file is normal. Each line is one token for one run: `asof`, `ticker`, `chain`, `id_short` (short id, 24 characters or fewer), mention counts, a nullable velocity ratio, nullable sample stats, `confidence`, `alert` (boolean), and `paper_position` (one book letter, or null). Blank lines are ignored.
+
 `solada-prefilter/liquidity_moves.json` is research output on the desk-data branch. It has no JSON schema of its own, so an extra field is allowed. The privacy guard checks `actor_tag` only. `tokens[]` stays in Snek rank order. Each token may include `last_checked`: UTC `YYYY-MM-DDTHH:MM:SSZ`, or null when that token has not been read. The value is a time. It is not a wallet, a unit, or a stake key. Which token is scanned first is least-recently-checked and is stored in the private cache, not in this list's order.
 
 ## Paper book

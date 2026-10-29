@@ -48,10 +48,10 @@ def preview_version():
     """
     import hashlib
     h = hashlib.sha256()
-    for rel in ("preview/app.css", "preview/app.js"):
-        p = ROOT / rel
-        if not p.is_file():
+    for p in sorted((ROOT / "preview").glob("*")):
+        if not p.is_file() or p.suffix not in (".css", ".js"):
             continue
+        rel = p.relative_to(ROOT).as_posix()
         h.update(rel.encode())
         h.update(p.read_bytes())
     return h.hexdigest()[:10]
