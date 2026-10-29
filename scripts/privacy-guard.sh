@@ -414,7 +414,7 @@ if bad:
   # Private blacklist documents are detected by shape, not only by file name.
   case "$f" in
     *.json)
-      if ! python3 -c '
+      python3 -c '
 import json, os, sys
 try:
     doc = json.load(open(sys.argv[1]))
@@ -436,8 +436,13 @@ if isinstance(doc, dict) and (doc.get("kind") == "whale_roster_public" or os.pat
     if not W.public_text_ok(doc):
         sys.exit(3)
 sys.exit(0)
-' "$f" "$script_dir/.."; then
-        echo "PRIVACY GUARD: $f: private roster or rugger document must not be published" >&2
+' "$f" "$script_dir/.."
+      rc=$?
+      if [ "$rc" -eq 1 ]; then
+        echo "PRIVACY GUARD: $f: private rugger document must not be published" >&2
+        fail=1
+      elif [ "$rc" -ne 0 ]; then
+        echo "PRIVACY GUARD: $f: private roster must not be published" >&2
         fail=1
       fi
       ;;

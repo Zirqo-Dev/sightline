@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Validate every desk file listed in desks.json against schema/. Needs: pip install jsonschema
 Usage: validate-desks.py [DATA_DIR]  DATA_DIR (default: repo root) holds desks.json and desk files;
-schemas always come from this script's repo schema/. x_buzz.json and x_buzz_history.jsonl
-are checked when present. The history file is JSONL: each non-empty line is one record."""
+schemas always come from this script's repo schema/. x_buzz.json, x_buzz_history.jsonl,
+buzz_outcomes.jsonl and buzz_outcomes_summary.json are checked when present. JSONL files:
+each non-empty line is one record. Outcome lines also get a privacy check."""
 import json,os,sys,glob
 from jsonschema import Draft202012Validator
 ROOT=os.path.join(os.path.dirname(os.path.abspath(__file__)),"..")
 SCHEMA=os.path.abspath(os.path.join(ROOT,"schema"))
+sys.path.insert(0, os.path.join(os.path.abspath(ROOT), "scripts"))
+import buzz_outcomes as outcome_mod
 # Same letters as the pre-filter writer. Not spelled here, so a public grep stays on the coin ticker.
 RETIRED_RISK_KEY="".join(chr(n) for n in (115,117,114,105))
 
@@ -28,7 +31,7 @@ def risk_maps(doc):
     return found
 
 os.chdir(sys.argv[1] if len(sys.argv)>1 else ROOT)
-S={k:Draft202012Validator(json.load(open(f"{SCHEMA}/{k}.schema.json"))) for k in("paper-book","run-log","brief","pulse","solada-vetoes","solana-rugger-log","x-buzz","x-buzz-history","whale-roster")}
+S={k:Draft202012Validator(json.load(open(f"{SCHEMA}/{k}.schema.json"))) for k in("paper-book","run-log","brief","pulse","solada-vetoes","solana-rugger-log","x-buzz","x-buzz-history","buzz-outcomes","buzz-outcomes-summary","whale-roster")}
 for v in S.values(): v.check_schema(v.schema)
 jobs=[]
 for d in json.load(open("desks.json"))["desks"]:
@@ -66,6 +69,18 @@ if os.path.exists(hist): history.append(hist)
 else: print(f"skip {hist} (not written yet)")
 for fix in ("scripts/fixtures/x-buzz-history.jsonl",):
     if os.path.exists(fix): history.append(fix)
+# One line per spike. Rewritten each run. Absent until the outcomes script writes it.
+outcome_files=[]
+outp="buzz_outcomes.jsonl"
+if os.path.exists(outp): outcome_files.append(outp)
+else: print(f"skip {outp} (not written yet)")
+for fix in ("scripts/fixtures/buzz-outcomes.jsonl",):
+    if os.path.exists(fix): outcome_files.append(fix)
+sum_name="buzz_outcomes_summary.json"
+if os.path.exists(sum_name): jobs.append((sum_name,"buzz-outcomes-summary"))
+else: print(f"skip {sum_name} (not written yet)")
+for fix in ("scripts/fixtures/buzz-outcomes-summary.json",):
+    if os.path.exists(fix): jobs.append((fix,"buzz-outcomes-summary"))
 bad=0
 risk_schema=S["run-log"].schema["properties"]["risk_check"]
 risk_check=Draft202012Validator(risk_schema)
@@ -82,6 +97,9 @@ for f,k in jobs:
                 continue
             for e in risk_check.iter_errors(bag):
                 extra.append(f"{label} at /{'/'.join(map(str,e.path))}: {e.message[:200]}")
+    if k=="buzz-outcomes-summary":
+        for msg in outcome_mod.privacy_problems(data)[:20]:
+            extra.append("privacy "+msg)
     for e in errs[:20]: print(f"INVALID {f} ({k}) at /{'/'.join(map(str,e.path))}: {e.message[:200]}")
     for msg in extra[:20]: print(f"INVALID {f} ({k}) {msg}")
     bad+=bool(errs or extra)
@@ -100,10 +118,31 @@ def history_errors(path):
                 found.append(f"line {n} at /{'/'.join(map(str,e.path))}: {e.message[:200]}")
     return found
 
+def outcome_errors(path):
+    """Schema plus privacy. A match reports the field, not the value."""
+    found=[]
+    with open(path,encoding="utf-8") as fh:
+        for n,line in enumerate(fh,1):
+            if not line.strip(): continue
+            try: row=json.loads(line)
+            except json.JSONDecodeError as e:
+                found.append(f"line {n}: {e.msg}"); continue
+            for e in S["buzz-outcomes"].iter_errors(row):
+                found.append(f"line {n} at /{'/'.join(map(str,e.path))}: {e.message[:200]}")
+            for msg in outcome_mod.privacy_problems(row):
+                found.append(f"line {n} privacy {msg}")
+    return found
+
 for f in history:
     if not os.path.exists(f): print(f"MISSING {f}"); bad+=1; continue
     errs=history_errors(f)
     for msg in errs[:20]: print(f"INVALID {f} (x-buzz-history) {msg}")
     bad+=bool(errs)
     if not errs: print(f"ok {f} (x-buzz-history)")
+for f in outcome_files:
+    if not os.path.exists(f): print(f"MISSING {f}"); bad+=1; continue
+    errs=outcome_errors(f)
+    for msg in errs[:20]: print(f"INVALID {f} (buzz-outcomes) {msg}")
+    bad+=bool(errs)
+    if not errs: print(f"ok {f} (buzz-outcomes)")
 sys.exit(1 if bad else 0)

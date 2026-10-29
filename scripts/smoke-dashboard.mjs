@@ -631,7 +631,17 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   const cock = full.split('data-tk="COCK"')[1].split("</article>")[0];
   assert(cock.includes('data-fill="54"') && cock.includes('data-tick="50"') && cock.includes("only 9% above") && cock.includes("🔴 Pass"), "COCK kill bar matches the approved mockup");
   assert(full.indexOf('data-tk="COCK"') < full.indexOf('data-tk="STRIKE"') && full.indexOf('data-tk="STRIKE"') < full.indexOf('data-tk="ASCEND"') && full.indexOf('data-tk="ASCEND"') < full.indexOf('data-tk="CLOVE"'), "board sorts by closeness to the kill line");
-  assert(full.includes("Lottery-size candidate") && full.includes('data-cv2-filter="g"') && full.includes("New launch other"), "verdict chips and launchpad badge render");
+  assert(full.includes("Lottery-size candidate") && full.includes('data-cv2-filter="g"'), "verdict chips render");
+  const badgeOf = tk => {
+    const card = full.split('data-tk="' + tk + '"')[1].split("</article>")[0];
+    const hit = card.match(/class="cv2-badge">([^<]*)</);
+    return hit ? hit[1] : "";
+  };
+  assert(badgeOf("CLOVE") === "Solada" && badgeOf("GHOST") === "Snek.fun" && badgeOf("COCK") === "New launch", "solada, snek, and new keep a launchpad badge");
+  assert(badgeOf("ASCEND") === "" && badgeOf("STRIKE") === "" && !full.includes("New launch other"), "established and minswap tokens have no badge");
+  const radar = full.split('data-cv2="radar"')[1].split('data-cv2="clusters"')[0];
+  const nova = radar.split(">NOVA<")[1].split("</article>")[0];
+  assert(nova.includes("New launch") && !nova.includes("New launch other"), "an unknown pad on the radar still says New launch");
   assert(full.includes("WHERE THE MONEY IS HEADING") && full.includes("MONEY OUT") && full.includes("MONEY IN") && full.includes("Selling SNEK") && full.includes("ASCEND accumulating") && full.includes("SNEK exiting"), "rotation card renders out, in, and trends");
   assert(full.includes("Swarm group A") && full.includes("repeat early buyers") && full.includes("FOSHIZLE"), "swarm group card renders");
   assert(full.includes("Sniper exits") && full.includes("CHEESE, INTEL"), "sniper card renders");
@@ -642,8 +652,11 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(!/founder|suri|suriradar/i.test(full) && !full.includes("stake1") && !full.includes("addr1"), "fixture stays free of wallet ids and retired names");
   const quiet = P.cardanoHtml({});
   assert(quiet.includes("GOOD TOKENS BOARD") && quiet.includes("No data yet") && quiet.includes("NEW LAUNCH RADAR") && quiet.includes("HEAT GRID"), "missing fields render an empty state");
-  const partial = P.cardanoHtml({ log: { verdicts: [{ ticker: "COCK", verdict: "pass", launchpad: "minswap", pool_ada: 163300, kill_metric: "pool_ada", kill_value: 163300, kill_limit: 150000, reasons: ["swarm key uylu74g0 sold"], whale_activity: "none tracked" }] } });
-  assert(partial.includes("only 9% above") && partial.includes("New launch other") && !partial.includes("uylu74g0") && partial.includes("No data yet"), "a verdict renders its bar, and a stake-like token in a reason is dropped");
+  const partial = P.cardanoHtml({ log: { verdicts: [{ ticker: "COCK", verdict: "pass", launchpad: "minswap", pool_ada: 163300, kill_metric: "pool_ada", kill_value: 163300, kill_limit: 150000, reasons: ["swarm key uylu74g0 sold"], whale_activity: "none tracked" }, { ticker: "FLOW", verdict: "watch", pool_ada: 4000, kill_metric: "pool_ada", kill_value: 4000, kill_limit: 1000 }], cardano_v2: { launches: [{ ticker: "BARE", age: "2h", holders: 10, pool_ada: 1000 }] } } });
+  const minswapCard = partial.split('data-tk="COCK"')[1].split("</article>")[0];
+  const flowCard = partial.split('data-tk="FLOW"')[1].split("</article>")[0];
+  const bareRadar = partial.split(">BARE<")[1].split("</article>")[0];
+  assert(partial.includes("only 9% above") && !minswapCard.includes("cv2-badge") && !flowCard.includes("cv2-badge") && bareRadar.includes("New launch") && !partial.includes("uylu74g0") && partial.includes("No data yet"), "minswap and a missing pad draw no board badge, a blank radar pad says New launch, and a stake-like token in a reason is dropped");
   const paper = load("scripts/fixtures/solana-desk/paper-fills.json");
   const trades = P.parseCsv(fs.readFileSync(path.join(root, "scripts/fixtures/solana-desk/trades-fills.csv"), "utf8"));
   const model = P.solanaModel(paper, trades, null);

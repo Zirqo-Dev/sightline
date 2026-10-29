@@ -88,7 +88,11 @@ def known_roles(cfg=None):
         except (OSError, ValueError):
             cfg = {}
     tags = ((cfg or {}).get("flags") or {}).get("snek_prefix_tags") or {}
-    return {k for k in tags if isinstance(k, str) and not k.startswith("_") and ROLE_RE.fullmatch(k)}
+    roles = {k for k in tags if isinstance(k, str) and not k.startswith("_") and ROLE_RE.fullmatch(k)}
+    # The prefix list moved to lead_whale. Veto files may still name the previous role.
+    if "lead_whale" in roles or "founder_whale" in roles:
+        roles.update(("lead_whale", "founder_whale"))
+    return roles
 
 
 def dev_tag_ok(tag, roles=None):

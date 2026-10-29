@@ -75,14 +75,17 @@
     if (k === "pool_ada") return "Pool ADA side";
     return "Line";
   }
-  function padBadge(t, p) {
-    const s = String(p || "").toLowerCase().trim();
-    if (!s) return "";
+  /* Board: solada and snek keep their badges. new/unknown means a brand-new token
+     from another pad. established, minswap, missing, or anything else is no badge.
+     Radar rows are new launches, so a missing pad there still says New launch. */
+  function padBadge(t, p, opt) {
+    const radar = !!(opt && opt.radar);
+    const s = String(p == null ? "" : p).toLowerCase().trim();
     if (s === "solada") return "Solada";
     if (s === "snek" || s === "snek.fun" || s === "snekfun") return "Snek.fun";
-    if (s === "minswap" || s === "unknown" || s === "other" || s === "new launch other") return "New launch other";
-    const c = clean(t, p);
-    return c && c.length <= 28 ? c : "New launch other";
+    if (s === "new" || s === "unknown") return "New launch";
+    if (radar && !s) return "New launch";
+    return "";
   }
   function verdictTone(v) {
     const s = String(v || "").toLowerCase();
@@ -692,7 +695,7 @@
     const ex = flag => row[flag] === true ? ' <span class="cv2-ex">example</span>' : "";
     const holdTxt = holders == null ? "–" : t.fmt(holders, 0);
     const poolTxt = pool == null ? "–" : compact(t, pool);
-    const badge = padBadge(t, row.launchpad);
+    const badge = padBadge(t, row.launchpad, { radar: true });
     const grad = row.graduated === true ? `<span class="cv2-badge">graduated</span>` : "";
     const example = row.example === true ? `<span class="cv2-ex">example</span>` : "";
     return `<article class="cv2-card${passed ? " cv2-hotcard" : ""}"><div class="cv2-row"><span class="cv2-tk">${t.esc(name)}</span>${badge ? `<span class="cv2-badge">${t.esc(badge)}</span>` : ""}${grad}${example}</div><div class="cv2-kv"><div>Age<b>${ageHtml}</b></div><div>Holders<b>${t.esc(holdTxt)}${ex("holders_example")}</b></div><div>Pool ADA<b>${t.esc(poolTxt)}${ex("pool_example")}</b></div></div><div class="cv2-bar"><div class="cv2-fill${passed ? " go" : ""}" style="width:${width}%"></div></div><div class="cv2-st ${cls}">${t.esc(status)}</div></article>`;
