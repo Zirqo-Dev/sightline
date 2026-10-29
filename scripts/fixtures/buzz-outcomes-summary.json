@@ -1,0 +1,90 @@
+{
+  "asof": "2026-10-29T12:05:00Z",
+  "buy_signal": false,
+  "definitions": {
+    "adverse": "later veto, rug, kill, or lp_pull is true. A null flag means that file or time was missing.",
+    "few_authors": "unique_authors <= 8, or mentions_1h / unique_authors >= 8",
+    "file": "buzz_outcomes.jsonl is rewritten each run, one line per spike, latest state wins.",
+    "many_authors": "unique_authors >= 10 and mentions per author < 8",
+    "ratio": "ratio_1h_vs_prev_hr >= 3 and mentions_1h >= 20",
+    "small_sample": "rate withheld when the group or the priced/known denominator is under 8",
+    "spike": "mentions_1h >= 20 and (ratio_1h_vs_prev_hr >= 3, or ratio null because the previous hour was 0)",
+    "up_24h": "h24 price_change_pct > 20",
+    "windows": "at_spike [asof, +2h), h1 [+1h, +6h), h6 [+6h, +24h), h24 [+24h, +30h). One fill per run.",
+    "zero_start": "ratio null and mentions_1h >= 20"
+  },
+  "excluded_reasons": {
+    "collision_ticker": 1,
+    "low_confidence": 1
+  },
+  "groups": [
+    {
+      "adverse_rate": null,
+      "adverse_reason": "small_sample",
+      "by": "author_pattern",
+      "n": 1,
+      "n_adverse": 0,
+      "n_adverse_known": 1,
+      "n_h24_priced": 0,
+      "n_h24_up": 0,
+      "pattern": "few_authors",
+      "small_sample": true,
+      "up_24h_rate": null,
+      "up_24h_reason": "small_sample"
+    },
+    {
+      "adverse_rate": null,
+      "adverse_reason": "small_sample",
+      "by": "spike_kind",
+      "n": 1,
+      "n_adverse": 0,
+      "n_adverse_known": 1,
+      "n_h24_priced": 0,
+      "n_h24_up": 0,
+      "pattern": "zero_start",
+      "small_sample": true,
+      "up_24h_rate": null,
+      "up_24h_reason": "small_sample"
+    },
+    {
+      "adverse_rate": null,
+      "adverse_reason": "small_sample",
+      "by": "chain",
+      "n": 1,
+      "n_adverse": 0,
+      "n_adverse_known": 1,
+      "n_h24_priced": 0,
+      "n_h24_up": 0,
+      "pattern": "solana",
+      "small_sample": true,
+      "up_24h_rate": null,
+      "up_24h_reason": "small_sample"
+    },
+    {
+      "adverse_rate": null,
+      "adverse_reason": "small_sample",
+      "by": "combined",
+      "n": 1,
+      "n_adverse": 0,
+      "n_adverse_known": 1,
+      "n_h24_priced": 0,
+      "n_h24_up": 0,
+      "pattern": "solana|zero_start|few_authors",
+      "small_sample": true,
+      "up_24h_rate": null,
+      "up_24h_reason": "small_sample"
+    }
+  ],
+  "kind": "buzz_outcomes_summary",
+  "measured_factor": true,
+  "min_sample": 8,
+  "note": "Research tally only. Not a buy signal and not a veto.",
+  "schema_version": 1,
+  "totals": {
+    "events": 2,
+    "excluded": 1,
+    "scored": 1
+  },
+  "up_pct": 20.0,
+  "veto": false
+}

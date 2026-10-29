@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zirqo-dev.github.io/sightline/schema/buzz-outcomes.schema.json",
+  "title": "Buzz outcome line",
+  "description": "One buzz_outcomes.jsonl line: one X buzz spike and the checkpoints filled after it. Research only. buy_signal and veto are false. The file is rewritten each run; one line per event; latest state wins. A null market or flag field was not observed. It is not a guess.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "measured_factor", "buy_signal", "veto",
+    "event_id", "asof", "chain", "ticker", "id_short",
+    "token_id", "token_id_source", "token_id_reason",
+    "scored", "exclude_reasons", "spike_kind", "author_pattern",
+    "features", "at_spike", "followups", "flags_at_spike", "later", "updated_at"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "buzz_outcome"},
+    "measured_factor": {"const": true},
+    "buy_signal": {"const": false},
+    "veto": {"const": false},
+    "event_id": {"type": "string", "minLength": 8, "maxLength": 160},
+    "asof": {"$ref": "#/$defs/time"},
+    "chain": {"enum": ["solana", "cardano"]},
+    "ticker": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9]{0,15}$"},
+    "id_short": {"type": "string", "minLength": 1, "maxLength": 24},
+    "token_id": {"type": ["string", "null"], "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$|^[0-9a-fA-F]{56,120}$"},
+    "token_id_source": {
+      "type": ["string", "null"],
+      "enum": ["x_buzz_query", "scanner_tasks", "paper", "known_unit", "desk_unit", null]
+    },
+    "token_id_reason": {"type": ["string", "null"], "maxLength": 200},
+    "scored": {"type": "boolean"},
+    "exclude_reasons": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"enum": ["low_confidence", "collision_ticker"]}
+    },
+    "spike_kind": {"enum": ["ratio", "zero_start"]},
+    "author_pattern": {"enum": ["few_authors", "many_authors", "mixed", "unknown"]},
+    "features": {"$ref": "#/$defs/features"},
+    "at_spike": {"$ref": "#/$defs/checkpoint"},
+    "followups": {"$ref": "#/$defs/followups"},
+    "flags_at_spike": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/flags"}]},
+    "later": {"$ref": "#/$defs/flags"},
+    "updated_at": {"$ref": "#/$defs/time"}
+  },
+  "$defs": {
+    "time": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "features": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mentions_1h", "mentions_24h", "ratio_1h_vs_prev_hr",
+        "unique_authors", "median_followers", "bot_like_share", "authors_over_10k",
+        "confidence", "alert", "paper_position", "token_age_hours", "token_age_reason"
+      ],
+      "properties": {
+        "mentions_1h": {"type": "integer", "minimum": 20},
+        "mentions_24h": {"type": "integer", "minimum": 0},
+        "ratio_1h_vs_prev_hr": {"type": ["number", "null"]},
+        "unique_authors": {"type": ["integer", "null"], "minimum": 0},
+        "median_followers": {"type": ["number", "null"]},
+        "bot_like_share": {"type": ["number", "null"]},
+        "authors_over_10k": {"type": ["integer", "null"], "minimum": 0},
+        "confidence": {"enum": ["high", "medium", "low"]},
+        "alert": {"type": "boolean"},
+        "paper_position": {"type": ["string", "null"], "pattern": "^[A-Z]$"},
+        "token_age_hours": {"type": ["number", "null"]},
+        "token_age_reason": {"type": ["string", "null"], "maxLength": 200}
+      }
+    },
+    "followups": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["h1", "h6", "h24"],
+      "properties": {
+        "h1": {"$ref": "#/$defs/checkpoint"},
+        "h6": {"$ref": "#/$defs/checkpoint"},
+        "h24": {"$ref": "#/$defs/checkpoint"}
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status", "due_at", "observed_at", "price", "price_unit", "price_change_pct",
+        "liquidity", "liquidity_unit", "liquidity_change_pct", "source", "reason", "flags"
+      ],
+      "properties": {
+        "status": {"enum": ["pending", "filled", "missed"]},
+        "due_at": {"$ref": "#/$defs/time"},
+        "observed_at": {"type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+        "price": {"type": ["number", "null"], "minimum": 0},
+        "price_unit": {"type": ["string", "null"], "enum": ["usd", "ada", null]},
+        "price_change_pct": {"type": ["number", "null"]},
+        "liquidity": {"type": ["number", "null"], "minimum": 0},
+        "liquidity_unit": {"type": ["string", "null"], "enum": ["usd", "ada", null]},
+        "liquidity_change_pct": {"type": ["number", "null"]},
+        "source": {"type": ["string", "null"], "enum": ["dexscreener", "geckoterminal", null]},
+        "reason": {"type": ["string", "null"], "maxLength": 200},
+        "flags": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/flags"}]}
+      }
+    },
+    "flags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["veto", "rug", "kill", "lp_pull", "paper", "reason"],
+      "properties": {
+        "veto": {"type": ["boolean", "null"]},
+        "rug": {"type": ["boolean", "null"]},
+        "kill": {"type": ["boolean", "null"]},
+        "lp_pull": {"type": ["boolean", "null"]},
+        "paper": {"type": ["boolean", "null"]},
+        "reason": {"type": ["string", "null"], "maxLength": 200}
+      }
+    }
+  }
+}
