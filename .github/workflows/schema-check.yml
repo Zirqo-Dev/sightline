@@ -19,5 +19,7 @@ jobs:
         run: python3 -m unittest discover -s solada-prefilter/tests
       - name: Solana desk tests
         run: python3 -m unittest discover -s solana-desk/tests -t solana-desk
+      - name: Rugger blacklist tests
+        run: python3 -m unittest discover -s rugger_blacklist/tests
       - name: X buzz schema tests
         run: python3 -m unittest discover -s scripts/tests

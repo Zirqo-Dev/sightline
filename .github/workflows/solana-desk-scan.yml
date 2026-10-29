@@ -41,19 +41,32 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Restore private rugger list (Actions cache, never committed)
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/solana-desk-cache
+          key: solana-desk-rugger-${{ github.run_id }}
+          restore-keys: solana-desk-rugger-
       - name: Run scanner
+        id: scan
         env:
           JUPITER_API_KEY: ${{ secrets.JUPITER_API_KEY }}
+          SOLANA_DESK_CACHE_DIR: ${{ runner.temp }}/solana-desk-cache
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
+          RUGGER_ACCEPT_RESET: ${{ vars.RUGGER_ACCEPT_RESET }}
           # Mode: manual input > repo variable SOLANA_DESK_MODE (set to 'scan' to pause fills without a PR) > auto
           MODE: ${{ github.event.inputs.mode || vars.SOLANA_DESK_MODE || 'auto' }}
         working-directory: code/solana-desk
         run: |
           if [ -z "$JUPITER_API_KEY" ]; then echo "::warning::JUPITER_API_KEY secret not set; using keyless Jupiter (noted in health.json)"; fi
-          timeout 420 python3 -m desk.run --mode "$MODE" --data-dir "$GITHUB_WORKSPACE/data/solana-desk"
+          mkdir -p "$SOLANA_DESK_CACHE_DIR"
+          timeout 420 python3 -m desk.run --mode "$MODE" --data-dir "$GITHUB_WORKSPACE/data/solana-desk" --cache-dir "$SOLANA_DESK_CACHE_DIR"
       - name: Commit to desk-data
         if: always()
         env:
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
         working-directory: data
         run: |
           git config user.name "solana-desk-bot"
@@ -74,3 +87,20 @@ jobs:
             git pull --rebase origin desk-data || { git rebase --abort; exit 1; }
           done
           exit 1
+      - name: Sync private rugger list
+        if: always()
+        timeout-minutes: 2
+        env:
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+          RUGGER_ACCEPT_RESET: ${{ vars.RUGGER_ACCEPT_RESET }}
+        working-directory: code
+        run: |
+          python3 -m rugger_blacklist.sync --desk solana \
+            --cache-dir "${{ runner.temp }}/solana-desk-cache" \
+            --public-dir "$GITHUB_WORKSPACE/data/solana-desk"
+      - name: Save private rugger list
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/solana-desk-cache
+          key: solana-desk-rugger-${{ github.run_id }}

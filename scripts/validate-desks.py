@@ -31,7 +31,7 @@ def risk_maps(doc):
     return found
 
 os.chdir(sys.argv[1] if len(sys.argv)>1 else ROOT)
-S={k:Draft202012Validator(json.load(open(f"{SCHEMA}/{k}.schema.json"))) for k in("paper-book","run-log","brief","pulse","solada-vetoes","x-buzz","x-buzz-history","buzz-outcomes","buzz-outcomes-summary")}
+S={k:Draft202012Validator(json.load(open(f"{SCHEMA}/{k}.schema.json"))) for k in("paper-book","run-log","brief","pulse","solada-vetoes","solana-rugger-log","x-buzz","x-buzz-history","buzz-outcomes","buzz-outcomes-summary")}
 for v in S.values(): v.check_schema(v.schema)
 jobs=[]
 for d in json.load(open("desks.json"))["desks"]:
@@ -49,6 +49,8 @@ for fix in ("scripts/fixtures/pulse-example.json", "scripts/fixtures/pulse-facto
     if os.path.exists(fix): jobs.append((fix,"pulse"))
 for fix in ("solada-prefilter/vetoes.json", "solada-prefilter/tests/fixtures/vetoes.json"):
     if os.path.exists(fix): jobs.append((fix,"solada-vetoes"))
+for fix in ("solana-desk/rugger_would_veto.json", "solana-desk/tests/fixtures/rugger_would_veto.json"):
+    if os.path.exists(fix): jobs.append((fix,"solana-rugger-log"))
 # Root of desk-data. Absent until a run writes it; the guard checks it when present.
 buzz="x_buzz.json"
 if os.path.exists(buzz): jobs.append((buzz,"x-buzz"))

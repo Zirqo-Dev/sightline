@@ -54,5 +54,18 @@ All generated files (tasks/trades CSVs, state, daily summaries, `paper.json`,
 `log.json`, briefs, review notes, health) are committed to the **`desk-data`** branch
 (folder `solana-desk/`) by the Actions bot, with pull-rebase retries and no force-push. `main` holds code only and changes only via PRs Bousky merges.
 
+## Rugger list (log only)
+RugCheck `rugged` is remembered per deployer in this desk's private Actions cache
+(`--cache-dir`, workflow cache `solana-desk-rugger-`, file `rugger-blacklist.json`).
+That cache is not the Cardano prefilter cache. A rug recorded on one desk is not on the other.
+A later lead from that deployer is appended to `rugger_would_veto.json` on desk-data.
+Rugger ids there are `r-` plus 12 hex digits (HMAC-SHA256 under `RUGGER_ID_PEPPER`, any string of at least 32 characters; the 32-byte key is HKDF-SHA256 of that UTF-8 string).
+They are not `w-` dev tags. If the pepper is missing, the log keeps the row and omits the id.
+The raw list is pushed by a separate sync step after the desk-data commit and before the cache save (`python -m rugger_blacklist.sync`, 2 minute cap). `health.json` `rugger_status.sync` is that step's previous result: `ok`, `unset`, `refused`, or `error`. Only that step sees `SIGHTLINE_PRIVATE_TOKEN` (a fine-grained PAT for `Zirqo-Dev/sightline-private` only, Contents read and write). The sync refuses a repo that is not private. Exclusion hashes live in `solana-desk/rugger.json`, not in the frozen desk config.
+This desk does not look up funding hops, so it
+does not by itself produce `known_rugger_funded`. The hook stops after 5 seconds inside the hook. Quote pacing and HTTP calls are not part of that budget.
+It does not change skip reasons, paper entries, exits, or the timing of quotes and fills. The v6.5 freeze is unchanged.
+There is no LP-pull or dump event feed; `lp_unlocked` stays a per-token safety skip.
+
 ## Tests
     cd solana-desk && python3 -m unittest discover -s tests -t .

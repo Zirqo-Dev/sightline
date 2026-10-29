@@ -1456,7 +1456,8 @@ def main():
     veto_summary = None
     try:
         veto_summary = vetoes_mod.run(
-            args.data_dir, cfg, args.dry_run, owner_env=os.environ.get("PRIVACY_GUARD_PATTERNS", ""), now_s=time.time())
+            args.data_dir, cfg, args.dry_run, owner_env=os.environ.get("PRIVACY_GUARD_PATTERNS", ""),
+            now_s=time.time(), cache_dir=args.cache_dir)
         print(f"vetoes: {json.dumps(veto_summary)}")
     except (SystemExit, Exception) as e:
         http._fail("vetoes", type(e).__name__)

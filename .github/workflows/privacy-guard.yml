@@ -13,4 +13,5 @@ jobs:
         env:
           # Optional repo secret; empty when unset, which the script ignores.
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
         run: bash scripts/privacy-guard.sh

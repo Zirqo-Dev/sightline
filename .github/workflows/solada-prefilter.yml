@@ -11,7 +11,8 @@ name: Solada prefilter
 # An all-caps coin ticker is not renamed. dev_checks is unchanged.
 # Flag-only cabal/whale signals go to desk-data:solada-prefilter/flags.json; their
 # private working data (full stake keys, sniper positions) rides in the same Actions
-# cache as the whale snapshot (flags-cache.json) and is never committed.
+# cache as the whale snapshot (flags-cache.json) and the rugger blacklist
+# (rugger-blacklist.json). Those files are never committed.
 # The primary webhook fires before dev_checks. dev_checks.json then gets its own
 # budget_s (180; Koios 36 / Blockfrost 50 unchanged) and yields if the run-start+720s
 # cap cannot also hold whale_ledger (90), big_moves (150 reserved) and liquidity_moves (50).
@@ -83,6 +84,7 @@ jobs:
           key: solada-prefilter-whale-${{ github.run_id }}
           restore-keys: solada-prefilter-whale-
       - name: Run prefilter
+        id: prefilter
         if: github.event.inputs.ping != 'true'
         env:
           BLOCKFROST_PROJECT_ID: ${{ secrets.BLOCKFROST_PROJECT_ID }}
@@ -94,6 +96,8 @@ jobs:
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
           # existing secret (no new one): big_moves.py drops owner wallets matching these patterns in memory, never printed
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
+          RUGGER_ACCEPT_RESET: ${{ vars.RUGGER_ACCEPT_RESET }}
         working-directory: code
         run: |
           [ -z "$BLOCKFROST_PROJECT_ID" ] && echo "::warning::BLOCKFROST_PROJECT_ID not set; using Koios"
@@ -103,16 +107,11 @@ jobs:
           # until 770s, leaving ~10s to flush JSON. The 20 min job then still has room
           # for cache save, the privacy guard, and the push retries below.
           timeout 780 python3 solada-prefilter/prefilter.py --repo . --data-dir "$GITHUB_WORKSPACE/data/solada-prefilter" --desk-data "$GITHUB_WORKSPACE/data" $flag
-      - name: Save private whale snapshot
-        if: always() && github.event.inputs.ping != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ runner.temp }}/prefilter-cache
-          key: solada-prefilter-whale-${{ github.run_id }}
       - name: Commit to desk-data
         if: always() && github.event.inputs.ping != 'true'
         env:
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
         working-directory: data
         run: |
           git config user.name "solada-prefilter-bot"
@@ -134,3 +133,21 @@ jobs:
             git pull --rebase origin desk-data || { git rebase --abort; exit 1; }
           done
           exit 1
+      - name: Sync private rugger list
+        if: always() && github.event.inputs.ping != 'true'
+        timeout-minutes: 2
+        env:
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+          RUGGER_ACCEPT_RESET: ${{ vars.RUGGER_ACCEPT_RESET }}
+        working-directory: code
+        run: |
+          python3 -m rugger_blacklist.sync --desk cardano \
+            --cache-dir "${{ runner.temp }}/prefilter-cache" \
+            --public-dir "$GITHUB_WORKSPACE/data/solada-prefilter"
+      - name: Save private whale snapshot
+        id: save-cache
+        if: always() && github.event.inputs.ping != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/prefilter-cache
+          key: solada-prefilter-whale-${{ github.run_id }}

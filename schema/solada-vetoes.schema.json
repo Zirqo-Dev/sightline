@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://zirqo-dev.github.io/sightline/schema/solada-vetoes.schema.json",
   "title": "Solada prefilter research vetoes",
-  "description": "Zero-AI hard vetoes for the Cardano desk. Research only. buy_signal is always false. Evidence values are wallet tags only.",
+    "description": "Zero-AI hard vetoes for the Cardano desk. Research only. buy_signal is always false. Evidence values are wallet tags or w- ids only. known_rugger and known_rugger_funded come from the private rugger blacklist.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "at", "desk", "note", "buy_signal", "sources", "counts", "tokens"],
@@ -41,12 +41,15 @@
     "counts": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["dev_sold", "serial_launcher", "lp_pulled", "ahead_of_dump"],
+      "required": ["dev_sold", "serial_launcher", "lp_pulled", "ahead_of_dump", "known_rugger", "known_rugger_funded", "known_rugger_sibling"],
       "properties": {
         "dev_sold": {"type": "integer", "minimum": 0},
         "serial_launcher": {"type": "integer", "minimum": 0},
         "lp_pulled": {"type": "integer", "minimum": 0},
-        "ahead_of_dump": {"type": "integer", "minimum": 0}
+        "ahead_of_dump": {"type": "integer", "minimum": 0},
+        "known_rugger": {"type": "integer", "minimum": 0},
+        "known_rugger_funded": {"type": "integer", "minimum": 0},
+        "known_rugger_sibling": {"type": "integer", "minimum": 0}
       }
     },
     "token": {
@@ -69,13 +72,22 @@
       "additionalProperties": false,
       "required": ["code", "evidence"],
       "properties": {
-        "code": {"enum": ["dev_sold", "serial_launcher", "lp_pulled", "ahead_of_dump"]},
+        "code": {"enum": ["dev_sold", "serial_launcher", "lp_pulled", "ahead_of_dump", "known_rugger", "known_rugger_funded", "known_rugger_sibling"]},
         "evidence": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
             "dev_tag": {"$ref": "#/$defs/tag"},
-            "actor_tag": {"$ref": "#/$defs/tag"}
+            "actor_tag": {"$ref": "#/$defs/tag"},
+            "rugger_id": {"type": "string", "pattern": "^r-[0-9a-f]{12}$", "description": "HMAC rugger id. Not a w- dev tag."},
+            "wallet_id": {"type": "string", "pattern": "^r-[0-9a-f]{12}$"},
+            "evidence_tags": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"enum": ["ahead_of_dump", "late_rug", "lp_pulled", "rugcheck_rugged"]}
+            },
+            "hop": {"type": "integer", "minimum": 1, "maximum": 8}
           }
         },
         "reason": {
@@ -100,6 +112,62 @@
             "required": ["code"]
           },
           "then": {"not": {"required": ["reason"]}}
+        },
+        {
+          "if": {
+            "properties": {"code": {"enum": ["dev_sold", "serial_launcher", "lp_pulled", "ahead_of_dump"]}},
+            "required": ["code"]
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "properties": {
+                  "rugger_id": false,
+                  "wallet_id": false,
+                  "evidence_tags": false,
+                  "hop": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {"code": {"const": "known_rugger"}},
+            "required": ["code"]
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "required": ["evidence_tags"],
+                "properties": {
+                  "dev_tag": false,
+                  "actor_tag": false,
+                  "wallet_id": false,
+                  "hop": false
+                }
+              }
+            },
+            "not": {"required": ["reason"]}
+          }
+        },
+        {
+          "if": {
+            "properties": {"code": {"enum": ["known_rugger_funded", "known_rugger_sibling"]}},
+            "required": ["code"]
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "required": ["evidence_tags", "hop"],
+                "properties": {
+                  "dev_tag": false,
+                  "actor_tag": false
+                }
+              }
+            },
+            "not": {"required": ["reason"]}
+          }
         }
       ]
     }

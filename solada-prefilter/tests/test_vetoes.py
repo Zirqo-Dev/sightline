@@ -145,7 +145,7 @@ class Derive(unittest.TestCase):
             "pull 8000 ADA is 40 percent of the reserve (>= 20 percent and >= 2000 ADA); "
             "same-party sell 2000 ADA is 25 percent of the pull inside 6h")
         self.assertNotIn("w-", row["vetoes"][2]["reason"])
-        self.assertEqual(doc["counts"], {"dev_sold": 1, "serial_launcher": 1, "lp_pulled": 0, "ahead_of_dump": 1})
+        self.assertEqual(doc["counts"], {"dev_sold": 1, "serial_launcher": 1, "lp_pulled": 0, "ahead_of_dump": 1, "known_rugger": 0, "known_rugger_funded": 0, "known_rugger_sibling": 0})
         self.assertEqual(row["policy_short"], "abcdef012345")
         quiet = _derive(_dev(dev_sold_ada=24, serial_3h=1, serial_7d=2), _move(kind="lp_add"))
         self.assertEqual(quiet["tokens"], [])
@@ -226,7 +226,7 @@ class Derive(unittest.TestCase):
         both = _derive(_dev(dev_tag="w-0123abcd", dev_sold_ada=0),
                        _move(actor_tag="w-0123abcd"))
         self.assertEqual([v["code"] for v in both["tokens"][0]["vetoes"]], ["lp_pulled", "ahead_of_dump"])
-        self.assertEqual(both["counts"], {"dev_sold": 0, "serial_launcher": 0, "lp_pulled": 1, "ahead_of_dump": 1})
+        self.assertEqual(both["counts"], {"dev_sold": 0, "serial_launcher": 0, "lp_pulled": 1, "ahead_of_dump": 1, "known_rugger": 0, "known_rugger_funded": 0, "known_rugger_sibling": 0})
         self.assertNotIn("w-", both["tokens"][0]["vetoes"][1]["reason"])
         loose = _derive(
             _dev(dev_sold_ada=0),

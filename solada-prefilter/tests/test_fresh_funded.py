@@ -236,7 +236,7 @@ class Row(unittest.TestCase):
         self.assertEqual(veto["counts"]["ahead_of_dump"], 0)
         self.assertNotIn("fresh_funded", json.dumps(veto["counts"]))
         # counts keys are the veto codes only
-        self.assertEqual(set(veto["counts"]), {"dev_sold", "serial_launcher", "lp_pulled", "ahead_of_dump"})
+        self.assertEqual(set(veto["counts"]), {"dev_sold", "serial_launcher", "lp_pulled", "ahead_of_dump", "known_rugger", "known_rugger_funded", "known_rugger_sibling"})
 
     def test_an_old_wallet_is_not_caution_and_a_miss_stays_null(self):
         old = [{"tx_hash": "cc", "block_height": 1, "block_time": 1}]

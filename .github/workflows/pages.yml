@@ -24,6 +24,7 @@ jobs:
       - name: Privacy guard
         env:
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
         run: bash scripts/privacy-guard.sh
       - uses: actions/setup-python@v5
         with:
