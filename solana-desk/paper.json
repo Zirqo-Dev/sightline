@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-29T06:00:28Z",
+ "generated_at": "2026-10-29T06:30:25Z",
  "cfg_version": "v1-v6.5",
  "open": [
   {
@@ -24,11 +24,11 @@
     "px": 0.0016256825499667297
    },
    "frac": 0.666667,
-   "last_mark": 0.0025999997805943066,
+   "last_mark": 0.002429877414470585,
    "thesis": "safety:too_fresh",
    "result": {
     "pnl": 0.085603417,
-    "pct": 59.93,
+    "pct": 49.47,
     "unit": "SOL",
     "net_pnl": 0.085603417,
     "gross_pnl": 0.097549048
@@ -48,39 +48,14 @@
     "px": 0.0043110598611640375
    },
    "frac": 0.333333,
-   "last_mark": 0.029005096121330384,
+   "last_mark": 0.031401765021467666,
    "thesis": "safety:too_fresh",
    "result": {
     "pnl": 0.350622368,
-    "pct": 572.81,
+    "pct": 628.4,
     "unit": "SOL",
     "net_pnl": 0.350622368,
     "gross_pnl": 0.37385306
-   }
-  },
-  {
-   "id": "S-20261029T0430-BCNTmWin",
-   "ticker": "BC",
-   "mint": "BCNT4t3rv5Hva8RnUtJUJLnxzeFAabcYp8CghC1SmWin",
-   "book": "S",
-   "status": "open",
-   "size": 0.5,
-   "cost_model": "v3-exit-aware",
-   "cost_model_started_at": "2026-10-29T00:30:25Z",
-   "opened_at": "2026-10-29T04:30:23Z",
-   "window_ends_at": "2026-10-29T06:30:23Z",
-   "entry": {
-    "px": 0.38683768049771705
-   },
-   "frac": 1.0,
-   "last_mark": 0.3848046976200062,
-   "thesis": "safety:too_old",
-   "result": {
-    "pnl": 0.0,
-    "pct": -0.53,
-    "unit": "SOL",
-    "net_pnl": 0.0,
-    "gross_pnl": 0.0
    }
   }
  ],
@@ -1559,6 +1534,35 @@
     "gross_pct": -92.71
    },
    "thesis": "safety:too_fresh"
+  },
+  {
+   "id": "S-20261029T0430-BCNTmWin",
+   "ticker": "BC",
+   "mint": "BCNT4t3rv5Hva8RnUtJUJLnxzeFAabcYp8CghC1SmWin",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-10-29T04:30:23Z",
+   "closed_at": "2026-10-29T06:30:25Z",
+   "entry": {
+    "px": 0.38683768049771705
+   },
+   "exit": {
+    "px": 0.3848811166301131
+   },
+   "exit_reason": "time_stop",
+   "result": {
+    "pnl": -0.00854038,
+    "pct": -1.7,
+    "unit": "SOL",
+    "net_pnl": -0.00854038,
+    "net_pct": -1.7,
+    "gross_pnl": -0.002528921,
+    "gross_pct": -0.51
+   },
+   "thesis": "safety:too_old"
   }
  ],
  "books": {
@@ -1590,14 +1594,14 @@
    "realized_gross_pnl": -0.911025679
   },
   "S": {
-   "cash": 5.195084479,
-   "equity": 7.333205224,
-   "realized_pnl": -3.789330904,
-   "open": 3,
-   "closed": 23,
+   "cash": 5.689557432,
+   "equity": 7.390705353,
+   "realized_pnl": -3.797871284,
+   "open": 2,
+   "closed": 24,
    "fills_today": 12,
    "would_halt": [],
-   "realized_gross_pnl": -3.460897459
+   "realized_gross_pnl": -3.46342638
   }
  },
  "costs": {
@@ -1624,8 +1628,8 @@
   "started_at": "2026-10-29T00:30:25Z",
   "windows": {
    "7": {
-    "counted_closes": 38,
-    "net_pnl": -5.071702414,
+    "counted_closes": 39,
+    "net_pnl": -5.080242794,
     "wins": 15,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
@@ -1634,8 +1638,8 @@
     }
    },
    "28": {
-    "counted_closes": 38,
-    "net_pnl": -5.071702414,
+    "counted_closes": 39,
+    "net_pnl": -5.080242794,
     "wins": 15,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
