@@ -1,210 +1,41 @@
 {
- "at": "2026-10-29T18:12:08Z",
+ "at": "2026-10-29T20:11:16Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "coordinated_buys",
-   "ticker": "BEPE",
-   "wallets": [
-    "w-432f8e3e",
-    "w-51dd1656",
-    "w-7d05f56d",
-    "w-99b005d9",
-    "w-b9fa5509",
-    "w-c1cbdaa2",
-    "w-c66abf4f",
-    "w-ddf5e81d",
-    "w-e97f4aa3",
-    "w-f286da6e"
-   ],
-   "window_s": 120,
-   "at": "2026-10-29T18:12:08Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "BEPE",
-   "wallets": [
-    "w-7d05f56d",
-    "w-b9fa5509",
-    "w-c1cbdaa2",
-    "w-d5d60996",
-    "w-f286da6e"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-10-29T18:12:08Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-095576b3",
-   "launches": [
-    "BEPE",
-    "BMEPE",
-    "PUG",
-    "TCM"
-   ],
-   "at": "2026-10-29T18:12:08Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-432f8e3e",
-   "launches": [
-    "BEPE",
-    "KING"
-   ],
-   "at": "2026-10-29T18:12:08Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-77c50bf8",
-   "launches": [
-    "BEPE",
-    "FOSHIZLE",
-    "MEOW",
-    "VEPE"
-   ],
-   "at": "2026-10-29T18:12:08Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-91acdc09",
-   "launches": [
-    "BEPE",
-    "BMEPE"
-   ],
-   "at": "2026-10-29T18:12:08Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-99b005d9",
-   "launches": [
-    "BEPE",
-    "FUKU",
-    "INTEL",
-    "MEOW",
-    "MONKEY",
-    "NERF",
-    "SLIP"
-   ],
-   "at": "2026-10-29T18:12:08Z"
-  },
-  {
    "kind": "sniper_full_exit",
-   "ticker": "COPE",
-   "wallet": "w-f7844f67",
+   "ticker": "KING",
+   "wallet": "w-c66abf4f",
    "tags": [],
-   "at": "2026-10-29T18:12:08Z"
+   "at": "2026-10-29T20:11:16Z"
   },
   {
-   "kind": "sniper_full_exit",
-   "ticker": "SHEF",
-   "wallet": "w-f7844f67",
-   "tags": [],
-   "at": "2026-10-29T18:12:08Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "FOSHIZLE",
-   "wallet": "w-eb64d281",
-   "tags": [],
-   "at": "2026-10-29T18:12:08Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "FLUIDY",
-   "wallet": "w-057c08fe",
-   "tags": [],
-   "at": "2026-10-29T18:12:08Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "BEPE",
-   "wallet": "w-d5d60996",
-   "tags": [],
-   "at": "2026-10-29T18:12:08Z"
-  },
-  {
-   "kind": "founder_whale_move",
-   "ticker": "USDCX",
-   "tag": "w-f3186187",
-   "delta": -2374576,
-   "decimals": 6,
-   "qty": -2.3746,
-   "ada_equiv": 59,
-   "value_basis": "decimals_x_price",
-   "pct": 100.0,
-   "at": "2026-10-29T18:12:08Z"
-  },
-  {
-   "kind": "founder_whale_move",
+   "kind": "volume_without_holders",
    "ticker": "MEPE",
-   "tag": "w-f3186187",
-   "delta": 1171824452250,
-   "decimals": 6,
-   "qty": 1171824.4523,
-   "ada_equiv": 596,
-   "value_basis": "ada_leg_rate",
-   "pct": 10.1,
-   "at": "2026-10-29T18:12:08Z"
+   "vol_h24_ada": 206292,
+   "ada_side": 34796,
+   "holders": [
+    157,
+    157
+   ],
+   "at": "2026-10-29T20:11:16Z"
   },
   {
-   "kind": "founder_whale_move",
+   "kind": "whale_move",
    "ticker": "ASCEND",
    "tag": "w-f3186187",
-   "delta": 2469851207,
+   "delta": 1150511015,
    "decimals": 6,
-   "qty": 2469.8512,
-   "ada_equiv": 3310,
-   "value_basis": "ada_leg_rate",
-   "pct": 0.8,
-   "at": "2026-10-29T18:12:08Z"
-  },
-  {
-   "kind": "founder_whale_move",
-   "ticker": "STRIKE",
-   "tag": "w-f3186187",
-   "delta": -5356580,
-   "decimals": 6,
-   "qty": -5.3566,
-   "ada_equiv": 12,
-   "value_basis": "decimals_x_price",
-   "dust": true,
-   "at": "2026-10-29T18:12:08Z"
+   "qty": 1150.511,
+   "ada_equiv": 1558,
+   "value_basis": "ada_leg",
+   "pct": 0.4,
+   "at": "2026-10-29T20:11:16Z"
   }
  ],
  "recent": [
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "MEOW",
-   "wallets": [
-    "w-260b4bdf",
-    "w-7b236c23",
-    "w-7ed3a0fa",
-    "w-7fe9c144",
-    "w-c66abf4f"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-10-28T14:11:45Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-13acc9c3",
-   "launches": [
-    "CNFTIO",
-    "INTEL"
-   ],
-   "at": "2026-10-28T14:11:45Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-1a306fa2",
-   "launches": [
-    "EVIL",
-    "MEOW"
-   ],
-   "at": "2026-10-28T14:11:45Z"
-  },
   {
    "kind": "repeat_early_buyer",
    "wallet": "w-4982aa46",
@@ -3361,11 +3192,41 @@
    "value_basis": "decimals_x_price",
    "dust": true,
    "at": "2026-10-29T18:12:08Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "KING",
+   "wallet": "w-c66abf4f",
+   "tags": [],
+   "at": "2026-10-29T20:11:16Z"
+  },
+  {
+   "kind": "volume_without_holders",
+   "ticker": "MEPE",
+   "vol_h24_ada": 206292,
+   "ada_side": 34796,
+   "holders": [
+    157,
+    157
+   ],
+   "at": "2026-10-29T20:11:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 1150511015,
+   "decimals": 6,
+   "qty": 1150.511,
+   "ada_equiv": 1558,
+   "value_basis": "ada_leg",
+   "pct": 0.4,
+   "at": "2026-10-29T20:11:16Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 2,
-  "koios": 20
+  "blockfrost": 1,
+  "koios": 2
  },
  "thresholds": {
   "enabled": true,
@@ -3401,7 +3262,7 @@
    "repeat_launcher",
    "swarm_launcher",
    "pool_preseeder",
-   "founder_whale"
+   "lead_whale"
   ],
   "exclude_tags": {
    "w-f46e5a31": "solada_curve_reserve"
