@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-29T05:00:27Z",
+ "generated_at": "2026-10-29T05:30:22Z",
  "cfg_version": "v1-v6.5",
  "open": [
   {
@@ -24,11 +24,11 @@
     "px": 0.0016256825499667297
    },
    "frac": 0.666667,
-   "last_mark": 0.0026474059371526595,
+   "last_mark": 0.0026585734154925622,
    "thesis": "safety:too_fresh",
    "result": {
     "pnl": 0.085603417,
-    "pct": 62.85,
+    "pct": 63.54,
     "unit": "SOL",
     "net_pnl": 0.085603417,
     "gross_pnl": 0.097549048
@@ -48,11 +48,11 @@
     "px": 0.0043110598611640375
    },
    "frac": 0.333333,
-   "last_mark": 0.02914533454510956,
+   "last_mark": 0.029263517422818366,
    "thesis": "safety:too_fresh",
    "result": {
     "pnl": 0.350622368,
-    "pct": 576.06,
+    "pct": 578.8,
     "unit": "SOL",
     "net_pnl": 0.350622368,
     "gross_pnl": 0.37385306
@@ -73,36 +73,11 @@
     "px": 0.38683768049771705
    },
    "frac": 1.0,
-   "last_mark": 0.384884348272096,
+   "last_mark": 0.3848596239285847,
    "thesis": "safety:too_old",
    "result": {
     "pnl": 0.0,
-    "pct": -0.5,
-    "unit": "SOL",
-    "net_pnl": 0.0,
-    "gross_pnl": 0.0
-   }
-  },
-  {
-   "id": "S-20261029T0500-9BQ3pump",
-   "ticker": "NIKI",
-   "mint": "9BQ3Yq1Hd7kFTqXyfLj1QZw4Pi3LNuDabXjV9yCzpump",
-   "book": "S",
-   "status": "open",
-   "size": 0.5,
-   "cost_model": "v3-exit-aware",
-   "cost_model_started_at": "2026-10-29T00:30:25Z",
-   "opened_at": "2026-10-29T05:00:27Z",
-   "window_ends_at": "2026-10-29T07:00:27Z",
-   "entry": {
-    "px": 0.00035556219787536336
-   },
-   "frac": 1.0,
-   "last_mark": 0.00035556219787536336,
-   "thesis": "safety:too_fresh",
-   "result": {
-    "pnl": 0.0,
-    "pct": 0.0,
+    "pct": -0.51,
     "unit": "SOL",
     "net_pnl": 0.0,
     "gross_pnl": 0.0
@@ -1555,6 +1530,35 @@
     "gross_pct": -50.51
    },
    "thesis": "safety:risk_score"
+  },
+  {
+   "id": "S-20261029T0500-9BQ3pump",
+   "ticker": "NIKI",
+   "mint": "9BQ3Yq1Hd7kFTqXyfLj1QZw4Pi3LNuDabXjV9yCzpump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-10-29T05:00:27Z",
+   "closed_at": "2026-10-29T05:30:22Z",
+   "entry": {
+    "px": 0.00035556219787536336
+   },
+   "exit": {
+    "px": 2.5927589780076333e-05
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": -0.468491495,
+    "pct": -92.94,
+    "unit": "SOL",
+    "net_pnl": -0.468491495,
+    "net_pct": -92.94,
+    "gross_pnl": -0.463540008,
+    "gross_pct": -92.71
+   },
+   "thesis": "safety:too_fresh"
   }
  ],
  "books": {
@@ -1586,14 +1590,14 @@
    "realized_gross_pnl": -0.911025679
   },
   "S": {
-   "cash": 5.15948364,
-   "equity": 7.808649005,
-   "realized_pnl": -3.32083941,
-   "open": 4,
-   "closed": 22,
+   "cash": 5.195084479,
+   "equity": 7.355122539,
+   "realized_pnl": -3.789330904,
+   "open": 3,
+   "closed": 23,
    "fills_today": 12,
    "would_halt": [],
-   "realized_gross_pnl": -2.997357451
+   "realized_gross_pnl": -3.460897459
   }
  },
  "costs": {
@@ -1620,8 +1624,8 @@
   "started_at": "2026-10-29T00:30:25Z",
   "windows": {
    "7": {
-    "counted_closes": 37,
-    "net_pnl": -4.603210919,
+    "counted_closes": 38,
+    "net_pnl": -5.071702414,
     "wins": 15,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
@@ -1630,8 +1634,8 @@
     }
    },
    "28": {
-    "counted_closes": 37,
-    "net_pnl": -4.603210919,
+    "counted_closes": 38,
+    "net_pnl": -5.071702414,
     "wins": 15,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
