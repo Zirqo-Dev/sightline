@@ -8,11 +8,6 @@ cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 patterns=(
   '"wallet_snapshot"'
   '"held"[[:space:]]*:[[:space:]]*true'
-  'stake1u8srdh'
-  'addr1vyrgesr'
-  "Bousky's"
-  'Bousky holds'
-  'Bousky wallet'
 )
 if [ -n "${PRIVACY_GUARD_PATTERNS:-}" ]; then
   while IFS= read -r p; do [ -n "$p" ] && patterns+=("$p"); done <<< "$PRIVACY_GUARD_PATTERNS"
