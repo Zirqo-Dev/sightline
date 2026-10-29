@@ -640,6 +640,144 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(build.includes("Kept off asset_version()"), "preview hash does not retint the legacy dashboard assets");
   assert(build.includes("bust_preview(index)"), "published index cache-busts the redesigned assets");
   assert(build.includes("legacy.html"), "build publishes the legacy dashboard");
+  assert(P.isDeskData("x_buzz.json"), "x_buzz.json is read from desk-data");
+  assert(!P.isDeskData("desks.json") && !P.isDeskData("schema/x-buzz.schema.json"), "root config and schema stay on main");
+  const appSrc = fs.readFileSync(previewJs, "utf8");
+  assert(appSrc.includes('p === "x_buzz.json"') && appSrc.includes("x_buzz_history.jsonl") && appSrc.includes("SightlineBuzz") && appSrc.includes("previewPage"), "buzz snapshot and history load only on the preview page");
+  assert(!index.includes("buzz.js") && !index.includes("buzz.css"), "live page does not load the buzz preview");
+  assert(!legacyPage.includes("buzz.js") && !legacyPage.includes("buzz.css"), "legacy page does not load the buzz preview");
+  assert(preview.includes('src="preview/buzz.js"') && preview.includes('href="preview/buzz.css"'), "preview page loads the buzz assets");
+}
+
+{
+  const buzzSrc = fs.readFileSync(path.join(root, "preview/buzz.js"), "utf8");
+  const buzzCss = fs.readFileSync(path.join(root, "preview/buzz.css"), "utf8");
+  assert(!buzzSrc.includes("setInterval") && !buzzSrc.includes("Math.random"), "buzz does not simulate a live tick");
+  assert(!/live tick|simulated/i.test(buzzSrc), "buzz copy does not describe a simulated tick");
+  assert(buzzCss.includes("prefers-reduced-motion") && buzzCss.includes(".buzz-static"), "reduced motion and static home charts are styled");
+  assert(buzzCss.includes(".logo span{color:var(--accent)") === false, "buzz css does not replace the accent logo rule");
+  const box = { console };
+  box.window = box;
+  box.globalThis = box;
+  vm.runInNewContext(buzzSrc, box);
+  const B = box.SightlineBuzz;
+  const mint = "A".repeat(44);
+  const hours = (a, b) => { const row = Array(24).fill(0); row[22] = a; row[23] = b; return row; };
+  const flat = () => Array(24).fill(0);
+  const doc = {
+    asof: "2026-10-29T01:49:00Z",
+    definitions: { bot_like: "account under 30 days old OR under 50 followers" },
+    tokens: [
+      { ticker: "RDOG", chain: "solana", id_short: "5kUx…nbwo", query: mint, mentions_24h: 7, mentions_1h: 5, hourly_24h: hours(2, 5), velocity: { ratio_1h_vs_prev_hr: 2.5 }, sample: { posts: 7, unique_authors: 7, median_followers: 1178, bot_like_share: 0, authors_over_10k: 1 }, confidence: "high" },
+      { ticker: "FLOATER", chain: "solana", id_short: "J7cq…pump", query: mint, mentions_24h: 30, mentions_1h: 22, hourly_24h: hours(10, 20), velocity: { ratio_1h_vs_prev_hr: 2.2 }, sample: { posts: 25, unique_authors: 15, median_followers: 1571, bot_like_share: 0.13, authors_over_10k: 1 }, confidence: "high" },
+      { ticker: "RSTR", chain: "solana", id_short: "9QT2…pump", query: mint, mentions_24h: 32, mentions_1h: 17, hourly_24h: hours(16, 16), velocity: { ratio_1h_vs_prev_hr: 1.06 }, sample: { posts: 25, unique_authors: 15, median_followers: 2120, bot_like_share: 0.2, authors_over_10k: 0 }, confidence: "high" },
+      { ticker: "BIO", chain: "solana", id_short: "7AxJ…pump", query: mint, mentions_24h: 140, mentions_1h: 45, hourly_24h: hours(121, 19), velocity: { ratio_1h_vs_prev_hr: 0.37 }, sample: { posts: 25, unique_authors: 14, median_followers: 1371, bot_like_share: 0.14, authors_over_10k: 1 }, confidence: "high" },
+      { ticker: "YIELDMOS", chain: "solana", id_short: "7tLn…rray", query: mint, mentions_24h: 3, mentions_1h: 0, hourly_24h: hours(3, 0), velocity: { ratio_1h_vs_prev_hr: 0 }, sample: { posts: 3, unique_authors: 3, median_followers: 1178, bot_like_share: 0.33, authors_over_10k: 0 }, confidence: "high" },
+      { ticker: "WIDE", chain: "solana", id_short: mint, query: mint, mentions_24h: 1, mentions_1h: 1, hourly_24h: hours(0, 1), velocity: { ratio_1h_vs_prev_hr: 0.1 }, sample: { posts: 1, unique_authors: 1, median_followers: 10, bot_like_share: 0, authors_over_10k: 0 }, confidence: "high" },
+      { ticker: "NIGHT", chain: "cardano", id_short: "0691b2fecc", query: "NIGHT cardano", mentions_24h: 1133, mentions_1h: 44, hourly_24h: flat(), velocity: { ratio_1h_vs_prev_hr: 1.02 }, sample: { posts: 25, unique_authors: 25, median_followers: 117, bot_like_share: 0.36, authors_over_10k: 1 }, confidence: "low" },
+      { ticker: "SNEK", chain: "cardano", id_short: "279c909f34", query: "SNEK cardano", mentions_24h: 44, mentions_1h: 1, hourly_24h: flat(), velocity: { ratio_1h_vs_prev_hr: null }, sample: { posts: 25, unique_authors: 14, median_followers: 817.5, bot_like_share: 0.14, authors_over_10k: 1 }, confidence: "medium" },
+      { ticker: "SOLADA", chain: "cardano", id_short: "e7c77b2784", query: "SOLADA", mentions_24h: 60, mentions_1h: 0, hourly_24h: flat(), velocity: { ratio_1h_vs_prev_hr: 0 }, sample: { posts: 25, unique_authors: 21, median_followers: 202, bot_like_share: 0.29, authors_over_10k: 0 }, confidence: "medium", low: true },
+      { ticker: "CLOVE", chain: "cardano", id_short: "c1b89ed48d", query: "CLOVE", mentions_24h: 6, mentions_1h: 0, hourly_24h: flat(), velocity: { ratio_1h_vs_prev_hr: 0 }, sample: { posts: 5, unique_authors: 3, median_followers: 102, bot_like_share: 0.33, authors_over_10k: 0 }, low: true }
+    ]
+  };
+  assert(B.velocityText(null) === "n/a" && B.velocityText(2.5) === "2.5x" && B.velocityText(2.2) === "2.2x" && B.velocityText(1.06) === "1.06x" && B.velocityText(0) === "0x" && B.velocityText(2) === "2x" && B.velocityText(10) === "10x", "velocity text");
+  assert(B.shortId("5kUx…nbwo") === "5kUx…nbwo" && B.shortId("eb7a93ebc3") === "eb7a93…", "short ids stay short");
+  assert(B.shortId(mint) === "AAAA…AAAA" && !B.shortId(mint).includes(mint.slice(0, 20)), "a full id is shortened");
+  const model = B.model(doc);
+  assert(model && model.hottest.ticker === "RDOG" && B.logoColor("solana", model) === "#ff7a45", "logo follows the hottest Solana ticker");
+  assert(B.logoColor("cardano", model) === "" && B.logoColor("home", model) === "" && B.logoColor("solana", null) === "", "other desks keep the accent logo");
+  const sol = B.solanaPanel(model);
+  assert(sol.includes("measured, not a signal") && sol.includes("no buzz data yet") === false, "solana buzz is labeled and filled");
+  assert(sol.indexOf("solana:RDOG") < sol.indexOf("solana:FLOATER") && sol.indexOf("solana:FLOATER") < sol.indexOf("solana:RSTR") && sol.indexOf("solana:RSTR") < sol.indexOf("solana:BIO"), "solana rows sort by velocity");
+  assert((sol.match(/class="vchip hot"/g) || []).length === 2, "chips pulse only at 2x or more");
+  assert(sol.includes('data-buzz-final="2.5x">2.5x<') && sol.includes('data-buzz-final="1.06x">1.06x<'), "velocity chip shows the file ratio");
+  const rdog = sol.split('data-buzz-token="solana:RDOG"')[1].split("</button>")[0];
+  assert((rdog.match(/<i/g) || []).length === 24 && (rdog.match(/class="z"/g) || []).length === 22, "each row is 24 recorded hours");
+  assert(!sol.includes(mint) && !sol.includes("A".repeat(20)) && sol.includes("5kUx…nbwo") && sol.includes("AAAA…AAAA"), "query and full ids stay off the solana panel");
+  assert(!/live tick|simulated|setInterval|Math\.random/i.test(sol), "solana panel is not a live tick");
+  const ada = B.cardanoPanel(model);
+  assert(ada.includes("buzz layer") && ada.includes("measured, not a signal"), "cardano buzz layer is labeled");
+  assert(/class="buzz-cell lowc" data-buzz-token="cardano:NIGHT"/.test(ada), "low confidence is hatched");
+  assert(/class="buzz-cell" data-buzz-token="cardano:SNEK"/.test(ada), "medium confidence is not hatched");
+  assert(/class="buzz-cell" data-buzz-token="cardano:SOLADA"/.test(ada), "schema confidence wins over a legacy low flag");
+  assert(/class="buzz-cell lowc" data-buzz-token="cardano:CLOVE"/.test(ada), "legacy low flag still hatches when confidence is absent");
+  const h2 = [...ada.matchAll(/<h2>([\s\S]*?)<\/h2>/g)].map(m => m[1].replace(/<[^>]+>/g, ""));
+  assert(h2.length === 1 && !/snek/i.test(h2[0]) && !/suri/i.test(ada) && !/\bfounder\b/i.test(ada), "buzz panel names stay neutral");
+  assert(ada.indexOf("cardano:NIGHT") < ada.indexOf("cardano:SNEK"), "cardano cells sort by 1h mentions");
+  assert(!ada.includes(mint) && ada.includes("0691b2…"), "cardano cells use a short id");
+  const home = B.homePanel(model);
+  assert(home === B.homePanel(model), "home charts are deterministic");
+  assert(home.includes("buzz-static") && home.includes("measured, not a signal"), "home buzz is static and labeled");
+  assert(!home.includes("data-buzz-count") && !/animation=/.test(home), "home charts do not animate");
+  assert((home.match(/stroke-dasharray="4 4"/g) || []).length === 3 && (home.match(/EXAMPLE PRICE/g) || []).length === 3, "price line is a dashed example placeholder");
+  assert(home.includes("Buzz: 5/h, 2.5x") && home.includes("Buzz: 22/h, 2.2x") && home.includes("Buzz: 17/h, 1.06x"), "chart stamps use the file");
+  assert(!home.includes(mint), "home charts hide full ids");
+  const floater = model.byKey["solana:FLOATER"];
+  const q = B.quality(floater);
+  assert(q.basis === "mixed" && q.segments[0].text === "bot-like 13%" && q.segments[1].text === "normal 80%" && q.segments[2].text === ">10k 1", "floater bar matches the sample");
+  assert(q.note.includes("1 of 15") && q.note.includes("unique authors") && q.note.includes("posts sample"), "shares say which base they use");
+  const detail = B.detailInner(floater, model);
+  assert(detail.includes("measured, not a signal") && detail.includes("data-w=\"13%\"") && detail.includes("data-w=\"80%\"") && detail.includes("data-w=\"7%\"") && detail.includes("&gt;10k 1"), "detail bar is the author mix");
+  assert(detail.includes("1,571") && detail.includes("posts sample") && !detail.includes(mint), "detail keeps the median and drops the query");
+  const snekDetail = B.detailInner(model.byKey["cardano:SNEK"], model);
+  assert(snekDetail.includes("817.5"), "median keeps a fractional follower count");
+  const quiet = B.quality({ sample: { posts: 0, unique_authors: 0, median_followers: null, bot_like_share: null, authors_over_10k: 0, skipped: "too few mentions to sample" } });
+  assert(quiet.basis === "none" && quiet.note.includes("too few"), "a skipped sample is labeled");
+  const authorsOnly = B.quality({ sample: { posts: 4, unique_authors: 4, median_followers: 10, bot_like_share: null, authors_over_10k: 1 } });
+  assert(authorsOnly.basis === "unique authors" && authorsOnly.note.includes("shares of 4 unique authors"), "author counts are used when the file has them");
+  const shellSol = '<div class="pagehead"></div><div class="stack"><p>books</p></div>';
+  const drawnSol = B.decorate("solana", shellSol, doc);
+  assert(drawnSol.indexOf("buzz sparkline") < drawnSol.indexOf("books") && drawnSol.includes("solana:RDOG"), "solana tab gains the sparkline");
+  const shellAda = '<div class="stack"><section class="panel"><h3><span class="ttl">Cluster heat</span></h3></section></div>';
+  const drawnAda = B.decorate("cardano", shellAda, doc);
+  assert(drawnAda.indexOf("buzz layer") < drawnAda.indexOf("Cluster heat</span>"), "buzz layer sits on the heat grid");
+  const shellHome = '<div class="stack"><section class="panel"><h3><span class="ttl">Latest briefs</span></h3><article class="feed-item"><div class="meta">desk</div></article></section></div>';
+  const drawnHome = B.decorate("home", shellHome, doc);
+  assert(drawnHome.indexOf("buzz vs price") < drawnHome.indexOf("Latest briefs</span>"), "home charts sit above briefs");
+  assert(drawnHome.includes('class="feed-item"><div class="meta"><span class="buzz-stamp"') && drawnHome.includes("Buzz: 5/h, 2.5x"), "briefs get the fastest stamp");
+  const missing = B.decorate("solana", shellSol, null);
+  assert(missing.includes("no buzz data yet") && !/\berror\b/i.test(missing), "a missing buzz file is an empty state");
+  assert(B.decorate("cardano", shellAda, { tokens: [] }).includes("no buzz data yet"), "an empty token list is an empty state");
+  assert(B.decorate("nft", "<p>nft</p>", doc) === "<p>nft</p>", "nft tab is left alone");
+  const moving = { console, matchMedia: () => ({ matches: false }) };
+  moving.window = moving;
+  moving.globalThis = moving;
+  vm.runInNewContext(buzzSrc, moving);
+  const started = moving.SightlineBuzz.solanaPanel(moving.SightlineBuzz.model(doc));
+  assert(started.includes('data-buzz-final="2.5x">0x<'), "motion grows the chip from zero");
+  const reduced = { console, matchMedia: () => ({ matches: true }) };
+  reduced.window = reduced;
+  reduced.globalThis = reduced;
+  vm.runInNewContext(buzzSrc, reduced);
+  const still = reduced.SightlineBuzz.solanaPanel(reduced.SightlineBuzz.model(doc));
+  assert(still.includes('data-buzz-final="2.5x">2.5x<'), "reduced motion paints the final ratio");
+  const noneHist = B.alertsPanel(B.historyModel(null));
+  assert(noneHist.includes("recent buzz alerts") && noneHist.includes("no buzz history yet") && noneHist.includes("measured, not a signal") && !/\berror\b/i.test(noneHist), "missing history is an empty state");
+  assert(B.detailInner(model.byKey["solana:RDOG"], model).includes("no buzz history yet"), "detail without history stays quiet");
+  const stakeBook = "stake1u" + "y".repeat(40);
+  const hist = [
+    { asof: "2026-10-28T20:00:00Z", ticker: "RDOG", chain: "solana", id_short: mint, mentions_1h: 2, mentions_24h: 2, ratio_1h_vs_prev_hr: null, alert: false, paper_position: stakeBook },
+    { asof: "2026-10-29T01:49:00Z", ticker: "RDOG", chain: "solana", id_short: "5kUx…nbwo", mentions_1h: 5, mentions_24h: 7, ratio_1h_vs_prev_hr: 2.5, alert: true, paper_position: "F" },
+    { asof: "2026-10-29T01:49:00Z", ticker: "FLOATER", chain: "solana", id_short: "J7cq…pump", mentions_1h: 22, mentions_24h: 30, ratio_1h_vs_prev_hr: 2.2, alert: false, paper_position: null },
+    { asof: "2026-10-29T02:00:00Z", ticker: "BIO", chain: "solana", id_short: "7AxJ…pump", mentions_1h: 9, mentions_24h: 9, ratio_1h_vs_prev_hr: 1.1, alert: true, paper_position: null }
+  ].map(row => JSON.stringify(row)).join("\n\n");
+  const parsed = B.historyModel(hist);
+  assert(parsed.missing === false && parsed.rows.length === 4 && parsed.rows[0].book === "" && parsed.rows[1].book === "F", "a book letter is kept and anything longer is dropped");
+  const alerts = B.alertsPanel(parsed);
+  assert(alerts.includes("buzz-static") && alerts.includes("measured, not a signal") && !alerts.includes("data-buzz-count"), "alert list is static and labeled");
+  assert(alerts.indexOf(">BIO<") < alerts.indexOf(">RDOG<"), "newest alert is listed first");
+  assert(alerts.includes("5/h") && alerts.includes("2.5x") && alerts.includes("buzz-book\">F<"), "alert row shows mentions, velocity, and the paper book");
+  assert(!alerts.includes("FLOATER") && !alerts.includes(mint) && !alerts.includes("stake1"), "non-alerts and full ids stay off the alert list");
+  assert(alerts.includes("ET"), "alert time is labeled ET");
+  const quietHist = B.historyModel(JSON.stringify({ asof: "2026-10-29T01:49:00Z", ticker: "SNEK", chain: "cardano", id_short: "279c90…", mentions_1h: 1, mentions_24h: 44, ratio_1h_vs_prev_hr: null, alert: false, paper_position: null }));
+  assert(B.alertsPanel(quietHist).includes("no buzz alerts yet"), "history with no alert runs says so");
+  const timeline = B.detailInner(model.byKey["solana:RDOG"], model, parsed);
+  assert(timeline.includes("Buzz timeline") && timeline.includes("dot marks an alert") && (timeline.match(/class="run alert"/g) || []).length === 1, "the token timeline marks the alert run");
+  assert(timeline.indexOf('class="run"') < timeline.indexOf('class="run alert"'), "timeline runs stay in time order");
+  assert(!timeline.includes(mint) && !timeline.includes("stake1"), "timeline does not render a full id");
+  const homeHist = B.decorate("home", shellHome, doc, hist);
+  assert(homeHist.includes("recent buzz alerts") && homeHist.indexOf("buzz vs price") < homeHist.indexOf("recent buzz alerts") && homeHist.indexOf("recent buzz alerts") < homeHist.indexOf("Latest briefs</span>"), "home shows alerts under the charts");
+  assert(B.decorate("home", shellHome, null, null).includes("no buzz history yet"), "home without a history file does not error");
 }
 
 console.log("smoke-dashboard: OK");
