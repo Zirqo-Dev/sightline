@@ -3,6 +3,7 @@ import contextlib
 import io
 import json
 import os
+import shutil
 import tempfile
 import unittest
 
@@ -551,6 +552,8 @@ class Sync(unittest.TestCase):
                 self.assertEqual(sorted(again.doc["entries"]["wallet-newer"]["evidence"]["late_rug"]),
                                  ["token-a", "token-b"])
                 self.assertIn("wallet-other", again.doc["entries"])
+                self.assertEqual(again.status()["sync"], "error")
+                self.assertEqual(set(json.load(open(os.path.join(cache, RB.SYNC_NAME)))), {"sync"})
             finally:
                 self._restore(old)
 
@@ -578,6 +581,7 @@ class Sync(unittest.TestCase):
                 healed = RB.open_book(cache, public, prior={"entries": 3, "edges": 1})
                 self.assertFalse(healed.held)
                 self.assertEqual(healed.judge("wallet-remote", "token-b", NOW)[0]["code"], "known_rugger")
+                self.assertEqual(healed.status()["sync"], "ok")
             finally:
                 self._restore(old)
 
@@ -594,9 +598,12 @@ class Sync(unittest.TestCase):
         RB._clone_private = clone
         RB._remote_read.clear()
         buf = io.StringIO()
+        cache = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, cache, True)
         try:
             with contextlib.redirect_stdout(buf):
-                self.assertFalse(RB.sync_cache("/tmp/does-not-need-to-exist", "solana", None))
+                self.assertFalse(RB.sync_cache(cache, "solana", None))
+                self.assertEqual(json.load(open(os.path.join(cache, RB.SYNC_NAME))), {"sync": "refused"})
                 self.assertEqual(RB.read_private("solana"), ("error", None))
             text = buf.getvalue()
             self.assertIn("visibility is not private", text)
@@ -606,7 +613,7 @@ class Sync(unittest.TestCase):
             RB._remote_read.clear()
             buf2 = io.StringIO()
             with contextlib.redirect_stdout(buf2):
-                self.assertFalse(RB.sync_cache("/tmp/does-not-need-to-exist", "cardano", None))
+                self.assertFalse(RB.sync_cache(cache, "cardano", None))
             self.assertIn("visibility is not private", buf2.getvalue())
             self.assertNotIn("down", buf2.getvalue())
         finally:

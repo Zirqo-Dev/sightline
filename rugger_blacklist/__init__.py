@@ -616,17 +616,26 @@ class Book:
             print("::warning::rugger blacklist: cache miss after a non-empty list; not saving")
 
     def status(self):
-        """Hash-free counts for the public health line."""
+        """Hash-free counts for the public health line.
+
+        sync, when present, is the previous private-repo sync: ok, unset, refused, or error.
+        """
         if self.held:
-            return {"store": "miss", "entries": self._held_entries, "edges": self._held_edges, "held": True}
-        kind = getattr(self.store, "kind", "hit")
-        if kind == "corrupt":
-            return {"store": "corrupt", "entries": self._held_entries, "edges": self._held_edges}
-        return {
-            "store": kind,
-            "entries": len(self.doc.get("entries") or {}),
-            "edges": len(self.doc.get("edges") or []),
-        }
+            out = {"store": "miss", "entries": self._held_entries, "edges": self._held_edges, "held": True}
+        else:
+            kind = getattr(self.store, "kind", "hit")
+            if kind == "corrupt":
+                out = {"store": "corrupt", "entries": self._held_entries, "edges": self._held_edges}
+            else:
+                out = {
+                    "store": kind,
+                    "entries": len(self.doc.get("entries") or {}),
+                    "edges": len(self.doc.get("edges") or []),
+                }
+        sync = read_sync_status(getattr(self, "cache_dir", None), getattr(self, "public_dir", None))
+        if sync:
+            out["sync"] = sync
+        return out
 
     def exclude(self, wallet):
         if not wallet_ok(wallet):
@@ -1207,25 +1216,31 @@ def _commit_export(tmp, token, desk, rel):
     _rebase_and_push(tmp, token)
 
 
+def _sync_done(cache_dir, public_dir, status, ok):
+    write_sync_status(cache_dir, status, public_dir)
+    return ok
+
+
 def sync_cache(cache_dir, desk, public_dir=None):
     """Union the cache with the private repo, then pull --rebase and push.
 
     A scan does not call this. A successful remote document clears a corrupt file
     and a miss. A push failure leaves the merged cache in place and does not say
-    the Actions cache saved the run. Never force-pushes.
+    the Actions cache saved the run. Never force-pushes. Writes a hash-free sync
+    status into the cache for the next health line.
     """
     if desk not in ("cardano", "solana") or not cache_dir:
         return False
     token = _token()
     if not token:
         warn_no_token()
-        return False
+        return _sync_done(cache_dir, public_dir, "unset", False)
     repo = _private_repo()
     if not repo:
         print("::warning::rugger blacklist: private repo name rejected")
-        return False
+        return _sync_done(cache_dir, public_dir, "error", False)
     if not _repo_is_private(repo, token):
-        return False
+        return _sync_done(cache_dir, public_dir, "refused", False)
     kind, local = _cache_parts(cache_dir)
     tmp = None
     try:
@@ -1245,20 +1260,20 @@ def sync_cache(cache_dir, desk, public_dir=None):
                 remote = None
         if not remote_ok:
             warn_not_updated()
-            return False
+            return _sync_done(cache_dir, public_dir, "error", False)
         if remote is not None or kind == "hit":
             merged = _apply_remote(cache_dir, public_dir, local, remote)
         else:
             merged = None
         if merged is None:
-            return True
+            return _sync_done(cache_dir, public_dir, "ok", True)
         rel = _export_into(tmp, desk, merged)
         _commit_export(tmp, token, desk, rel)
         _remote_read[desk] = ("ok", export_readable(merged, desk))
-        return True
+        return _sync_done(cache_dir, public_dir, "ok", True)
     except Exception:
         warn_not_updated()
-        return False
+        return _sync_done(cache_dir, public_dir, "error", False)
     finally:
         if tmp:
             shutil.rmtree(tmp, ignore_errors=True)
@@ -1319,6 +1334,8 @@ def open_book(cache_dir, public_dir, cfg=None, exclusions=(), prior=None, desk=N
         extra.extend(block["exclusions"])
     book = Book(store, settings_from(cfg), extra, exclusion_sha256(cfg))
     book.desk = desk if desk in ("cardano", "solana") else None
+    book.cache_dir = cache_dir
+    book.public_dir = public_dir
     book.hold_for_miss(prior)
     return book
 
@@ -1410,6 +1427,42 @@ def reseed_late_rugs(book, cache_dir, public_dir, at):
 
 HOLD_NAME = "HOLD"
 PULLS_NAME = "rugger-pulls.json"
+SYNC_NAME = "rugger-sync.json"
+SYNC_VALUES = ("ok", "unset", "refused", "error")
+
+
+def write_sync_status(cache_dir, status, public_dir=None):
+    """Record ok, unset, refused, or error. The file has no wallets."""
+    if not cache_dir or status not in SYNC_VALUES:
+        return False
+    path = os.path.join(cache_dir, SYNC_NAME)
+    if public_dir and _inside(path, public_dir):
+        return False
+    try:
+        os.makedirs(cache_dir, exist_ok=True)
+        with open(path, "w") as fh:
+            json.dump({"sync": status}, fh)
+            fh.write("\n")
+    except OSError:
+        return False
+    return True
+
+
+def read_sync_status(cache_dir, public_dir=None):
+    """The enum from the cache, or None. A file with anything else is ignored."""
+    if not cache_dir:
+        return None
+    path = os.path.join(cache_dir, SYNC_NAME)
+    if public_dir and _inside(path, public_dir):
+        return None
+    try:
+        with open(path) as fh:
+            doc = json.load(fh)
+    except (OSError, ValueError):
+        return None
+    if isinstance(doc, dict) and set(doc) == {"sync"} and doc.get("sync") in SYNC_VALUES:
+        return doc["sync"]
+    return None
 
 
 def prior_from_doc(doc):

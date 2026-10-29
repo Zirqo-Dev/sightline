@@ -188,6 +188,24 @@ class LogOnly(unittest.TestCase):
             else:
                 os.environ["PRIVACY_GUARD_PATTERNS"] = old
 
+    def test_health_sync_field_is_hash_free(self):
+        rc = _rc(rugged=True, creator=CREATOR)
+        with tempfile.TemporaryDirectory() as d:
+            data, cache = os.path.join(d, "data"), os.path.join(d, "cache")
+            os.makedirs(data)
+            os.makedirs(cache)
+            with open(os.path.join(cache, RB.SYNC_NAME), "w") as fh:
+                json.dump({"sync": "ok"}, fh)
+            run.scan(data, self._get(rc, MINT_A), key=None, now=NOW, mode="scan",
+                     sleep=lambda s: None, cache_dir=cache)
+            health = json.load(open(os.path.join(data, "health.json")))
+            self.assertEqual(health["rugger_status"]["sync"], "ok")
+            self.assertNotIn(CREATOR, json.dumps(health["rugger_status"]))
+            with open(os.path.join(cache, RB.SYNC_NAME), "w") as fh:
+                json.dump({"sync": "ok", "wallet": CREATOR}, fh)
+            book = RB.open_book(cache, data, desk="solana")
+            self.assertNotIn("sync", book.status())
+
     def test_exclusions_come_from_rugger_json(self):
         self.assertFalse(hasattr(C, "RUGGER_EXCLUSION_SHA256"))
         digest = "ab" * 32

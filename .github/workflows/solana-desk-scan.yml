@@ -62,22 +62,6 @@ jobs:
           if [ -z "$JUPITER_API_KEY" ]; then echo "::warning::JUPITER_API_KEY secret not set; using keyless Jupiter (noted in health.json)"; fi
           mkdir -p "$SOLANA_DESK_CACHE_DIR"
           timeout 420 python3 -m desk.run --mode "$MODE" --data-dir "$GITHUB_WORKSPACE/data/solana-desk" --cache-dir "$SOLANA_DESK_CACHE_DIR"
-      - name: Sync private rugger list
-        if: always()
-        env:
-          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
-          RUGGER_ACCEPT_RESET: ${{ vars.RUGGER_ACCEPT_RESET }}
-        working-directory: code
-        run: |
-          python3 -m rugger_blacklist.sync --desk solana \
-            --cache-dir "${{ runner.temp }}/solana-desk-cache" \
-            --public-dir "$GITHUB_WORKSPACE/data/solana-desk"
-      - name: Save private rugger list
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ runner.temp }}/solana-desk-cache
-          key: solana-desk-rugger-${{ github.run_id }}
       - name: Commit to desk-data
         if: always()
         env:
@@ -103,3 +87,20 @@ jobs:
             git pull --rebase origin desk-data || { git rebase --abort; exit 1; }
           done
           exit 1
+      - name: Sync private rugger list
+        if: always()
+        timeout-minutes: 2
+        env:
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+          RUGGER_ACCEPT_RESET: ${{ vars.RUGGER_ACCEPT_RESET }}
+        working-directory: code
+        run: |
+          python3 -m rugger_blacklist.sync --desk solana \
+            --cache-dir "${{ runner.temp }}/solana-desk-cache" \
+            --public-dir "$GITHUB_WORKSPACE/data/solana-desk"
+      - name: Save private rugger list
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/solana-desk-cache
+          key: solana-desk-rugger-${{ github.run_id }}

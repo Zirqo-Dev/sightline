@@ -423,7 +423,7 @@ sys.exit(0)
 done
 owner_hits=0
 if [ -n "${PRIVACY_GUARD_PATTERNS:-}" ]; then
-  owner_id_blob=$(python3 -c '
+  if ! owner_id_blob=$(python3 -c '
 import hashlib, hmac, os, re, sys
 src = sys.argv[1] if len(sys.argv) > 1 else ""
 if src:
@@ -433,6 +433,9 @@ try:
 except Exception:
     F = None
 text = os.environ.get("PRIVACY_GUARD_PATTERNS", "")
+if F is None and re.search(r"addr1[02-9ac-hj-np-z]{20,}", text):
+    sys.stderr.write("PRIVACY GUARD FAILED: cannot derive stake keys from owner addresses\n")
+    sys.exit(1)
 ids = []
 seen = set()
 pepper = None
@@ -467,7 +470,9 @@ for m in sol.finditer(text):
         continue
     add(m.group(0))
 sys.stdout.write("\n".join(ids))
-' "$script_dir/../solada-prefilter")
+' "$script_dir/../solada-prefilter"); then
+    exit 1
+  fi
   if [ -n "$owner_id_blob" ]; then
     for f in "${files[@]}"; do
       [ -f "$f" ] || continue

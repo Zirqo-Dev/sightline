@@ -458,6 +458,41 @@ class Guard(unittest.TestCase):
         self.assertNotEqual(r2.returncode, 0)
         self.assertIn(b"private cache file", r2.stderr)
 
+    def test_guard_fails_closed_when_stake_derivation_cannot_import(self):
+        payment = "addr1" + ("q" * 20)
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d, True)
+        main = os.path.join(d, "main", "scripts")
+        os.makedirs(main)
+        shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), main)
+        data = os.path.join(d, "desk-data")
+        os.makedirs(data)
+        with open(os.path.join(data, "note.json"), "w") as fh:
+            fh.write("{}\n")
+        subprocess.run(["git", "init", "-q"], cwd=data, check=True)
+        subprocess.run(["git", "add", "-A"], cwd=data, check=True)
+        env = dict(os.environ, PRIVACY_GUARD_PATTERNS=payment)
+        r = subprocess.run(["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data"],
+                           cwd=d, env=env, capture_output=True)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn(b"cannot derive stake keys", r.stderr)
+        self.assertNotIn(payment.encode(), r.stdout + r.stderr)
+        env_ok = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
+        plain = subprocess.run(["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data"],
+                               cwd=d, env=env_ok, capture_output=True)
+        self.assertEqual(plain.returncode, 0, plain.stderr)
+
+    def test_cardano_status_includes_sync(self):
+        with tempfile.TemporaryDirectory() as d:
+            data, cache = os.path.join(d, "data"), os.path.join(d, "cache")
+            os.makedirs(data)
+            os.makedirs(cache)
+            with open(os.path.join(cache, RB.SYNC_NAME), "w") as fh:
+                json.dump({"sync": "unset"}, fh)
+            _book, _devs, _times, status = V._open_rugger(cache, data, CFG, AT, False)
+            self.assertEqual(status["sync"], "unset")
+            self.assertEqual(set(status) & {"wallet", "stake"}, set())
+
 
 if __name__ == "__main__":
     unittest.main()
