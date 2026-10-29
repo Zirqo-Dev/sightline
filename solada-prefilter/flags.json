@@ -1,48 +1,32 @@
 {
- "at": "2026-10-29T10:10:46Z",
+ "at": "2026-10-29T12:11:24Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "sniper_full_exit",
-   "ticker": "MASCOT",
-   "wallet": "w-bb4db38b",
-   "tags": [],
-   "at": "2026-10-29T10:10:46Z"
+   "kind": "holder_concentration",
+   "ticker": "EVIL",
+   "top_addr_pct": 38.0,
+   "top_cluster_pct": 38.0,
+   "top_cluster": "w-fd97dd73",
+   "basis": "ex-fe819d",
+   "at": "2026-10-29T12:11:24Z"
   },
   {
-   "kind": "sniper_full_exit",
-   "ticker": "MASCOT",
-   "wallet": "w-907ce4e3",
-   "tags": [],
-   "at": "2026-10-29T10:10:46Z"
+   "kind": "founder_whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 52458723,
+   "decimals": 6,
+   "qty": 52.4587,
+   "ada_equiv": 71,
+   "value_basis": "ada_leg",
+   "pct": 0.0,
+   "at": "2026-10-29T12:11:24Z"
   }
  ],
  "recent": [
-  {
-   "kind": "watch_tags_early_buyers",
-   "ticker": "BREAD",
-   "tags": [
-    "u9n6w6w8uh"
-   ],
-   "roles": [
-    "log_whale_watch"
-   ],
-   "at": "2026-10-27T20:11:04Z"
-  },
-  {
-   "kind": "watch_tags_early_buyers",
-   "ticker": "INTEL",
-   "tags": [
-    "u8ght830nm",
-    "u9n6w6w8uh"
-   ],
-   "roles": [
-    "log_whale_watch"
-   ],
-   "at": "2026-10-27T20:11:04Z"
-  },
   {
    "kind": "watch_tags_early_buyers",
    "ticker": "TCM",
@@ -3208,10 +3192,32 @@
    "wallet": "w-907ce4e3",
    "tags": [],
    "at": "2026-10-29T10:10:46Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "EVIL",
+   "top_addr_pct": 38.0,
+   "top_cluster_pct": 38.0,
+   "top_cluster": "w-fd97dd73",
+   "basis": "ex-fe819d",
+   "at": "2026-10-29T12:11:24Z"
+  },
+  {
+   "kind": "founder_whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 52458723,
+   "decimals": 6,
+   "qty": 52.4587,
+   "ada_equiv": 71,
+   "value_basis": "ada_leg",
+   "pct": 0.0,
+   "at": "2026-10-29T12:11:24Z"
   }
  ],
  "api_calls": {
-  "koios": 1
+  "blockfrost": 1,
+  "koios": 2
  },
  "thresholds": {
   "enabled": true,
