@@ -1,10 +1,10 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793239227,
+ "last_run_ts": 1793241024,
  "voids": [],
  "books": {
   "F": {
-   "cash": 5.7682550770517,
+   "cash": 5.787007063603835,
    "open": {
     "F-20261029T0100-J7cqpump": {
      "entry": 0.0016912872880881567,
@@ -13,7 +13,7 @@
      "liq0": 144.6746,
      "opened": 1793235626,
      "frac": 0.6666666666666667,
-     "last_mark": 0.002544242859251847,
+     "last_mark": 0.002275484648197091,
      "stale": 0,
      "no_route_count": 0,
      "mint": "J7cqsaTuXUavwA3sp238tSpartUfYwDrJAaHuDvypump",
@@ -28,7 +28,7 @@
      "entry_cost": 0.5034405160820143,
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "exit_haircut": 0.006581893612163024
+     "exit_haircut": 0.0065768867622949785
     },
     "F-20261029T0100-7tLnrray": {
      "entry": 2.2631820664637057e-05,
@@ -37,7 +37,7 @@
      "liq0": 20.08759,
      "opened": 1793235626,
      "frac": 1.0,
-     "last_mark": 2.1087226107724015e-05,
+     "last_mark": 2.0353965619354563e-05,
      "stale": 0,
      "no_route_count": 0,
      "mint": "7tLnH6ZsUKm5e8nNaBxd4YbLNd5pYFvSf35exRDsrray",
@@ -52,40 +52,16 @@
      "entry_cost": 0.5060458094366558,
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "exit_haircut": 0.0117100783724256
-    },
-    "F-20261029T0100-9QT2pump": {
-     "entry": 0.0004387761541598724,
-     "peak": 0.0007325299119924667,
-     "steps": 1,
-     "liq0": 62.9878,
-     "opened": 1793235626,
-     "frac": 0.6666666666666667,
-     "last_mark": 0.0005927290378998172,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "9QT2ue258kE1NYr7U9f3uGpcRNQHPB45ikxmmCdGpump",
-     "symbol": "RSTR",
-     "tokens": 1139533211319,
-     "run_id": "20261029T0100",
-     "why": "pass",
-     "book": "F",
-     "pnl": 0.1083756178247669,
-     "gross_pnl": 0.11158072100000002,
-     "entry_haircut": 0.00796888221044043,
-     "entry_cost": 0.5039944411052202,
-     "cost_model": "v3-exit-aware",
-     "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "exit_haircut": 0.0072976901849974565
+     "exit_haircut": 0.011611863474766108
     },
     "F-20261029T0200-BZutpump": {
      "entry": 0.00011914752978083529,
-     "peak": 0.00011914752978083529,
+     "peak": 0.00012450594305904667,
      "steps": 0,
      "liq0": 34.8768,
      "opened": 1793239227,
      "frac": 1.0,
-     "last_mark": 0.00011914752978083529,
+     "last_mark": 0.00012450594305904667,
      "stale": 0,
      "no_route_count": 0,
      "mint": "BZutpnKFLjLqQ8XRP1Ny7RnVNBvZ4NgoEn4QBAxVpump",
@@ -99,12 +75,13 @@
      "entry_haircut": 0.009533389113769476,
      "entry_cost": 0.5047766945568847,
      "cost_model": "v3-exit-aware",
-     "cost_model_started_at": "2026-10-29T00:30:25Z"
+     "cost_model_started_at": "2026-10-29T00:30:25Z",
+     "exit_haircut": 0.010286866316171947
     }
    },
    "fills_day": "2026-10-29",
    "fills_today": 8,
-   "realized_pnl": -2.5492991141632726,
+   "realized_pnl": -2.8665434216812846,
    "closed": [
     {
      "id": "F-20261028T1330-96AUWRAY",
@@ -273,14 +250,31 @@
      "why_entered": "pass",
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z"
+    },
+    {
+     "id": "F-20261029T0100-9QT2pump",
+     "mint": "9QT2ue258kE1NYr7U9f3uGpcRNQHPB45ikxmmCdGpump",
+     "symbol": "RSTR",
+     "opened": 1793235626,
+     "closed": 1793241024,
+     "entry": 0.0004387761541598724,
+     "exit_px": 2.5258845213193554e-05,
+     "why": "liquidity_pulled",
+     "pnl": -0.20886869,
+     "gross_pnl": -0.20256375,
+     "pct": -41.44,
+     "gross_pct": -40.51,
+     "why_entered": "pass",
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z"
     }
    ],
    "would_halt": [],
    "peak_equity": 10.0,
-   "realized_gross": 0.11000872000007858
+   "realized_gross": -0.20413575133325476
   },
   "R": {
-   "cash": 6.718342334785062,
+   "cash": 6.965494418140777,
    "open": {
     "R-20261029T0100-7tLnrray": {
      "entry": 2.2631820664637057e-05,
@@ -289,7 +283,7 @@
      "liq0": 20.08759,
      "opened": 1793235626,
      "frac": 1.0,
-     "last_mark": 2.1087226107724015e-05,
+     "last_mark": 2.0353965619354563e-05,
      "stale": 0,
      "no_route_count": 0,
      "mint": "7tLnH6ZsUKm5e8nNaBxd4YbLNd5pYFvSf35exRDsrray",
@@ -304,7 +298,7 @@
      "entry_cost": 0.5060458094366558,
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "exit_haircut": 0.0117100783724256
+     "exit_haircut": 0.011611863474766108
     },
     "R-20261029T0100-J7cqpump": {
      "entry": 0.0016912872880881567,
@@ -313,7 +307,7 @@
      "liq0": 144.6746,
      "opened": 1793235626,
      "frac": 0.6666666666666667,
-     "last_mark": 0.0030368966902942834,
+     "last_mark": 0.0023425380261191354,
      "stale": 0,
      "no_route_count": 0,
      "mint": "J7cqsaTuXUavwA3sp238tSpartUfYwDrJAaHuDvypump",
@@ -328,59 +322,12 @@
      "entry_cost": 0.5034405160820143,
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "exit_haircut": 0.006702131593752583
-    },
-    "R-20261029T0100-9QT2pump": {
-     "entry": 0.0004387761541598724,
-     "peak": 0.0006875312331556763,
-     "steps": 1,
-     "liq0": 62.9878,
-     "opened": 1793235626,
-     "frac": 0.6666666666666667,
-     "last_mark": 0.0005927290378998172,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "9QT2ue258kE1NYr7U9f3uGpcRNQHPB45ikxmmCdGpump",
-     "symbol": "RSTR",
-     "tokens": 1139533211319,
-     "run_id": "20261029T0100",
-     "why": "random_match",
-     "book": "R",
-     "pnl": 0.0914087660734566,
-     "gross_pnl": 0.09448822466666665,
-     "entry_haircut": 0.00796888221044043,
-     "entry_cost": 0.5039944411052202,
-     "cost_model": "v3-exit-aware",
-     "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "exit_haircut": 0.0072976901849974565
-    },
-    "R-20261029T0200-B3gspump": {
-     "entry": 0.0005005694842401771,
-     "peak": 0.0005005694842401771,
-     "steps": 0,
-     "liq0": 66.9399,
-     "opened": 1793239227,
-     "frac": 1.0,
-     "last_mark": 0.0005005694842401771,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "B3gsiynnGCcAdGPwigWyCnjy6t1hf8vR62ZDBwngpump",
-     "symbol": "PVE",
-     "tokens": 998862327293,
-     "run_id": "20261029T0200",
-     "why": "random_match",
-     "book": "R",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
-     "entry_haircut": 0.007853502155252306,
-     "entry_cost": 0.5039367510776261,
-     "cost_model": "v3-exit-aware",
-     "cost_model_started_at": "2026-10-29T00:30:25Z"
+     "exit_haircut": 0.0065938459279121535
     }
    },
    "fills_day": "2026-10-29",
    "fills_today": 7,
-   "realized_pnl": -1.6000517999091706,
+   "realized_pnl": -2.192832761701229,
    "closed": [
     {
      "id": "R-20261028T1400-Cd5npump",
@@ -521,14 +468,48 @@
      "why_entered": "random_match",
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z"
+    },
+    {
+     "id": "R-20261029T0100-9QT2pump",
+     "mint": "9QT2ue258kE1NYr7U9f3uGpcRNQHPB45ikxmmCdGpump",
+     "symbol": "RSTR",
+     "opened": 1793235626,
+     "closed": 1793241024,
+     "entry": 0.0004387761541598724,
+     "exit_px": 2.5219743676215597e-05,
+     "why": "liquidity_pulled",
+     "pnl": -0.225864549,
+     "gross_pnl": -0.219685952,
+     "pct": -44.81,
+     "gross_pct": -43.94,
+     "why_entered": "random_match",
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z"
+    },
+    {
+     "id": "R-20261029T0200-B3gspump",
+     "mint": "B3gsiynnGCcAdGPwigWyCnjy6t1hf8vR62ZDBwngpump",
+     "symbol": "PVE",
+     "opened": 1793239227,
+     "closed": 1793241024,
+     "entry": 0.0005005694842401771,
+     "exit_px": 0.00023390352465607232,
+     "why": "hard_stop",
+     "pnl": -0.275507647,
+     "gross_pnl": -0.266362581,
+     "pct": -54.67,
+     "gross_pct": -53.27,
+     "why_entered": "random_match",
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z"
     }
    ],
    "would_halt": [],
    "peak_equity": 10.0,
-   "realized_gross": 0.04866337366688228
+   "realized_gross": -0.5318733836664511
   },
   "S": {
-   "cash": 7.05834963881304,
+   "cash": 6.572640080056228,
    "open": {
     "S-20261028T1900-BLAypump": {
      "entry": 0.0016256825499667297,
@@ -537,7 +518,7 @@
      "liq0": 148.2672,
      "opened": 1793214029,
      "frac": 0.6666666666666667,
-     "last_mark": 0.002364114791869221,
+     "last_mark": 0.0025370568377228796,
      "stale": 0,
      "no_route_count": 0,
      "mint": "BLAytV5xTVEkYJYS1RoFR5Ypgm3JZ44CvVdZHTExpump",
@@ -550,7 +531,7 @@
      "gross_pnl": 0.097549048,
      "entry_haircut": 0.02746345431991389,
      "entry_cost": 0.5137417271599569,
-     "exit_haircut": 0.006618983937841813
+     "exit_haircut": 0.006645245986191088
     },
     "S-20261028T2100-dyw5pump": {
      "entry": 0.0043110598611640375,
@@ -559,7 +540,7 @@
      "liq0": 257.1357,
      "opened": 1793221227,
      "frac": 0.3333333333333334,
-     "last_mark": 0.022354441576300975,
+     "last_mark": 0.02183077369473058,
      "stale": 0,
      "no_route_count": 0,
      "mint": "dyw5fDNv91eknniMG4tGCU1ZrzjuxbpsLiEzih6pump",
@@ -572,36 +553,35 @@
      "gross_pnl": 0.37385306,
      "entry_haircut": 0.020440792724637596,
      "entry_cost": 0.5102303963623187,
-     "exit_haircut": 0.006334925386403139
+     "exit_haircut": 0.0063273780628136265
     },
-    "S-20261029T0030-9QT2pump": {
-     "entry": 0.00045170216607361277,
-     "peak": 0.0006860665936633544,
-     "steps": 1,
-     "liq0": 71.5353,
-     "opened": 1793233825,
-     "frac": 0.6666666666666667,
-     "last_mark": 0.0005928035552871614,
+    "S-20261029T0230-2fnGpump": {
+     "entry": 0.00047108860918987914,
+     "peak": 0.00047108860918987914,
+     "steps": 0,
+     "liq0": 69.9144,
+     "opened": 1793241024,
+     "frac": 1.0,
+     "last_mark": 0.00047108860918987914,
      "stale": 0,
      "no_route_count": 0,
-     "mint": "9QT2ue258kE1NYr7U9f3uGpcRNQHPB45ikxmmCdGpump",
-     "symbol": "RSTR",
-     "tokens": 1106924069783,
-     "run_id": "20261029T0030",
+     "mint": "2fnGKgfwYjqv99ppnKCq5nCLLhRSJAPAhSMVkqjipump",
+     "symbol": "PODCAT",
+     "tokens": 1061371449545,
+     "run_id": "20261029T0230",
      "why": "safety:too_fresh",
      "book": "S",
-     "pnl": 0.08349242595724843,
-     "gross_pnl": 0.08647454200000002,
-     "entry_haircut": 0.0077352603515221,
-     "entry_cost": 0.503877630175761,
+     "pnl": 0.0,
+     "gross_pnl": 0.0,
+     "entry_haircut": 0.007775205071689882,
+     "entry_cost": 0.5038976025358449,
      "cost_model": "v3-exit-aware",
-     "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "exit_haircut": 0.0072609001582602415
+     "cost_model_started_at": "2026-10-29T00:30:25Z"
     }
    },
    "fills_day": "2026-10-29",
-   "fills_today": 5,
-   "realized_pnl": -2.093160657509043,
+   "fills_today": 6,
+   "realized_pnl": -2.410891033847184,
    "closed": [
     {
      "id": "S-20261028T1330-5Zjdpump",
@@ -846,11 +826,28 @@
      "why_entered": "safety:too_fresh",
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z"
+    },
+    {
+     "id": "S-20261029T0030-9QT2pump",
+     "mint": "9QT2ue258kE1NYr7U9f3uGpcRNQHPB45ikxmmCdGpump",
+     "symbol": "RSTR",
+     "opened": 1793233825,
+     "closed": 1793241024,
+     "entry": 0.00045170216607361277,
+     "exit_px": 2.522039926865574e-05,
+     "why": "liquidity_pulled",
+     "pnl": -0.23423795,
+     "gross_pnl": -0.228247413,
+     "pct": -46.49,
+     "gross_pct": -45.65,
+     "why_entered": "safety:too_fresh",
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z"
     }
    ],
    "would_halt": [],
    "peak_equity": 10.89800187930826,
-   "realized_gross": -1.81321724633156
+   "realized_gross": -2.127939201664885
   }
  },
  "cost_model_started_at": "2026-10-29T00:30:25Z",
