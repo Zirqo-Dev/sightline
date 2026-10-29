@@ -7,59 +7,9 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-29T04:00:26Z",
+ "generated_at": "2026-10-29T04:30:23Z",
  "cfg_version": "v1-v6.5",
  "open": [
-  {
-   "id": "F-20261029T0100-J7cqpump",
-   "ticker": "FLOATER",
-   "mint": "J7cqsaTuXUavwA3sp238tSpartUfYwDrJAaHuDvypump",
-   "book": "F",
-   "status": "open",
-   "size": 0.5,
-   "cost_model": "v3-exit-aware",
-   "cost_model_started_at": "2026-10-29T00:30:25Z",
-   "opened_at": "2026-10-29T01:00:26Z",
-   "window_ends_at": "2026-10-29T03:00:26Z",
-   "entry": {
-    "px": 0.0016912872880881567
-   },
-   "frac": 0.666667,
-   "last_mark": 0.0028631707720401627,
-   "thesis": "pass",
-   "result": {
-    "pnl": 0.065330206,
-    "pct": 69.29,
-    "unit": "SOL",
-    "net_pnl": 0.065330206,
-    "gross_pnl": 0.067966895
-   }
-  },
-  {
-   "id": "R-20261029T0100-J7cqpump",
-   "ticker": "FLOATER",
-   "mint": "J7cqsaTuXUavwA3sp238tSpartUfYwDrJAaHuDvypump",
-   "book": "R",
-   "status": "open",
-   "size": 0.5,
-   "cost_model": "v3-exit-aware",
-   "cost_model_started_at": "2026-10-29T00:30:25Z",
-   "opened_at": "2026-10-29T01:00:26Z",
-   "window_ends_at": "2026-10-29T03:00:26Z",
-   "entry": {
-    "px": 0.0016912872880881567
-   },
-   "frac": 0.666667,
-   "last_mark": 0.002864724160219222,
-   "thesis": "random_match",
-   "result": {
-    "pnl": 0.129544431,
-    "pct": 69.38,
-    "unit": "SOL",
-    "net_pnl": 0.129544431,
-    "gross_pnl": 0.132602093
-   }
-  },
   {
    "id": "S-20261028T1900-BLAypump",
    "ticker": "TRUMPKIN",
@@ -74,11 +24,11 @@
     "px": 0.0016256825499667297
    },
    "frac": 0.666667,
-   "last_mark": 0.0028743402315143463,
+   "last_mark": 0.0029215220390037557,
    "thesis": "safety:too_fresh",
    "result": {
     "pnl": 0.085603417,
-    "pct": 76.81,
+    "pct": 79.71,
     "unit": "SOL",
     "net_pnl": 0.085603417,
     "gross_pnl": 0.097549048
@@ -98,36 +48,36 @@
     "px": 0.0043110598611640375
    },
    "frac": 0.333333,
-   "last_mark": 0.02643410138504503,
+   "last_mark": 0.02506535831319381,
    "thesis": "safety:too_fresh",
    "result": {
     "pnl": 0.350622368,
-    "pct": 513.17,
+    "pct": 481.42,
     "unit": "SOL",
     "net_pnl": 0.350622368,
     "gross_pnl": 0.37385306
    }
   },
   {
-   "id": "S-20261029T0300-EUpopump",
-   "ticker": "PERCS",
-   "mint": "EUpo3XyMwkXkqtceeUtCswaGquBeRmvbupKihTefpump",
+   "id": "S-20261029T0430-BCNTmWin",
+   "ticker": "BC",
+   "mint": "BCNT4t3rv5Hva8RnUtJUJLnxzeFAabcYp8CghC1SmWin",
    "book": "S",
    "status": "open",
    "size": 0.5,
    "cost_model": "v3-exit-aware",
    "cost_model_started_at": "2026-10-29T00:30:25Z",
-   "opened_at": "2026-10-29T03:00:26Z",
-   "window_ends_at": "2026-10-29T05:00:26Z",
+   "opened_at": "2026-10-29T04:30:23Z",
+   "window_ends_at": "2026-10-29T06:30:23Z",
    "entry": {
-    "px": 0.0001552530768556179
+    "px": 0.38683768049771705
    },
    "frac": 1.0,
-   "last_mark": 0.00012697955959092147,
-   "thesis": "safety:risk_score",
+   "last_mark": 0.38683768049771705,
+   "thesis": "safety:too_old",
    "result": {
     "pnl": 0.0,
-    "pct": -18.21,
+    "pct": 0.0,
     "unit": "SOL",
     "net_pnl": 0.0,
     "gross_pnl": 0.0
@@ -545,6 +495,35 @@
    "thesis": "pass"
   },
   {
+   "id": "F-20261029T0100-J7cqpump",
+   "ticker": "FLOATER",
+   "mint": "J7cqsaTuXUavwA3sp238tSpartUfYwDrJAaHuDvypump",
+   "book": "F",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-10-29T01:00:26Z",
+   "closed_at": "2026-10-29T04:30:23Z",
+   "entry": {
+    "px": 0.0016912872880881567
+   },
+   "exit": {
+    "px": 2.2858787840270934e-05
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": -0.265897579,
+    "pct": -52.82,
+    "unit": "SOL",
+    "net_pnl": -0.265897579,
+    "net_pct": -52.82,
+    "gross_pnl": -0.260861233,
+    "gross_pct": -52.17
+   },
+   "thesis": "pass"
+  },
+  {
    "id": "R-20261028T1400-Cd5npump",
    "ticker": "Nipple",
    "mint": "Cd5n31W4nCxEXQwQCfHUNDZ3WMwurVTW3Zrsp5Xqpump",
@@ -897,6 +876,35 @@
     "net_pct": -12.17,
     "gross_pnl": -0.050324167,
     "gross_pct": -10.06
+   },
+   "thesis": "random_match"
+  },
+  {
+   "id": "R-20261029T0100-J7cqpump",
+   "ticker": "FLOATER",
+   "mint": "J7cqsaTuXUavwA3sp238tSpartUfYwDrJAaHuDvypump",
+   "book": "R",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-10-29T01:00:26Z",
+   "closed_at": "2026-10-29T04:30:23Z",
+   "entry": {
+    "px": 0.0016912872880881567
+   },
+   "exit": {
+    "px": 2.2858787840270934e-05
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": -0.201683354,
+    "pct": -40.06,
+    "unit": "SOL",
+    "net_pnl": -0.201683354,
+    "net_pct": -40.06,
+    "gross_pnl": -0.196226036,
+    "gross_pct": -39.25
    },
    "thesis": "random_match"
   },
@@ -1493,38 +1501,74 @@
     "gross_pct": -87.61
    },
    "thesis": "safety:too_fresh"
+  },
+  {
+   "id": "S-20261029T0300-EUpopump",
+   "ticker": "PERCS",
+   "mint": "EUpo3XyMwkXkqtceeUtCswaGquBeRmvbupKihTefpump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-10-29T03:00:26Z",
+   "closed_at": "2026-10-29T04:30:23Z",
+   "entry": {
+    "px": 0.0001552530768556179
+   },
+   "exit": {
+    "px": 7.683799531970697e-05
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": -0.263208062,
+    "pct": -52.15,
+    "unit": "SOL",
+    "net_pnl": -0.263208062,
+    "net_pct": -52.15,
+    "gross_pnl": -0.252539541,
+    "gross_pct": -50.51
+   },
+   "thesis": "safety:risk_score"
   }
  ],
  "books": {
   "F": {
-   "cash": 6.484453922,
-   "equity": 7.045000874,
-   "realized_pnl": -3.179919067,
-   "open": 1,
-   "closed": 15,
+   "cash": 6.488853149,
+   "equity": 6.488853149,
+   "realized_pnl": -3.511146851,
+   "open": 0,
+   "closed": 16,
    "fills_today": 8,
-   "would_halt": [],
-   "realized_gross_pnl": -0.494971853
+   "would_halt": [
+    {
+     "day": "2026-10-29",
+     "ts": "2026-10-29T04:30:23Z",
+     "book": "F",
+     "drawdown": 0.3511
+    }
+   ],
+   "realized_gross_pnl": -0.823799982
   },
   "R": {
-   "cash": 7.409938677,
-   "equity": 7.970789561,
-   "realized_pnl": -2.254434313,
-   "open": 1,
-   "closed": 13,
+   "cash": 7.414337903,
+   "equity": 7.414337903,
+   "realized_pnl": -2.585662097,
+   "open": 0,
+   "closed": 14,
    "fills_today": 7,
    "would_halt": [],
-   "realized_gross_pnl": -0.582197551
+   "realized_gross_pnl": -0.911025679
   },
   "S": {
-   "cash": 5.9250977,
-   "equity": 7.931037557,
-   "realized_pnl": -3.057631348,
+   "cash": 5.663575973,
+   "equity": 7.718450704,
+   "realized_pnl": -3.32083941,
    "open": 3,
-   "closed": 21,
-   "fills_today": 10,
+   "closed": 22,
+   "fills_today": 11,
    "would_halt": [],
-   "realized_gross_pnl": -2.74481791
+   "realized_gross_pnl": -2.997357451
   }
  },
  "costs": {
@@ -1551,8 +1595,8 @@
   "started_at": "2026-10-29T00:30:25Z",
   "windows": {
    "7": {
-    "counted_closes": 34,
-    "net_pnl": -3.677547287,
+    "counted_closes": 37,
+    "net_pnl": -4.603210919,
     "wins": 15,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
@@ -1561,8 +1605,8 @@
     }
    },
    "28": {
-    "counted_closes": 34,
-    "net_pnl": -3.677547287,
+    "counted_closes": 37,
+    "net_pnl": -4.603210919,
     "wins": 15,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
@@ -1590,5 +1634,11 @@
    "rule": "Assumption, not a measured constant. Verified impact is the constant-product move of this fill's SOL into the pool's SOL reserve: 10000 * dx / (pool + dx). Jupiter priceImpactPct is stored as impact_pct and is not used. On 28 Oct 2026 the open pools of 148.27, 179.79 and 257.14 SOL carried Jupiter impacts of 2.49%, 1.24% and 1.09%. The same 0.5 SOL ticket against those reserves is 0.336%, 0.277% and 0.194%. Quoted outAmount across three sizes sits on that curve: the mid size predicted from the other two matched within 0.02% on the pools whose vault did not move during the read. The Jupiter field is a gap versus a cached USD price. Per side: base_bps + impact_weight * verified_impact_bps, plus stress_exit_bps on hard_stop, trailing_stop and liquidity_pulled, capped at max_bps. A missing reserve adds no impact term. Charged on entry and on exit. Skip, exit, kill, void, and the v6.5 freeze are unchanged."
   }
  ],
- "summaries": []
+ "summaries": [
+  {
+   "at": "2026-10-29T04:30:23Z",
+   "type": "would_halt",
+   "note": "F drawdown 35.1%"
+  }
+ ]
 }
