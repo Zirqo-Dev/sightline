@@ -424,18 +424,14 @@ done
 owner_hits=0
 if [ -n "${PRIVACY_GUARD_PATTERNS:-}" ]; then
   owner_id_blob=$(python3 -c '
-import base64, hashlib, hmac, os, re, sys
+import hashlib, hmac, os, re, sys
 text = os.environ.get("PRIVACY_GUARD_PATTERNS", "")
 ids = []
 pepper = None
 raw = os.environ.get("RUGGER_ID_PEPPER", "").strip()
-if raw:
-    try:
-        key = base64.b64decode(raw, validate=True)
-        if len(key) == 32:
-            pepper = key
-    except Exception:
-        pepper = None
+if len(raw) >= 32:
+    prk = hmac.new(b"\x00" * 32, raw.encode("utf-8"), hashlib.sha256).digest()
+    pepper = hmac.new(prk, b"sightline-rugger-id-v1\x01", hashlib.sha256).digest()
 for token in re.findall(r"stake1[02-9ac-hj-np-z]{20,}|addr1[02-9ac-hj-np-z]{20,}", text):
     ids.append("w-" + hashlib.sha256(token.encode()).hexdigest()[:8])
     if pepper is not None:

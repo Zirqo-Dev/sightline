@@ -1,9 +1,10 @@
 """Cross-run rugger blacklist for the Cardano and Solana research desks.
 
 Raw wallets stay in a private store. New rugger public ids are r- plus 12 hex
-digits of HMAC-SHA256 under RUGGER_ID_PEPPER. They do not match the desks' w-
-dev tags. If the pepper is missing, public rugger rows keep counts and evidence
-tags and omit the ids.
+digits of HMAC-SHA256. The key is HKDF-SHA256 of RUGGER_ID_PEPPER, any UTF-8
+string of at least 32 characters (info sightline-rugger-id-v1). They do not
+match the desks' w- dev tags. If the pepper is missing or shorter than 32
+characters, public rugger rows keep counts and evidence tags and omit the ids.
 
 Working store: rugger-blacklist.json in the Actions cache (fallback read and write).
 Durable copy: a human-readable JSON file in the private repo named by
@@ -16,7 +17,6 @@ buy_signal is never produced here. Research / paper only.
 """
 from __future__ import annotations
 
-import base64
 import hashlib
 import hmac
 import json
@@ -45,6 +45,8 @@ _ADDR_RE = re.compile(r"addr1[02-9ac-hj-np-z]{20,}")
 _REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 _ISO = "%Y-%m-%dT%H:%M:%SZ"
 PEPPER_ENV = "RUGGER_ID_PEPPER"
+PEPPER_MIN = 32
+_PEPPER_INFO = b"sightline-rugger-id-v1"
 TOKEN_ENV = "SIGHTLINE_PRIVATE_TOKEN"
 REPO_ENV = "SIGHTLINE_PRIVATE_REPO"
 DEFAULT_PRIVATE_REPO = "Zirqo-Dev/sightline-private"
@@ -63,18 +65,25 @@ def wallet_ok(wallet):
     return not any(ord(c) < 32 for c in wallet)
 
 
+def _hkdf_sha256(ikm):
+    """32-byte HKDF-SHA256. Salt is 32 zero bytes. Info is the domain label."""
+    prk = hmac.new(b"\x00" * 32, ikm, hashlib.sha256).digest()
+    return hmac.new(prk, _PEPPER_INFO + b"\x01", hashlib.sha256).digest()
+
+
 def load_pepper():
-    """32-byte key from RUGGER_ID_PEPPER (base64), or None. The value is not printed."""
+    """32-byte HMAC key from RUGGER_ID_PEPPER, or None. The value is not printed.
+
+    Any string of at least 32 characters after strip is accepted. The key is
+    HKDF-SHA256 of the UTF-8 string. A shorter string is missing.
+    """
     raw = os.environ.get(PEPPER_ENV, "")
-    if not isinstance(raw, str) or not raw.strip():
+    if not isinstance(raw, str):
         return None
-    try:
-        key = base64.b64decode(raw.strip(), validate=True)
-    except Exception:
+    secret = raw.strip()
+    if len(secret) < PEPPER_MIN:
         return None
-    if len(key) != 32:
-        return None
-    return key
+    return _hkdf_sha256(secret.encode("utf-8"))
 
 
 def pepper_ready():
@@ -86,7 +95,7 @@ def warn_no_pepper():
     if _pepper_warned:
         return
     _pepper_warned = True
-    print("::warning::rugger blacklist: RUGGER_ID_PEPPER missing or not 32 bytes; publishing counts only")
+    print("::warning::rugger blacklist: RUGGER_ID_PEPPER missing or shorter than 32 characters; publishing counts only")
 
 
 def unsalted_id(wallet):

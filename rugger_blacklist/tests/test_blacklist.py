@@ -1,11 +1,12 @@
 """Offline tests for the shared rugger blacklist. No network, no secrets, no raw addresses in assertions."""
-import base64
+import contextlib
+import io
 import json
 import os
 import tempfile
 import unittest
 
-os.environ.setdefault("RUGGER_ID_PEPPER", base64.b64encode(b"t" * 32).decode())
+os.environ.setdefault("RUGGER_ID_PEPPER", "test-pepper-not-base64-and-at-least-32-chars")
 
 import rugger_blacklist as RB
 
@@ -332,6 +333,70 @@ class PepperAndPrivate(unittest.TestCase):
         self.assertTrue(RB._ID_RE.fullmatch(rid))
         self.assertNotEqual(rid, RB.unsalted_id("wallet-rugger"))
         self.assertTrue(rid.startswith("r-") and len(rid) == 14)
+
+    def test_a_long_non_base64_string_derives_a_stable_id(self):
+        secret = "pw-manager-!@#$%^&*()-not-base64-40chars!!"
+        self.assertGreaterEqual(len(secret), 40)
+        old = os.environ.get("RUGGER_ID_PEPPER")
+        try:
+            os.environ["RUGGER_ID_PEPPER"] = secret
+            key = RB.load_pepper()
+            self.assertEqual(len(key), 32)
+            self.assertEqual(key, RB._hkdf_sha256(secret.encode("utf-8")))
+            rid = RB.public_id("wallet-rugger")
+            self.assertEqual(RB.public_id("wallet-rugger"), rid)
+            self.assertTrue(RB._ID_RE.fullmatch(rid))
+            self.assertNotEqual(rid, RB.unsalted_id("wallet-rugger"))
+        finally:
+            if old is None:
+                os.environ.pop("RUGGER_ID_PEPPER", None)
+            else:
+                os.environ["RUGGER_ID_PEPPER"] = old
+
+    def test_shorter_than_32_is_missing_and_the_value_is_not_printed(self):
+        short = "SHORTPEPPERVALUE"
+        self.assertLess(len(short), 32)
+        old = os.environ.get("RUGGER_ID_PEPPER")
+        RB._pepper_warned = False
+        try:
+            os.environ["RUGGER_ID_PEPPER"] = short
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                self.assertIsNone(RB.load_pepper())
+                self.assertFalse(RB.pepper_ready())
+                self.assertIsNone(RB.public_id("wallet-rugger"))
+                RB.warn_no_pepper()
+            text = buf.getvalue()
+            self.assertIn("::warning::", text)
+            self.assertIn("shorter than 32 characters", text)
+            self.assertNotIn(short, text)
+            os.environ["RUGGER_ID_PEPPER"] = "x" * 31
+            self.assertIsNone(RB.load_pepper())
+        finally:
+            if old is None:
+                os.environ.pop("RUGGER_ID_PEPPER", None)
+            else:
+                os.environ["RUGGER_ID_PEPPER"] = old
+            RB._pepper_warned = False
+
+    def test_surrounding_whitespace_matches_the_stripped_string(self):
+        secret = "a" * 32
+        old = os.environ.get("RUGGER_ID_PEPPER")
+        try:
+            os.environ["RUGGER_ID_PEPPER"] = secret
+            rid = RB.public_id("wallet-rugger")
+            os.environ["RUGGER_ID_PEPPER"] = " \n\t" + secret + " \t\n"
+            self.assertEqual(RB.public_id("wallet-rugger"), rid)
+            self.assertEqual(RB.load_pepper(), RB._hkdf_sha256(secret.encode("utf-8")))
+            os.environ["RUGGER_ID_PEPPER"] = "   " + ("y" * 31) + "   "
+            self.assertIsNone(RB.load_pepper())
+            os.environ["RUGGER_ID_PEPPER"] = "   \n\t  "
+            self.assertIsNone(RB.load_pepper())
+        finally:
+            if old is None:
+                os.environ.pop("RUGGER_ID_PEPPER", None)
+            else:
+                os.environ["RUGGER_ID_PEPPER"] = old
 
     def test_missing_pepper_keeps_the_row_and_drops_the_id(self):
         old = os.environ.pop("RUGGER_ID_PEPPER", None)

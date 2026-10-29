@@ -1,5 +1,4 @@
 """SPD-77 Cardano hard veto. Offline. Synthetic wallets. No secrets."""
-import base64
 import json
 import os
 import shutil
@@ -8,7 +7,7 @@ import sys
 import tempfile
 import unittest
 
-os.environ.setdefault("RUGGER_ID_PEPPER", base64.b64encode(b"t" * 32).decode())
+os.environ.setdefault("RUGGER_ID_PEPPER", "test-pepper-not-base64-and-at-least-32-chars")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
