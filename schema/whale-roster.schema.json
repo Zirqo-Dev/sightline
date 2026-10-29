@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zirqo-dev.github.io/sightline/schema/whale-roster.schema.json",
+  "title": "Public whale roster summary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "kind", "buy_signal", "whales"],
+  "properties": {
+    "schema": {"const": 1},
+    "kind": {"const": "whale_roster_public"},
+    "buy_signal": {"const": false},
+    "measured_factor": {"const": true},
+    "min_sample": {"const": 8},
+    "asof": {"type": "string"},
+    "note": {"type": "string"},
+    "whales": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codename", "role", "status", "scores"],
+        "properties": {
+          "codename": {"type": "string", "minLength": 3, "maxLength": 40},
+          "role": {"enum": ["lead", "watch"]},
+          "status": {"enum": ["candidate", "active", "dropped"]},
+          "scores": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["events", "accumulate", "trim", "exit", "priced_h1", "priced_h6", "priced_h24", "hits_h1", "hits_h6", "hits_h24", "hit_rate_h1", "hit_rate_h6", "hit_rate_h24", "small_sample", "social_moves_matched"],
+            "properties": {
+              "events": {"type": "integer", "minimum": 0},
+              "accumulate": {"type": "integer", "minimum": 0},
+              "trim": {"type": "integer", "minimum": 0},
+              "exit": {"type": "integer", "minimum": 0},
+              "priced_h1": {"type": "integer", "minimum": 0},
+              "priced_h6": {"type": "integer", "minimum": 0},
+              "priced_h24": {"type": "integer", "minimum": 0},
+              "hits_h1": {"type": "integer", "minimum": 0},
+              "hits_h6": {"type": "integer", "minimum": 0},
+              "hits_h24": {"type": "integer", "minimum": 0},
+              "hit_rate_h1": {"type": ["number", "null"]},
+              "hit_rate_h6": {"type": ["number", "null"]},
+              "hit_rate_h24": {"type": ["number", "null"]},
+              "small_sample": {"type": "boolean"},
+              "social_moves_matched": {"type": ["integer", "null"], "minimum": 0}
+            }
+          }
+        }
+      }
+    }
+  }
+}

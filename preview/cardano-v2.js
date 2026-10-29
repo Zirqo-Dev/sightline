@@ -21,11 +21,13 @@
       : `<p class="slim-brief">No brief published yet.</p>`;
     return `<div class="stack cv2">
       <div class="pagehead"><div><h1>Cardano</h1><div class="sub">Kill lines first · paper research · w- tags only</div>${briefBar}</div></div>
+      ${learnedSection(t, v)}
       ${boardSection(t, v, v2)}
       ${moneySection(t, v, v2)}
       ${radarSection(t, v2)}
       ${clusterSection(t, v, v2)}
       ${heatSection(t, v, v2)}
+      ${outcomeSection(t, v)}
       ${moreSection(t, v)}
     </div>`;
   }
@@ -275,6 +277,47 @@
     return "";
   }
 
+  function learnedSection(t, v) {
+    const lines = Array.isArray(v.learned) ? v.learned.filter(Boolean) : [];
+    if (!lines.length) return "";
+    return `<section class="cv2-learned" data-cv2="changed"><h2>What changed this run</h2><ul>${lines.map(line => `<li>${t.esc(line)}</li>`).join("")}</ul></section>`;
+  }
+  function netSpark(points) {
+    const nums = (points || []).map(p => p && p.n).filter(n => typeof n === "number" && isFinite(n));
+    if (nums.length < 2) return "";
+    const min = Math.min.apply(null, nums);
+    const max = Math.max.apply(null, nums);
+    const span = max - min || 1;
+    const w = 84, h = 28;
+    const d = nums.map((n, i) => {
+      const x = 2 + (i / (nums.length - 1)) * (w - 4);
+      const y = h - 4 - ((n - min) / span) * (h - 8);
+      return (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1);
+    }).join(" ");
+    const up = nums[nums.length - 1] >= nums[0];
+    return `<svg class="cv2-spark ${up ? "up" : "dn"}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${d}"/></svg>`;
+  }
+  function netCards(t, whales) {
+    const rows = (whales || []).filter(w => w && w.net_flow_ada != null && isFinite(w.net_flow_ada));
+    if (!rows.length) return "";
+    return `<div class="cv2-nets">${rows.map(w => {
+      const n = w.net_flow_ada;
+      const cls = n > 0 ? "up" : n < 0 ? "dn" : "";
+      const sign = n > 0 ? "+" : "";
+      return `<article class="cv2-net"><div><b>${t.esc(w.codename || "Whale")}</b><span class="${cls}">net ${sign}${t.esc(t.fmt(n, 0))} ADA</span></div>${netSpark(w.history)}</article>`;
+    }).join("")}</div>`;
+  }
+  function outcomeSection(t, v) {
+    const rows = Array.isArray(v.outcomes) ? v.outcomes : [];
+    if (!rows.length) return "";
+    const cards = rows.map(r => {
+      const pump = r.pump || 0;
+      const rug = r.rug || 0;
+      const donut = t.donut ? t.donut(pump, rug, r.label) : "";
+      return `<article class="cv2-out">${donut}<p class="cv2-outn"><span class="up">${t.esc(t.fmt(pump, 0))} pump</span><span class="dn">${t.esc(t.fmt(rug, 0))} rug</span></p></article>`;
+    }).join("");
+    return section("outcomes", "FLAG OUTCOMES", "Pump and rug counts after each flag. Research only.", `<div class="cv2-outs">${cards}</div>`);
+  }
   function section(id, title, sub, body) {
     return `<section class="cv2-sec" data-cv2="${id}"><h2 class="cv2-h">// ${title}</h2>${sub ? `<p class="cv2-sub">${sub}</p>` : ""}${body}</section>`;
   }
@@ -594,7 +637,7 @@
   function moneySection(t, v, v2) {
     const rot = rotationModel(t, v, v2);
     return section("money", "WHERE THE MONEY IS HEADING", "Who is moving money, and where it is going.",
-      rotationCard(t, rot) + swarmCards(t, swarmModel(t, v, v2)) + sniperCard(t, sniperModel(t, v, v2)) + hotCards(t, hotModel(t, v, v2, rot)));
+      netCards(t, v.whales) + rotationCard(t, rot) + swarmCards(t, swarmModel(t, v, v2)) + sniperCard(t, sniperModel(t, v, v2)) + hotCards(t, hotModel(t, v, v2, rot)));
   }
 
   function entryProgress(t, holders, pool, barH, barP) {
@@ -847,9 +890,6 @@
   }
 
   function moreSection(t, v) {
-    const outcomes = (v.log && v.log.flag_outcomes) || {};
-    const kinds = Object.keys(outcomes);
-    const outcomeLine = kinds.length ? `<p class="dim">${kinds.map(k => t.esc(t.displayKind(k))).filter(Boolean).join(" · ")}</p>` : "";
     const risk = v.risk && v.risk.length ? `<div class="risk-legend"><b>Risk score</b>${v.risk.map(t.riskBadge).join("")}</div>` : "";
     const flagged = t.flaggedThisRun(v.log, { new: v.flags || [] }, v.kills);
     const flagRow = flagged.length ? `<div class="flag-legend"><b>Flagged this run</b></div><div class="filters">${flagged.map(f => `<span class="chip ${f.tone === "red" ? "bad" : "caution"}">${t.esc(f.ticker)}</span>`).join("")}</div>` : "";
@@ -861,7 +901,7 @@
     const bookN = books[0].open + books[0].closed + books[1].open + books[1].closed;
     const bookHtml = bookN ? `<div class="donuts">${t.donut(books[0].wins, books[0].losses, "Solada " + (books[0].unit || "ADA"))}${t.donut(books[1].wins, books[1].losses, "Pump " + (books[1].unit || ""))}</div><p class="dim">Open ${books[0].open + books[1].open} · closed ${books[0].closed + books[1].closed}</p>` : "";
     const bits = [];
-    if (risk || flagRow || outcomeLine) bits.push(`<div class="cv2-moreblock">${risk}${flagRow}${outcomeLine}</div>`);
+    if (risk || flagRow) bits.push(`<div class="cv2-moreblock">${risk}${flagRow}</div>`);
     if (devs) bits.push(devs);
     if (bookHtml) bits.push(bookHtml);
     if (!bits.length) return "";

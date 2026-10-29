@@ -75,7 +75,9 @@ jobs:
       - name: Offline flag tests (no network, no secrets)
         if: github.event.inputs.ping != 'true'
         working-directory: code
-        run: python3 -m unittest discover -s solada-prefilter/tests
+        run: |
+          python3 -m unittest discover -s solada-prefilter/tests
+          python3 -m unittest discover -s whale_roster/tests
       - name: Restore private whale snapshot (Actions cache, never committed)
         if: github.event.inputs.ping != 'true'
         uses: actions/cache/restore@v4
@@ -107,6 +109,19 @@ jobs:
           # until 770s, leaving ~10s to flush JSON. The 20 min job then still has room
           # for cache save, the privacy guard, and the push retries below.
           timeout 780 python3 solada-prefilter/prefilter.py --repo . --data-dir "$GITHUB_WORKSPACE/data/solada-prefilter" --desk-data "$GITHUB_WORKSPACE/data" $flag
+      - name: Whale roster research
+        if: always() && github.event.inputs.ping != 'true'
+        timeout-minutes: 2
+        working-directory: code
+        run: |
+          [ -d "$GITHUB_WORKSPACE/data/solada-prefilter" ] || { echo "no desk-data"; exit 0; }
+          python3 -m whale_roster.build \
+            --repo . \
+            --data-dir "$GITHUB_WORKSPACE/data" \
+            --cache-dir "${{ runner.temp }}/prefilter-cache" \
+            --public-dir "$GITHUB_WORKSPACE/data/solada-prefilter" \
+            --network \
+            --max-lookups 8
       - name: Commit to desk-data
         if: always() && github.event.inputs.ping != 'true'
         env:
@@ -142,6 +157,16 @@ jobs:
         working-directory: code
         run: |
           python3 -m rugger_blacklist.sync --desk cardano \
+            --cache-dir "${{ runner.temp }}/prefilter-cache" \
+            --public-dir "$GITHUB_WORKSPACE/data/solada-prefilter"
+      - name: Sync private whale roster
+        if: always() && github.event.inputs.ping != 'true'
+        timeout-minutes: 2
+        env:
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+        working-directory: code
+        run: |
+          python3 -m whale_roster.sync \
             --cache-dir "${{ runner.temp }}/prefilter-cache" \
             --public-dir "$GITHUB_WORKSPACE/data/solada-prefilter"
       - name: Save private whale snapshot

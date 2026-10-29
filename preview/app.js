@@ -206,7 +206,7 @@
   }
   function displayKind(kind) {
     const raw = String(kind || "");
-    if (raw === "founder_whale_move") return (leadCodename || "Whale") + " move";
+    if (raw === "founder_whale_move" || raw === "whale_move") return (leadCodename || "Whale") + " move";
     if (raw === "founder_whale" || raw === "founder_pct") return "";
     return sanitize(raw.replace(/_/g, " "));
   }
@@ -646,6 +646,87 @@
     if (/founder|cockwhale/i.test(s)) return "";
     return s;
   }
+  function snapshotRows(node) {
+    if (!node || typeof node !== "object") return [];
+    if (Array.isArray(node.whales) && node.whales.length) return node.whales.filter(w => w && typeof w === "object");
+    if (node.founder_whale && typeof node.founder_whale === "object") return [node.founder_whale];
+    return [];
+  }
+  function rowNet(row, whale) {
+    const n = num(row && row.net_flow_ada);
+    if (n == null) return null;
+    const name = animalName(row.codename) || animalName(row.handle);
+    const tag = safeTag(row.tag) || safeTag(row.address) || "";
+    if (whale.codename && name && name === whale.codename) return n;
+    if (whale.tag && tag && tag === whale.tag) return n;
+    return null;
+  }
+  function netFor(node, whale) {
+    const rows = snapshotRows(node);
+    if (!rows.length) return null;
+    for (let i = 0; i < rows.length; i++) {
+      const n = rowNet(rows[i], whale);
+      if (n != null) return n;
+    }
+    if (rows.length === 1 && whale.fromOld) {
+      const n = num(rows[0].net_flow_ada);
+      if (n != null) return n;
+    }
+    return null;
+  }
+  function publicWhales(log) {
+    if (!log || typeof log !== "object") return [];
+    let fromOld = false;
+    let raw = Array.isArray(log.whales) ? log.whales.filter(w => w && typeof w === "object") : [];
+    if (!raw.length && log.founder_whale && typeof log.founder_whale === "object") {
+      raw = [log.founder_whale];
+      fromOld = true;
+    }
+    const whales = raw.map(row => {
+      const name = animalName(row.codename) || animalName(row.handle) || "";
+      const tag = safeTag(row.tag) || safeTag(row.address) || "";
+      let codename = name || (tag && whaleNames[tag]) || "";
+      if (!codename && fromOld && Object.keys(whaleNames).length === 1) codename = whaleNames[Object.keys(whaleNames)[0]];
+      if (!codename) codename = "Whale";
+      const role = row.role === "lead" || row.role === "watch" ? row.role : (codename === "Grumpy Walrus" ? "lead" : "watch");
+      return { codename, role, tag: /^w-/.test(tag) ? tag : "", fromOld, net_flow_ada: num(row.net_flow_ada) };
+    });
+    const nodes = [{ node: log, t: log.asof }].concat((Array.isArray(log.history) ? log.history : []).map(h => ({ node: h, t: h && h.asof })));
+    whales.forEach(w => {
+      const pts = [];
+      nodes.forEach(item => {
+        const n = netFor(item.node, w);
+        if (n == null) return;
+        pts.push({ t: String(item.t || ""), n });
+      });
+      pts.sort((a, b) => String(a.t).localeCompare(String(b.t)));
+      const dedup = [];
+      pts.forEach(p => {
+        if (dedup.length && dedup[dedup.length - 1].t === p.t) dedup[dedup.length - 1] = p;
+        else dedup.push(p);
+      });
+      w.history = dedup.slice(-12);
+    });
+    return whales;
+  }
+  function learnedLines(log) {
+    const raw = log && log.learned_or_changed;
+    if (!Array.isArray(raw)) return [];
+    return raw.map(item => sanitize(typeof item === "string" ? item : item && (item.text || item.line || ""))).filter(Boolean).slice(0, 8);
+  }
+  function outcomeRows(log) {
+    const bag = log && log.flag_outcomes;
+    if (!bag || typeof bag !== "object" || Array.isArray(bag)) return [];
+    const whaleKey = Object.prototype.hasOwnProperty.call(bag, "whale_move") ? "whale_move"
+      : Object.prototype.hasOwnProperty.call(bag, "founder_whale_move") ? "founder_whale_move" : "whale_move";
+    const keys = ["coordinated_buys", "fresh_wallet_swarm", "sniper_full_exit", "holder_concentration", whaleKey];
+    return keys.map(key => {
+      const row = bag[key] && typeof bag[key] === "object" ? bag[key] : {};
+      const pump = num(row.pump);
+      const rug = num(row.rug);
+      return { label: displayKind(key), pump: pump == null ? 0 : pump, rug: rug == null ? 0 : rug };
+    });
+  }
   function publicFounder(fw) {
     if (!fw || typeof fw !== "object") return null;
     const tag = safeTag(fw.address) || safeTag(fw.tag) || safeTag(fw.w_tag);
@@ -797,8 +878,10 @@
     }
     const devs = (d.devs && Array.isArray(d.devs.entries)) ? d.devs.entries : [];
     const risk = riskList(d.log);
-    const founder = publicFounder(d.log && d.log.founder_whale);
-    return { flags, top, byTicker, vetoTokens, dumpMoves, counts, devs, risk, founder, brief: d.brief || null, whale: d.whale || null, liq: d.liq || null, big: d.big || null, log: d.log || null, pulse: d.pulse || null, kills: d.kills || null, pump: d.pump || null, paper: d.paper || null, vetoes: d.vetoes || null };
+    const whales = publicWhales(d.log);
+    const oldOnly = !(d.log && Array.isArray(d.log.whales) && d.log.whales.length);
+    const founder = publicFounder(oldOnly && d.log ? d.log.founder_whale : null);
+    return { flags, top, byTicker, vetoTokens, dumpMoves, counts, devs, risk, founder, whales, learned: learnedLines(d.log), outcomes: outcomeRows(d.log), brief: d.brief || null, whale: d.whale || null, liq: d.liq || null, big: d.big || null, log: d.log || null, pulse: d.pulse || null, kills: d.kills || null, pump: d.pump || null, paper: d.paper || null, vetoes: d.vetoes || null };
   }
   function briefBits(b, desk) {
     if (!b) return null;
@@ -909,9 +992,10 @@
   }
   function cardanoHtml(data) {
     whaleNames = whaleCodenames(data && data.log);
+    const named = publicWhales(data && data.log);
+    const linked = (data && data.whale && safeTag(data.whale.whale_tag)) || (named[0] && named[0].tag) || "";
+    leadCodename = (linked && whaleNames[linked]) || (named[0] && named[0].codename) || "";
     const v = cardanoView(data);
-    const linked = (v.whale && safeTag(v.whale.whale_tag)) || (v.founder && v.founder.tag) || "";
-    leadCodename = (linked && whaleNames[linked]) || "";
     if (!root.CardanoBoard) return `<p class="muted">Cardano board isn't installed.</p>`;
     return root.CardanoBoard.render({
       esc, tx, num, fmt, sanitize, tickerName, safeTag, labelTag, animalName,
