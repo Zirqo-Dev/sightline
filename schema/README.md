@@ -38,6 +38,7 @@ Bots write daily briefs as `<desk>/briefs/YYYY-MM-DD.json` only. They do not mai
 - **required:** `schema_version` (= 2), `desk`, `asof`, `headline`
 - usual: `levels{ticker: verdict}`, `kill_lines`, `paper_actions`, `rules_added`, `followups[]`, `sources`, `history[]` (past runs, same shape; each needs `asof`; keep about the last 20)
 - optional: `risk_check` `{ticker: {risk, tags, source, note}}`. `risk` is a string or null. `source` is `scanner` or `dev_checks`. A retired top-level map with the same shape is still accepted. A coin ticker is not that map.
+- optional: `verdicts[]` and `cardano_v2` for the Cardano tab. Each verdict may add `launchpad`, `kill_metric`, `kill_value`, `kill_limit`, `pct_from_line`, `why`, and `whale_line`. `cardano_v2` may add `entry_bar`, `launchpads`, `launches`, `rotation`, `swarms`, `snipers`, `hot`, `clusters`, and `heat`. All of it is optional. The field list and examples are in [dashboard/PLUGINS.md](../dashboard/PLUGINS.md#cardano-tab-v2). Extra fields stay allowed.
 
 ## Daily brief
 - **required:** `schema_version` (= 2), `desk`, `date` (YYYY-MM-DD), `headline`

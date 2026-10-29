@@ -912,104 +912,12 @@
     const v = cardanoView(data);
     const linked = (v.whale && safeTag(v.whale.whale_tag)) || (v.founder && v.founder.tag) || "";
     leadCodename = (linked && whaleNames[linked]) || "";
-    const brief = briefBits(v.brief, "Cardano");
-    const trigger = sanitize(v.log && v.log.trigger);
-    const runAt = v.vetoes && v.vetoes.at;
-    const stale = v.vetoes && Array.isArray(v.vetoes.stale) && v.vetoes.stale.length;
-    const headChips = `<div class="head-chips">${trigger && trigger.length <= 32 ? chip("trigger " + trigger, "ok") : ""}${chip(runAt ? "last run " + (when(runAt) || "") : "no last run", stale ? "bad" : "ok")}${chip("lp " + (v.counts.lp_pulled || 0), "bad")}${chip("dump " + (v.counts.ahead_of_dump || 0), "caution")}</div>`;
-    const briefBar = brief
-      ? `<p class="slim-brief">${esc(when(brief.date) || "")} · ${tx(brief.headline)}</p>`
-      : `<p class="slim-brief">No brief published yet.</p>`;
-    const riskBy = {};
-    v.risk.forEach(s => { riskBy[s.ticker.toUpperCase()] = s; });
-    const ordered = orderPoolRows(v.top, v.log, v.pulse);
-    const maxDepth = Math.max(1, ...ordered.map(r => num(r.ada_side_depth) || 0));
-    const depthBars = ordered.length ? `<div class="depth-list">${ordered.map(r => {
-      const name = tickerName(r.ticker) || "–";
-      const score = riskBy[name.toUpperCase()];
-      const tone = score ? score.tone : "s-none";
-      const tip = score ? riskTip(score) : "No risk score";
-      const core = CORE_NAMES.indexOf(name.toUpperCase()) >= 0;
-      const depth = num(r.ada_side_depth) || 0;
-      const pct = depth ? Math.max(4, Math.round(depth / maxDepth * 100)) : 0;
-      return `<div class="depth-row"><div class="depth-name"><i class="risk-dot ${tone}" title="${esc(tip)}"></i><span class="nm">${esc(name)}</span>${core ? '<span class="core-badge">Core</span>' : ""}</div><div class="depth-track"><i style="width:${pct}%"></i></div><span class="mono dim">${esc(depth ? fmt(depth, 0) : "–")}</span></div>`;
-    }).join("")}</div>` : empty("No pool depths yet", "Bars appear when cardano_top10 or the pulse has an ADA side.");
-    const outcomes = (v.log && v.log.flag_outcomes) || {};
-    const kinds = Object.keys(outcomes);
-    const donuts = kinds.length ? `<div class="donuts">${kinds.map(k => donut(num(outcomes[k] && outcomes[k].pump) || 0, num(outcomes[k] && outcomes[k].rug) || 0, displayKind(k))).join("")}</div>` : empty("No flag outcomes yet", "Pump and rug counts show up as rings once the desk scores them.");
-    const sparks = ordered.slice(0, 6).map(r => {
-      const name = tickerName(r.ticker);
-      const series = depthSeries(v.log, v.pulse, name);
-      const kill = killFor(v.kills, name);
-      const overlay = kill && /ada|side|depth|pool/i.test(kill.metric || "") ? kill : null;
-      const svg = killSpark(series, overlay);
-      if (!svg) return "";
-      return `<div class="killspark"><div class="mono">${esc(name)}${kill && kill.hit ? chip(" kill", "bad") : ""}</div>${svg}</div>`;
-    }).filter(Boolean).join("");
-    const sparkBlock = sparks || empty("No depth history yet", "Sparklines need two ADA-side readings from the pulse or the run history.");
-    const gauges = v.kills ? Object.keys(v.kills).map(k => gauge(killFor(v.kills, k))).filter(Boolean).slice(0, 8).join("") : "";
-    const gaugeBlock = gauges ? `<div class="gauges">${gauges}</div>` : empty("No kill gauges", "kill_status has no numeric lines yet.");
-    const heat = heatHtml(heatModel(v.flags));
-    const whaleTag = (v.whale && safeTag(v.whale.whale_tag)) || (v.founder && v.founder.tag) || "";
-    const whaleName = labelTag(whaleTag) || "Whale";
-    const sankey = sankeyHtml(sankeyFlows(v.whale, v.big, v.log));
-    const flow = flowMapHtml(v.log, v.liq);
-    const devCards = v.devs.length ? `<div class="dev-cards">${v.devs.slice(0, 16).map(e => {
-      const name = tickerName(e.ticker) || "–";
-      const tone = riskTone(e.risk);
-      return `<article class="dev-card"><b class="mono">${esc(name)}</b><span class="risk-score ${tone}">${esc(sanitize(e.risk) || "unscored")}</span> ${freshFunded(e) ? chip("fresh funded", "caution") : ""}${tagChip(e.dev_tag) || ""}<div class="dim">${esc(e.serial_3h == null && e.serial_7d == null ? "" : "serial " + (e.serial_3h ?? "–") + " / " + (e.serial_7d ?? "–"))}</div></article>`;
-    }).join("")}</div>` : empty("Dev checks not published", "dev_checks.json is missing.");
-    const books = [paperBoard(v.paper), paperBoard(v.pump)];
-    const bookHtml = `<div class="donuts">${donut(books[0].wins, books[0].losses, "Solada " + (books[0].unit || "ADA"))}${donut(books[1].wins, books[1].losses, "Pump " + (books[1].unit || ""))}</div><p class="dim">Open ${books[0].open + books[1].open} · closed ${books[0].closed + books[1].closed} · paper pnl ${fmt(books[0].pnl, 1)} ${esc(books[0].unit)} and ${fmt(books[1].pnl, 1)} ${esc(books[1].unit)}</p>`;
-    const lessons = []
-      .concat((v.log && v.log.learned_or_changed) || [])
-      .concat((v.log && v.log.patterns) || [])
-      .concat(((v.log && v.log.followups) || []).slice(0, 4).map(f => ({ pattern: typeof f === "string" ? f : (f && (f.text || f.note || "")) })));
-    const lessonHtml = lessons.length ? lessons.slice(0, 6).map(item => {
-      if (typeof item === "string") return feedItem(chip("note", ""), item, []);
-      const title = item.pattern || item.rule || item.text || "";
-      const bits = [item.outcome, item.evidence].map(x => typeof x === "string" ? x : "").filter(Boolean);
-      return feedItem(chip(item.outcome ? "pattern" : "follow-up", ""), title, bits);
-    }).join("") : empty("No lessons yet", "Patterns, learned notes, and follow-ups land here.");
-    const recentFlags = v.flags.slice(0, 16).map(f => {
-      const tags = flagTags(f).slice(0, 2).map(tagChip).join("");
-      return `<span class="chip ${/exit|rug|dump/i.test(f.kind || "") ? "bad" : ""}">${esc(displayKind(f.kind))}${f.ticker ? " · " + esc(tickerName(f.ticker)) : ""}</span>${tags}`;
-    }).join(" ");
-    const flagged = flaggedThisRun(v.log, data && data.flags, v.kills);
-    const flagRow = `<div class="flag-legend"><b>Flagged this run</b><span class="chip bad">rug or kill-line</span><span class="chip caution">coordinated launch</span></div><div class="filters">${flagged.length ? flagged.map(f => `<span class="chip ${f.tone === "red" ? "bad" : "caution"}">${esc(f.ticker)}</span>`).join("") : `<span class="dim">None on the latest run.</span>`}</div>`;
-    const riskLegend = `<div class="risk-legend"><b>Risk score</b><span class="risk-score s-low">green · lower</span><span class="risk-score s-mid">amber · caution</span><span class="risk-score s-high">red · high</span></div>`;
-    const topRows = ordered.map(r => {
-      const name = tickerName(r.ticker) || "–";
-      const score = riskBy[name.toUpperCase()];
-      const depth = num(r.ada_side_depth);
-      return {
-        rank: `<span data-v="${esc(r.rank ?? "")}">${esc(r.rank ?? "")}</span>`,
-        ticker: `<span class="depth-name"><i class="risk-dot ${score ? score.tone : "s-none"}"></i><b>${esc(name)}</b>${CORE_NAMES.indexOf(name.toUpperCase()) >= 0 ? '<span class="core-badge">Core</span>' : ""}</span>`,
-        depth: `<span data-v="${depth == null ? "" : depth}">${esc(depth == null ? "–" : fmt(depth, 0))}</span>`,
-        holders: `<span data-v="${num(r.holders) == null ? "" : num(r.holders)}">${esc(num(r.holders) == null ? "–" : fmt(r.holders, 0))}</span>`,
-        delta: `<span data-v="${num(r.holders_delta) == null ? "" : num(r.holders_delta)}">${esc(num(r.holders_delta) == null ? "–" : fmt(r.holders_delta, 0))}</span>`
-      };
-    });
-    const topTable = topRows.length ? table(
-      [{ key: "rank", label: "#" }, { key: "ticker", label: "Ticker" }, { key: "depth", label: "ADA side", num: true }, { key: "holders", label: "Holders", num: true }, { key: "delta", label: "Holder Δ", num: true }],
-      topRows
-    ) : "";
-    const sortable = topTable
-      .replace(">#</th>", ' data-sort="rank">#</th>')
-      .replace(">Ticker</th>", ' data-sort="t">Ticker</th>')
-      .replace(">ADA side</th>", ' data-sort="d">ADA side</th>')
-      .replace(">Holders</th>", ' data-sort="h">Holders</th>');
-    return `<div class="stack">
-      <div class="pagehead"><div><h1>Cardano</h1><div class="sub">Visuals first · paper research · w- tags only</div>${briefBar}</div>${headChips}</div>
-      <div class="viz-grid">${panel("Pool ADA (one side)", "", flagRow + riskLegend + depthBars, "chart", "ADA in the token's deepest pool (Minswap); total TVL is ~2x.")}${panel("Flag hit rate", "pump vs rug", donuts, "flag")}</div>
-      ${panel("Pool depth", "dashed kill line", `<div class="killsparks">${sparkBlock}</div>${gaugeBlock}`, "chart")}
-      ${panel("Cluster heat", "early buyers", (recentFlags ? `<div class="filters">${recentFlags}</div>` : "") + heat, "flag")}
-      <div class="viz-grid">${panel(whaleName, "", sankey, "chart")}${panel("Liquidity map", "enter / exit", flow, "chart")}</div>
-      ${panel("Dev risk", "fresh funded", devCards, "flag")}
-      ${panel("Paper books", "not orders", bookHtml, "layers")}
-      ${panel("Lessons", "follow-ups", lessonHtml, "feed")}
-      <details class="fold"><summary>Tables</summary>${sortable || empty("No top 10 table", "")}<div class="filters">${chip("lp_pulled " + (v.counts.lp_pulled || 0), "bad")}${chip("ahead_of_dump " + (v.counts.ahead_of_dump || 0), "bad")}${chip("dev_sold " + (v.counts.dev_sold || 0), "caution")}${chip("serial_launcher " + (v.counts.serial_launcher || 0), "caution")}</div></details>
-    </div>`;
+    if (!root.CardanoBoard) return `<p class="muted">Cardano board isn't installed.</p>`;
+    return root.CardanoBoard.render({
+      esc, tx, num, fmt, sanitize, tickerName, safeTag, labelTag, animalName,
+      displayKind, flaggedThisRun, riskBadge, riskTone, chip, tagChip, freshFunded,
+      paperBoard, donut, when, timeOf, briefBits, flagTags, flagAda
+    }, data || {}, v);
   }
 
   function nftRows(pulse, log) {
@@ -1348,6 +1256,32 @@
           const c = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv));
           return c * dir;
         }).forEach(row => tbody.appendChild(row));
+        return;
+      }
+      const fbtn = e.target.closest && e.target.closest("[data-cv2-filter]");
+      if (fbtn) {
+        const chips = fbtn.parentElement;
+        if (chips) chips.querySelectorAll("[data-cv2-filter]").forEach(b => b.classList.toggle("on", b === fbtn));
+        const f = fbtn.getAttribute("data-cv2-filter") || "all";
+        const board = document.getElementById("cv2-board");
+        if (!board) return;
+        let n = 0;
+        board.querySelectorAll("[data-v]").forEach(card => {
+          const show = f === "all" || card.getAttribute("data-v") === f;
+          card.hidden = !show;
+          if (show) n += 1;
+        });
+        const none = document.getElementById("cv2-none");
+        if (none) none.hidden = n > 0;
+        return;
+      }
+      const heatBtn = e.target.closest && e.target.closest("[data-cv2-heat]");
+      if (heatBtn) {
+        const wrap = document.getElementById("cv2-heat");
+        if (!wrap) return;
+        const on = wrap.classList.toggle("all");
+        const n = heatBtn.getAttribute("data-n") || "";
+        heatBtn.textContent = on ? "Show top 8 only" : ("Show all wallets (" + n + ")");
         return;
       }
       const btn = e.target.closest && e.target.closest("[data-chain-filter]");

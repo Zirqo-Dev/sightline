@@ -1,0 +1,150 @@
+{
+  "log": {
+    "asof": "2026-10-29T08:15:00-04:00",
+    "whale_watch": {
+      "wallets": [{ "tag": "w-f3186187", "codename": "Grumpy Walrus" }]
+    },
+    "verdicts": [
+      {
+        "ticker": "CLOVE",
+        "launchpad": "solada",
+        "verdict": "watch",
+        "kill_metric": "holders",
+        "kill_value": 296,
+        "kill_limit": 125,
+        "reasons": ["Price −30% in 24h", "Pool ADA side only ~23.9k", "Other kill lines: market cap 160k ADA, or a whale selling more than 5M"],
+        "whale_activity": "none tracked"
+      },
+      {
+        "ticker": "GHOST",
+        "launchpad": "snek",
+        "verdict": "lottery",
+        "kill_metric": "holders",
+        "kill_value": 400,
+        "kill_limit": 120,
+        "reasons": ["Holders well clear of the line"]
+      },
+      {
+        "ticker": "ASCEND",
+        "launchpad": "minswap",
+        "verdict": "watch",
+        "kill_metric": "pool_ada",
+        "kill_value": 1131000,
+        "kill_limit": 750000,
+        "reasons": ["Price −6.3% in 24h", "Pool still well above kill line"],
+        "whale_activity": "Grumpy Walrus holds ~308.3k, added 52 this morning"
+      },
+      {
+        "ticker": "STRIKE",
+        "launchpad": "unknown",
+        "verdict": "watch",
+        "kill_metric": "pool_ada",
+        "kill_value": 1239000,
+        "kill_limit": 900000,
+        "reasons": ["Deep pool, steady", "Kill line is high, so less room"]
+      },
+      {
+        "ticker": "COCK",
+        "launchpad": "minswap",
+        "verdict": "pass",
+        "kill_metric": "pool_ada",
+        "kill_value": 163300,
+        "kill_limit": 150000,
+        "reasons": ["Pool barely above the kill line", "Liquidity pulled repeatedly"],
+        "whale_activity": "Grumpy Walrus pulled liquidity 7 times"
+      }
+    ],
+    "cardano_v2": {
+      "entry_bar": { "holders": 120, "pool_ada": 25000 },
+      "launchpads": [
+        { "id": "solada", "label": "Solada", "launches": 74, "graduated": 5 },
+        { "id": "snek", "label": "Snek.fun", "launches": 33, "graduated": 1 },
+        { "id": "other", "label": "Other", "launches": 0, "graduated": 0 }
+      ],
+      "launches": [
+        { "ticker": "GHOST", "launchpad": "snek", "age": "9h", "holders": 142, "pool_ada": 31200, "swarm": false, "example": true },
+        { "ticker": "MEPE", "launchpad": "solada", "graduated": true, "age": "1d", "holders": 124, "pool_ada": 27900, "swarm": true },
+        { "ticker": "DGENS", "launchpad": "snek", "graduated": true, "age": "2d", "holders": 88, "pool_ada": 14000, "holders_example": true, "pool_example": true },
+        { "ticker": "FOSHIZLE", "launchpad": "solada", "age": "3d", "holders": 61, "pool_ada": 9400, "swarm": true },
+        { "ticker": "MSNEK", "launchpad": "solada", "age": "4d", "holders": 47, "pool_ada": 6100, "swarm": true, "sniper": true }
+      ],
+      "rotation": {
+        "who": "Grumpy Walrus",
+        "window": "Last 24h",
+        "from": "2026-10-28T19:34:00-04:00",
+        "to": "2026-10-29T08:03:00-04:00",
+        "out": [
+          { "token": "SNEK", "detail": "sold 1M", "ada": 2978 },
+          { "token": "COCK", "detail": "pool pull", "ada": 944 },
+          { "token": "outside wallet", "detail": "in", "ada": 690 }
+        ],
+        "in": [
+          { "token": "ASCEND", "ada": 1521 },
+          { "token": "FLOW", "ada": 1316 },
+          { "token": "MEPE", "detail": "now 11.05M", "ada": 1170 }
+        ],
+        "takeaway": "Selling SNEK and trimming old bags → rotating into ASCEND, MEPE, FLOW.",
+        "trends": [
+          { "token": "ASCEND", "trend": "accumulating" },
+          { "token": "MEPE", "trend": "accumulating" },
+          { "token": "SNEK", "trend": "exiting" }
+        ]
+      },
+      "swarms": [
+        {
+          "name": "Swarm group A",
+          "label": "repeat early buyers",
+          "wallets": 14,
+          "last_seen": ["FOSHIZLE", "MSNEK", "COPE", "ROCKET", "SHEF", "RTB"],
+          "launches": [
+            { "ticker": "RTB", "at": "2026-10-29T06:10:00-04:00" },
+            { "ticker": "SHEF", "at": "2026-10-28T23:40:00-04:00" }
+          ],
+          "note": "When this group jumps in, it's usually a swarm launch → Pass. Worth watching only if a token keeps real holders after they leave."
+        }
+      ],
+      "snipers": {
+        "tickers": ["CHEESE", "INTEL"],
+        "note": "first-block buyers fully exited."
+      },
+      "hot": [
+        {
+          "ticker": "MEPE",
+          "line": "Grumpy Walrus added ~1,170 ADA and the swarm group bought at launch.",
+          "note": "Both overlap here. MEPE is still a swarm launch → Pass on the radar; watch whether holders stay."
+        }
+      ],
+      "clusters": [
+        {
+          "ticker": "TCM",
+          "tone": "r",
+          "pill": "🔴 coordinated buys",
+          "summary": "Coordinated buys + 7 repeat early buyers",
+          "wallets": ["w-8315deec", "w-94d806d7", "w-4982aa46", "w-4bb7d165"]
+        },
+        {
+          "ticker": "CHEESE",
+          "tone": "y",
+          "pill": "sniper full exit",
+          "summary": "A first-minute buyer sold everything",
+          "wallets": ["w-94d806d7"]
+        }
+      ],
+      "heat": {
+        "tokens": ["SLIP", "MONKEY", "MEOW", "FUKU", "CHEESE", "MEPE"],
+        "wallets": [
+          { "tag": "c66a", "cells": { "SLIP": { "ada": 1200 }, "CHEESE": { "ada": 980, "sniper": true } } },
+          { "tag": "8315", "cells": { "MONKEY": { "ada": 1100 }, "CHEESE": { "ada": 400, "sniper": true } } },
+          { "tag": "94d8", "cells": { "MEOW": { "ada": 870 } } },
+          { "tag": "4982", "cells": { "FUKU": { "ada": 760 } } },
+          { "tag": "4bb7", "cells": { "MEPE": { "ada": 900 } } },
+          { "tag": "a1f0", "cells": { "FUKU": { "ada": 280 } } },
+          { "tag": "7e2b", "cells": { "MEOW": { "ada": 120 } } },
+          { "tag": "d09c", "cells": { "SLIP": { "ada": 40 } } },
+          { "tag": "3b5e", "cells": { "SLIP": { "ada": 30 } } },
+          { "tag": "f412", "cells": { "MONKEY": { "ada": 20 } } }
+        ]
+      }
+    }
+  }
+}
