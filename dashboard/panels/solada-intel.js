@@ -94,7 +94,7 @@
     const mv = moves.slice().sort((a, b) => ((a.lp || a.raw_units) - (b.lp || b.raw_units)) || first(a.ticker) - first(b.ticker)).slice(0, 8);
     const net = w && typeof w.net_flow_ada === "number" ? w.net_flow_ada : null;
     const tagged = safeTag(w && w.stake_prefix) || safeTag(moves[0] && moves[0].tag);
-    const who = (w && typeof w.codename === "string" && w.codename && !/founder|cockwhale|\$|@/i.test(w.codename)) ? w.codename : "Whale";
+    const who = (w && typeof w.codename === "string" && w.codename && !/founder|\$|@/i.test(w.codename)) ? w.codename : "Whale";
     return `<div class="si-whale"><div class="si-whead"><b>${S.esc(who)}</b> ${tagged ? chips([tagged]) : ""}${net != null ? ` <span class="${net >= 0 ? "up" : "down"} mono">net ${net > 0 ? "+" : ""}${S.fmt(net, 0)} ADA</span>` : ""}</div>
       ${mv.length ? `<div class="si-moves">${mv.map(m => `<span class="si-move ${/ASCEND|STRIKE/i.test(m.ticker) ? "key" : ""}${m.lp || m.raw_units ? " dim" : ""}"><b>${S.esc(m.ticker)}</b> ${m.lp ? S.pill("LP", "pass") + " " : ""}<span class="${m.delta >= 0 ? "up" : "down"}">${m.delta > 0 ? "+" : ""}${S.fmt(m.delta, 0)}</span>${m.raw_units ? ` <span class="si-dim">raw units · unvalued</span>` : m.ada_equiv ? ` ≈${S.fmt(m.ada_equiv, 0)}₳` : ""}</span>`).join("")}</div>` : ""}
       ${lines.map(l => `<div class="si-wline ${first(l) ? "" : "key"}">${S.rich(l)}</div>`).join("")}</div>`;

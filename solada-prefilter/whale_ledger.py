@@ -1,4 +1,4 @@
-"""SPD-44 founder whale ledger ($cockwhale), zero AI, free Koios public tier (no key).
+"""SPD-44 lead whale ledger (codename Grumpy Walrus), zero AI, free Koios public tier (no key).
 
 Writes desk-data:solada-prefilter/whale_ledger.json. Rows:
   {time, tx_short, kind, token, qty, ada_leg, counterparty_tag, order_ref_short?, order_status?}

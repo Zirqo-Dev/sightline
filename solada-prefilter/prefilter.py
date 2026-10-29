@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import flags as flagmod  # noqa: E402  flag-only signals, never triggers
 import valuation as V  # noqa: E402  LP detection, raw-unit valuation, kill dedupe
 import big_moves as BM  # noqa: E402  SPD-43 big-move detector (research rows, never triggers)
-import whale_ledger as WL  # noqa: E402  SPD-44 founder whale ledger (research rows, never triggers)
+import whale_ledger as WL  # noqa: E402  SPD-44 lead whale ledger (research rows, never triggers)
 import dev_checks as DC  # noqa: E402  phase-1 dev sells / serial / drawdown (own budget; may add a dev_sell trigger)
 import liquidity_moves as LM  # noqa: E402  SPD-55 pool reserves (research rows, never triggers)
 import vetoes as vetoes_mod  # noqa: E402  SPD-65 research vetoes from those files (never a buy signal)
@@ -1107,7 +1107,7 @@ def main():
         else:
             state["kill_reported"][tk] = entry
 
-    # ---- founder whale
+    # ---- lead whale (public codename). The ADA handle, when needed, comes from WHALE_ADA_HANDLE.
     wcfg = cfg["whale"]
     lp_pols = V.lp_policies(cfg)
     unit_decimals = {unit_of(l): 6 for l in launches if l.get("curve") and unit_of(l)}
@@ -1119,10 +1119,15 @@ def main():
                   for l in launches if unit_of(l) and l.get("curve") and not graduated(l)}
     dust = V.dust_cfg(wcfg)
     whale_summary = None
-    addr = chain.handle_address(wcfg["handle_policy"], wcfg["handle"])
-    stake = chain.stake_of(addr) if addr else None
+    handle = os.environ.get("WHALE_ADA_HANDLE", "").strip()
+    stake = None
+    if handle:
+        addr = chain.handle_address(wcfg.get("handle_policy") or "", handle)
+        stake = chain.stake_of(addr) if addr else None
     if not stake:
-        http._fail("whale", "handle not resolved")
+        stake = (wcfg.get("stake") or "").strip() or None
+    if not stake:
+        http._fail("whale", "whale not resolved")
     else:
         wt = tag(stake)
         snap = chain.account_assets(stake)
@@ -1201,7 +1206,7 @@ def main():
             whale_summary["moves"] = moves
             if moves:
                 triggers.append({"key": f"whale:{wt}:{hashlib.sha256(json.dumps(moves, sort_keys=True).encode()).hexdigest()[:12]}",
-                                 "kind": "whale_move", "name": "$cockwhale", "metrics": {"tag": wt, "moves": moves[:20]}})
+                                 "kind": "whale_move", "name": wcfg.get("codename") or "lead", "metrics": {"tag": wt, "moves": moves[:20]}})
         if snap is not None:
             # full snapshot stays in the private cache only, never in committed state
             if not args.dry_run:
@@ -1388,7 +1393,7 @@ def main():
     summary_path = os.path.join(args.data_dir, "last-run.json" if not args.dry_run else "dry-run.json")
     write_json(summary_path, build_summary(None, None), indent=1)  # written before research too (nice-to-have)
     note_koios_pause(http)  # a 429 during dev checks: Koios stays paused ~60s, then resumes for research
-    # ---- SPD-44 founder whale ledger first, for at most whale_ledger.budget_s, so big_moves cannot skip it.
+    # ---- SPD-44 lead whale ledger first, for at most whale_ledger.budget_s, so big_moves cannot skip it.
     http.deadline = job_deadline(cfg, t_start, time.time(), "whale_ledger")
     whale_ledger = None
     if WL.wl_cfg(cfg)["enabled"]:

@@ -22,7 +22,7 @@ Sample: one pull of the DexScreener paid feed (30 profiles + 30 boosts; 23 and 2
 ## Thresholds vs v6.2
 | Threshold | Verdict |
 |---|---|
-| Liquidity floor $50k (usd) | **Needs a broken-field fix**: switch to a quote-side SOL floor. Snapshot: usd ≥ $50k passed 2/30, while quote ≥ 25 SOL passed 7/30 (and the usd passers included a 6.3-SOL pool). **Suggested `min_quote_liquidity_sol = 25`**, which is the same bar the existing 1%-of-pool ticket cap already implies for 0.5 SOL. Bousky decides |
+| Liquidity floor $50k (usd) | **Needs a broken-field fix**: switch to a quote-side SOL floor. Snapshot: usd ≥ $50k passed 2/30, while quote ≥ 25 SOL passed 7/30 (and the usd passers included a 6.3-SOL pool). **Suggested `min_quote_liquidity_sol = 25`**, which is the same bar the existing 1%-of-pool ticket cap already implies for 0.5 SOL. The owner decides |
 | LP lock ≥ 90% | Holds for DAMM/Orca/Raydium; **pool-type-aware fix** for DLMM (N/A) and PumpSwap (structural) |
 | Top-10 ≤ 35% | Holds **only** with pool/curve/locker exclusion (implemented) |
 | Dev ≤ 10% | Holds (creator from RugCheck) |

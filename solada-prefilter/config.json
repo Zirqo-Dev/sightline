@@ -21,11 +21,12 @@
     "idempotency_slot_minutes": 120
   },
   "whale": {
-    "handle": "cockwhale",
+    "codename": "Grumpy Walrus",
+    "roster_id": "lead",
     "handle_policy": "f0ff48bbb7bbe9d59a40f1ce90e9e9d0ff5002ec48f232b49ca0fb9a",
     "stake": "stake1uylu74g0f466kj7s7ptmy40sn7cwdt3zvnswccmhxkujmtq0zqllm",
     "stake_prefix": "uylu74g0",
-    "_stake_note": "Public third-party key of the lead whale (Grumpy Walrus), not the owner's. Listed in scripts/privacy-public-keys.txt so the privacy guard allows this exact value; output carries only its tag.",
+    "_stake_note": "Public third-party stake key of the lead whale (codename Grumpy Walrus, roster id lead), not the owner's. Listed in scripts/privacy-public-keys.txt so the privacy guard allows this exact value; output carries only its tag. The ADA handle is not stored here. Set WHALE_ADA_HANDLE (a secret) to resolve it; otherwise whale.stake is used.",
     "min_ada_equiv": 2000,
     "min_position_pct": 10,
     "always_tickers": [

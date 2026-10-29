@@ -1,4 +1,4 @@
-"""SPD-44 founder whale ledger (offline, no secrets, no network). Fake addresses come from labels."""
+"""SPD-44 lead whale ledger (offline, no secrets, no network). Fake addresses come from labels."""
 import re, shutil, hashlib, json, os, subprocess, sys, tempfile, unittest
 from unittest import mock
 HERE = os.path.dirname(os.path.abspath(__file__))

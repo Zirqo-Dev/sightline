@@ -47,6 +47,8 @@ jobs:
       - name: Privacy guard on desk-data
         env:
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          PRIVACY_IDENTITY_HASHES: ${{ secrets.PRIVACY_IDENTITY_HASHES }}
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
           RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
         run: bash main/scripts/privacy-guard.sh --root desk-data
       - uses: actions/setup-python@v5
