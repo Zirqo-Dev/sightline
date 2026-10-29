@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-29T10:00:28Z",
+ "generated_at": "2026-10-29T10:30:24Z",
  "cfg_version": "v1-v6.5",
  "open": [
   {
@@ -24,11 +24,11 @@
     "px": 0.0043110598611640375
    },
    "frac": 0.333333,
-   "last_mark": 0.03421160151866922,
+   "last_mark": 0.04262642370354321,
    "thesis": "safety:too_fresh",
    "result": {
     "pnl": 0.350622368,
-    "pct": 693.58,
+    "pct": 888.77,
     "unit": "SOL",
     "net_pnl": 0.350622368,
     "gross_pnl": 0.37385306
@@ -49,39 +49,14 @@
     "px": 0.00039636282071216184
    },
    "frac": 0.333333,
-   "last_mark": 0.0018080889942811973,
+   "last_mark": 0.0014051097088210282,
    "thesis": "safety:too_fresh",
    "result": {
     "pnl": 0.38325867,
-    "pct": 356.17,
+    "pct": 254.5,
     "unit": "SOL",
     "net_pnl": 0.38325867,
     "gross_pnl": 0.39067268
-   }
-  },
-  {
-   "id": "S-20261029T1000-6KiSpump",
-   "ticker": "BabyNuts",
-   "mint": "6KiSJe4GB9vLratvfF4Zb91jNQeekE3QCG3BnLzkpump",
-   "book": "S",
-   "status": "open",
-   "size": 0.5,
-   "cost_model": "v3-exit-aware",
-   "cost_model_started_at": "2026-10-29T00:30:25Z",
-   "opened_at": "2026-10-29T10:00:28Z",
-   "window_ends_at": "2026-10-29T12:00:28Z",
-   "entry": {
-    "px": 0.0015281107630793062
-   },
-   "frac": 1.0,
-   "last_mark": 0.0015281107630793062,
-   "thesis": "safety:risk_score",
-   "result": {
-    "pnl": 0.0,
-    "pct": 0.0,
-    "unit": "SOL",
-    "net_pnl": 0.0,
-    "gross_pnl": 0.0
    }
   }
  ],
@@ -1646,6 +1621,35 @@
     "gross_pct": -61.18
    },
    "thesis": "safety:too_fresh"
+  },
+  {
+   "id": "S-20261029T1000-6KiSpump",
+   "ticker": "BabyNuts",
+   "mint": "6KiSJe4GB9vLratvfF4Zb91jNQeekE3QCG3BnLzkpump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-10-29T10:00:28Z",
+   "closed_at": "2026-10-29T10:30:24Z",
+   "entry": {
+    "px": 0.0015281107630793062
+   },
+   "exit": {
+    "px": 2.0393860621903806e-05
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": -0.496926885,
+    "pct": -98.71,
+    "unit": "SOL",
+    "net_pnl": -0.496926885,
+    "net_pct": -98.71,
+    "gross_pnl": -0.4933271,
+    "gross_pct": -98.67
+   },
+   "thesis": "safety:risk_score"
   }
  ],
  "books": {
@@ -1677,14 +1681,14 @@
    "realized_gross_pnl": -0.911025679
   },
   "S": {
-   "cash": 5.524145767,
-   "equity": 8.089691854,
-   "realized_pnl": -3.634456334,
-   "open": 3,
-   "closed": 26,
+   "cash": 5.53066138,
+   "equity": 7.754685435,
+   "realized_pnl": -4.131383219,
+   "open": 2,
+   "closed": 27,
    "fills_today": 15,
    "would_halt": [],
-   "realized_gross_pnl": -3.265149304
+   "realized_gross_pnl": -3.758476404
   }
  },
  "costs": {
@@ -1711,8 +1715,8 @@
   "started_at": "2026-10-29T00:30:25Z",
   "windows": {
    "7": {
-    "counted_closes": 43,
-    "net_pnl": -4.916827843,
+    "counted_closes": 44,
+    "net_pnl": -5.413754728,
     "wins": 18,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
@@ -1721,8 +1725,8 @@
     }
    },
    "28": {
-    "counted_closes": 43,
-    "net_pnl": -4.916827843,
+    "counted_closes": 44,
+    "net_pnl": -5.413754728,
     "wins": 18,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,

@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793268028,
+ "last_run_ts": 1793269824,
  "voids": [],
  "books": {
   "F": {
@@ -479,16 +479,16 @@
    "realized_gross": -0.9110256789997693
   },
   "S": {
-   "cash": 5.5241457673974,
+   "cash": 5.53066138035666,
    "open": {
     "S-20261028T2100-dyw5pump": {
      "entry": 0.0043110598611640375,
-     "peak": 0.035171117862607126,
+     "peak": 0.04262642370354321,
      "steps": 2,
      "liq0": 257.1357,
      "opened": 1793221227,
      "frac": 0.3333333333333334,
-     "last_mark": 0.03421160151866922,
+     "last_mark": 0.04262642370354321,
      "stale": 0,
      "no_route_count": 0,
      "mint": "dyw5fDNv91eknniMG4tGCU1ZrzjuxbpsLiEzih6pump",
@@ -501,7 +501,7 @@
      "gross_pnl": 0.37385306,
      "entry_haircut": 0.020440792724637596,
      "entry_cost": 0.5102303963623187,
-     "exit_haircut": 0.006402783333226784
+     "exit_haircut": 0.006430921136106428
     },
     "S-20261029T0800-Fa24pump": {
      "entry": 0.00039636282071216184,
@@ -510,7 +510,7 @@
      "liq0": 99.3711,
      "opened": 1793260827,
      "frac": 0.3333333333333334,
-     "last_mark": 0.0018080889942811973,
+     "last_mark": 0.0014051097088210282,
      "stale": 0,
      "no_route_count": 0,
      "mint": "Fa24xN13pzjmcx1dtKP9nBMMFCwLtXCJrtP5hSPKpump",
@@ -525,35 +525,12 @@
      "entry_cost": 0.5036358066647909,
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "exit_haircut": 0.007149601916302621
-    },
-    "S-20261029T1000-6KiSpump": {
-     "entry": 0.0015281107630793062,
-     "peak": 0.0015281107630793062,
-     "steps": 0,
-     "liq0": 144.009388,
-     "opened": 1793268028,
-     "frac": 1.0,
-     "last_mark": 0.0015281107630793062,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "6KiSJe4GB9vLratvfF4Zb91jNQeekE3QCG3BnLzkpump",
-     "symbol": "BabyNuts",
-     "tokens": 327201412411,
-     "run_id": "20261029T1000",
-     "why": "safety:risk_score",
-     "book": "S",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
-     "entry_haircut": 0.006864995705330923,
-     "entry_cost": 0.5034424978526654,
-     "cost_model": "v3-exit-aware",
-     "cost_model_started_at": "2026-10-29T00:30:25Z"
+     "exit_haircut": 0.007009185764833563
     }
    },
    "fills_day": "2026-10-29",
    "fills_today": 15,
-   "realized_pnl": -3.634456333740899,
+   "realized_pnl": -4.131383218634304,
    "closed": [
     {
      "id": "S-20261028T1330-5Zjdpump",
@@ -966,11 +943,28 @@
      "why_entered": "safety:too_fresh",
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z"
+    },
+    {
+     "id": "S-20261029T1000-6KiSpump",
+     "mint": "6KiSJe4GB9vLratvfF4Zb91jNQeekE3QCG3BnLzkpump",
+     "symbol": "BabyNuts",
+     "opened": 1793268028,
+     "closed": 1793269824,
+     "entry": 0.0015281107630793062,
+     "exit_px": 2.0393860621903806e-05,
+     "why": "liquidity_pulled",
+     "pnl": -0.496926885,
+     "gross_pnl": -0.4933271,
+     "pct": -98.71,
+     "gross_pct": -98.67,
+     "why_entered": "safety:risk_score",
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z"
     }
    ],
    "would_halt": [],
    "peak_equity": 10.89800187930826,
-   "realized_gross": -3.265149303996929
+   "realized_gross": -3.758476403996929
   }
  },
  "cost_model_started_at": "2026-10-29T00:30:25Z",
