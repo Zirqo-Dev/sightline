@@ -58,7 +58,7 @@ The live Cardano tab (`preview/cardano-v2.js`, route `#/cardano`) draws five sec
 
 | Source | What the tab uses |
 |---|---|
-| `log.verdicts[]` | One board card per row. `ticker`, `verdict` (`watch` → 🟡 Watch, `pass` → 🔴 Pass, `lottery` / `call` → 🟢 Lottery-size candidate), `launchpad` (`solada` → Solada, `snek` → Snek.fun, anything else → New launch other), `reasons` (up to 3 bullets), `whale_activity` (hidden when it is "none tracked"), `pool_ada`, `holders`, `mcap_ada`. |
+| `log.verdicts[]` | One board card per row. `ticker`, `verdict` (`watch` → 🟡 Watch, `pass` → 🔴 Pass, `lottery` / `call` → 🟢 Lottery-size candidate), `launchpad` (see badge rules below), `reasons` (up to 3 bullets), `whale_activity` (hidden when it is "none tracked"), `pool_ada`, `holders`, `mcap_ada`. |
 | `log.verdicts[].kill_line` | Prose. Comparisons such as `ADA side under 750k` or `holders under 125` are parsed when the numeric fields below are absent. |
 | `solada-prefilter/kill_status.json` | Per ticker `{metric, value, line, hit, text}`. `metric` is `ada_side`, `holders`, or `mcap`. Used as the bar when the verdict has no explicit numbers. |
 | `log.cardano_top10[]` | Fallback pool / holder / mcap readings, and the whole board when `verdicts` is missing. |
@@ -126,7 +126,7 @@ These override the parsed prose and `kill_status.json` for that ticker. `kill_li
 
 | Field | Meaning |
 |---|---|
-| `launchpad` | `solada`, `snek`, `minswap`, `unknown`, or a short label. |
+| `launchpad` | Badge only. `solada` → Solada. `snek` → Snek.fun. `new` or `unknown` → New launch (a brand-new token from another pad). `established`, `minswap`, missing, null, or empty → no badge. `established` is the preferred value for older Minswap pools and OG projects (STRIKE, ASCEND, FLOW). `minswap` also draws no badge, because those tokens are the norm. Radar rows are new launches, so a missing or unknown pad there still shows New launch. |
 | `kill_metric` | `pool_ada` (alias `ada_side`), `holders`, `mcap` (alias `mcap_ada`), or `curve`. |
 | `kill_value` | Current reading of that metric. |
 | `kill_limit` | Threshold. Also accepted as `kill_threshold`. |
