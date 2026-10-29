@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793287824,
+ "last_run_ts": 1793289629,
  "voids": [],
  "books": {
   "F": {
@@ -479,35 +479,11 @@
    "realized_gross": -0.9110256789997693
   },
   "S": {
-   "cash": 6.764000866515412,
-   "open": {
-    "S-20261029T1530-3zoypump": {
-     "entry": 0.0020696957941265543,
-     "peak": 0.0020696957941265543,
-     "steps": 0,
-     "liq0": 37.5163,
-     "opened": 1793287824,
-     "frac": 1.0,
-     "last_mark": 0.0020696957941265543,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "3zoyoJwywuALj49wi9ffsz49hJaToJ29f9JBSCGNpump",
-     "symbol": "ELOOONG",
-     "tokens": 241581396367,
-     "run_id": "20261029T1530",
-     "why": "safety:too_fresh",
-     "book": "S",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
-     "entry_haircut": 0.009288063278120174,
-     "entry_cost": 0.5046540316390601,
-     "cost_model": "v3-exit-aware",
-     "cost_model_started_at": "2026-10-29T00:30:25Z"
-    }
-   },
+   "cash": 7.158883623364934,
+   "open": {},
    "fills_day": "2026-10-29",
    "fills_today": 16,
-   "realized_pnl": -2.7313451018455295,
+   "realized_pnl": -2.841116376635067,
    "closed": [
     {
      "id": "S-20261028T1330-5Zjdpump",
@@ -969,11 +945,28 @@
      "pct": 317.44,
      "gross_pct": 335.56,
      "why_entered": "safety:too_fresh"
+    },
+    {
+     "id": "S-20261029T1530-3zoypump",
+     "mint": "3zoyoJwywuALj49wi9ffsz49hJaToJ29f9JBSCGNpump",
+     "symbol": "ELOOONG",
+     "opened": 1793287824,
+     "closed": 1793289629,
+     "entry": 0.0020696957941265543,
+     "exit_px": 0.0016822948749853146,
+     "why": "liquidity_pulled",
+     "pnl": -0.109771275,
+     "gross_pnl": -0.093588855,
+     "pct": -21.75,
+     "gross_pct": -18.72,
+     "why_entered": "safety:too_fresh",
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z"
     }
    ],
    "would_halt": [],
    "peak_equity": 10.89800187930826,
-   "realized_gross": -2.3156321013049026
+   "realized_gross": -2.4092209563049027
   }
  },
  "cost_model_started_at": "2026-10-29T00:30:25Z",

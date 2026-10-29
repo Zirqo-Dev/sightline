@@ -7,35 +7,9 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-29T15:30:24Z",
+ "generated_at": "2026-10-29T16:00:29Z",
  "cfg_version": "v1-v6.5",
- "open": [
-  {
-   "id": "S-20261029T1530-3zoypump",
-   "ticker": "ELOOONG",
-   "mint": "3zoyoJwywuALj49wi9ffsz49hJaToJ29f9JBSCGNpump",
-   "book": "S",
-   "status": "open",
-   "size": 0.5,
-   "cost_model": "v3-exit-aware",
-   "cost_model_started_at": "2026-10-29T00:30:25Z",
-   "opened_at": "2026-10-29T15:30:24Z",
-   "window_ends_at": "2026-10-29T17:30:24Z",
-   "entry": {
-    "px": 0.0020696957941265543
-   },
-   "frac": 1.0,
-   "last_mark": 0.0020696957941265543,
-   "thesis": "safety:too_fresh",
-   "result": {
-    "pnl": 0.0,
-    "pct": 0.0,
-    "unit": "SOL",
-    "net_pnl": 0.0,
-    "gross_pnl": 0.0
-   }
-  }
- ],
+ "open": [],
  "closed": [
   {
    "id": "F-20261028T1330-96AUWRAY",
@@ -1683,6 +1657,35 @@
     "gross_pct": 335.56
    },
    "thesis": "safety:too_fresh"
+  },
+  {
+   "id": "S-20261029T1530-3zoypump",
+   "ticker": "ELOOONG",
+   "mint": "3zoyoJwywuALj49wi9ffsz49hJaToJ29f9JBSCGNpump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-10-29T15:30:24Z",
+   "closed_at": "2026-10-29T16:00:29Z",
+   "entry": {
+    "px": 0.0020696957941265543
+   },
+   "exit": {
+    "px": 0.0016822948749853146
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": -0.109771275,
+    "pct": -21.75,
+    "unit": "SOL",
+    "net_pnl": -0.109771275,
+    "net_pct": -21.75,
+    "gross_pnl": -0.093588855,
+    "gross_pct": -18.72
+   },
+   "thesis": "safety:too_fresh"
   }
  ],
  "books": {
@@ -1714,14 +1717,14 @@
    "realized_gross_pnl": -0.911025679
   },
   "S": {
-   "cash": 6.764000867,
-   "equity": 7.259346835,
-   "realized_pnl": -2.731345102,
-   "open": 1,
-   "closed": 29,
+   "cash": 7.158883623,
+   "equity": 7.158883623,
+   "realized_pnl": -2.841116377,
+   "open": 0,
+   "closed": 30,
    "fills_today": 16,
    "would_halt": [],
-   "realized_gross_pnl": -2.315632101
+   "realized_gross_pnl": -2.409220956
   }
  },
  "costs": {
@@ -1748,8 +1751,8 @@
   "started_at": "2026-10-29T00:30:25Z",
   "windows": {
    "7": {
-    "counted_closes": 46,
-    "net_pnl": -4.013716611,
+    "counted_closes": 47,
+    "net_pnl": -4.123487886,
     "wins": 20,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
@@ -1758,8 +1761,8 @@
     }
    },
    "28": {
-    "counted_closes": 46,
-    "net_pnl": -4.013716611,
+    "counted_closes": 47,
+    "net_pnl": -4.123487886,
     "wins": 20,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
