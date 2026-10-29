@@ -1,79 +1,44 @@
 {
- "at": "2026-10-29T20:11:16Z",
+ "at": "2026-10-29T22:09:45Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "sniper_full_exit",
-   "ticker": "KING",
-   "wallet": "w-c66abf4f",
-   "tags": [],
-   "at": "2026-10-29T20:11:16Z"
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 73.8,
+   "top_cluster_pct": 73.8,
+   "top_cluster": "w-13d53c47",
+   "basis": "ex-fe819d",
+   "at": "2026-10-29T22:09:45Z"
   },
   {
-   "kind": "volume_without_holders",
-   "ticker": "MEPE",
-   "vol_h24_ada": 206292,
-   "ada_side": 34796,
-   "holders": [
-    157,
-    157
-   ],
-   "at": "2026-10-29T20:11:16Z"
+   "kind": "whale_move",
+   "ticker": "FLOW",
+   "tag": "w-f3186187",
+   "delta": -10005000000,
+   "decimals": 6,
+   "qty": -10005.0,
+   "ada_equiv": 3033,
+   "value_basis": "ada_leg_rate",
+   "pct": 2.7,
+   "at": "2026-10-29T22:09:45Z"
   },
   {
    "kind": "whale_move",
    "ticker": "ASCEND",
    "tag": "w-f3186187",
-   "delta": 1150511015,
+   "delta": 2250763950,
    "decimals": 6,
-   "qty": 1150.511,
-   "ada_equiv": 1558,
+   "qty": 2250.764,
+   "ada_equiv": 2923,
    "value_basis": "ada_leg",
-   "pct": 0.4,
-   "at": "2026-10-29T20:11:16Z"
+   "pct": 0.7,
+   "at": "2026-10-29T22:09:45Z"
   }
  ],
  "recent": [
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-4982aa46",
-   "launches": [
-    "BREAD",
-    "CNFTIO",
-    "INTEL",
-    "MEOW",
-    "PINU",
-    "SLIP"
-   ],
-   "at": "2026-10-28T14:11:45Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-4bd659ff",
-   "launches": [
-    "CNFTIO",
-    "FUKU",
-    "MEOW",
-    "MEPE",
-    "MONKEY"
-   ],
-   "at": "2026-10-28T14:11:45Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-5c27935d",
-   "launches": [
-    "CNFTIO",
-    "FUKU",
-    "MCFA",
-    "MEOW",
-    "MONKEY",
-    "SLIP"
-   ],
-   "at": "2026-10-28T14:11:45Z"
-  },
   {
    "kind": "repeat_early_buyer",
    "wallet": "w-8001b7d0",
@@ -3222,11 +3187,43 @@
    "value_basis": "ada_leg",
    "pct": 0.4,
    "at": "2026-10-29T20:11:16Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 73.8,
+   "top_cluster_pct": 73.8,
+   "top_cluster": "w-13d53c47",
+   "basis": "ex-fe819d",
+   "at": "2026-10-29T22:09:45Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "FLOW",
+   "tag": "w-f3186187",
+   "delta": -10005000000,
+   "decimals": 6,
+   "qty": -10005.0,
+   "ada_equiv": 3033,
+   "value_basis": "ada_leg_rate",
+   "pct": 2.7,
+   "at": "2026-10-29T22:09:45Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 2250763950,
+   "decimals": 6,
+   "qty": 2250.764,
+   "ada_equiv": 2923,
+   "value_basis": "ada_leg",
+   "pct": 0.7,
+   "at": "2026-10-29T22:09:45Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 1,
-  "koios": 2
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,
