@@ -7,33 +7,9 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-29T08:30:23Z",
+ "generated_at": "2026-10-29T09:00:26Z",
  "cfg_version": "v1-v6.5",
  "open": [
-  {
-   "id": "S-20261028T1900-BLAypump",
-   "ticker": "TRUMPKIN",
-   "mint": "BLAytV5xTVEkYJYS1RoFR5Ypgm3JZ44CvVdZHTExpump",
-   "book": "S",
-   "status": "open",
-   "size": 0.5,
-   "cost_model": "pre-v3",
-   "opened_at": "2026-10-28T19:00:29Z",
-   "window_ends_at": "2026-10-28T21:00:29Z",
-   "entry": {
-    "px": 0.0016256825499667297
-   },
-   "frac": 0.666667,
-   "last_mark": 0.002431340426347557,
-   "thesis": "safety:too_fresh",
-   "result": {
-    "pnl": 0.085603417,
-    "pct": 49.56,
-    "unit": "SOL",
-    "net_pnl": 0.085603417,
-    "gross_pnl": 0.097549048
-   }
-  },
   {
    "id": "S-20261028T2100-dyw5pump",
    "ticker": "CATBOT",
@@ -48,11 +24,11 @@
     "px": 0.0043110598611640375
    },
    "frac": 0.333333,
-   "last_mark": 0.0320037755866337,
+   "last_mark": 0.03223742746951382,
    "thesis": "safety:too_fresh",
    "result": {
     "pnl": 0.350622368,
-    "pct": 642.36,
+    "pct": 647.78,
     "unit": "SOL",
     "net_pnl": 0.350622368,
     "gross_pnl": 0.37385306
@@ -72,15 +48,40 @@
    "entry": {
     "px": 0.00039636282071216184
    },
-   "frac": 0.666667,
-   "last_mark": 0.0007610247253506625,
+   "frac": 0.333333,
+   "last_mark": 0.0009607896678008142,
    "thesis": "safety:too_fresh",
    "result": {
-    "pnl": 0.149933977,
-    "pct": 92.0,
+    "pnl": 0.38325867,
+    "pct": 142.4,
     "unit": "SOL",
-    "net_pnl": 0.149933977,
-    "gross_pnl": 0.153336743
+    "net_pnl": 0.38325867,
+    "gross_pnl": 0.39067268
+   }
+  },
+  {
+   "id": "S-20261029T0900-BnxtBuuu",
+   "ticker": "Bu",
+   "mint": "Bnxttv7gQHYP1n9JyXuiATWKtxxJPc6sJJzeRFVBuuu",
+   "book": "S",
+   "status": "open",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-10-29T09:00:26Z",
+   "window_ends_at": "2026-10-29T11:00:26Z",
+   "entry": {
+    "px": 0.00031006151389643277
+   },
+   "frac": 1.0,
+   "last_mark": 0.00031006151389643277,
+   "thesis": "safety:too_fresh",
+   "result": {
+    "pnl": 0.0,
+    "pct": 0.0,
+    "unit": "SOL",
+    "net_pnl": 0.0,
+    "gross_pnl": 0.0
    }
   }
  ],
@@ -1588,6 +1589,34 @@
     "gross_pct": -0.51
    },
    "thesis": "safety:too_old"
+  },
+  {
+   "id": "S-20261028T1900-BLAypump",
+   "ticker": "TRUMPKIN",
+   "mint": "BLAytV5xTVEkYJYS1RoFR5Ypgm3JZ44CvVdZHTExpump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "pre-v3",
+   "opened_at": "2026-10-28T19:00:29Z",
+   "closed_at": "2026-10-29T09:00:26Z",
+   "entry": {
+    "px": 0.0016256825499667297
+   },
+   "exit": {
+    "px": 0.0021792100260399606
+   },
+   "exit_reason": "trailing_stop",
+   "result": {
+    "pnl": 0.180276574,
+    "pct": 35.09,
+    "unit": "SOL",
+    "net_pnl": 0.180276574,
+    "net_pct": 35.09,
+    "gross_pnl": 0.211045474,
+    "gross_pct": 42.21
+   },
+   "thesis": "safety:too_fresh"
   }
  ],
  "books": {
@@ -1619,14 +1648,14 @@
    "realized_gross_pnl": -0.911025679
   },
   "S": {
-   "cash": 5.503734204,
-   "equity": 7.863419235,
-   "realized_pnl": -3.647937308,
+   "cash": 5.837900023,
+   "equity": 7.973230493,
+   "realized_pnl": -3.319939458,
    "open": 3,
-   "closed": 24,
-   "fills_today": 13,
+   "closed": 25,
+   "fills_today": 14,
    "would_halt": [],
-   "realized_gross_pnl": -3.310089637
+   "realized_gross_pnl": -2.959257275
   }
  },
  "costs": {
@@ -1653,9 +1682,9 @@
   "started_at": "2026-10-29T00:30:25Z",
   "windows": {
    "7": {
-    "counted_closes": 40,
-    "net_pnl": -4.930308817,
-    "wins": 16,
+    "counted_closes": 42,
+    "net_pnl": -4.602310967,
+    "wins": 18,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
     "older_labels": {
@@ -1663,9 +1692,9 @@
     }
    },
    "28": {
-    "counted_closes": 40,
-    "net_pnl": -4.930308817,
-    "wins": 16,
+    "counted_closes": 42,
+    "net_pnl": -4.602310967,
+    "wins": 18,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
     "older_labels": {
