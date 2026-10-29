@@ -47,7 +47,7 @@ One file each in `dashboard/panels/`. Each calls `S.register`.
 | `notes` | A string, or an object of named sections. |
 | `chart` | A simple line. `options.x` (default `t` or `at`) and `options.y`. |
 | `embed` | Another page, collapsed to one line (`details`). `options.url` is relative to the site root (`nft/site/`) or absolute. `options.preview` is an image in the desk folder, shown until the panel is opened and the preview is clicked. `options.height` is pixels. |
-| `solada-intel` | Solada intel: 24h flag strip from `solada-prefilter/flags.json`, Cardano top 10 from `log.cardano_top10`, founder whale card (ASCEND/STRIKE first, hidden when absent), per-ticker drill-down (pulse sparklines, kill-line bar, first-block buyers held/exited, cluster timeline), cluster heat grid, pattern scoreboard. Every part has an empty state. Wallets render as tags only. |
+| `solada-intel` | Solada intel: 24h flag strip from `solada-prefilter/flags.json`, Cardano top 10 from `log.cardano_top10`, Grumpy Walrus card (ASCEND/STRIKE first, hidden when absent), per-ticker drill-down (pulse sparklines, kill-line bar, first-block buyers held/exited, cluster timeline), cluster heat grid, pattern scoreboard. Every part has an empty state. Wallets render as tags only. |
 | `coming-soon` | A reserved slot. `options.text` is the message. |
 
 ## Cardano tab (v2)

@@ -89,7 +89,6 @@
     let s = String(value ?? "");
     s = s.replace(/\$[A-Za-z0-9_]{2,32}/g, " ");
     s = s.replace(/@[A-Za-z0-9_]{2,32}/g, " ");
-    s = s.replace(/cockwhale/gi, " ");
     s = s.replace(/founder_whale_move/gi, (leadCodename || "Whale") + " move");
     s = s.replace(/founder_pct/gi, " ");
     s = s.replace(/founder_whale/gi, leadCodename || "whale");
@@ -614,7 +613,7 @@
   function animalName(value) {
     const t = String(value || "").trim();
     if (!t || t.length > 40 || !/^[A-Za-z][A-Za-z' -]{1,40}$/.test(t)) return "";
-    if (/founder|cockwhale|seller|buyer|cluster|sniper|dumper|launcher|\$|@/i.test(t)) return "";
+    if (/founder|seller|buyer|cluster|sniper|dumper|launcher|\$|@/i.test(t)) return "";
     return t;
   }
   function whaleCodenames(log) {
@@ -643,7 +642,7 @@
     if (!s) return "";
     if (whaleNames[s]) return whaleNames[s];
     if (/^w-[0-9a-f]{8}$/.test(s)) return s;
-    if (/founder|cockwhale/i.test(s)) return "";
+    if (/founder/i.test(s)) return "";
     return s;
   }
   function snapshotRows(node) {

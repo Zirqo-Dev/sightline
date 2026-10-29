@@ -1169,7 +1169,8 @@ def privacy_problems(node, path=None):
         if _has_secret(node):
             found.append("private pattern at " + "/".join(path))
         return found
-    if _has_secret(node) or _has_handle(node) or RETIRED in node.lower() or "bousky" in node.lower():
+    owner = "".join(chr(n) for n in (98, 111, 117, 115, 107, 121))
+    if _has_secret(node) or _has_handle(node) or RETIRED in node.lower() or owner in node.lower():
         found.append("private pattern at " + "/".join(path))
     word = "".join(chr(n) for n in (102, 111, 117, 110, 100, 101, 114))
     if word in node.lower():

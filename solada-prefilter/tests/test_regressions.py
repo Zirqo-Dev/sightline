@@ -123,7 +123,7 @@ class WhaleRun(unittest.TestCase):
                        mock.patch.object(P.Chain, "account_txs_after", lambda self, s, h, n: [("agg1", 101), ("lpadd", 102)] if legs else []),
                        mock.patch.object(F.FlagChain, "tx_utxos", lambda self, hs: {h: ut[h] for h in hs}),
                        mock.patch.object(P, "gt_pool", lambda http, u: dict(pool) if u == FLOW_UNIT else None)]
-            run = run_main(d, fake_req, patches, env={"SOLADA_WEBHOOK_URL": "https://example.invalid/hook"})
+            run = run_main(d, fake_req, patches, env={"SOLADA_WEBHOOK_URL": "https://example.invalid/hook", "WHALE_ADA_HANDLE": "fixture-handle"})
             F.assert_public(run)
             return run, asked
 

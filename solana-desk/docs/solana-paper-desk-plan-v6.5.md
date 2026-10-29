@@ -4,9 +4,9 @@
 
 _Original title: SCAN > VERIFY > EXECUTE > EXIT: v6.3, day-1 field fixes applied (looser start)_
 
-> **Reviews closed:** the external reviews are done. From now on, changes come only from Bousky and Grok Bot.
+> **Reviews closed:** the external reviews are done. From now on, changes come only from the owner and Grok Bot.
 
-A paper-only Solana memecoin desk in Sightline's own `solana/` folder, built on the @0xTimQ article. Zero-AI code runs the mechanics plus a time-matched random shadow book; KING does one capped judgment review a day; Snek stays on Solada only; Bousky is the only signer. AI does only the daily KING judgment review plus a weekly read. The test is designed to kill a non-edge and can only catch big edges, never prove a small one. Numbers are suggestions or labeled estimates.
+A paper-only Solana memecoin desk in Sightline's own `solana/` folder, built on the @0xTimQ article. Zero-AI code runs the mechanics plus a time-matched random shadow book; KING does one capped judgment review a day; Snek stays on Solada only; the owner is the only signer. AI does only the daily KING judgment review plus a weekly read. The test is designed to kill a non-edge and can only catch big edges, never prove a small one. Numbers are suggestions or labeled estimates.
 
 > **Honest framing:** the most likely day-28 outcome is KILL or "filters too strict". If that happens, the test worked: paper-only means the downside is time and usage, not money.
 
@@ -14,23 +14,23 @@ A paper-only Solana memecoin desk in Sightline's own `solana/` folder, built on 
 
 | Stage | Status | Condition |
 |---|---|---|
-| Build (setup runs) | Cleared (reviewer: go) | Bousky approves v6.3 (done) and completes his three one-time steps (Jupiter key, sightline-only token, `main` protection) |
+| Build (setup runs) | Cleared (reviewer: go) | the owner approves v6.3 (done) and completes his three one-time steps (Jupiter key, sightline-only token, `main` protection) |
 | Day 1: threshold and uptime checks | Cleared | Raw API responses reviewed; box loop confirmed unattended or switch to the 30-min Actions fallback before fills |
 | Days 2-3: scan + verify only | Cleared | No fills; thresholds may be adjusted on scan pass rates only |
 | Day 4: paper fills start | Gated | Only after the config freeze at the end of day 3 (config v1 plus decision rules committed) and all v6 to v6.3 changes in code |
 
 ## Baseline: resolved (run both)
 
-> **Decision: run BOTH desks.** Baseline is the Base-only educational paper desk (repo Zirqo-Dev/baseline-desk, Notion backlog with BL-n cards, Claude as analyst and Claude Code as builder). It runs outside Grok, so it adds no Grok usage and does not compete for KING's review slot. Suggestion only (optional): if Bousky wants the two desks' results comparable, give Baseline the same structure, a kill rule set in advance plus a random control book.
+> **Decision: run BOTH desks.** Baseline is the Base-only educational paper desk (repo Zirqo-Dev/baseline-desk, Notion backlog with BL-n cards, Claude as analyst and Claude Code as builder). It runs outside Grok, so it adds no Grok usage and does not compete for KING's review slot. Suggestion only (optional): if the owner wants the two desks' results comparable, give Baseline the same structure, a kill rule set in advance plus a random control book.
 
 | Coordination rule | Detail |
 |---|---|
 | Separate repos | Baseline lives in Zirqo-Dev/baseline-desk; this desk lives in Zirqo-Dev/sightline (`solana/`) |
 | Separate mandates | Baseline: Base-only, educational, Claude/Claude Code. This desk: Solana-only, KING + zero-AI code |
 | No shared files or tasks | No shared configs, logs, books, backlog cards or credentials; the sightline token never touches baseline-desk |
-| Changes | Neither builder edits the other desk; cross-desk ideas go to Bousky, not to the other repo |
+| Changes | Neither builder edits the other desk; cross-desk ideas go to the owner, not to the other repo |
 
-## What changed in v6.3 (day-1 field fixes, looser start; approved by Bousky)
+## What changed in v6.3 (day-1 field fixes, looser start; approved by the owner)
 
 Based on the day-1 API check (one snapshot of 30 Solana tokens from the paid feed; indicative only).
 
@@ -46,7 +46,7 @@ Based on the day-1 API check (one snapshot of 30 Solana tokens from the paid fee
 
 Snapshot pass count: of 14 graduated tokens, **9 had at least 10 SOL** on the SOL side (7 at 25 SOL). This is a looser start: tighten later only on data, as a logged pass-rate change before the freeze.
 
-## What changed in v6.2 (approved by Bousky)
+## What changed in v6.2 (approved by the owner)
 
 | # | Change | Why |
 |---|---|---|
@@ -55,7 +55,7 @@ Snapshot pass count: of 14 graduated tokens, **9 had at least 10 SOL** on the SO
 | 3 | The top-5%-trimmed comparison becomes a report warning, not a kill clause; the bootstrap bound is reported, not a kill clause; second-pass kill checks removed | Fewer clauses means fewer false kills |
 | 4 | A daily no-AI health line (loop ran, check count, error rate, data-failure rate) on the dashboard | Mechanics stay zero-AI and visible at a glance |
 | 5 | AI does only the daily KING judgment review plus a weekly read | Zero-AI mechanics confirmed |
-| 6 | External reviews are done; from now on it's Bousky and Grok Bot only | Stops the plan from moving |
+| 6 | External reviews are done; from now on it's the owner and Grok Bot only | Stops the plan from moving |
 
 ## What changed in v6.1 (wiring fix)
 
@@ -63,10 +63,10 @@ Snapshot pass count: of 14 graduated tokens, **9 had at least 10 SOL** on the SO
 |---|---|---|
 | 1 | Every generated file goes on `desk-data`: daily summary, `paper.json`, `log.json`, `briefs/`, `review.json` (plus tasks/trades/state) | Protecting `main` would otherwise block the desk's own daily writes, tempting someone to switch protection off |
 | 2 | `pages.yml` checks out `main` (code) plus `desk-data` (data) and builds the site | Dashboard still updates without any write to `main` |
-| 3 | `main` changes only via PRs Bousky merges; the box token never needs write access to `main` | Branch protection can stay on permanently |
-| 4 | The setup run opens a PR instead of pushing; Bousky merges it from his phone | Same rule applies from day 0 |
+| 3 | `main` changes only via PRs the owner merges; the box token never needs write access to `main` | Branch protection can stay on permanently |
+| 4 | The setup run opens a PR instead of pushing; the owner merges it from his phone | Same rule applies from day 0 |
 | 5 | New Checkpoints section (end of day 3, day 7, days 14/28) | Pre-commits what to do when tempted |
-| 6 | Optional: Bousky logs his own KILL/STOP/PASS prediction with a confidence before day 4 | Calibration check, whatever the desk does |
+| 6 | Optional: the owner logs his own KILL/STOP/PASS prediction with a confidence before day 4 | Calibration check, whatever the desk does |
 | 7 | Honest framing line: KILL or "filters too strict" is the most likely day-28 outcome | That outcome means the test worked |
 
 ## What changed in v6 (final review round)
@@ -80,7 +80,7 @@ Snapshot pass count: of 14 graduated tokens, **9 had at least 10 SOL** on the SO
 | 5 | Mid-test infra switch starts a new book; loop outage over 2h voids new entries for that window | A cadence change is a strategy change |
 | 6 | False-kill rates restated (reviewer's estimate): about 1/2 for a real +5% edge, about 15% for +20% (superseded in v6.2) | Three kill clauses checked twice kill more often; the test catches big edges only |
 | 7 | PASS also needs F's own expectancy after costs above zero | Beating random while losing isn't income |
-| + | Branch protection on `main` (optional, adopted): the box token can write only to `desk-data`; Bousky sets the rule himself on github.com | Limits damage if the token leaks |
+| + | Branch protection on `main` (optional, adopted): the box token can write only to `desk-data`; the owner sets the rule himself on github.com | Limits damage if the token leaks |
 
 Earlier rounds already added: the hypothesis and pre-set rules, F/R/S shadow books with identical execution checks, stale-aware exits, data/safety/execution skip split, bootstrap expectancy, time-matched R, void days, no X-read metric, Option A infra with a sightline-only token, the day-1 threshold re-check, and the Baseline decision.
 
@@ -112,7 +112,7 @@ Earlier rounds already added: the hypothesis and pre-set rules, F/R/S shadow boo
 
 | Standing rule | Detail |
 |---|---|
-| Live | Out of scope. Any live step is a separate written decision by Bousky, with its own wallet and cap |
+| Live | Out of scope. Any live step is a separate written decision by the owner, with its own wallet and cap |
 | Config | Adjustable on days 1-3 on scan pass rates only (never prices); frozen at the end of day 3. Any later change starts a new book; books are never pooled |
 | Infra switch | A mid-test switch (box to Actions or back) starts a new book |
 | Loop outage | Over 2 hours: new entries in that window are voided; open positions keep being tracked |
@@ -122,7 +122,7 @@ Earlier rounds already added: the hypothesis and pre-set rules, F/R/S shadow boo
 
 > **A separate `solana/` desk with a zero-AI loop plus a time-matched random shadow book, and one unscored KING review a day. No new bot.** Code runs SCAN, the hard-skip VERIFY, paper EXECUTE and EXIT for all books. KING's "Solana paper desk" routine reviews at most 3 survivors a day as a judgment pass (no score, no metric). Day 14 is an early stop for clear failure only; day 28 is the one real test (decision table above). A dedicated bot stays a later option only if a much longer paper test passes.
 
-## Mandate separation (decided by Bousky)
+## Mandate separation (decided by the owner)
 
 | Agent / thing | Mandate | Does not |
 |---|---|---|
@@ -130,7 +130,7 @@ Earlier rounds already added: the hypothesis and pre-set rules, F/R/S shadow boo
 | KING: 'Solana paper desk' routine | 1 daily unscored judgment review of at most 3 survivors; wallet/cluster forensics notes; report | Never edits `config.py`; no scored X-read metric; never mixes with NFT desk logs |
 | KING: NFT desk | Unchanged (`nft/`) | - |
 | Zero-AI loop (code) | SCAN, hard skips, all books' paper fills and exits, `tasks.csv`/`trades.csv` | No AI |
-| Bousky | Edits `config.py`, approves changes, only signer | - |
+| the owner | Edits `config.py`, approves changes, only signer | - |
 | Shared | Only the gathering pattern (pulse.sh style, exit codes, privacy guard, validator) and helper code | Never mandates, rules, books or logs |
 
 Why: one agent with two desks blends rules and leaks lessons across books. A separate routine, folder and logs gives every trade a single owner (the article's "nobody holds two"). KING fits because of its wallet/cluster forensics; the review notes it was also chosen partly because its routine was paused (availability, not only fit). That is acceptable because KING's role is now small and unscored.
@@ -175,9 +175,9 @@ All books use the same fixed 0.5 SOL ticket, costs and exits, with their own pap
 | Rejected: Actions every 5 min | 288 runs/day | Matches the article | Highest terms risk; exceeds the Pages soft limit of 10 builds/hour |
 | Rejected: new GitHub account or Enterprise | - | - | One free personal account per person; Enterprise has the same Actions terms plus a bill |
 
-**Push credential (Option A):** a fine-grained personal access token that Bousky creates himself, scoped to Zirqo-Dev/sightline only, permission Contents: read and write (nothing else), expiry 30-60 days. Stored as a box secret, never pasted in chat, never all-repo access, rotated at expiry.
+**Push credential (Option A):** a fine-grained personal access token that the owner creates himself, scoped to Zirqo-Dev/sightline only, permission Contents: read and write (nothing else), expiry 30-60 days. Stored as a box secret, never pasted in chat, never all-repo access, rotated at expiry.
 
-**Branch protection (adopted):** Bousky adds a rule on github.com protecting `main` (require pull requests, no direct pushes), so the box token never needs write access to `main` and writes only to `desk-data`. Code changes to `main` arrive only as PRs Bousky merges (from his phone if he likes), including the setup run's PR.
+**Branch protection (adopted):** the owner adds a rule on github.com protecting `main` (require pull requests, no direct pushes), so the box token never needs write access to `main` and writes only to `desk-data`. Code changes to `main` arrive only as PRs the owner merges (from his phone if he likes), including the setup run's PR.
 
 **Infra switch rule:** switching between Option A and B mid-test starts a new book; a loop outage over 2 hours voids new entries for that window.
 
@@ -245,7 +245,7 @@ Done on Oct 24, 2026 from the box (findings.md, raw responses in raw/). Jupiter 
 
 | Path | Purpose |
 |---|---|
-| `solana/desk/config.py` | Every number; Bousky edits, bots never do; frozen end of day 3 |
+| `solana/desk/config.py` | Every number; the owner edits, bots never do; frozen end of day 3 |
 | `solana/desk/scan.py, verify.py, desk.py, book.py, exits.py, report.py, quote.py, shadow.py` | Article's files plus the shadow books (F, R, S) |
 | `desk-data` branch: `tasks.csv, trades.csv, state.json` | Logs and state (7-day window + monthly archive) |
 | `desk-data` branch: `solana/health.json` | Daily no-AI health line: loop ran (yes/no, runs vs expected), check count, error rate, data-failure rate; shown on the dashboard |
@@ -258,7 +258,7 @@ Done on Oct 24, 2026 from the box (findings.md, raw responses in raw/). Jupiter 
 
 Rules:
 
-1. Paper only. No wallets, keys, signing or swaps; Bousky signs everything, ever.
+1. Paper only. No wallets, keys, signing or swaps; the owner signs everything, ever.
 2. Never show the owner wallets or holdings; other wallets as stable short tags (w-7f3a); privacy-guard on every push.
 3. For entries, missing data is a skip and a skip is final (article). For exits, a temporary error means stale + retry; only a confirmed gone pool or 3 no-route checks means -100%.
 4. Execution checks apply to every book; only safety filters differ.
@@ -266,7 +266,7 @@ Rules:
 6. Halts are logged as "would have halted"; they never stop a book.
 7. Snek never touches `solana/`; KING's desk routine never touches `solada/` or `nft/`.
 8. The decision rules above are frozen with the config at the end of day 3.
-9. `main` is branch-protected; all generated files and the box token's writes go only to `desk-data`; `main` changes only via PRs Bousky merges.
+9. `main` is branch-protected; all generated files and the box token's writes go only to `desk-data`; `main` changes only via PRs the owner merges.
 
 ## Logging: tasks.csv / trades.csv
 
@@ -300,18 +300,18 @@ Estimates back-solved from the pool hitting 82% mid-week with KING at about 3 ru
 
 ## Cloud-only setup
 
-| Piece | Runs on | Part for Bousky |
+| Piece | Runs on | Part for the owner |
 |---|---|---|
 | Desk loop | Grok Bot cloud computer (Option A), Actions every 30 min as fallback (Option B) | None |
 | Daily review | KING routine 'Solana paper desk' on the Grok Bot cloud computer | Read the report on phone |
 | Dashboard | zirqo-dev.github.io/sightline, Solana desk tab with the daily no-AI health line at the top, deployed via Actions | Phone browser |
 | Docs | Notion (connected) | - |
-| Keys | Free Jupiter API key; fine-grained sightline-only token (Contents read/write, 30-60 day expiry) | Bousky creates both himself; stored as secrets, never in chat |
+| Keys | Free Jupiter API key; fine-grained sightline-only token (Contents read/write, 30-60 day expiry) | the owner creates both himself; stored as secrets, never in chat |
 | Local machine | Nothing: no server, Docker or CLI | - |
 
 ## Paper test (28 days with a day-14 early stop, PASS capped at 200 F closes or 12 weeks)
 
-1. **Setup (3-4 KING runs):** Port the article's files plus shadow.py (F, R, S) with the fixed 0.5 SOL ticket; Option A with lock file, `desk-data` branch, Pages via Actions; Jupiter key and sightline-only token as secrets; Bousky protects `main`; the setup run opens a PR that Bousky merges from his phone.
+1. **Setup (3-4 KING runs):** Port the article's files plus shadow.py (F, R, S) with the fixed 0.5 SOL ticket; Option A with lock file, `desk-data` branch, Pages via Actions; Jupiter key and sightline-only token as secrets; the owner protects `main`; the setup run opens a PR that the owner merges from his phone.
 2. **Day 1: threshold re-check and uptime check:** Raw responses, LP/top-10/RugCheck checks, confirm the box loop runs unattended (else switch to Option B now, before any book exists).
 3. **Days 2-3: scan + verify only:** No fills. Check-in 1: pass rates per filter, data-failure rate, safety vs execution skip mix, check delays. Adjust thresholds on pass rates only, then freeze config v1 and the decision rules at the end of day 3.
 4. **Days 4-14: F, R, S live, config frozen:** Daily unscored KING review. Check-in 2 (day 7): F close count vs the 20 minimum, voided windows, R/F ratio, stale marks, usage %.
@@ -379,7 +379,7 @@ Removed earlier because they pass on a broken desk: skip rate of 90% or more, av
 | Option | Verdict |
 |---|---|
 | A. Article literally (5-min agent routines, xAI key) | Reject: usage, separate bill, terms risk |
-| B. Give the desk to Snek | Reject: muddles the Solada mandate (call made by Bousky) |
+| B. Give the desk to Snek | Reject: muddles the Solada mandate (call made by the owner) |
 | C. `solana/` desk: zero-AI loop (Option A) + F/R/S books + unscored daily KING review | Recommended |
 | D. Same, KING review every other day or code-only | Fallback if usage runs hot |
 | E. New dedicated bot | Only after a much longer paper test passes |
@@ -397,7 +397,7 @@ Removed earlier because they pass on a broken desk: skip rate of 90% or more, av
 
 ## Minimal viable next step
 
-1. **Bousky approves v6.3 (done):** Baseline keeps running in its own repo; Snek's Solada routine unchanged; nothing unpaused yet.
-2. **Bousky does three one-time steps himself on his phone or laptop:** The free Jupiter API key; a fine-grained token for Zirqo-Dev/sightline only (Contents read/write, 30-60 day expiry); a branch protection rule on `main`. Keys go in as secrets, never into chat.
-3. **One KING setup run:** Builds `solana/desk/` with shadow.py (F, R, S), the fixed 0.5 SOL ticket, would-halt logging, the Option A loop with a lock file, the `desk-data` branch and Pages-via-Actions, delivered as a PR that Bousky merges from his phone (no direct push to `main`), then runs the day-1 threshold and box-uptime checks.
+1. **the owner approves v6.3 (done):** Baseline keeps running in its own repo; Snek's Solada routine unchanged; nothing unpaused yet.
+2. **the owner does three one-time steps himself on his phone or laptop:** The free Jupiter API key; a fine-grained token for Zirqo-Dev/sightline only (Contents read/write, 30-60 day expiry); a branch protection rule on `main`. Keys go in as secrets, never into chat.
+3. **One KING setup run:** Builds `solana/desk/` with shadow.py (F, R, S), the fixed 0.5 SOL ticket, would-halt logging, the Option A loop with a lock file, the `desk-data` branch and Pages-via-Actions, delivered as a PR that the owner merges from his phone (no direct push to `main`), then runs the day-1 threshold and box-uptime checks.
 4. **Days 2-3 scan + verify only; freeze at end of day 3; fills from day 4:** Optional: log your KILL/STOP/PASS prediction with a confidence before day 4. Day 14 (early stop only) and day 28 (the real test) follow the decision table and the Checkpoints.

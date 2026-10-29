@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
-# Privacy guard: fail if owner wallet data appears in files to be published.
+# Privacy guard: fail if owner wallet data or identity wording appears in files to be published.
 # Usage: scripts/privacy-guard.sh [--root DIR] [files...]   (no args = staged files, or all tracked files if none staged)
 #   --root DIR: scan the git checkout at DIR (e.g. a desk-data worktree) with this script's rules.
-# Extra private patterns (one ERE per line): env PRIVACY_GUARD_PATTERNS and/or gitignored .privacy-patterns
+# Extra private wallet patterns (one ERE per line): env PRIVACY_GUARD_PATTERNS and/or gitignored .privacy-patterns
+# Identity wording is not listed in this file. scripts/privacy_identity.py hashes tokens and
+# n-grams and compares them to digests from PRIVACY_IDENTITY_HASHES, .privacy-identity-hashes,
+# or identities/blocked.sha256 in the private repo (SIGHTLINE_PRIVATE_TOKEN).
 set -u
 # Resolve this script's directory before any cd. In --root mode the workflow
 # runs `bash main/scripts/privacy-guard.sh --root desk-data`; cd "$2" first
@@ -25,9 +28,6 @@ patterns=(
   # addresses (e.g. the Solada curve address in solada/log.json) use them.
   'stake1[02-9ac-hj-np-z]{50,}'
   'addr1q[02-9ac-hj-np-z]{90,}'
-  "Bousky's"
-  'Bousky holds'
-  'Bousky wallet'
 )
 n_generic=${#patterns[@]}  # patterns above are generic; any added below are owner-specific
 # Owner-specific wallet patterns come ONLY from the PRIVACY_GUARD_PATTERNS secret (one ERE per line)
@@ -42,7 +42,7 @@ if [ -f .privacy-patterns ]; then
 fi
 
 # Exact public third-party keys (scripts/privacy-public-keys.txt next to this script) are masked before the
-# generic checks, so e.g. a founder whale's key in config can be published. Owner patterns still apply to them.
+# generic checks, so e.g. the lead whale's public stake key in config can be published. Owner patterns still apply to them.
 # Hardened (review M4): every entry must be one full stake key (^stake1 + 53 bech32 chars, nothing else); masking
 # is OFF when no owner patterns are loaded (an allowlist must never be checked against an empty owner list); only
 # whole tokens are masked (a longer id containing the key is not hidden); and only in the files listed in
@@ -517,6 +517,13 @@ fi
 if [ "$owner_hits" -gt 0 ]; then
   echo "PRIVACY GUARD: owner id matched ${owner_hits} time(s)" >&2
   fail=1
+fi
+# Names and handles are not listed above. Digests live in a secret or the private repo.
+ident_py="$script_dir/privacy_identity.py"
+if [ -f "$ident_py" ] && [ ${#files[@]} -gt 0 ]; then
+  if ! printf '%s\n' "${files[@]}" | python3 "$ident_py" --root "$(pwd)"; then
+    fail=1
+  fi
 fi
 if [ $fail -ne 0 ]; then
   echo "PRIVACY GUARD FAILED: owner wallet data must not be committed. See PRIVACY.md." >&2

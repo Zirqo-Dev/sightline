@@ -40,7 +40,7 @@ trigger, so schedule gaps can be measured.
 Fallback trigger (if GitHub cron is flaky): cron-job.org can start a run every 30 min with
 `POST https://api.github.com/repos/Zirqo-Dev/sightline/dispatches`, headers
 `Authorization: Bearer <token>`, `Accept: application/vnd.github+json`, body
-`{"event_type":"solana-desk-scan"}`. Bousky creates that token himself: a separate
+`{"event_type":"solana-desk-scan"}`. The owner creates that token himself: a separate
 fine-grained token for Zirqo-Dev/sightline only (GitHub's docs require Contents read/write
 for this endpoint; alternatively call the workflow_dispatch endpoint
 `.../actions/workflows/solana-desk-scan.yml/dispatches` with body `{"ref":"main"}`, which
@@ -52,7 +52,7 @@ scanner falls back to keyless Jupiter and says so in `health.json`.
 ## Where data goes
 All generated files (tasks/trades CSVs, state, daily summaries, `paper.json`,
 `log.json`, briefs, review notes, health) are committed to the **`desk-data`** branch
-(folder `solana-desk/`) by the Actions bot, with pull-rebase retries and no force-push. `main` holds code only and changes only via PRs Bousky merges.
+(folder `solana-desk/`) by the Actions bot, with pull-rebase retries and no force-push. `main` holds code only and changes only via PRs the owner merges.
 
 ## Rugger list (log only)
 RugCheck `rugged` is remembered per deployer in this desk's private Actions cache

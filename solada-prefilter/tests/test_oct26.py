@@ -112,7 +112,7 @@ class WhalePayload(unittest.TestCase):
                        mock.patch.object(P.Chain, "account_txs_after", lambda self, s, h, n: [(t, 101 + i) for i, t in enumerate(ut)]),
                        mock.patch.object(F.FlagChain, "tx_utxos", lambda self, hs: {h: ut[h] for h in hs}),
                        mock.patch.object(P, "gt_pool", lambda http, u: {"ada_side": 9000, "mcap_ada": None, "price_ada": FX["strike_price_ada"], "basis": "geckoterminal"} if u == STRIKE else None)]
-            run = run_main(d, fake_req, patches)
+            run = run_main(d, fake_req, patches, env={"WHALE_ADA_HANDLE": "fixture-handle"})
             F.assert_public(run)
         return {m["asset"]: m for m in run["whale"]["moves"]}, cfg
 

@@ -22,7 +22,6 @@
     let t = String(s ?? "");
     t = t.replace(/\$[A-Za-z0-9_]{2,32}/g, " ");
     t = t.replace(/@[A-Za-z0-9_]{2,32}/g, " ");
-    t = t.replace(/cockwhale/gi, " ");
     t = t.replace(/\bfounder\b/gi, " ");
     t = t.replace(new RegExp("\\b" + String.fromCharCode(115, 117, 114, 105) + "\\b", "gi"), " ");
     t = t.replace(/\b(?:stake|addr)(?:_test)?1[0-9a-z]{8,}\b/gi, "");

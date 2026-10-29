@@ -1,4 +1,4 @@
-"""Desk config (plan v6.5, config v1). Bousky edits; bots never do. Frozen Oct 26, 2026 (end of day 3): any change starts a new book."""
+"""Desk config (plan v6.5, config v1). The owner edits; bots never do. Frozen Oct 26, 2026 (end of day 3): any change starts a new book."""
 CFG_VERSION = "v1-v6.5"
 FROZEN = True
 PAPER = True  # always
@@ -12,7 +12,7 @@ LEADS_PER_RUN = 12
 
 SKIP_IF = dict(
     min_liquidity_usd=None,        # v6.3: removed (DexScreener usd counts the token side)
-    min_quote_liquidity_sol=10,    # v6.3: SOL-side pool floor (looser start), approved by Bousky
+    min_quote_liquidity_sol=10,    # v6.3: SOL-side pool floor (looser start), approved by the owner
     min_lp_locked_pct=90,          # applied only to pool types where LP lock is meaningful
     max_dev_pct=10,
     max_top10_pct=35,              # pool/curve/locker accounts excluded
