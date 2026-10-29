@@ -35,7 +35,7 @@ def asset_version():
 
 
 def bust(html):
-    """Append ?v=<hash> to local dashboard/*.css|js references in the published index.html only."""
+    """Append ?v=<hash> to local dashboard/*.css|js references in the published legacy.html only."""
     v = asset_version()
     return re.sub(r'((?:href|src)="dashboard/[^"?]+\.(?:css|js))"', lambda m: f'{m.group(1)}?v={v}"', html)
 
@@ -43,8 +43,8 @@ def bust(html):
 def preview_version():
     """Content hash of the preview stylesheet and script.
 
-    Kept off asset_version() so publishing the preview does not change the live
-    dashboard's cache-bust query on index.html.
+    Kept off asset_version() so a preview edit does not change the legacy
+    dashboard's cache-bust query. index.html and preview.html share this hash.
     """
     import hashlib
     h = hashlib.sha256()
@@ -58,7 +58,7 @@ def preview_version():
 
 
 def bust_preview(html):
-    """Append ?v=<hash> to preview/*.css|js in the published preview.html only."""
+    """Append ?v=<hash> to preview/*.css|js in published index.html and preview.html."""
     v = preview_version()
     return re.sub(
         r'((?:href|src)="preview/[^"?]+\.(?:css|js))"',
@@ -98,24 +98,33 @@ def main():
         shutil.rmtree(DIST)
     DIST.mkdir()
     names, block = panel_tags()
-    html = (ROOT / "index.html").read_text(encoding="utf-8")
-    html2, n = MARKER.subn(block, html, count=1)
+    legacy_path = ROOT / "legacy.html"
+    if not legacy_path.is_file():
+        sys.exit("build-site: legacy.html is missing")
+    legacy = legacy_path.read_text(encoding="utf-8")
+    html2, n = MARKER.subn(block, legacy, count=1)
     if n != 1:
-        sys.exit("build-site: index.html is missing <!-- panels:begin --> ... <!-- panels:end -->")
-    (DIST / "index.html").write_text(bust(html2), encoding="utf-8")
+        sys.exit("build-site: legacy.html is missing <!-- panels:begin --> ... <!-- panels:end -->")
+    (DIST / "legacy.html").write_text(bust(html2), encoding="utf-8")
+    if html2 != legacy:
+        legacy_path.write_text(html2, encoding="utf-8")
+        print("  refreshed legacy.html panel list")
+    index = (ROOT / "index.html").read_text(encoding="utf-8")
+    if "preview/app.css" not in index or "preview/app.js" not in index:
+        sys.exit("build-site: index.html must load preview/app.css and preview/app.js")
+    if "<!-- panels:begin -->" in index:
+        sys.exit("build-site: panel script tags belong in legacy.html, not index.html")
+    (DIST / "index.html").write_text(bust_preview(index), encoding="utf-8")
     preview = ROOT / "preview.html"
-    if preview.is_file():
-        (DIST / "preview.html").write_text(
-            bust_preview(preview.read_text(encoding="utf-8")),
-            encoding="utf-8",
-        )
-        src_preview = ROOT / "preview"
-        if src_preview.is_dir():
-            shutil.copytree(src_preview, DIST / "preview")
-        print(f"  preview assets ?v={preview_version()}")
-    if html2 != html:
-        (ROOT / "index.html").write_text(html2, encoding="utf-8")
-        print("  refreshed index.html panel list")
+    src_preview = ROOT / "preview"
+    if not preview.is_file() or not (src_preview / "app.js").is_file() or not (src_preview / "app.css").is_file():
+        sys.exit("build-site: preview.html, preview/app.js, and preview/app.css are required")
+    (DIST / "preview.html").write_text(
+        bust_preview(preview.read_text(encoding="utf-8")),
+        encoding="utf-8",
+    )
+    shutil.copytree(src_preview, DIST / "preview")
+    print(f"  preview assets ?v={preview_version()}")
     shutil.copytree(ROOT / "dashboard", DIST / "dashboard")
     (DIST / ".nojekyll").write_text("", encoding="utf-8")
     shutil.copy(ROOT / "desks.json", DIST / "desks.json")

@@ -78,7 +78,7 @@ S.register("floor-chart", {
 });
 ```
 
-Do not edit `index.html`. The build lists every `dashboard/panels/*.js` file and adds the script tags. After the next build, any desk can use `"type": "floor-chart"` in its `panels.json`.
+Do not edit `index.html` to register a panel. The live page is the redesigned shell. The build lists every `dashboard/panels/*.js` file and adds the script tags to `legacy.html`, the previous dashboard. After the next build, any desk can use `"type": "floor-chart"` in its `panels.json`.
 
 If a desk lists a type that is not installed, that panel shows a short "not installed" line and the rest of the page works. Solada's sample layout does this with `heatmap`.
 
@@ -101,7 +101,7 @@ python3 scripts/build-site.py
 python3 -m http.server -d dist
 ```
 
-`dist/` is a static folder: `index.html`, `dashboard/`, `desks.json`, and each desk's JSON, including the legacy page at `nft/site/`. The browser loads desk JSON from the same origin with relative URLs.
+`dist/` is a static folder: `index.html` (redesigned shell), `preview.html`, `legacy.html`, `preview/`, `dashboard/`, `desks.json`, and each desk's JSON, including the older NFT page at `nft/site/`. The browser loads desk JSON from the same origin with relative URLs. `index.html` and `preview.html` reference `preview/app.css` and `preview/app.js` with a content hash query so GitHub Pages does not keep a stale shell.
 
 ### Desk data comes from the `desk-data` branch
 

@@ -4,7 +4,7 @@ Paper-trading and research desks. Not financial advice. No real positions.
 
 https://zirqo-dev.github.io/sightline/
 
-The site root is the shared dashboard: a combined Home page, one page per desk, and a Briefs archive. It reads `desks.json` and each desk's JSON from the same origin. Panel layout: [dashboard/PLUGINS.md](dashboard/PLUGINS.md). File format: [schema/README.md](schema/README.md). Privacy: [PRIVACY.md](PRIVACY.md).
+The site root is the redesigned shell (`index.html` with `preview/app.js` and `preview/app.css`): Home, Cardano, Solana, NFT, and Briefs. It reads `desks.json` and each desk's JSON from the same origin. The previous dashboard stays at `legacy.html`. `preview.html` is the same shell with a preview badge, for the next design pass. Legacy panel layout: [dashboard/PLUGINS.md](dashboard/PLUGINS.md). File format: [schema/README.md](schema/README.md). Privacy: [PRIVACY.md](PRIVACY.md).
 
 The older NFT finder still runs at [nft/site/](nft/site/). After deploy: `https://zirqo-dev.github.io/sightline/nft/site/`. Paste an OpenSea key in that page only. Never commit it.
 
@@ -17,7 +17,7 @@ python3 scripts/build-site.py
 python3 -m http.server -d dist
 ```
 
-The build uses the Python standard library only. It writes `dist/`, generates each desk's `briefs/index.json` from `briefs/YYYY-MM-DD.json`, and includes every file in `dashboard/panels/`. Adding a panel does not require an `index.html` edit.
+The build uses the Python standard library only. It writes `dist/`, generates each desk's `briefs/index.json` from `briefs/YYYY-MM-DD.json`, and includes every file in `dashboard/panels/`. Adding a panel does not require an `index.html` edit: the build injects those script tags into `legacy.html`. Published `index.html` and `preview.html` get a `?v=` query on `preview/app.css` and `preview/app.js`. `legacy.html` gets its own `?v=` on `dashboard/` assets, so a design edit does not retint the previous dashboard.
 
 `node scripts/smoke-dashboard.mjs` checks that the dashboard scripts parse, that P&L stays per unit, that distance-to-kill is computed correctly, that a wallet snippet always renders the same compact tag and color, and that pulse, radar, and data-age behave against `scripts/fixtures/pulse-example.json`. Number checks use `scripts/fixtures/dashboard-smoke.json`. Live desk files only get a shape check, so a bot opening or closing a ticket, or not having written `pulse.json` yet, does not fail the deploy.
 
