@@ -888,8 +888,12 @@ def _funded_out(dev, ordered):
             for u in rows or []:
                 if not isinstance(u, dict):
                     continue
-                st, script, _addr = _who(u)
-                out.append({"stake": st, "script": bool(script), "lovelace": u.get("lovelace"), "assets": u.get("assets")})
+                st, script, addr = _who(u)
+                out.append({
+                    "stake": st, "script": bool(script),
+                    "enterprise": (not script) and (not st) and _enterprise_key(addr),
+                    "lovelace": u.get("lovelace"), "assets": u.get("assets"),
+                })
             return out
         txs.append({"time": tx.get("time"), "inputs": side(tx.get("inputs")), "outputs": side(tx.get("outputs"))})
     try:
@@ -922,7 +926,7 @@ def _feed_rugger(cache, scans, cache_dir, data_dir, now_s, loaded, dry_run, cfg=
             stake = row.get("stake")
             if not stake or _hidden(pats, stakes, stake):
                 continue
-            if RB.public_id(stake) in owners:
+            if RB.public_id(stake) in owners or RB.unsalted_id(stake) in owners:
                 continue
             sc = (scans or {}).get(unit) or {}
             stats = sc.get("stats") if isinstance(sc, dict) else None
@@ -936,12 +940,12 @@ def _feed_rugger(cache, scans, cache_dir, data_dir, now_s, loaded, dry_run, cfg=
             if not isinstance(sc, dict):
                 continue
             stake = sc.get("stake")
-            if not stake or _hidden(pats, stakes, stake) or RB.public_id(stake) in owners:
+            if not stake or _hidden(pats, stakes, stake) or RB.public_id(stake) in owners or RB.unsalted_id(stake) in owners:
                 continue
             for hop in sc.get("funded") or []:
                 other = hop.get("stake") if isinstance(hop, dict) else hop
                 when = hop.get("time") if isinstance(hop, dict) else None
-                if not other or _hidden(pats, stakes, other) or RB.public_id(other) in owners:
+                if not other or _hidden(pats, stakes, other) or RB.public_id(other) in owners or RB.unsalted_id(other) in owners:
                     continue
                 if isinstance(when, (int, float)) and not isinstance(when, bool) and when > 0:
                     at = iso(when)

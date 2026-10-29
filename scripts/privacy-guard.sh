@@ -138,7 +138,7 @@ for f in "${files[@]}"; do
   [ -f "$f" ] || continue
   case "$f" in "$self"|PRIVACY.md|.privacy-patterns|.github/workflows/privacy-guard.yml|.github/workflows/desk-data-guard.yml|scripts/privacy-public-keys.txt) continue;; esac
   case "$(basename "$f")" in
-    rugger-blacklist.json|rugger-blacklist.json.enc)
+    rugger-blacklist.json|rugger-blacklist.json.enc|rugger-pulls.json)
       echo "PRIVACY GUARD: $f: private cache file must not be published" >&2
       fail=1
       continue
@@ -425,19 +425,49 @@ owner_hits=0
 if [ -n "${PRIVACY_GUARD_PATTERNS:-}" ]; then
   owner_id_blob=$(python3 -c '
 import hashlib, hmac, os, re, sys
+src = sys.argv[1] if len(sys.argv) > 1 else ""
+if src:
+    sys.path.insert(0, src)
+try:
+    import flags as F
+except Exception:
+    F = None
 text = os.environ.get("PRIVACY_GUARD_PATTERNS", "")
 ids = []
+seen = set()
 pepper = None
 raw = os.environ.get("RUGGER_ID_PEPPER", "").strip()
 if len(raw) >= 32:
     prk = hmac.new(b"\x00" * 32, raw.encode("utf-8"), hashlib.sha256).digest()
     pepper = hmac.new(prk, b"sightline-rugger-id-v1\x01", hashlib.sha256).digest()
-for token in re.findall(r"stake1[02-9ac-hj-np-z]{20,}|addr1[02-9ac-hj-np-z]{20,}", text):
+
+def add(token):
+    if not token or token in seen:
+        return
+    seen.add(token)
     ids.append("w-" + hashlib.sha256(token.encode()).hexdigest()[:8])
     if pepper is not None:
         ids.append("r-" + hmac.new(pepper, token.encode(), hashlib.sha256).hexdigest()[:12])
+
+cardano = list(re.finditer(r"stake1[02-9ac-hj-np-z]{20,}|addr1[02-9ac-hj-np-z]{20,}", text))
+spans = [m.span() for m in cardano]
+for m in cardano:
+    token = m.group(0)
+    add(token)
+    if token.startswith("addr1") and F is not None:
+        try:
+            st = F.addr_info(token)[0]
+        except Exception:
+            st = None
+        if st:
+            add(st)
+sol = re.compile(r"(?<![1-9A-HJ-NP-Za-km-z])[1-9A-HJ-NP-Za-km-z]{32,44}(?![1-9A-HJ-NP-Za-km-z])")
+for m in sol.finditer(text):
+    if any(m.start() < end and m.end() > start for start, end in spans):
+        continue
+    add(m.group(0))
 sys.stdout.write("\n".join(ids))
-')
+' "$script_dir/../solada-prefilter")
   if [ -n "$owner_id_blob" ]; then
     for f in "${files[@]}"; do
       [ -f "$f" ] || continue

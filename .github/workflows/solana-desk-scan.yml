@@ -52,9 +52,9 @@ jobs:
         env:
           JUPITER_API_KEY: ${{ secrets.JUPITER_API_KEY }}
           SOLANA_DESK_CACHE_DIR: ${{ runner.temp }}/solana-desk-cache
-          # Empty until the owner creates them. The run warns and uses the Actions cache.
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
           RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
-          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+          RUGGER_ACCEPT_RESET: ${{ vars.RUGGER_ACCEPT_RESET }}
           # Mode: manual input > repo variable SOLANA_DESK_MODE (set to 'scan' to pause fills without a PR) > auto
           MODE: ${{ github.event.inputs.mode || vars.SOLANA_DESK_MODE || 'auto' }}
         working-directory: code/solana-desk
@@ -62,9 +62,18 @@ jobs:
           if [ -z "$JUPITER_API_KEY" ]; then echo "::warning::JUPITER_API_KEY secret not set; using keyless Jupiter (noted in health.json)"; fi
           mkdir -p "$SOLANA_DESK_CACHE_DIR"
           timeout 420 python3 -m desk.run --mode "$MODE" --data-dir "$GITHUB_WORKSPACE/data/solana-desk" --cache-dir "$SOLANA_DESK_CACHE_DIR"
-          if [ -f "$SOLANA_DESK_CACHE_DIR/HOLD" ]; then echo "rugger_hold=1" >> "$GITHUB_OUTPUT"; else echo "rugger_hold=0" >> "$GITHUB_OUTPUT"; fi
+      - name: Sync private rugger list
+        if: always()
+        env:
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+          RUGGER_ACCEPT_RESET: ${{ vars.RUGGER_ACCEPT_RESET }}
+        working-directory: code
+        run: |
+          python3 -m rugger_blacklist.sync --desk solana \
+            --cache-dir "${{ runner.temp }}/solana-desk-cache" \
+            --public-dir "$GITHUB_WORKSPACE/data/solana-desk"
       - name: Save private rugger list
-        if: always() && steps.scan.outputs.rugger_hold != '1'
+        if: always()
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.temp }}/solana-desk-cache
@@ -73,6 +82,7 @@ jobs:
         if: always()
         env:
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
         working-directory: data
         run: |
           git config user.name "solana-desk-bot"

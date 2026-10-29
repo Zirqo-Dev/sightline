@@ -96,9 +96,8 @@ jobs:
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
           # existing secret (no new one): big_moves.py drops owner wallets matching these patterns in memory, never printed
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
-          # Empty until the owner creates them. The run warns and uses the Actions cache.
           RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
-          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+          RUGGER_ACCEPT_RESET: ${{ vars.RUGGER_ACCEPT_RESET }}
         working-directory: code
         run: |
           [ -z "$BLOCKFROST_PROJECT_ID" ] && echo "::warning::BLOCKFROST_PROJECT_ID not set; using Koios"
@@ -108,10 +107,19 @@ jobs:
           # until 770s, leaving ~10s to flush JSON. The 20 min job then still has room
           # for cache save, the privacy guard, and the push retries below.
           timeout 780 python3 solada-prefilter/prefilter.py --repo . --data-dir "$GITHUB_WORKSPACE/data/solada-prefilter" --desk-data "$GITHUB_WORKSPACE/data" $flag
-          if [ -f "${{ runner.temp }}/prefilter-cache/HOLD" ]; then echo "rugger_hold=1" >> "$GITHUB_OUTPUT"; else echo "rugger_hold=0" >> "$GITHUB_OUTPUT"; fi
+      - name: Sync private rugger list
+        if: always() && github.event.inputs.ping != 'true'
+        env:
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+          RUGGER_ACCEPT_RESET: ${{ vars.RUGGER_ACCEPT_RESET }}
+        working-directory: code
+        run: |
+          python3 -m rugger_blacklist.sync --desk cardano \
+            --cache-dir "${{ runner.temp }}/prefilter-cache" \
+            --public-dir "$GITHUB_WORKSPACE/data/solada-prefilter"
       - name: Save private whale snapshot
         id: save-cache
-        if: always() && github.event.inputs.ping != 'true' && steps.prefilter.outputs.rugger_hold != '1'
+        if: always() && github.event.inputs.ping != 'true'
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.temp }}/prefilter-cache
@@ -120,6 +128,7 @@ jobs:
         if: always() && github.event.inputs.ping != 'true'
         env:
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
         working-directory: data
         run: |
           git config user.name "solada-prefilter-bot"

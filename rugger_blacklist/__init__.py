@@ -8,9 +8,12 @@ characters, public rugger rows keep counts and evidence tags and omit the ids.
 
 Working store: rugger-blacklist.json in the Actions cache (fallback read and write).
 Durable copy: a human-readable JSON file in the private repo named by
-SIGHTLINE_PRIVATE_REPO (default Zirqo-Dev/sightline-private), pushed with
-SIGHTLINE_PRIVATE_TOKEN. If that token is unset, the cache is used and a warning
-is printed. Ciphertext is not written to a public branch.
+SIGHTLINE_PRIVATE_REPO (default Zirqo-Dev/sightline-private). A separate sync
+step pushes it with SIGHTLINE_PRIVATE_TOKEN after the desk run. Scans do not
+clone or push. The token is a fine-grained PAT for that private repo only,
+Contents read and write. If the token is unset, or the repo is not private,
+the cache is used and a fixed warning is printed. Ciphertext is not written
+to a public branch.
 
 Defaults: hops 1, expiry_days null (no expiry), shared_funder_min 25.
 buy_signal is never produced here. Research / paper only.
@@ -25,6 +28,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import urllib.request
 from datetime import datetime, timezone
 
 TAGS = ("late_rug", "lp_pulled", "ahead_of_dump", "rugcheck_rugged")
@@ -42,6 +46,8 @@ _ID_RE = re.compile(r"^r-[0-9a-f]{12}$")
 _W_RE = re.compile(r"^w-[0-9a-f]{8}$")
 _STAKE_RE = re.compile(r"stake1[02-9ac-hj-np-z]{20,}")
 _ADDR_RE = re.compile(r"addr1[02-9ac-hj-np-z]{20,}")
+_SOL_RE = re.compile(r"(?<![1-9A-HJ-NP-Za-km-z])[1-9A-HJ-NP-Za-km-z]{32,44}(?![1-9A-HJ-NP-Za-km-z])")
+_CARDANO_RE = re.compile(r"stake1[02-9ac-hj-np-z]{20,}|addr1[02-9ac-hj-np-z]{20,}")
 _REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 _ISO = "%Y-%m-%dT%H:%M:%SZ"
 PEPPER_ENV = "RUGGER_ID_PEPPER"
@@ -170,14 +176,35 @@ def _add_owner(ids, wallet):
         ids.add(rid)
 
 
+def owner_wallets(text):
+    """Stake keys, base addresses, and base58 Solana keys (32-44 chars) in `text`.
+
+    A base58 run that overlaps a stake1 or addr1 match is not a second wallet.
+    """
+    if not isinstance(text, str) or not text:
+        return []
+    found = []
+    spans = []
+    for match in _CARDANO_RE.finditer(text):
+        found.append(match.group(0))
+        spans.append(match.span())
+    for match in _SOL_RE.finditer(text):
+        if any(match.start() < end and match.end() > start for start, end in spans):
+            continue
+        token = match.group(0)
+        if token not in found:
+            found.append(token)
+    return found
+
+
 def owner_ids(owner_env, derive=None):
     """Owner tags that must not be published. w- tags always; r- ids when the pepper is set.
 
-    `derive`, when set, maps an address to its stake key. Nothing is printed.
-    An r- id does not equal that wallet's w- dev tag.
+    `derive`, when set, maps an addr1 to its stake key. Solana keys are the base58
+    tokens themselves. Nothing is printed. An r- id does not equal that wallet's w- tag.
     """
     ids = set()
-    for token in _STAKE_RE.findall(owner_env or "") + _ADDR_RE.findall(owner_env or ""):
+    for token in owner_wallets(owner_env):
         _add_owner(ids, token)
         if derive is not None and token.startswith("addr1"):
             try:
@@ -555,7 +582,18 @@ class Book:
         return bool(digest) and digest in self.exclusion_sha
 
     def hold_for_miss(self, prior):
-        """A cache miss after a non-empty list does not save over the missing file."""
+        """A cache miss after a non-empty list does not save over the missing file.
+
+        RUGGER_ACCEPT_RESET=1 clears that hold, including a corrupt file, so the
+        owner can accept an empty list on purpose.
+        """
+        if accept_reset():
+            self.readonly = False
+            self.held = False
+            if getattr(self.store, "_corrupt", False):
+                self.store._corrupt = False
+                self.store.kind = "miss"
+            return
         entries = 0
         edges = 0
         if isinstance(prior, dict):
@@ -607,19 +645,24 @@ class Book:
             return False
         if not wallet_ok(wallet) or self._blocked(wallet):
             return False
-        if parse_iso(at) is None:
+        missing_time = at is None
+        if not missing_time and parse_iso(at) is None:
             return False
         entry = self.doc["entries"].get(wallet)
         if entry is None:
             entry = {
-                "chain": chain, "evidence": {}, "first_seen": at, "last_seen": at, "funded": [],
+                "chain": chain, "evidence": {},
+                "first_seen": None if missing_time else at,
+                "last_seen": None if missing_time else at,
+                "funded": [],
             }
             self.doc["entries"][wallet] = entry
         entry["chain"] = chain
-        if not entry.get("first_seen") or at < entry["first_seen"]:
-            entry["first_seen"] = at
-        if not entry.get("last_seen") or at > entry["last_seen"]:
-            entry["last_seen"] = at
+        if not missing_time:
+            if not entry.get("first_seen") or at < entry["first_seen"]:
+                entry["first_seen"] = at
+            if not entry.get("last_seen") or at > entry["last_seen"]:
+                entry["last_seen"] = at
         tokens = entry["evidence"].setdefault(tag, [])
         if token not in tokens:
             tokens.append(token)
@@ -649,7 +692,6 @@ class Book:
         self.store.save(self.doc)
         if getattr(self.store, "kind", "") == "miss":
             self.store.kind = "hit"
-        push_private(self.doc, getattr(self, "desk", None))
         return True
 
     def _expired(self, at, now_s):
@@ -870,6 +912,19 @@ def warn_no_token():
     print("::warning::rugger blacklist: SIGHTLINE_PRIVATE_TOKEN unset; using the Actions cache only")
 
 
+def accept_reset():
+    """True when the owner set RUGGER_ACCEPT_RESET=1 to drop a hold on purpose."""
+    return os.environ.get("RUGGER_ACCEPT_RESET", "").strip() == "1"
+
+
+def warn_not_updated():
+    print("::warning::rugger blacklist: private repo not updated")
+
+
+def warn_not_private():
+    print("::warning::rugger blacklist: private repo refused; visibility is not private")
+
+
 def _private_repo():
     repo = os.environ.get(REPO_ENV, DEFAULT_PRIVATE_REPO)
     if not isinstance(repo, str):
@@ -878,8 +933,19 @@ def _private_repo():
     return repo if _REPO_RE.fullmatch(repo) else None
 
 
+class _GitFail(Exception):
+    def __init__(self, stderr):
+        self.stderr = stderr or ""
+        super().__init__("git failed")
+
+
 def _git(args, cwd, token):
-    """Run git. The token is passed through askpass, not argv, and is not printed."""
+    """Run git. The token is passed through askpass, not argv, and is not printed.
+
+    Never pass --force. A non-zero exit raises _GitFail with stderr for the retry check.
+    """
+    if any(arg == "--force" or arg.startswith("--force") for arg in args):
+        raise _GitFail("force refused")
     fd, ask = tempfile.mkstemp(prefix="rugger-ask-")
     try:
         with os.fdopen(fd, "w") as fh:
@@ -889,7 +955,10 @@ def _git(args, cwd, token):
         env["SIGHTLINE_PRIVATE_TOKEN"] = token
         env["GIT_ASKPASS"] = ask
         env["GIT_TERMINAL_PROMPT"] = "0"
-        subprocess.run(args, cwd=cwd, env=env, timeout=20, check=True, capture_output=True)
+        proc = subprocess.run(args, cwd=cwd, env=env, timeout=20, capture_output=True)
+        if proc.returncode != 0:
+            err = proc.stderr.decode("utf-8", "replace") if proc.stderr else ""
+            raise _GitFail(err)
     finally:
         try:
             os.unlink(ask)
@@ -897,32 +966,105 @@ def _git(args, cwd, token):
             pass
 
 
+def _non_fast_forward(text):
+    low = (text or "").lower()
+    return "non-fast-forward" in low or "[rejected]" in low or "fetch first" in low
+
+
+def _rebase_and_push(tmp, token):
+    """One pull --rebase, then push. One more pull --rebase after a non-fast-forward.
+
+    Never force-pushes. Both desks share the repo and edit different files.
+    A repo with no upstream yet is pushed with -u, still without --force.
+    """
+    def rebase():
+        try:
+            _git(["git", "pull", "--rebase"], tmp, token)
+        except _GitFail as err:
+            subprocess.run(["git", "rebase", "--abort"], cwd=tmp, capture_output=True)
+            low = err.stderr.lower()
+            if "no tracking" in low or "no upstream" in low or "there is no tracking" in low:
+                return False
+            raise
+        return True
+
+    if not rebase():
+        _git(["git", "push", "-u", "origin", "HEAD"], tmp, token)
+        return
+    try:
+        _git(["git", "push"], tmp, token)
+    except _GitFail as err:
+        if not _non_fast_forward(err.stderr):
+            raise
+        if not rebase():
+            _git(["git", "push", "-u", "origin", "HEAD"], tmp, token)
+            return
+        _git(["git", "push"], tmp, token)
+
+
+def _github_repo(repo, token):
+    """GET /repos/{repo}. The token and the body are not printed."""
+    req = urllib.request.Request(
+        "https://api.github.com/repos/%s" % repo,
+        headers={
+            "Authorization": "Bearer " + token,
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "sightline-rugger",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        doc = json.loads(resp.read(1_000_000).decode())
+    return doc if isinstance(doc, dict) else None
+
+
+def _repo_is_private(repo, token):
+    """False unless the API says private is true. Fail closed. Fixed warning only."""
+    try:
+        doc = _github_repo(repo, token)
+    except Exception:
+        doc = None
+    if not isinstance(doc, dict) or doc.get("private") is not True:
+        warn_not_private()
+        return False
+    return True
+
+
 def _clone_private(repo, token):
     tmp = tempfile.mkdtemp(prefix="rugger-private-")
     url = "https://x-access-token@github.com/%s.git" % repo
     try:
-        _git(["git", "clone", "--depth", "1", url, tmp], None, token)
+        _git(["git", "clone", url, tmp], None, token)
     except Exception:
         shutil.rmtree(tmp, ignore_errors=True)
         raise
     return tmp
 
 
+def _token():
+    token = os.environ.get(TOKEN_ENV, "")
+    return token.strip() if isinstance(token, str) else ""
+
+
 def read_private(desk):
-    """(status, doc). status is unset, error, absent, or ok. Does not print the token."""
+    """(status, doc). status is unset, error, absent, or ok. Does not print the token.
+
+    Refuses a repo that is not private before cloning. Not called from a scan.
+    """
     if desk in _remote_read:
         return _remote_read[desk]
     if desk not in ("cardano", "solana"):
         return "unset", None
-    token = os.environ.get(TOKEN_ENV, "")
-    token = token.strip() if isinstance(token, str) else ""
+    token = _token()
     if not token:
         warn_no_token()
         _remote_read[desk] = ("unset", None)
         return _remote_read[desk]
     repo = _private_repo()
     if not repo:
-        print("::warning::rugger blacklist: private repo name rejected; using the Actions cache")
+        print("::warning::rugger blacklist: private repo name rejected")
+        _remote_read[desk] = ("error", None)
+        return _remote_read[desk]
+    if not _repo_is_private(repo, token):
         _remote_read[desk] = ("error", None)
         return _remote_read[desk]
     tmp = None
@@ -939,7 +1081,7 @@ def read_private(desk):
         _remote_read[desk] = ("ok", doc)
         return _remote_read[desk]
     except Exception:
-        print("::warning::rugger blacklist: private repo unread; using the Actions cache")
+        print("::warning::rugger blacklist: private repo unread")
         _remote_read[desk] = ("error", None)
         return _remote_read[desk]
     finally:
@@ -947,40 +1089,209 @@ def read_private(desk):
             shutil.rmtree(tmp, ignore_errors=True)
 
 
-def push_private(doc, desk):
-    """Write the readable file to the private repo. False when the token is unset or the push fails."""
-    if desk not in ("cardano", "solana"):
+def merge_docs(local, remote):
+    """Union of two blacklist documents. The newer last_seen wins; tokens and edges add.
+
+    Either side may be the internal shape or the readable export. A missing side is empty.
+    """
+    a = _clean_doc(local) if isinstance(local, dict) else _empty()
+    b = _clean_doc(remote) if isinstance(remote, dict) else _empty()
+    out = _empty()
+    for wallet in list(a["entries"]) + [w for w in b["entries"] if w not in a["entries"]]:
+        ea = a["entries"].get(wallet)
+        eb = b["entries"].get(wallet)
+        if ea and not eb:
+            out["entries"][wallet] = ea
+            continue
+        if eb and not ea:
+            out["entries"][wallet] = eb
+            continue
+        evidence = {}
+        for tag in set(ea["evidence"]) | set(eb["evidence"]):
+            tokens = []
+            for src in (ea["evidence"].get(tag) or []), (eb["evidence"].get(tag) or []):
+                for token in src:
+                    if token not in tokens:
+                        tokens.append(token)
+            if tokens:
+                evidence[tag] = tokens[-MAX_TOKENS:]
+        firsts = [t for t in (ea.get("first_seen"), eb.get("first_seen")) if parse_iso(t)]
+        lasts = [t for t in (ea.get("last_seen"), eb.get("last_seen")) if parse_iso(t)]
+        later = eb if (lasts and eb.get("last_seen") == max(lasts)) else ea
+        out["entries"][wallet] = {
+            "chain": later.get("chain") if later.get("chain") in CHAINS else "cardano",
+            "evidence": evidence,
+            "first_seen": min(firsts) if firsts else None,
+            "last_seen": max(lasts) if lasts else None,
+            "funded": [],
+        }
+    out["edges"] = list(a["edges"]) + list(b["edges"])
+    out["exclusions"] = list(a["exclusions"])
+    for wallet in b["exclusions"]:
+        if wallet not in out["exclusions"]:
+            out["exclusions"].append(wallet)
+    _dedupe_edges(out)
+    _attach_all(out)
+    return out
+
+
+def _cache_parts(cache_dir):
+    """(kind, doc) for the local blacklist file. kind is miss, corrupt, or hit."""
+    path = os.path.join(cache_dir, PRIVATE_NAME)
+    if not os.path.exists(path):
+        return "miss", None
+    try:
+        with open(path) as fh:
+            doc = json.load(fh)
+    except (OSError, ValueError):
+        return "corrupt", None
+    if not isinstance(doc, dict):
+        return "corrupt", None
+    return "hit", doc
+
+
+def _write_cache_doc(cache_dir, doc, public_dir=None):
+    path = os.path.join(cache_dir, PRIVATE_NAME)
+    if public_dir and _inside(path, public_dir):
         return False
-    token = os.environ.get(TOKEN_ENV, "")
-    token = token.strip() if isinstance(token, str) else ""
+    os.makedirs(cache_dir, exist_ok=True)
+    parent = os.path.dirname(path)
+    fd, tmp = tempfile.mkstemp(dir=parent, prefix=".rugger-", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as fh:
+            json.dump(doc, fh, separators=(",", ":"))
+            fh.write("\n")
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+    return True
+
+
+def clear_hold(cache_dir):
+    if not cache_dir:
+        return
+    try:
+        os.remove(os.path.join(cache_dir, HOLD_NAME))
+    except OSError:
+        pass
+
+
+def _apply_remote(cache_dir, public_dir, local_doc, remote_doc):
+    """Write the union and clear a hold. remote_doc None means the remote file is absent."""
+    merged = merge_docs(local_doc, remote_doc)
+    _write_cache_doc(cache_dir, merged, public_dir)
+    clear_hold(cache_dir)
+    return merged
+
+
+def _export_into(tmp, desk, doc):
+    rel = os.path.join(tmp, "rugger", desk)
+    os.makedirs(rel, exist_ok=True)
+    path = os.path.join(rel, PRIVATE_NAME)
+    with open(path, "w") as fh:
+        json.dump(export_readable(doc, desk), fh, indent=2)
+        fh.write("\n")
+    return os.path.join("rugger", desk, PRIVATE_NAME)
+
+
+def _commit_export(tmp, token, desk, rel):
+    _git(["git", "add", "--", rel], tmp, token)
+    quiet = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=tmp, capture_output=True)
+    if quiet.returncode != 0:
+        _git(["git", "-c", "user.email=rugger-bot@users.noreply.github.com", "-c", "user.name=rugger-bot",
+              "commit", "-q", "-m", "rugger %s" % desk], tmp, token)
+    _rebase_and_push(tmp, token)
+
+
+def sync_cache(cache_dir, desk, public_dir=None):
+    """Union the cache with the private repo, then pull --rebase and push.
+
+    A scan does not call this. A successful remote document clears a corrupt file
+    and a miss. A push failure leaves the merged cache in place and does not say
+    the Actions cache saved the run. Never force-pushes.
+    """
+    if desk not in ("cardano", "solana") or not cache_dir:
+        return False
+    token = _token()
     if not token:
         warn_no_token()
         return False
     repo = _private_repo()
     if not repo:
-        print("::warning::rugger blacklist: private repo name rejected; using the Actions cache")
+        print("::warning::rugger blacklist: private repo name rejected")
+        return False
+    if not _repo_is_private(repo, token):
+        return False
+    kind, local = _cache_parts(cache_dir)
+    tmp = None
+    try:
+        tmp = _clone_private(repo, token)
+        path = os.path.join(tmp, "rugger", desk, PRIVATE_NAME)
+        remote = None
+        remote_ok = False
+        if not os.path.exists(path):
+            remote_ok = True
+        else:
+            try:
+                with open(path) as fh:
+                    remote = json.load(fh)
+                remote_ok = isinstance(remote, dict)
+            except (OSError, ValueError):
+                remote_ok = False
+                remote = None
+        if not remote_ok:
+            warn_not_updated()
+            return False
+        if remote is not None or kind == "hit":
+            merged = _apply_remote(cache_dir, public_dir, local, remote)
+        else:
+            merged = None
+        if merged is None:
+            return True
+        rel = _export_into(tmp, desk, merged)
+        _commit_export(tmp, token, desk, rel)
+        _remote_read[desk] = ("ok", export_readable(merged, desk))
+        return True
+    except Exception:
+        warn_not_updated()
+        return False
+    finally:
+        if tmp:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+def push_private(doc, desk):
+    """Push one document. Prefer sync_cache, which unions with the remote first."""
+    if desk not in ("cardano", "solana"):
+        return False
+    token = _token()
+    if not token:
+        warn_no_token()
+        return False
+    repo = _private_repo()
+    if not repo:
+        print("::warning::rugger blacklist: private repo name rejected")
+        return False
+    if not _repo_is_private(repo, token):
         return False
     tmp = None
     try:
         tmp = _clone_private(repo, token)
-        rel = os.path.join(tmp, "rugger", desk)
-        os.makedirs(rel, exist_ok=True)
-        path = os.path.join(rel, PRIVATE_NAME)
-        with open(path, "w") as fh:
-            json.dump(export_readable(doc, desk), fh, indent=2)
-            fh.write("\n")
-        _git(["git", "add", "--", os.path.join("rugger", desk, PRIVATE_NAME)], tmp, token)
-        quiet = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=tmp, capture_output=True)
-        if quiet.returncode == 0:
-            _remote_read[desk] = ("ok", export_readable(doc, desk))
-            return True
-        _git(["git", "-c", "user.email=rugger-bot@users.noreply.github.com", "-c", "user.name=rugger-bot",
-              "commit", "-q", "-m", "rugger %s" % desk], tmp, token)
-        _git(["git", "push", "origin", "HEAD"], tmp, token)
-        _remote_read[desk] = ("ok", export_readable(doc, desk))
+        path = os.path.join(tmp, "rugger", desk, PRIVATE_NAME)
+        remote = None
+        if os.path.exists(path):
+            with open(path) as fh:
+                remote = json.load(fh)
+        merged = merge_docs(doc, remote)
+        rel = _export_into(tmp, desk, merged)
+        _commit_export(tmp, token, desk, rel)
         return True
     except Exception:
-        print("::warning::rugger blacklist: private repo not updated; the Actions cache still has this run")
+        warn_not_updated()
         return False
     finally:
         if tmp:
@@ -990,6 +1301,7 @@ def push_private(doc, desk):
 def open_book(cache_dir, public_dir, cfg=None, exclusions=(), prior=None, desk=None):
     """Private book for this run. None when no cache directory was given.
 
+    Reads the Actions-cache file only. The private repo is merged later by sync_cache.
     A cache directory inside public_dir still returns a book, but it does not
     read or write a file. That is the refused-path case, not a cache miss.
     exclusion_sha256 values in cfg are full hashes, matched at runtime.
@@ -1007,12 +1319,6 @@ def open_book(cache_dir, public_dir, cfg=None, exclusions=(), prior=None, desk=N
         extra.extend(block["exclusions"])
     book = Book(store, settings_from(cfg), extra, exclusion_sha256(cfg))
     book.desk = desk if desk in ("cardano", "solana") else None
-    if book.desk:
-        status, remote = read_private(book.desk)
-        if status == "ok" and isinstance(remote, dict):
-            book.doc = _clean_doc(remote)
-            if getattr(book.store, "kind", "") == "miss":
-                book.store.kind = "hit"
     book.hold_for_miss(prior)
     return book
 
@@ -1020,8 +1326,9 @@ def open_book(cache_dir, public_dir, cfg=None, exclusions=(), prior=None, desk=N
 def ada_only_recipients(dev, txs, min_lovelace=5_000_000):
     """ADA-only recipients in a tx whose every non-script input is `dev`.
 
-    Each tx is {time, inputs: [{stake, script}], outputs: [{stake, lovelace, assets, script}]}.
-    A second non-script payer, a script output, a token output, or dust is not a hop.
+    Each tx is {time, inputs: [{stake, script, enterprise}], outputs: [{stake, lovelace, assets, script}]}.
+    A second non-script payer, a stakeless enterprise co-payer, a script output, a token
+    output, or dust is not a hop. A script input (a batcher) does not disqualify the tx.
     Returns [{stake, time}] with the tx time. This does not call the chain.
     """
     if not dev or not isinstance(txs, list):
@@ -1036,7 +1343,10 @@ def ada_only_recipients(dev, txs, min_lovelace=5_000_000):
         if not isinstance(tx, dict):
             continue
         inputs = [u for u in (tx.get("inputs") or []) if isinstance(u, dict)]
-        payers = [u for u in inputs if not u.get("script") and u.get("stake")]
+        non_script = [u for u in inputs if not u.get("script")]
+        if any(u.get("enterprise") for u in non_script):
+            continue
+        payers = [u for u in non_script if u.get("stake")]
         if not payers or any(u.get("stake") != dev for u in payers):
             continue
         when = tx.get("time")
@@ -1085,11 +1395,15 @@ def reseed_late_rugs(book, cache_dir, public_dir, at):
     for unit, row in units.items():
         if not isinstance(row, dict) or row.get("late_rug") is not True:
             continue
-        stamp = at
+        stake = row.get("stake")
         live = row.get("live_at_ms")
         if isinstance(live, (int, float)) and not isinstance(live, bool) and live > 0:
             stamp = iso(float(live) / 1000.0)
-        if book.note_evidence(row.get("stake"), "cardano", "late_rug", str(unit), stamp):
+        else:
+            prev = (book.doc.get("entries") or {}).get(stake) if stake else None
+            old = prev.get("last_seen") if isinstance(prev, dict) else None
+            stamp = old if parse_iso(old) else None
+        if book.note_evidence(stake, "cardano", "late_rug", str(unit), stamp):
             n += 1
     return n
 
@@ -1122,8 +1436,14 @@ def read_prior(path):
 
 
 def mark_hold(cache_dir, book):
-    """Tell the workflow not to save a cache that would shadow a missed non-empty list."""
+    """Mark a missed rugger file. Other files in the cache directory still save.
+
+    RUGGER_ACCEPT_RESET=1 removes the mark instead of writing it.
+    """
     if not cache_dir or book is None:
+        return
+    if accept_reset():
+        clear_hold(cache_dir)
         return
     kind = getattr(book.store, "kind", "")
     if not book.held and kind != "corrupt":

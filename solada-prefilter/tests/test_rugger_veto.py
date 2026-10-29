@@ -161,6 +161,18 @@ class Feeds(unittest.TestCase):
             "outputs": [{"stake": child, "addr": "", "lovelace": 6_000_000, "assets": {}}],
         }]
         self.assertEqual(DC._funded_out(dev, party), [])
+        import flags as F
+        from test_dev_checks import kh
+        ent = F.b32_encode("addr", bytes([0x61]) + kh("copayer")[:28])
+        copayer = [{
+            "time": NOW - 100,
+            "inputs": [
+                {"stake": dev, "addr": "", "lovelace": 1, "assets": {}},
+                {"stake": None, "addr": ent, "lovelace": 1, "assets": {}},
+            ],
+            "outputs": [{"stake": child, "addr": "", "lovelace": 6_000_000, "assets": {}}],
+        }]
+        self.assertEqual(DC._funded_out(dev, copayer), [])
         loaded = DC._patterns(OWNER)
         with tempfile.TemporaryDirectory() as d:
             data, cache = os.path.join(d, "data"), os.path.join(d, "cache")
@@ -228,6 +240,66 @@ class Feeds(unittest.TestCase):
             self.assertIn("ahead_of_dump", hit["tags"])
             self.assertNotIn(dev, json.dumps(hit))
             self.assertIn(dev, open(os.path.join(cache, RB.PULLS_NAME)).read())
+
+    def test_pull_stakes_save_when_the_pepper_is_unset(self):
+        dev = stake("rugger")
+        old = os.environ.pop("RUGGER_ID_PEPPER", None)
+        RB._pepper_warned = False
+        try:
+            self.assertIsNone(RB.public_id(dev))
+            with tempfile.TemporaryDirectory() as d:
+                data, cache = os.path.join(d, "data"), os.path.join(d, "cache")
+                os.makedirs(data)
+                os.makedirs(cache)
+                with open(os.path.join(cache, "dev-checks-cache.json"), "w") as fh:
+                    json.dump({"units": {UNIT_A: {"stake": dev}}}, fh)
+                first = [{"kind": "lp_remove", "unit": UNIT_A, "tx_short": "eeee", "pool_key": "pool",
+                          "_lp_stake": dev, "ahead_of_dump": False, "time": NOW - 50,
+                          "ada": 8000, "reserve_ada": 12000}]
+                LM._feed_rugger(cache, data, first, [], NOW - 50, CFG, False)
+                self.assertTrue(RB.wallet_ok(dev))
+                self.assertIn(dev, open(os.path.join(cache, RB.PULLS_NAME)).read())
+                later = [{"tx_short": "eeee", "pool_key": "pool", "unit": UNIT_A, "kind": "lp_remove",
+                          "ahead_of_dump": True, "time": NOW - 50, "ada": 8000, "reserve_ada": 12000}]
+                LM._feed_rugger(cache, data, [], later, NOW, CFG, False)
+                hit = RB.open_book(cache, data).judge(dev, UNIT_B, NOW)[0]
+                self.assertIn("ahead_of_dump", hit["tags"])
+                self.assertIn("lp_pulled", hit["tags"])
+                self.assertIsNone(hit["rugger_id"])
+                self.assertNotIn(dev, json.dumps(hit))
+        finally:
+            if old is not None:
+                os.environ["RUGGER_ID_PEPPER"] = old
+            RB._pepper_warned = False
+
+    def test_lp_pulled_uses_the_configured_floor(self):
+        dev = stake("rugger")
+        high = json.loads(json.dumps(CFG))
+        high.setdefault("liquidity_moves", {}).setdefault("ahead_of_dump", {})["pull_min_ada"] = 50000
+        low = json.loads(json.dumps(CFG))
+        low.setdefault("liquidity_moves", {}).setdefault("ahead_of_dump", {})["pull_min_ada"] = 50
+        with tempfile.TemporaryDirectory() as d:
+            data, cache = os.path.join(d, "data"), os.path.join(d, "cache")
+            os.makedirs(data)
+            os.makedirs(cache)
+            with open(os.path.join(cache, "dev-checks-cache.json"), "w") as fh:
+                json.dump({"units": {UNIT_A: {"stake": dev}}}, fh)
+            big = [{"kind": "lp_remove", "unit": UNIT_A, "tx_short": "ffff", "pool_key": "pool",
+                    "_lp_stake": dev, "ahead_of_dump": False, "time": NOW - 10,
+                    "ada": 8000, "reserve_ada": 12000}]
+            LM._feed_rugger(cache, data, big, [], NOW, high, False)
+            self.assertNotIn("lp_pulled", RB.open_book(cache, data).doc["entries"].get(dev, {}).get("evidence", {}))
+        with tempfile.TemporaryDirectory() as d:
+            data, cache = os.path.join(d, "data"), os.path.join(d, "cache")
+            os.makedirs(data)
+            os.makedirs(cache)
+            with open(os.path.join(cache, "dev-checks-cache.json"), "w") as fh:
+                json.dump({"units": {UNIT_A: {"stake": dev}}}, fh)
+            small = [{"kind": "lp_remove", "unit": UNIT_A, "tx_short": "gggg", "pool_key": "pool",
+                      "_lp_stake": dev, "ahead_of_dump": False, "time": NOW - 10,
+                      "ada": 100, "reserve_ada": 100}]
+            LM._feed_rugger(cache, data, small, [], NOW, low, False)
+            self.assertIn("lp_pulled", RB.open_book(cache, data).doc["entries"][dev]["evidence"])
 
 
 class OwnerAndOutput(unittest.TestCase):
@@ -346,6 +418,45 @@ class Guard(unittest.TestCase):
         self.assertIn(b"owner id matched", r.stderr)
         self.assertNotIn(dev.encode(), r.stdout + r.stderr)
         self.assertNotIn(wid.encode(), r.stdout + r.stderr)
+
+    def test_guard_derives_the_stake_and_rejects_a_pulls_file(self):
+        import flags as F
+        from test_dev_checks import addr
+        payment = addr("guard-pay")
+        derived = F.addr_info(payment)[0]
+        sol = "M" * 32
+        doc = {"note": RB.public_id(derived) + " " + RB.public_id(sol)}
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d, True)
+        main = os.path.join(d, "main")
+        os.makedirs(os.path.join(main, "scripts"))
+        shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), os.path.join(main, "scripts"))
+        shutil.copy(os.path.join(ROOT, "scripts", "privacy-public-keys.txt"), os.path.join(main, "scripts"))
+        shutil.copytree(SRC, os.path.join(main, "solada-prefilter"),
+                        ignore=shutil.ignore_patterns("tests", "__pycache__"))
+        data = os.path.join(d, "desk-data")
+        os.makedirs(data)
+        with open(os.path.join(data, "note.json"), "w") as fh:
+            json.dump(doc, fh)
+        subprocess.run(["git", "init", "-q"], cwd=data, check=True)
+        subprocess.run(["git", "add", "-A"], cwd=data, check=True)
+        env = dict(os.environ, PRIVACY_GUARD_PATTERNS=payment + "\n" + sol)
+        r = subprocess.run(["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data"],
+                           cwd=d, env=env, capture_output=True)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn(b"owner id matched", r.stderr)
+        self.assertNotIn(payment.encode(), r.stdout + r.stderr)
+        self.assertNotIn(derived.encode(), r.stdout + r.stderr)
+        self.assertNotIn(sol.encode(), r.stdout + r.stderr)
+        pulls = os.path.join(data, "rugger-pulls.json")
+        with open(pulls, "w") as fh:
+            fh.write("{}\n")
+        subprocess.run(["git", "add", "-A"], cwd=data, check=True)
+        env2 = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
+        r2 = subprocess.run(["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data"],
+                            cwd=d, env=env2, capture_output=True)
+        self.assertNotEqual(r2.returncode, 0)
+        self.assertIn(b"private cache file", r2.stderr)
 
 
 if __name__ == "__main__":

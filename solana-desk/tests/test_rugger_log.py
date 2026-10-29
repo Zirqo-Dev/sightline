@@ -3,6 +3,7 @@ import json
 import os
 import sys
 import tempfile
+import time
 import unittest
 
 os.environ.setdefault("RUGGER_ID_PEPPER", "test-pepper-not-base64-and-at-least-32-chars")
@@ -11,6 +12,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
+from desk import config as C  # noqa: E402
 from desk import run, skips  # noqa: E402
 import rugger_blacklist as RB  # noqa: E402
 
@@ -129,6 +131,73 @@ class LogOnly(unittest.TestCase):
                      sleep=lambda s: None, cache_dir=data)
             self.assertFalse(os.path.exists(os.path.join(data, RB.PRIVATE_NAME)))
             self.assertNotIn(CREATOR, open(os.path.join(data, "health.json")).read())
+
+    def test_quote_gap_sleep_does_not_spend_the_rugger_budget(self):
+        rc = _rc(rugged=True, creator=CREATOR)
+        pair = _pair()
+        quote = json.load(open(os.path.join(FX, "jup_lite_quote.json")))
+
+        def get(url, headers=None):
+            if "token-profiles" in url:
+                return [{"chainId": "solana", "tokenAddress": m} for m in (MINT_A, MINT_B)]
+            if "token-boosts" in url:
+                return []
+            if "/latest/dex/tokens/" in url:
+                return {"pairs": [pair]}
+            if "rugcheck" in url:
+                return rc
+            if "jup.ag" in url:
+                return quote
+            raise AssertionError("unexpected url")
+
+        old = run.RUGGER_BUDGET_S
+        run.RUGGER_BUDGET_S = run.QUOTE_GAP_S / 2
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                data, cache = os.path.join(d, "data"), os.path.join(d, "cache")
+                os.makedirs(data)
+                os.makedirs(cache)
+                t0 = time.monotonic()
+                run.scan(data, get, key=None, now=NOW, mode="scan", sleep=time.sleep, cache_dir=cache)
+                elapsed = time.monotonic() - t0
+                self.assertGreaterEqual(elapsed, run.QUOTE_GAP_S)
+                book = RB.open_book(cache, data)
+                self.assertEqual(book.judge(CREATOR, "mint-other", NOW)[0]["code"], "known_rugger")
+                self.assertTrue(os.path.exists(os.path.join(cache, RB.PRIVATE_NAME)))
+        finally:
+            run.RUGGER_BUDGET_S = old
+
+    def test_an_owner_base58_key_is_not_stored(self):
+        sol = "N" * 40
+        rc = _rc(rugged=True, creator=sol)
+        old = os.environ.get("PRIVACY_GUARD_PATTERNS")
+        os.environ["PRIVACY_GUARD_PATTERNS"] = sol
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                data, cache = os.path.join(d, "data"), os.path.join(d, "cache")
+                os.makedirs(data)
+                os.makedirs(cache)
+                run.scan(data, self._get(rc, MINT_A), key=None, now=NOW, mode="scan",
+                         sleep=lambda s: None, cache_dir=cache)
+                book = RB.open_book(cache, data)
+                self.assertEqual(book.judge(sol, MINT_B, NOW), [])
+                self.assertNotIn(sol, open(os.path.join(cache, RB.PRIVATE_NAME)).read())
+        finally:
+            if old is None:
+                os.environ.pop("PRIVACY_GUARD_PATTERNS", None)
+            else:
+                os.environ["PRIVACY_GUARD_PATTERNS"] = old
+
+    def test_exclusions_come_from_rugger_json(self):
+        self.assertFalse(hasattr(C, "RUGGER_EXCLUSION_SHA256"))
+        digest = "ab" * 32
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "rugger.json")
+            with open(path, "w") as fh:
+                json.dump({"exclusion_sha256": [digest, "nope"]}, fh)
+            cfg = run._rugger_cfg(path)
+        self.assertEqual(cfg["rugger_blacklist"]["exclusion_sha256"], [digest])
+        self.assertEqual(run._rugger_cfg(os.path.join(ROOT, "solana-desk", "rugger.json"))["rugger_blacklist"]["exclusion_sha256"], [])
 
 
 if __name__ == "__main__":

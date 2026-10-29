@@ -268,6 +268,12 @@ class AdaOnly(unittest.TestCase):
             "outputs": [{"stake": "wallet-child", "lovelace": 6_000_000, "assets": {}}],
         }]
         self.assertEqual([row["stake"] for row in RB.ada_only_recipients(dev, via_script)], ["wallet-child"])
+        enterprise = [{
+            "time": 100,
+            "inputs": [{"stake": dev}, {"enterprise": True}],
+            "outputs": [{"stake": "wallet-child", "lovelace": 6_000_000, "assets": {}}],
+        }]
+        self.assertEqual(RB.ada_only_recipients(dev, enterprise), [])
 
 
 class WindowAndPrune(unittest.TestCase):
@@ -435,6 +441,198 @@ class PepperAndPrivate(unittest.TestCase):
         self.assertEqual(status, "unset")
         self.assertIsNone(doc)
         self.assertFalse(RB.push_private({"entries": {}, "edges": [], "exclusions": []}, "cardano"))
+
+    def test_save_does_not_push(self):
+        called = []
+        old = RB.push_private
+        RB.push_private = lambda doc, desk: called.append(desk) or True
+        try:
+            book = _book()
+            book.desk = "cardano"
+            book.note_evidence("wallet-rugger", "cardano", "late_rug", "token-a", AT)
+            self.assertTrue(book.save())
+            self.assertEqual(called, [])
+        finally:
+            RB.push_private = old
+
+    def test_union_keeps_the_newer_last_seen_and_both_wallets(self):
+        local = RB.Book(RB.MemoryStore(None), RB.settings_from(None))
+        remote = RB.Book(RB.MemoryStore(None), RB.settings_from(None))
+        local.note_evidence("wallet-newer", "cardano", "late_rug", "token-a", LATER)
+        remote.note_evidence("wallet-newer", "cardano", "late_rug", "token-b", AT)
+        remote.note_evidence("wallet-other", "cardano", "lp_pulled", "token-c", AT)
+        remote.note_edge("wallet-other", "wallet-child", "cardano", AT)
+        merged = RB.merge_docs(local.doc, RB.export_readable(remote.doc, "cardano"))
+        row = merged["entries"]["wallet-newer"]
+        self.assertEqual(row["last_seen"], LATER)
+        self.assertEqual(sorted(row["evidence"]["late_rug"]), ["token-a", "token-b"])
+        self.assertIn("wallet-other", merged["entries"])
+        self.assertTrue(any(e["funded"] == "wallet-child" for e in merged["edges"]))
+
+    def test_a_base58_key_is_an_owner_id(self):
+        sol = "K" * 44
+        ids = RB.owner_ids(sol)
+        self.assertIn(RB.public_id(sol), ids)
+        self.assertIn(RB.unsalted_id(sol), ids)
+        self.assertEqual(RB.owner_wallets("not-a-wallet"), [])
+
+    def test_reseed_does_not_invent_now_when_live_at_is_missing(self):
+        wallet = "wallet-rugger"
+        with tempfile.TemporaryDirectory() as cache, tempfile.TemporaryDirectory() as public:
+            with open(os.path.join(cache, "dev-checks-cache.json"), "w") as fh:
+                json.dump({"units": {"token-a": {"late_rug": True, "stake": wallet}}}, fh)
+            book = RB.open_book(cache, public)
+            self.assertEqual(RB.reseed_late_rugs(book, cache, public, LATER), 1)
+            self.assertIsNone(book.doc["entries"][wallet]["last_seen"])
+            book.note_evidence(wallet, "cardano", "late_rug", "token-a", AT)
+            self.assertEqual(book.doc["entries"][wallet]["last_seen"], AT)
+            RB.reseed_late_rugs(book, cache, public, LATER)
+            self.assertEqual(book.doc["entries"][wallet]["last_seen"], AT)
+
+    def test_accept_reset_clears_a_hold(self):
+        os.environ["RUGGER_ACCEPT_RESET"] = "1"
+        try:
+            with tempfile.TemporaryDirectory() as cache, tempfile.TemporaryDirectory() as public:
+                prior = {"store": "hit", "entries": 4, "edges": 2}
+                book = RB.open_book(cache, public, prior=prior)
+                self.assertFalse(book.held)
+                self.assertTrue(book.writable)
+                self.assertTrue(book.note_evidence("wallet-rugger", "cardano", "late_rug", "token-a", AT))
+                self.assertTrue(book.save())
+                RB.mark_hold(cache, book)
+                self.assertFalse(os.path.exists(os.path.join(cache, RB.HOLD_NAME)))
+                self.assertTrue(os.path.exists(os.path.join(cache, RB.PRIVATE_NAME)))
+        finally:
+            os.environ.pop("RUGGER_ACCEPT_RESET", None)
+
+
+class Sync(unittest.TestCase):
+    def _patch(self, clone, private, commit):
+        old = (RB._clone_private, RB._repo_is_private, RB._commit_export, RB._github_repo)
+        RB._clone_private = clone
+        RB._repo_is_private = private
+        RB._commit_export = commit
+        return old
+
+    def _restore(self, old):
+        RB._clone_private, RB._repo_is_private, RB._commit_export, RB._github_repo = old
+        os.environ.pop("SIGHTLINE_PRIVATE_TOKEN", None)
+        RB._remote_read.clear()
+        RB._token_warned = False
+
+    def test_push_failure_keeps_a_newer_cache(self):
+        with tempfile.TemporaryDirectory() as d:
+            cache, public = os.path.join(d, "cache"), os.path.join(d, "public")
+            os.makedirs(cache)
+            os.makedirs(public)
+            book = RB.open_book(cache, public, desk="cardano")
+            book.note_evidence("wallet-newer", "cardano", "late_rug", "token-a", LATER)
+            book.save()
+            remote_book = RB.Book(RB.MemoryStore(None), RB.settings_from(None))
+            remote_book.note_evidence("wallet-newer", "cardano", "late_rug", "token-b", AT)
+            remote_book.note_evidence("wallet-other", "cardano", "lp_pulled", "token-c", AT)
+            clone = os.path.join(d, "clone")
+            os.makedirs(os.path.join(clone, "rugger", "cardano"))
+            with open(os.path.join(clone, "rugger", "cardano", RB.PRIVATE_NAME), "w") as fh:
+                json.dump(RB.export_readable(remote_book.doc, "cardano"), fh)
+            os.environ["SIGHTLINE_PRIVATE_TOKEN"] = "t" * 40
+            old = self._patch(lambda repo, token: clone, lambda repo, token: True,
+                              lambda *a, **k: (_ for _ in ()).throw(RB._GitFail("push failed")))
+            buf = io.StringIO()
+            try:
+                with contextlib.redirect_stdout(buf):
+                    self.assertFalse(RB.sync_cache(cache, "cardano", public))
+                text = buf.getvalue()
+                self.assertIn("private repo not updated", text)
+                self.assertNotIn("Actions cache still has this run", text)
+                self.assertNotIn("t" * 40, text)
+                again = RB.open_book(cache, public)
+                self.assertEqual(again.doc["entries"]["wallet-newer"]["last_seen"], LATER)
+                self.assertEqual(sorted(again.doc["entries"]["wallet-newer"]["evidence"]["late_rug"]),
+                                 ["token-a", "token-b"])
+                self.assertIn("wallet-other", again.doc["entries"])
+            finally:
+                self._restore(old)
+
+    def test_corrupt_cache_and_a_good_remote_clears_the_hold(self):
+        with tempfile.TemporaryDirectory() as d:
+            cache, public = os.path.join(d, "cache"), os.path.join(d, "public")
+            os.makedirs(cache)
+            os.makedirs(public)
+            with open(os.path.join(cache, RB.PRIVATE_NAME), "w") as fh:
+                fh.write("{")
+            book = RB.open_book(cache, public, prior={"entries": 3, "edges": 1})
+            RB.mark_hold(cache, book)
+            self.assertTrue(os.path.exists(os.path.join(cache, RB.HOLD_NAME)))
+            remote_book = RB.Book(RB.MemoryStore(None), RB.settings_from(None))
+            remote_book.note_evidence("wallet-remote", "cardano", "late_rug", "token-a", AT)
+            clone = os.path.join(d, "clone")
+            os.makedirs(os.path.join(clone, "rugger", "cardano"))
+            with open(os.path.join(clone, "rugger", "cardano", RB.PRIVATE_NAME), "w") as fh:
+                json.dump(RB.export_readable(remote_book.doc, "cardano"), fh)
+            os.environ["SIGHTLINE_PRIVATE_TOKEN"] = "t" * 40
+            old = self._patch(lambda repo, token: clone, lambda repo, token: True, lambda *a, **k: None)
+            try:
+                self.assertTrue(RB.sync_cache(cache, "cardano", public))
+                self.assertFalse(os.path.exists(os.path.join(cache, RB.HOLD_NAME)))
+                healed = RB.open_book(cache, public, prior={"entries": 3, "edges": 1})
+                self.assertFalse(healed.held)
+                self.assertEqual(healed.judge("wallet-remote", "token-b", NOW)[0]["code"], "known_rugger")
+            finally:
+                self._restore(old)
+
+    def test_a_repo_that_is_not_private_is_refused(self):
+        calls = []
+        os.environ["SIGHTLINE_PRIVATE_TOKEN"] = "t" * 40
+        old_gh, old_clone = RB._github_repo, RB._clone_private
+        def github(repo, token):
+            return {"private": False}
+        def clone(repo, token):
+            calls.append("clone")
+            raise AssertionError("cloned")
+        RB._github_repo = github
+        RB._clone_private = clone
+        RB._remote_read.clear()
+        buf = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(buf):
+                self.assertFalse(RB.sync_cache("/tmp/does-not-need-to-exist", "solana", None))
+                self.assertEqual(RB.read_private("solana"), ("error", None))
+            text = buf.getvalue()
+            self.assertIn("visibility is not private", text)
+            self.assertNotIn("t" * 40, text)
+            self.assertEqual(calls, [])
+            RB._github_repo = lambda repo, token: (_ for _ in ()).throw(OSError("down"))
+            RB._remote_read.clear()
+            buf2 = io.StringIO()
+            with contextlib.redirect_stdout(buf2):
+                self.assertFalse(RB.sync_cache("/tmp/does-not-need-to-exist", "cardano", None))
+            self.assertIn("visibility is not private", buf2.getvalue())
+            self.assertNotIn("down", buf2.getvalue())
+        finally:
+            RB._github_repo, RB._clone_private = old_gh, old_clone
+            self._restore((old_clone, RB._repo_is_private, RB._commit_export, old_gh))
+
+    def test_rebase_retries_a_non_fast_forward_and_never_forces(self):
+        calls = []
+        def fake(args, cwd, token):
+            calls.append(list(args))
+            if args == ["git", "push"] and sum(1 for c in calls if c == ["git", "push"]) == 1:
+                raise RB._GitFail("! [rejected] non-fast-forward")
+        old = RB._git
+        RB._git = fake
+        try:
+            RB._rebase_and_push(".", "token-value")
+        finally:
+            RB._git = old
+        self.assertEqual(calls, [
+            ["git", "pull", "--rebase"],
+            ["git", "push"],
+            ["git", "pull", "--rebase"],
+            ["git", "push"],
+        ])
+        self.assertNotIn("--force", json.dumps(calls))
+        self.assertNotIn("token-value", json.dumps(calls))
 
 
 class SealFaults(unittest.TestCase):

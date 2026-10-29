@@ -80,12 +80,23 @@ def _rugger():
     return RB
 
 
-def _rugger_cfg():
-    """Exclusion hashes only. Does not read or change v6.5 skip, entry, or exit rules."""
-    raw = getattr(C, "RUGGER_EXCLUSION_SHA256", ()) or ()
+def _rugger_cfg(path=None):
+    """Exclusion hashes from solana-desk/rugger.json. Not the frozen v6.5 config."""
+    path = path or os.path.join(os.path.dirname(__file__), "..", "rugger.json")
+    raw = []
+    try:
+        with open(path) as fh:
+            doc = json.load(fh)
+        if isinstance(doc, dict) and isinstance(doc.get("exclusion_sha256"), list):
+            raw = doc["exclusion_sha256"]
+    except (OSError, ValueError):
+        raw = []
     return {"rugger_blacklist": {
         "hops": 1, "sibling": False, "shared_funder_min": 25,
-        "exclusion_sha256": [h for h in raw if isinstance(h, str)],
+        "exclusion_sha256": [
+            h for h in raw
+            if isinstance(h, str) and len(h) == 64 and all(c in "0123456789abcdef" for c in h)
+        ],
     }}
 
 
@@ -109,7 +120,7 @@ def observe_rugger(book, rc, mint, now, launch_s=None, owners=None):
     creator = rc.get("creator")
     if not isinstance(creator, str) or not creator or not isinstance(mint, str) or not mint:
         return []
-    if owners and RB.public_id(creator) in owners:
+    if owners and (RB.public_id(creator) in owners or RB.unsalted_id(creator) in owners):
         return []
     at = RB.iso(now)
     if rc.get("rugged") is True:
@@ -281,7 +292,6 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
         prior = _rugger().read_prior(os.path.join(data_dir, "health.json"))
     except Exception:
         prior = None
-    rugger_t0 = time.monotonic()
     try:
         book = rugger_book(cache_dir, data_dir, prior=prior)
         owners = _rugger().owner_ids(os.environ.get("PRIVACY_GUARD_PATTERNS", ""))
@@ -290,6 +300,7 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
         book = None
         owners = set()
     would = []
+    rugger_spent = 0.0
     rugger_stopped = False
     for i, mint in enumerate(m for m, _ in ls):
         src = ls[i][1]
@@ -311,10 +322,11 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
                     source=src, check_delay_s=round(time.time() - t0, 2), cfg_version=C.CFG_VERSION, seed=seed,
                     error_src=";".join(sorted(ERR_NAMES[e] for e in errs))))
         # Log-only. stype, reason, and run_leads are already fixed. Fills do not read this.
-        # The whole hook, across every lead, stops after 5s. Skips and fills do not.
+        # The 5s budget is time inside this hook only. Quote pacing and HTTP are not counted.
+        hook_t0 = time.monotonic()
         try:
             if book is not None and not rugger_stopped:
-                if time.monotonic() - rugger_t0 > RUGGER_BUDGET_S:
+                if rugger_spent > RUGGER_BUDGET_S:
                     rugger_stopped = True
                     print("::warning::rugger log: 5s budget spent")
                 else:
@@ -326,10 +338,12 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
                         would.append(_public_would(mint, verdict))
         except Exception as e:
             print(f"rugger log: skipped ({type(e).__name__})", file=sys.stderr)
+        finally:
+            rugger_spent += time.monotonic() - hook_t0
     if book is not None:
         try:
             _rugger().mark_hold(cache_dir, book)
-            if book.writable and time.monotonic() - rugger_t0 <= RUGGER_BUDGET_S:
+            if book.writable and rugger_spent <= RUGGER_BUDGET_S:
                 book.save()
             elif book.writable:
                 print("::warning::rugger log: 5s budget spent")

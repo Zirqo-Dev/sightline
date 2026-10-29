@@ -130,6 +130,7 @@ jobs:
       - name: Existing checks
         env:
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
         run: |
           bash scripts/privacy-guard.sh
           pip install --quiet "jsonschema>=4.18"
@@ -172,6 +173,7 @@ jobs:
       - name: Checks before commit
         env:
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
         run: |
           # Pass the forensics tree so a brand-new report is scanned before git add.
           # With no arguments the guard only sees tracked files.
@@ -181,6 +183,7 @@ jobs:
       - name: Commit reports to desk-data
         env:
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
         run: |
           set -euo pipefail
           if [ "${GITHUB_REF}" != "refs/heads/main" ]; then

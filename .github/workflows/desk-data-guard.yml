@@ -6,7 +6,7 @@ name: desk-data-guard
 # solada-prefilter/liquidity_moves.json, solada-prefilter/vetoes.json and
 # solana-desk/rugger_would_veto.json, with the same patterns and allowlist. A dev_tag,
 # actor_tag, or veto evidence tag there must be a role label or a w- hash. Rugger ids
-# are w- hashes. A raw wallet key or a private rugger-blacklist file fails the guard.
+# are r- HMAC ids. A raw wallet key or a private rugger-blacklist file fails the guard.
 # The allowlist does not mask those files.
 # Pushes made with the built-in GITHUB_TOKEN (desk scan, solada-prefilter)
 # do not trigger workflows, so a timed run covers those. Primary: cron-job.org ->
@@ -47,6 +47,7 @@ jobs:
       - name: Privacy guard on desk-data
         env:
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
         run: bash main/scripts/privacy-guard.sh --root desk-data
       - uses: actions/setup-python@v5
         if: ${{ !cancelled() }}

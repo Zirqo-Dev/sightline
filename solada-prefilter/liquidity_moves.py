@@ -991,7 +991,7 @@ def _save_pull_stakes(cache_dir, public_dir, rows):
     for row in rows or []:
         key = _pull_key(row)
         stake = row.get("stake")
-        if not key or not RB.public_id(stake) or key in seen:
+        if not key or not RB.wallet_ok(stake) or key in seen:
             continue
         seen.add(key)
         when = row.get("time")
@@ -1043,6 +1043,7 @@ def _feed_rugger(cache_dir, public_dir, events, flagged, now_s, cfg, dry_run, pr
         if not book.writable:
             return
         devs = RB.deployers_from_dev_cache(cache_dir, public_dir)
+        floors = floors_of(lm_cfg(cfg))
         owners = RB.owner_ids(os.environ.get("PRIVACY_GUARD_PATTERNS", ""), derive=lambda a: F.addr_info(a)[0])
         rows = [ev for ev in (events or []) if isinstance(ev, dict)]
         seen_ids = {id(ev) for ev in rows}
@@ -1060,7 +1061,7 @@ def _feed_rugger(cache_dir, public_dir, events, flagged, now_s, cfg, dry_run, pr
             saved = by_key.get(_pull_key(ev))
             if not stake and saved:
                 stake = saved.get("stake")
-            if not stake or not unit or RB.public_id(stake) in owners:
+            if not stake or not unit or RB.public_id(stake) in owners or RB.unsalted_id(stake) in owners:
                 continue
             when = ev.get("time")
             if (isinstance(when, bool) or not isinstance(when, (int, float)) or when <= 0) and saved:
@@ -1070,7 +1071,7 @@ def _feed_rugger(cache_dir, public_dir, events, flagged, now_s, cfg, dry_run, pr
             at = RB.iso(when)
             if ev.get("ahead_of_dump") is True:
                 book.note_evidence(stake, "cardano", "ahead_of_dump", unit, at)
-            material = pull_is_material(ev) or (saved and pull_is_material(saved))
+            material = pull_is_material(ev, floors) or (saved and pull_is_material(saved, floors))
             if material and devs.get(unit) == stake:
                 book.note_evidence(stake, "cardano", "lp_pulled", unit, at)
         book.save()
