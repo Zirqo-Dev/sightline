@@ -7,34 +7,9 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-29T11:00:27Z",
+ "generated_at": "2026-10-29T11:30:22Z",
  "cfg_version": "v1-v6.5",
- "open": [
-  {
-   "id": "S-20261028T2100-dyw5pump",
-   "ticker": "CATBOT",
-   "mint": "dyw5fDNv91eknniMG4tGCU1ZrzjuxbpsLiEzih6pump",
-   "book": "S",
-   "status": "open",
-   "size": 0.5,
-   "cost_model": "pre-v3",
-   "opened_at": "2026-10-28T21:00:27Z",
-   "window_ends_at": "2026-10-28T23:00:27Z",
-   "entry": {
-    "px": 0.0043110598611640375
-   },
-   "frac": 0.333333,
-   "last_mark": 0.05267945594724532,
-   "thesis": "safety:too_fresh",
-   "result": {
-    "pnl": 0.350622368,
-    "pct": 1121.96,
-    "unit": "SOL",
-    "net_pnl": 0.350622368,
-    "gross_pnl": 0.37385306
-   }
-  }
- ],
+ "open": [],
  "closed": [
   {
    "id": "F-20261028T1330-96AUWRAY",
@@ -1654,6 +1629,34 @@
     "gross_pct": 105.91
    },
    "thesis": "safety:too_fresh"
+  },
+  {
+   "id": "S-20261028T2100-dyw5pump",
+   "ticker": "CATBOT",
+   "mint": "dyw5fDNv91eknniMG4tGCU1ZrzjuxbpsLiEzih6pump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "pre-v3",
+   "opened_at": "2026-10-28T21:00:27Z",
+   "closed_at": "2026-10-29T11:30:22Z",
+   "entry": {
+    "px": 0.0043110598611640375
+   },
+   "exit": {
+    "px": 0.03803963535127581
+   },
+   "exit_reason": "trailing_stop",
+   "result": {
+    "pnl": 1.61966428,
+    "pct": 317.44,
+    "unit": "SOL",
+    "net_pnl": 1.61966428,
+    "net_pct": 317.44,
+    "gross_pnl": 1.677808335,
+    "gross_pct": 335.56
+   },
+   "thesis": "safety:too_fresh"
   }
  ],
  "books": {
@@ -1685,14 +1688,14 @@
    "realized_gross_pnl": -0.911025679
   },
   "S": {
-   "cash": 5.829536187,
-   "equity": 7.852920487,
-   "realized_pnl": -4.000387014,
-   "open": 1,
-   "closed": 28,
+   "cash": 7.268654898,
+   "equity": 7.268654898,
+   "realized_pnl": -2.731345102,
+   "open": 0,
+   "closed": 29,
    "fills_today": 15,
    "would_halt": [],
-   "realized_gross_pnl": -3.619587377
+   "realized_gross_pnl": -2.315632101
   }
  },
  "costs": {
@@ -1719,9 +1722,9 @@
   "started_at": "2026-10-29T00:30:25Z",
   "windows": {
    "7": {
-    "counted_closes": 45,
-    "net_pnl": -5.282758524,
-    "wins": 19,
+    "counted_closes": 46,
+    "net_pnl": -4.013716611,
+    "wins": 20,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
     "older_labels": {
@@ -1729,9 +1732,9 @@
     }
    },
    "28": {
-    "counted_closes": 45,
-    "net_pnl": -5.282758524,
-    "wins": 19,
+    "counted_closes": 46,
+    "net_pnl": -4.013716611,
+    "wins": 20,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
     "older_labels": {

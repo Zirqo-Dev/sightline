@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793271627,
+ "last_run_ts": 1793273422,
  "voids": [],
  "books": {
   "F": {
@@ -479,34 +479,11 @@
    "realized_gross": -0.9110256789997693
   },
   "S": {
-   "cash": 5.829536186725113,
-   "open": {
-    "S-20261028T2100-dyw5pump": {
-     "entry": 0.0043110598611640375,
-     "peak": 0.05267945594724532,
-     "steps": 2,
-     "liq0": 257.1357,
-     "opened": 1793221227,
-     "frac": 0.3333333333333334,
-     "last_mark": 0.05267945594724532,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "dyw5fDNv91eknniMG4tGCU1ZrzjuxbpsLiEzih6pump",
-     "symbol": "CATBOT",
-     "tokens": 115980760208,
-     "run_id": "20261028T2100",
-     "why": "safety:too_fresh",
-     "book": "S",
-     "pnl": 0.35062236778864625,
-     "gross_pnl": 0.37385306,
-     "entry_haircut": 0.020440792724637596,
-     "entry_cost": 0.5102303963623187,
-     "exit_haircut": 0.006484733708370118
-    }
-   },
+   "cash": 7.268654898154471,
+   "open": {},
    "fills_day": "2026-10-29",
    "fills_today": 15,
-   "realized_pnl": -4.0003870144874485,
+   "realized_pnl": -2.7313451018455295,
    "closed": [
     {
      "id": "S-20261028T1330-5Zjdpump",
@@ -953,11 +930,26 @@
      "why_entered": "safety:too_fresh",
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z"
+    },
+    {
+     "id": "S-20261028T2100-dyw5pump",
+     "mint": "dyw5fDNv91eknniMG4tGCU1ZrzjuxbpsLiEzih6pump",
+     "symbol": "CATBOT",
+     "opened": 1793221227,
+     "closed": 1793273422,
+     "entry": 0.0043110598611640375,
+     "exit_px": 0.03803963535127581,
+     "why": "trailing_stop",
+     "pnl": 1.61966428,
+     "gross_pnl": 1.677808335,
+     "pct": 317.44,
+     "gross_pct": 335.56,
+     "why_entered": "safety:too_fresh"
     }
    ],
    "would_halt": [],
    "peak_equity": 10.89800187930826,
-   "realized_gross": -3.619587376663596
+   "realized_gross": -2.3156321013049026
   }
  },
  "cost_model_started_at": "2026-10-29T00:30:25Z",
