@@ -11,7 +11,8 @@ name: Solada prefilter
 # An all-caps coin ticker is not renamed. dev_checks is unchanged.
 # Flag-only cabal/whale signals go to desk-data:solada-prefilter/flags.json; their
 # private working data (full stake keys, sniper positions) rides in the same Actions
-# cache as the whale snapshot (flags-cache.json) and is never committed.
+# cache as the whale snapshot (flags-cache.json) and the rugger blacklist
+# (rugger-blacklist.json). Those files are never committed.
 # The primary webhook fires before dev_checks. dev_checks.json then gets its own
 # budget_s (180; Koios 36 / Blockfrost 50 unchanged) and yields if the run-start+720s
 # cap cannot also hold whale_ledger (90), big_moves (150 reserved) and liquidity_moves (50).

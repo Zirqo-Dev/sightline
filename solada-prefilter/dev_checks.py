@@ -869,6 +869,66 @@ def _private_cache(cache_dir, data_dir):
     return cpath
 
 
+def _rb():
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    import rugger_blacklist as RB
+    return RB
+
+
+def _funded_out(dev, ordered):
+    """ADA-only recipients in txs this scan already read. No new chain call. Not a public field."""
+    if not dev:
+        return []
+    txs = []
+    for tx in ordered or []:
+        def side(rows):
+            out = []
+            for u in rows or []:
+                if not isinstance(u, dict):
+                    continue
+                st, script, _addr = _who(u)
+                out.append({"stake": st, "script": bool(script), "lovelace": u.get("lovelace"), "assets": u.get("assets")})
+            return out
+        txs.append({"inputs": side(tx.get("inputs")), "outputs": side(tx.get("outputs"))})
+    try:
+        return _rb().ada_only_recipients(dev, txs)
+    except Exception:
+        return []
+
+
+def _feed_rugger(cache, scans, cache_dir, data_dir, now_s, loaded, dry_run):
+    """Copy late_rug stakes and funding hops into the private blacklist. Never a public file."""
+    if dry_run or not cache_dir or not loaded:
+        return
+    try:
+        book = _rb().open_book(cache_dir, data_dir)
+        if book is None or not book.writable:
+            return
+        pats, stakes = loaded
+        at = iso(now_s)
+        for unit, row in (cache.get("units") or {}).items():
+            if not isinstance(row, dict) or row.get("late_rug") is not True:
+                continue
+            stake = row.get("stake")
+            if not stake or _hidden(pats, stakes, stake):
+                continue
+            book.note_evidence(stake, "cardano", "late_rug", unit, at)
+        for sc in (scans or {}).values():
+            if not isinstance(sc, dict):
+                continue
+            stake = sc.get("stake")
+            if not stake or _hidden(pats, stakes, stake):
+                continue
+            for other in sc.get("funded") or []:
+                if other and not _hidden(pats, stakes, other):
+                    book.note_edge(stake, other, "cardano", at)
+        book.save()
+    except Exception as e:
+        print(f"dev_checks: rugger blacklist skipped ({type(e).__name__})", file=sys.stderr)
+
+
 def _launcher_stake(launch, ex):
     addr = (launch or {}).get("launcherAddress") or ""
     stake = F.addr_info(addr)[0]
@@ -970,7 +1030,7 @@ def _scan(chain, item, ex, dc):
     # An incomplete read keeps the observed sells. _entry never lowers a stored sell and marks the row partial.
     base.update(complete=complete, txs_read=len(ordered), unread_txs=unread, saw_newest=saw_newest,
                 last_tx_s=max((t["time"] for t in ordered), default=None), stats=stats, stake=stake,
-                launch_s=launch_s)
+                launch_s=launch_s, funded=_funded_out(stake, ordered))
     return base
 
 
@@ -1250,6 +1310,7 @@ def _quiet_owner(sc, item, pats, stakes):
     addr = ((item.get("launch") or {}).get("launcherAddress") or "")
     if st and _hidden(pats, stakes, st, addr):
         sc["stake"] = None
+        sc["funded"] = []
         if sc.get("stats"):
             sc["stats"] = dict(sc["stats"], sell_hashes=[], sell_ada={}, sharp=False)
     return sc
@@ -1558,6 +1619,7 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
                                           "fresh_funded_h")},
         "entries": entries, "coverage": coverage,
     })
+    _feed_rugger(cache, scans, cache_dir, data_dir, now_s, loaded, dry_run)
     if not dry_run:
         if cpath:
             KT.write_json(cpath, cache)

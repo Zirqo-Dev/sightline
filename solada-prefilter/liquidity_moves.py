@@ -24,7 +24,7 @@ last_checked time. That time moves only after a successful read. A budget skip, 
 opened before any page comes back, keeps its previous stamp, so later runs cover it first.
 budget_s and the Koios cap stay where they are.
 """
-import hashlib, os, time
+import hashlib, os, sys, time
 from datetime import datetime, timezone
 
 import dev_checks as DC
@@ -885,6 +885,7 @@ def _apply_tx(tx, token_row, scripts, splash_pols, bc, lp_pols, watch, loaded, e
         ev["ada"] = round(abs(int(ev["ada_delta"])) / 1e6, 2)
         ev["reserve_ada"] = round(int(ev["reserve_lovelace"]) / 1e6, 2)
         ev["actor_tag"] = None
+        kept_stake = ev.get("lp_stake") if kind == "lp_remove" and not lp else None
         if kind in ("lp_add", "lp_remove"):
             ev["actor_tag"] = _safe_tag(ev.get("lp_stake"), ev.get("lp_addr"), watch, loaded, ex_tags)
         elif kind == "swap" and direction == "sell":
@@ -892,6 +893,9 @@ def _apply_tx(tx, token_row, scripts, splash_pols, bc, lp_pols, watch, loaded, e
             ev["actor_tag"] = _safe_tag(st, who, watch, loaded, ex_tags)
         ev.pop("lp_stake", None)
         ev.pop("lp_addr", None)
+        # Private hop input. public_move does not copy it. Popped before the public file is built.
+        if kept_stake and ev.get("actor_tag"):
+            ev["_lp_stake"] = kept_stake
         out.append(ev)
     return out
 
@@ -938,6 +942,38 @@ def _basis(koios_calls, bf_calls):
     if bf_calls:
         return "blockfrost"
     return "koios"
+
+
+def _feed_rugger(cache_dir, public_dir, events, now_s, cfg, dry_run):
+    """Record lp_pulled and ahead_of_dump actors on the private blacklist. No public wallet."""
+    if dry_run or not cache_dir:
+        return
+    try:
+        root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        if root not in sys.path:
+            sys.path.insert(0, root)
+        import rugger_blacklist as RB
+        book = RB.open_book(cache_dir, public_dir, cfg)
+        if book is None or not book.writable:
+            return
+        devs = RB.deployers_from_dev_cache(cache_dir, public_dir)
+        roles = set(DC.known_roles(cfg))
+        at = DC.iso(now_s)
+        for ev in events or []:
+            if not isinstance(ev, dict) or ev.get("kind") != "lp_remove":
+                continue
+            stake = ev.get("_lp_stake")
+            unit = ev.get("unit") or ev.get("_unit")
+            if not stake or not unit:
+                continue
+            if ev.get("ahead_of_dump") is True:
+                book.note_evidence(stake, "cardano", "ahead_of_dump", unit, at)
+            tag = ev.get("actor_tag")
+            if (isinstance(tag, str) and tag in roles) or devs.get(unit) == stake:
+                book.note_evidence(stake, "cardano", "lp_pulled", unit, at)
+        book.save()
+    except Exception as e:
+        print(f"liquidity_moves: rugger blacklist skipped ({type(e).__name__})")
 
 
 def run(http, cfg, top10, units_by_ticker, meta, lp_pols, data_dir, cache_dir, dry_run, now_s,
@@ -1036,6 +1072,11 @@ def _run(http, cfg, bc, top10, units_by_ticker, meta, lp_pols, path, cache_dir, 
             })
     sized = [e for e in events if e.get("kind")]
     waiting, flagged_pulls = mark_dumps(sized, cache.get("open_pulls"), bc, now_s)
+    try:
+        _feed_rugger(cache_dir, os.path.dirname(path), sized, now_s, cfg, dry_run)
+    finally:
+        for ev in sized:
+            ev.pop("_lp_stake", None)
     flagged = {}
     for p in flagged_pulls:
         short = p.get("tx_short") or (p.get("hash") or "")[:10]

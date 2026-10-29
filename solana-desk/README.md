@@ -54,5 +54,14 @@ All generated files (tasks/trades CSVs, state, daily summaries, `paper.json`,
 `log.json`, briefs, review notes, health) are committed to the **`desk-data`** branch
 (folder `solana-desk/`) by the Actions bot, with pull-rebase retries and no force-push. `main` holds code only and changes only via PRs Bousky merges.
 
+## Rugger list (log only)
+RugCheck `rugged` is remembered per deployer in the private Actions cache
+(`--cache-dir`, workflow cache `solana-desk-rugger-`, file `rugger-blacklist.json`).
+A later lead from that deployer, or from a wallet they funded, is appended to
+`rugger_would_veto.json` on desk-data. That file is hashes and the public mint.
+It does not change skip reasons, paper entries, or exits. The v6.5 freeze is unchanged.
+The Solana desk has no LP-pull or dump event feed; `lp_unlocked` stays a per-token
+safety skip and is not blacklist evidence.
+
 ## Tests
     cd solana-desk && python3 -m unittest discover -s tests -t .

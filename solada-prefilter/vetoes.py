@@ -21,6 +21,13 @@ skipped and listed under `stale`. A corrupt source keeps the previous vetoes.jso
 Evidence values are tags only (a w- hash or a role label). Owner wallets are dropped
 upstream, before these files are written; keep_tag is the backstop. A bad document is
 not written. This module does not change desk rules, kill lines, or thresholds.
+
+known_rugger: the deployer is already on the private rugger blacklist for a different
+token (late_rug, lp_pulled, ahead_of_dump, or rugcheck_rugged). known_rugger_funded: the
+deployer is a wallet that rugger funded, within the configured hop count, or a hop-1
+sibling of a shared funder who is not excluded and not over the fan-out floor. Both are
+hard research vetoes beside serial_launcher. buy_signal stays false. Raw wallets stay in
+the private store. Public evidence carries a w- id and the evidence tags.
 """
 import json, os, re, sys
 from datetime import datetime, timezone
@@ -32,9 +39,12 @@ import liquidity_moves as LM
 
 NOTE = (
     "Research vetoes for the Cardano desk. Never a buy signal. They do not change desk rules, "
-    "kill lines, or thresholds. Evidence values are wallet tags only."
+    "kill lines, or thresholds. Evidence values are wallet tags only. known_rugger and "
+    "known_rugger_funded are hard vetoes from the private rugger blacklist. Public ids are "
+    "w- hashes. Raw wallets are not written here."
 )
-CODES = ("dev_sold", "serial_launcher", "lp_pulled", "ahead_of_dump")
+CODES = ("dev_sold", "serial_launcher", "lp_pulled", "ahead_of_dump", "known_rugger", "known_rugger_funded")
+RUGGER_TAGS = ("ahead_of_dump", "late_rug", "lp_pulled", "rugcheck_rugged")
 TICKER_RE = re.compile(r"^[A-Z0-9][A-Z0-9._-]{0,31}$")
 POLICY_RE = re.compile(r"^[0-9a-f]{8,56}$")
 UNIT_RE = re.compile(r"^[0-9a-f]{56,200}$")
@@ -264,13 +274,90 @@ def from_liquidity(doc, roles, loaded, tokens, dev_index, floors):
             tokens.veto(row or tokens.add(ticker, policy, None), "lp_pulled", ev)
 
 
-def build(dev_doc, liq_doc, cfg, owner_env, at, stale=None):
+def _rugger():
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    import rugger_blacklist as RB
+    return RB
+
+
+def _id_ok(value):
+    return isinstance(value, str) and DC.TAG_RE.fullmatch(value)
+
+
+def _tags_ok(value):
+    if not isinstance(value, list) or not value or len(value) > len(RUGGER_TAGS):
+        return False
+    return all(isinstance(tag, str) and tag in RUGGER_TAGS for tag in value) and len(value) == len(set(value))
+
+
+def _verdict_evidence(verdict, roles, loaded):
+    """Public evidence, or None when a wallet id cannot be published."""
+    rid = keep_tag(verdict.get("rugger_id"), roles, loaded)
+    tags = verdict.get("tags")
+    if not rid or not _tags_ok(tags):
+        return None
+    ev = {"rugger_id": rid, "evidence_tags": sorted(tags)}
+    if verdict.get("code") == "known_rugger":
+        return ev
+    wid = keep_tag(verdict.get("wallet_id"), roles, loaded)
+    hop = verdict.get("hop")
+    if not wid or isinstance(hop, bool) or not isinstance(hop, int) or not 1 <= hop <= 8:
+        return None
+    ev["wallet_id"] = wid
+    ev["hop"] = hop
+    return ev
+
+
+def apply_rugger(tokens, dev_doc, book, deployers, roles, loaded, at):
+    """Hard veto from the private book. Skipped when the book or owner patterns are missing.
+
+    The deployer stake comes from the private dev-checks cache, not from dev_checks.json.
+    A hidden owner stake is not judged. The same token that supplied the only evidence
+    does not gain known_rugger; a later token by that deployer does.
+    """
+    if book is None or not loaded or not isinstance(dev_doc, dict):
+        return
+    pats, stakes = loaded
+    now = None
+    try:
+        now = _rugger().parse_iso(at)
+    except Exception:
+        now = None
+    if now is None:
+        return
+    for entry in dev_doc.get("entries") or []:
+        if not isinstance(entry, dict):
+            continue
+        unit = _unit(entry.get("unit"))
+        ticker = _ticker(entry.get("ticker"))
+        policy = _policy(entry.get("policy_short"))
+        if not unit:
+            continue
+        stake = (deployers or {}).get(unit)
+        if not stake or DC._hidden(pats, stakes, stake):
+            continue
+        try:
+            verdicts = book.judge(stake, unit, now)
+        except Exception:
+            continue
+        for verdict in verdicts:
+            if verdict.get("code") not in ("known_rugger", "known_rugger_funded"):
+                continue
+            ev = _verdict_evidence(verdict, roles, loaded)
+            if ev:
+                tokens.veto(tokens.add(ticker, policy, unit), verdict["code"], ev)
+
+
+def build(dev_doc, liq_doc, cfg, owner_env, at, stale=None, book=None, deployers=None):
     loaded = DC._patterns(owner_env, who="vetoes")
     roles = DC.known_roles(cfg)
     tokens = _Tokens()
     dev_index = []
     from_dev_checks(dev_doc, cfg, roles, loaded, tokens, dev_index)
     from_liquidity(liq_doc, roles, loaded, tokens, dev_index, LM.resolve_floors(liq_doc, cfg))
+    apply_rugger(tokens, dev_doc, book, deployers, roles, loaded, at)
     rows = [r for r in tokens.rows if r.get("vetoes")]
     for row in rows:
         for veto in row["vetoes"]:
@@ -301,6 +388,22 @@ def code_counts(rows):
             if code in counts:
                 counts[code] += 1
     return counts
+
+
+def _verdict_shape(code, ev):
+    """True when a rugger veto's evidence is ids and tags only."""
+    if not isinstance(ev, dict) or not _id_ok(ev.get("rugger_id")) or not _tags_ok(ev.get("evidence_tags")):
+        return False
+    if list(ev.get("evidence_tags")) != sorted(ev.get("evidence_tags")):
+        return False
+    if code == "known_rugger":
+        return set(ev) == {"rugger_id", "evidence_tags"}
+    if code != "known_rugger_funded":
+        return False
+    hop = ev.get("hop")
+    if isinstance(hop, bool) or not isinstance(hop, int) or not 1 <= hop <= 8:
+        return False
+    return set(ev) == {"rugger_id", "wallet_id", "evidence_tags", "hop"} and _id_ok(ev.get("wallet_id"))
 
 
 def reason_ok(reason):
@@ -357,12 +460,17 @@ def validate_doc(doc):
             elif keys != {"code", "evidence"}:
                 raise SystemExit("vetoes: code rejected")
             ev = veto.get("evidence")
-            if not isinstance(ev, dict) or set(ev) - {"dev_tag", "actor_tag"}:
-                raise SystemExit("vetoes: evidence rejected")
-            for value in ev.values():
-                if not DC.dev_tag_ok(value, DC.known_roles()):
-                    raise SystemExit("vetoes: evidence tag rejected")
-            if veto.get("code") == "ahead_of_dump" and not reason_ok(veto.get("reason")):
+            code = veto.get("code")
+            if code in ("known_rugger", "known_rugger_funded"):
+                if not _verdict_shape(code, ev):
+                    raise SystemExit("vetoes: evidence rejected")
+            else:
+                if not isinstance(ev, dict) or set(ev) - {"dev_tag", "actor_tag"}:
+                    raise SystemExit("vetoes: evidence rejected")
+                for value in ev.values():
+                    if not DC.dev_tag_ok(value, DC.known_roles()):
+                        raise SystemExit("vetoes: evidence tag rejected")
+            if code == "ahead_of_dump" and not reason_ok(veto.get("reason")):
                 raise SystemExit("vetoes: reason rejected")
     counts = doc.get("counts")
     if counts != code_counts(rows):
@@ -411,11 +519,31 @@ def _fresh(doc, now_s, max_age_s):
     return (float(now_s) - ts) <= float(max_age_s)
 
 
-def run(data_dir, cfg, dry_run, owner_env=None, now_s=None):
+def _open_rugger(cache_dir, data_dir, cfg, at, dry_run):
+    """Private book plus {unit: stake}. A cache miss leaves both empty. Never raises."""
+    if not cache_dir:
+        return None, {}
+    try:
+        RB = _rugger()
+        book = RB.open_book(cache_dir, data_dir, cfg)
+        if book is None:
+            return None, {}
+        RB.reseed_late_rugs(book, cache_dir, data_dir, at)
+        if not dry_run:
+            book.save()
+        return book, RB.deployers_from_dev_cache(cache_dir, data_dir)
+    except Exception as e:
+        print(f"vetoes: rugger blacklist skipped ({type(e).__name__})", file=sys.stderr)
+        return None, {}
+
+
+def run(data_dir, cfg, dry_run, owner_env=None, now_s=None, cache_dir=None):
     """Write vetoes.json unless dry_run. Never raises. Returns a small summary.
 
     A corrupt dev_checks or liquidity_moves file keeps the previous vetoes.json.
     A source older than max_age_h is skipped and named in stale.
+    cache_dir is the private Actions cache. A missing rugger file is a cache miss:
+    known_rugger is not invented from the public files.
     """
     try:
         vc = veto_cfg(cfg)
@@ -438,7 +566,9 @@ def run(data_dir, cfg, dry_run, owner_env=None, now_s=None):
         elif not _fresh(liq_doc, now, max_age):
             stale.append("liquidity_moves")
             liq_doc = {}
-        doc = build(dev_doc, liq_doc, cfg, owner_env, DC.iso(now), stale=stale)
+        at = DC.iso(now)
+        book, deployers = _open_rugger(cache_dir, data_dir, cfg, at, dry_run)
+        doc = build(dev_doc, liq_doc, cfg, owner_env, at, stale=stale, book=book, deployers=deployers)
         path = os.path.join(data_dir, "vetoes.json")
         if not dry_run:
             KT.write_json(path, doc, indent=1)

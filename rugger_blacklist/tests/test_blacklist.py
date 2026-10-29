@@ -1,0 +1,248 @@
+"""Offline tests for the shared rugger blacklist. No network, no secrets, no raw addresses in assertions."""
+import json
+import os
+import tempfile
+import unittest
+
+import rugger_blacklist as RB
+
+AT = "2026-10-28T02:07:00Z"
+LATER = "2026-11-28T02:07:00Z"
+NOW = RB.parse_iso(AT)
+
+
+def _book(hops=1, expiry=None, hub=25, exclusions=()):
+    cfg = {"rugger_blacklist": {"hops": hops, "expiry_days": expiry, "shared_funder_min": hub}}
+    return RB.Book(RB.MemoryStore(None), RB.settings_from(cfg), exclusions)
+
+
+def _ids(blob):
+    return [item.get("code") for item in blob]
+
+
+class EvidencePaths(unittest.TestCase):
+    def test_each_tag_is_kept_and_a_later_token_is_known_rugger(self):
+        for tag in RB.TAGS:
+            book = _book()
+            self.assertTrue(book.note_evidence("wallet-rugger", "cardano" if tag != "rugcheck_rugged" else "solana",
+                                               tag, "token-a", AT))
+            self.assertEqual(book.judge("wallet-rugger", "token-a", NOW), [])
+            hit = book.judge("wallet-rugger", "token-b", NOW)
+            self.assertEqual(_ids(hit), ["known_rugger"])
+            self.assertEqual(hit[0]["tags"], [tag])
+            self.assertTrue(RB._ID_RE.fullmatch(hit[0]["rugger_id"]))
+            self.assertNotIn("wallet-rugger", json.dumps(hit))
+
+    def test_unknown_tag_and_stake_shaped_token_are_dropped(self):
+        book = _book()
+        self.assertFalse(book.note_evidence("wallet-rugger", "cardano", "not_a_tag", "token-a", AT))
+        self.assertFalse(book.note_evidence("wallet-rugger", "cardano", "late_rug", "stake1u" + "q" * 40, AT))
+        self.assertEqual(book.doc["entries"], {})
+
+    def test_same_token_does_not_veto_itself(self):
+        book = _book()
+        book.note_evidence("wallet-rugger", "cardano", "late_rug", "token-a", AT)
+        book.note_evidence("wallet-rugger", "cardano", "lp_pulled", "token-a", AT)
+        self.assertEqual(book.judge("wallet-rugger", "token-a", NOW), [])
+        hit = book.judge("wallet-rugger", "token-b", NOW)
+        self.assertEqual(hit[0]["tags"], ["late_rug", "lp_pulled"])
+
+
+class FundingHop(unittest.TestCase):
+    def _rug(self, book):
+        book.note_evidence("wallet-rugger", "cardano", "late_rug", "token-a", AT)
+
+    def test_one_hop_outbound_and_not_the_grandchild_by_default(self):
+        book = _book(hops=1)
+        self._rug(book)
+        book.note_edge("wallet-rugger", "wallet-child", "cardano", AT)
+        book.note_edge("wallet-child", "wallet-grand", "cardano", AT)
+        child = book.judge("wallet-child", "token-b", NOW)
+        self.assertEqual(_ids(child), ["known_rugger_funded"])
+        self.assertEqual(child[0]["hop"], 1)
+        self.assertNotIn("wallet-rugger", json.dumps(child))
+        self.assertNotIn("wallet-child", json.dumps(child))
+        self.assertEqual(book.judge("wallet-grand", "token-c", NOW), [])
+        entry = book.doc["entries"]["wallet-rugger"]
+        self.assertEqual(entry["funded"], ["wallet-child"])
+        self.assertEqual(entry["first_seen"], AT)
+        self.assertEqual(entry["last_seen"], AT)
+
+    def test_two_hops_reaches_the_grandchild(self):
+        book = _book(hops=2)
+        self._rug(book)
+        book.note_edge("wallet-rugger", "wallet-child", "cardano", AT)
+        book.note_edge("wallet-child", "wallet-grand", "cardano", AT)
+        grand = book.judge("wallet-grand", "token-c", NOW)
+        self.assertEqual(_ids(grand), ["known_rugger_funded"])
+        self.assertEqual(grand[0]["hop"], 2)
+
+    def test_zero_hops_keeps_the_deployer_only(self):
+        book = _book(hops=0)
+        self._rug(book)
+        book.note_edge("wallet-rugger", "wallet-child", "cardano", AT)
+        self.assertEqual(_ids(book.judge("wallet-rugger", "token-b", NOW)), ["known_rugger"])
+        self.assertEqual(book.judge("wallet-child", "token-b", NOW), [])
+
+    def test_shared_funder_sibling_is_one_hop(self):
+        book = _book(hops=1, hub=25)
+        book.note_edge("wallet-funder", "wallet-rugger", "cardano", AT)
+        book.note_edge("wallet-funder", "wallet-sibling", "cardano", AT)
+        self._rug(book)
+        hit = book.judge("wallet-sibling", "token-b", NOW)
+        self.assertEqual(_ids(hit), ["known_rugger_funded"])
+        self.assertEqual(hit[0]["hop"], 1)
+        self.assertEqual(book.judge("wallet-funder", "token-b", NOW), [])
+
+
+class ExclusionAndHub(unittest.TestCase):
+    def test_excluded_funder_does_not_taint_and_is_not_stored(self):
+        book = _book(exclusions=("wallet-cex",))
+        self.assertFalse(book.note_edge("wallet-cex", "wallet-rugger", "cardano", AT))
+        self.assertFalse(book.note_edge("wallet-cex", "wallet-other", "cardano", AT))
+        self.assertFalse(book.note_evidence("wallet-cex", "solana", "rugcheck_rugged", "token-a", AT))
+        book.note_evidence("wallet-rugger", "cardano", "late_rug", "token-a", AT)
+        self.assertEqual(book.doc["edges"], [])
+        book.note_edge("wallet-rugger", "wallet-child", "cardano", AT)
+        self.assertEqual(_ids(book.judge("wallet-child", "token-b", NOW)), ["known_rugger_funded"])
+        self.assertEqual(book.judge("wallet-other", "token-b", NOW), [])
+        self.assertNotIn("wallet-cex", book.doc["entries"])
+
+    def test_high_fanout_does_not_taint_unrelated_wallets(self):
+        book = _book(hub=4)
+        book.note_evidence("wallet-rugger", "cardano", "ahead_of_dump", "token-a", AT)
+        for i in range(4):
+            book.note_edge("wallet-hub", "wallet-%d" % i, "cardano", AT)
+        book.note_edge("wallet-hub", "wallet-rugger", "cardano", AT)
+        for i in range(4):
+            self.assertEqual(book.judge("wallet-%d" % i, "token-b", NOW), [])
+        self.assertEqual(_ids(book.judge("wallet-rugger", "token-b", NOW)), ["known_rugger"])
+
+    def test_a_rugger_who_funded_many_wallets_does_not_taint_them(self):
+        book = _book(hub=3)
+        book.note_evidence("wallet-rugger", "cardano", "lp_pulled", "token-a", AT)
+        for name in ("wallet-a", "wallet-b", "wallet-c"):
+            book.note_edge("wallet-rugger", name, "cardano", AT)
+        for name in ("wallet-a", "wallet-b", "wallet-c"):
+            self.assertEqual(book.judge(name, "token-b", NOW), [])
+        self.assertEqual(_ids(book.judge("wallet-rugger", "token-b", NOW)), ["known_rugger"])
+
+    def test_exclude_after_the_fact_drops_the_link(self):
+        book = _book(hub=25)
+        book.note_evidence("wallet-rugger", "cardano", "late_rug", "token-a", AT)
+        book.note_edge("wallet-hub", "wallet-rugger", "cardano", AT)
+        book.note_edge("wallet-hub", "wallet-other", "cardano", AT)
+        self.assertEqual(_ids(book.judge("wallet-other", "token-b", NOW)), ["known_rugger_funded"])
+        book.exclude("wallet-hub")
+        self.assertEqual(book.judge("wallet-other", "token-b", NOW), [])
+        self.assertNotIn("wallet-hub", json.dumps(book.doc["edges"]))
+
+
+class ExpiryAndPersistence(unittest.TestCase):
+    def test_expiry_ignores_old_rows_and_the_default_does_not(self):
+        fresh = _book(expiry=None)
+        fresh.note_evidence("wallet-rugger", "cardano", "late_rug", "token-a", AT)
+        self.assertEqual(_ids(fresh.judge("wallet-rugger", "token-b", RB.parse_iso(LATER))), ["known_rugger"])
+        aged = _book(expiry=10)
+        aged.note_evidence("wallet-rugger", "cardano", "late_rug", "token-a", AT)
+        aged.note_edge("wallet-rugger", "wallet-child", "cardano", AT)
+        later = RB.parse_iso(LATER)
+        self.assertEqual(aged.judge("wallet-rugger", "token-b", later), [])
+        self.assertEqual(aged.judge("wallet-child", "token-b", later), [])
+        self.assertIn("wallet-rugger", aged.doc["entries"])
+
+    def test_file_store_survives_a_second_open(self):
+        with tempfile.TemporaryDirectory() as cache, tempfile.TemporaryDirectory() as public:
+            book = RB.open_book(cache, public)
+            book.note_evidence("wallet-rugger", "solana", "rugcheck_rugged", "mint-a", AT)
+            book.note_edge("wallet-rugger", "wallet-child", "solana", AT)
+            self.assertTrue(book.save())
+            again = RB.open_book(cache, public)
+            hit = again.judge("wallet-child", "mint-b", NOW)
+            self.assertEqual(_ids(hit), ["known_rugger_funded"])
+            raw = open(os.path.join(cache, RB.PRIVATE_NAME)).read()
+            self.assertIn("wallet-rugger", raw)
+            self.assertNotIn("wallet-rugger", json.dumps(hit))
+
+    def test_cache_miss_vetoes_nobody_until_this_run_records(self):
+        with tempfile.TemporaryDirectory() as cache, tempfile.TemporaryDirectory() as public:
+            self.assertFalse(os.path.exists(os.path.join(cache, RB.PRIVATE_NAME)))
+            book = RB.open_book(cache, public)
+            self.assertEqual(book.judge("wallet-rugger", "token-b", NOW), [])
+            self.assertTrue(book.writable)
+            book.note_evidence("wallet-rugger", "cardano", "late_rug", "token-a", AT)
+            book.save()
+            self.assertTrue(os.path.exists(os.path.join(cache, RB.PRIVATE_NAME)))
+            kept = RB.open_book(cache, public)
+            self.assertEqual(_ids(kept.judge("wallet-rugger", "token-b", NOW)), ["known_rugger"])
+
+    def test_corrupt_store_is_not_overwritten(self):
+        with tempfile.TemporaryDirectory() as cache, tempfile.TemporaryDirectory() as public:
+            path = os.path.join(cache, RB.PRIVATE_NAME)
+            with open(path, "w") as fh:
+                fh.write("{")
+            book = RB.open_book(cache, public)
+            self.assertFalse(book.writable)
+            book.note_evidence("wallet-rugger", "cardano", "late_rug", "token-a", AT)
+            self.assertFalse(book.save())
+            self.assertEqual(open(path).read(), "{")
+            again = RB.open_book(cache, public)
+            self.assertEqual(again.judge("wallet-rugger", "token-b", NOW), [])
+
+    def test_public_directory_is_not_a_store(self):
+        with tempfile.TemporaryDirectory() as public:
+            book = RB.open_book(public, public)
+            book.note_evidence("wallet-rugger", "cardano", "late_rug", "token-a", AT)
+            self.assertFalse(book.save())
+            self.assertFalse(os.path.exists(os.path.join(public, RB.PRIVATE_NAME)))
+            again = RB.open_book(public, public)
+            self.assertEqual(again.judge("wallet-rugger", "token-b", NOW), [])
+
+
+class Seal(unittest.TestCase):
+    def test_roundtrip_and_a_wrong_key_does_not_overwrite(self):
+        key = b"test-key-not-a-secret"
+        with tempfile.TemporaryDirectory() as cache, tempfile.TemporaryDirectory() as public:
+            path = os.path.join(cache, "rugger-blacklist.json.enc")
+            store = RB.EncryptedFileStore(path, key, public)
+            book = RB.Book(store, RB.settings_from(None))
+            book.note_evidence("wallet-rugger", "cardano", "late_rug", "token-a", AT)
+            self.assertTrue(book.save())
+            raw = open(path, "rb").read()
+            self.assertTrue(raw.startswith(b"RG1"))
+            self.assertNotIn(b"wallet-rugger", raw)
+            again = RB.Book(RB.EncryptedFileStore(path, key, public), RB.settings_from(None))
+            self.assertEqual(_ids(again.judge("wallet-rugger", "token-b", NOW)), ["known_rugger"])
+            wrong = RB.Book(RB.EncryptedFileStore(path, b"other-test-key!!", public), RB.settings_from(None))
+            self.assertFalse(wrong.writable)
+            wrong.note_evidence("wallet-other", "cardano", "late_rug", "token-z", AT)
+            self.assertFalse(wrong.save())
+            self.assertEqual(open(path, "rb").read(), raw)
+
+    def test_defaults(self):
+        self.assertEqual(RB.DEFAULTS["hops"], 1)
+        self.assertIsNone(RB.DEFAULTS["expiry_days"])
+        self.assertEqual(RB.DEFAULTS["shared_funder_min"], 25)
+        tuned = RB.settings_from({"rugger_blacklist": {"hops": 9, "expiry_days": -1, "shared_funder_min": 1}})
+        self.assertEqual(tuned["hops"], RB.MAX_HOPS)
+        self.assertIsNone(tuned["expiry_days"])
+        self.assertEqual(tuned["shared_funder_min"], 2)
+
+
+class AdaOnly(unittest.TestCase):
+    def test_ada_only_output_is_a_hop_and_a_token_output_is_not(self):
+        dev = "wallet-rugger"
+        txs = [{
+            "inputs": [{"stake": dev}],
+            "outputs": [
+                {"stake": "wallet-child", "lovelace": 6_000_000, "assets": {}},
+                {"stake": "wallet-buyer", "lovelace": 9_000_000, "assets": {"token": 1}},
+                {"stake": "wallet-dust", "lovelace": 1_000_000, "assets": {}},
+                {"stake": "wallet-script", "lovelace": 8_000_000, "assets": {}, "script": True},
+            ],
+        }]
+        self.assertEqual(RB.ada_only_recipients(dev, txs), ["wallet-child"])
+
+
+if __name__ == "__main__":
+    unittest.main()

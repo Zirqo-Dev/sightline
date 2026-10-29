@@ -41,15 +41,29 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Restore private rugger list (Actions cache, never committed)
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/solana-desk-cache
+          key: solana-desk-rugger-${{ github.run_id }}
+          restore-keys: solana-desk-rugger-
       - name: Run scanner
         env:
           JUPITER_API_KEY: ${{ secrets.JUPITER_API_KEY }}
+          SOLANA_DESK_CACHE_DIR: ${{ runner.temp }}/solana-desk-cache
           # Mode: manual input > repo variable SOLANA_DESK_MODE (set to 'scan' to pause fills without a PR) > auto
           MODE: ${{ github.event.inputs.mode || vars.SOLANA_DESK_MODE || 'auto' }}
         working-directory: code/solana-desk
         run: |
           if [ -z "$JUPITER_API_KEY" ]; then echo "::warning::JUPITER_API_KEY secret not set; using keyless Jupiter (noted in health.json)"; fi
-          timeout 420 python3 -m desk.run --mode "$MODE" --data-dir "$GITHUB_WORKSPACE/data/solana-desk"
+          mkdir -p "$SOLANA_DESK_CACHE_DIR"
+          timeout 420 python3 -m desk.run --mode "$MODE" --data-dir "$GITHUB_WORKSPACE/data/solana-desk" --cache-dir "$SOLANA_DESK_CACHE_DIR"
+      - name: Save private rugger list
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/solana-desk-cache
+          key: solana-desk-rugger-${{ github.run_id }}
       - name: Commit to desk-data
         if: always()
         env:

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zirqo-dev.github.io/sightline/schema/solana-rugger-log.schema.json",
+  "title": "Solana rugger would-veto log",
+  "description": "Log only. Does not change entries or exits. buy_signal is always false. Wallet ids are w- hashes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "desk", "mode", "buy_signal", "note", "at", "rows"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "desk": {"const": "solana"},
+    "mode": {"const": "log_only"},
+    "buy_signal": {"const": false},
+    "note": {"type": "string", "minLength": 1},
+    "at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "rows": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/row"}
+    }
+  },
+  "$defs": {
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mint", "code", "rugger_id", "evidence_tags"],
+      "properties": {
+        "mint": {"type": "string", "minLength": 1, "maxLength": 64},
+        "code": {"enum": ["known_rugger", "known_rugger_funded"]},
+        "rugger_id": {"type": "string", "pattern": "^w-[0-9a-f]{8}$"},
+        "wallet_id": {"type": "string", "pattern": "^w-[0-9a-f]{8}$"},
+        "evidence_tags": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["ahead_of_dump", "late_rug", "lp_pulled", "rugcheck_rugged"]}
+        },
+        "hop": {"type": "integer", "minimum": 1, "maximum": 8}
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"code": {"const": "known_rugger"}},
+            "required": ["code"]
+          },
+          "then": {
+            "not": {"anyOf": [{"required": ["wallet_id"]}, {"required": ["hop"]}]}
+          }
+        },
+        {
+          "if": {
+            "properties": {"code": {"const": "known_rugger_funded"}},
+            "required": ["code"]
+          },
+          "then": {"required": ["wallet_id", "hop"]}
+        }
+      ]
+    }
+  }
+}

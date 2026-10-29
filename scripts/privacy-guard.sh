@@ -119,7 +119,7 @@ fi
 # and allowlist handling below is unchanged; none of these files are in mask_files, so an
 # allowlisted key here still fails.
 if [ -n "${root_mode:-}" ]; then
-  for need in solada-prefilter/dev_checks.json solada-prefilter/liquidity_moves.json solada-prefilter/vetoes.json; do
+  for need in solada-prefilter/dev_checks.json solada-prefilter/liquidity_moves.json solada-prefilter/vetoes.json solana-desk/rugger_would_veto.json; do
     [ -f "$need" ] || continue
     have=0
     for f in "${files[@]}"; do
@@ -137,6 +137,13 @@ fail=0
 for f in "${files[@]}"; do
   [ -f "$f" ] || continue
   case "$f" in "$self"|PRIVACY.md|.privacy-patterns|.github/workflows/privacy-guard.yml|.github/workflows/desk-data-guard.yml|scripts/privacy-public-keys.txt) continue;; esac
+  case "$(basename "$f")" in
+    rugger-blacklist.json|rugger-blacklist.json.enc)
+      echo "PRIVACY GUARD: $f: private cache file must not be published" >&2
+      fail=1
+      continue
+      ;;
+  esac
   grep -qI . "$f" 2>/dev/null || continue  # binary / empty
   for i in "${!patterns[@]}"; do
     p="${patterns[$i]}"
@@ -220,8 +227,9 @@ if bad:
       fail=1
     fi
   fi
-  # Veto evidence is tags only: dev_tag and actor_tag, each a w- hash or a role label.
-  # Indexes only: the value itself is never printed. Allowlist masking is not applied.
+  # Veto evidence is tags only. Old codes: dev_tag and actor_tag, each a w- hash or a role label.
+  # known_rugger / known_rugger_funded: rugger_id and wallet_id are w- hashes, evidence_tags are
+  # the closed enum, hop is an integer. A raw wallet key fails. Indexes only: values are not printed.
   if [ "$f" = "solada-prefilter/vetoes.json" ] || [ "$(basename "$f")" = "vetoes.json" -a "$(basename "$(dirname "$f")")" = "solada-prefilter" ]; then
     if ! python3 -c '
 import json, re, sys
@@ -239,23 +247,59 @@ for k in tags:
     if isinstance(k, str) and not k.startswith("_") and role_re.fullmatch(k):
         roles.add(k)
 ok = re.compile(r"^w-[0-9a-f]{8}$")
+ev_tags = {"ahead_of_dump", "late_rug", "lp_pulled", "rugcheck_rugged"}
+banned = {"wallet", "stake", "address", "creator", "funder", "funded", "launcherAddress", "raw"}
+leak = re.compile(r"stake1[02-9ac-hj-np-z]{20,}|addr1[02-9ac-hj-np-z]{20,}")
 bad = []
+
+def walk(node, key=""):
+    if isinstance(node, dict):
+        if banned & set(node):
+            return False
+        return all(walk(v, k) for k, v in node.items())
+    if isinstance(node, list):
+        return all(walk(v, key) for v in node)
+    if key == "reason":
+        return True
+    if isinstance(node, str) and leak.search(node):
+        return False
+    return True
+
 tokens = doc.get("tokens") if isinstance(doc, dict) else None
 if not isinstance(tokens, list):
     sys.stderr.write("PRIVACY GUARD FAILED: vetoes.json has no tokens list\n")
+    sys.exit(1)
+if not walk(doc):
+    sys.stderr.write("PRIVACY GUARD: %s: veto evidence is not a role label or w- hash (tokens 0)\n" % path)
     sys.exit(1)
 for i, tok in enumerate(tokens):
     if not isinstance(tok, dict):
         bad.append(str(i))
         continue
     for v in tok.get("vetoes") or []:
-        if not isinstance(v, dict):
-            bad.append(str(i))
-            continue
-        if not isinstance(v.get("evidence"), dict):
+        if not isinstance(v, dict) or not isinstance(v.get("evidence"), dict):
             bad.append(str(i))
             continue
         ev = v["evidence"]
+        code = v.get("code")
+        if code in ("known_rugger", "known_rugger_funded"):
+            if not ok.fullmatch(ev.get("rugger_id") or ""):
+                bad.append(str(i))
+                continue
+            tags_v = ev.get("evidence_tags")
+            if not isinstance(tags_v, list) or not tags_v or any(t not in ev_tags for t in tags_v):
+                bad.append(str(i))
+                continue
+            if code == "known_rugger":
+                if set(ev) != {"rugger_id", "evidence_tags"}:
+                    bad.append(str(i))
+                continue
+            hop = ev.get("hop")
+            if (set(ev) != {"rugger_id", "wallet_id", "evidence_tags", "hop"}
+                    or not ok.fullmatch(ev.get("wallet_id") or "")
+                    or isinstance(hop, bool) or not isinstance(hop, int) or not 1 <= hop <= 8):
+                bad.append(str(i))
+            continue
         if set(ev) - {"dev_tag", "actor_tag"}:
             bad.append(str(i))
             continue
@@ -276,6 +320,69 @@ if bad:
     sys.stderr.write("PRIVACY GUARD: %s: veto evidence is not a role label or w- hash (tokens %s)\n" % (path, ",".join(bad[:10])))
     sys.exit(1)
 ' "$f" "$script_dir/../solada-prefilter/config.json"; then
+      fail=1
+    fi
+  fi
+  # Solana would-veto log. Wallet ids are w- hashes. A creator/funder/stake field is a leak.
+  # Indexes only. The mint is the public token id already written on tasks.csv.
+  if [ "$f" = "solana-desk/rugger_would_veto.json" ] || [ "$(basename "$f")" = "rugger_would_veto.json" -a "$(basename "$(dirname "$f")")" = "solana-desk" ]; then
+    if ! python3 -c '
+import json, re, sys
+path = sys.argv[1]
+try:
+    doc = json.load(open(path))
+except Exception:
+    sys.stderr.write("PRIVACY GUARD FAILED: cannot read rugger_would_veto.json\n")
+    sys.exit(1)
+ok = re.compile(r"^w-[0-9a-f]{8}$")
+ev_tags = {"ahead_of_dump", "late_rug", "lp_pulled", "rugcheck_rugged"}
+banned = {"wallet", "stake", "address", "creator", "funder", "funded", "launcherAddress", "raw"}
+leak = re.compile(r"stake1[02-9ac-hj-np-z]{20,}|addr1[02-9ac-hj-np-z]{20,}")
+bad = []
+
+def walk(node):
+    if isinstance(node, dict):
+        if banned & set(node):
+            return False
+        return all(walk(v) for v in node.values())
+    if isinstance(node, list):
+        return all(walk(v) for v in node)
+    if isinstance(node, str) and leak.search(node):
+        return False
+    return True
+
+rows = doc.get("rows") if isinstance(doc, dict) else None
+if (not isinstance(doc, dict) or doc.get("buy_signal") is not False or doc.get("mode") != "log_only"
+        or not isinstance(rows, list) or not walk(doc)):
+    sys.stderr.write("PRIVACY GUARD FAILED: rugger_would_veto.json rejected\n")
+    sys.exit(1)
+for i, row in enumerate(rows):
+    if not isinstance(row, dict):
+        bad.append(str(i))
+        continue
+    code = row.get("code")
+    if not ok.fullmatch(row.get("rugger_id") or ""):
+        bad.append(str(i))
+        continue
+    tags_v = row.get("evidence_tags")
+    if not isinstance(tags_v, list) or not tags_v or any(t not in ev_tags for t in tags_v):
+        bad.append(str(i))
+        continue
+    if code == "known_rugger":
+        if set(row) - {"mint", "code", "rugger_id", "evidence_tags"}:
+            bad.append(str(i))
+        continue
+    if code == "known_rugger_funded":
+        hop = row.get("hop")
+        if (not ok.fullmatch(row.get("wallet_id") or "")
+                or isinstance(hop, bool) or not isinstance(hop, int) or not 1 <= hop <= 8):
+            bad.append(str(i))
+        continue
+    bad.append(str(i))
+if bad:
+    sys.stderr.write("PRIVACY GUARD: %s: rugger log id is not a w- hash (rows %s)\n" % (path, ",".join(bad[:10])))
+    sys.exit(1)
+' "$f"; then
       fail=1
     fi
   fi

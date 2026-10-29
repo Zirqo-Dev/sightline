@@ -242,6 +242,12 @@
     "enabled": true,
     "max_age_h": 5
   },
+  "rugger_blacklist": {
+    "_note": "SPD-77 shared rugger list (rugger_blacklist). Private Actions-cache file rugger-blacklist.json, never desk-data. hops is 1. expiry_days null means no expiry. shared_funder_min 25: a funder with at least that many distinct funded wallets does not spread a taint, and neither does an excluded shared funder. Exclusions are raw wallets in the private store only, never in this file. known_rugger and known_rugger_funded are hard research vetoes on the Cardano desk. The Solana desk logs them and does not change entries or exits. buy_signal stays false.",
+    "hops": 1,
+    "expiry_days": null,
+    "shared_funder_min": 25
+  },
   "_research_budget_note": "Doc-only. Not read by job_deadline or research_deadline. Sum of the reserved whale_ledger + big_moves + liquidity_moves slices (90+150+50). dev_checks.budget_s (180) sits outside this sum and runs after the primary webhook. big_moves may also use slack before the liquidity reserve. dev_checks, whale_ledger and big_moves stop at run start + 720s. liquidity_moves keeps its own budget_s from the moment it starts and stops by run start + 770s. The process is killed at 780s and the workflow job is 20 minutes, leaving about 420s for checkout, tests, cache, the privacy guard, and the commit/push retries.",
   "research_budget_s": 290
 }
