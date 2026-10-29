@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-29T10:30:24Z",
+ "generated_at": "2026-10-29T11:00:27Z",
  "cfg_version": "v1-v6.5",
  "open": [
   {
@@ -24,39 +24,14 @@
     "px": 0.0043110598611640375
    },
    "frac": 0.333333,
-   "last_mark": 0.04262642370354321,
+   "last_mark": 0.05267945594724532,
    "thesis": "safety:too_fresh",
    "result": {
     "pnl": 0.350622368,
-    "pct": 888.77,
+    "pct": 1121.96,
     "unit": "SOL",
     "net_pnl": 0.350622368,
     "gross_pnl": 0.37385306
-   }
-  },
-  {
-   "id": "S-20261029T0800-Fa24pump",
-   "ticker": "OTC",
-   "mint": "Fa24xN13pzjmcx1dtKP9nBMMFCwLtXCJrtP5hSPKpump",
-   "book": "S",
-   "status": "open",
-   "size": 0.5,
-   "cost_model": "v3-exit-aware",
-   "cost_model_started_at": "2026-10-29T00:30:25Z",
-   "opened_at": "2026-10-29T08:00:27Z",
-   "window_ends_at": "2026-10-29T10:00:27Z",
-   "entry": {
-    "px": 0.00039636282071216184
-   },
-   "frac": 0.333333,
-   "last_mark": 0.0014051097088210282,
-   "thesis": "safety:too_fresh",
-   "result": {
-    "pnl": 0.38325867,
-    "pct": 254.5,
-    "unit": "SOL",
-    "net_pnl": 0.38325867,
-    "gross_pnl": 0.39067268
    }
   }
  ],
@@ -1650,6 +1625,35 @@
     "gross_pct": -98.67
    },
    "thesis": "safety:risk_score"
+  },
+  {
+   "id": "S-20261029T0800-Fa24pump",
+   "ticker": "OTC",
+   "mint": "Fa24xN13pzjmcx1dtKP9nBMMFCwLtXCJrtP5hSPKpump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-10-29T08:00:27Z",
+   "closed_at": "2026-10-29T11:00:27Z",
+   "entry": {
+    "px": 0.00039636282071216184
+   },
+   "exit": {
+    "px": 0.0007266655005510131
+   },
+   "exit_reason": "trailing_stop",
+   "result": {
+    "pnl": 0.514254874,
+    "pct": 102.11,
+    "unit": "SOL",
+    "net_pnl": 0.514254874,
+    "net_pct": 102.11,
+    "gross_pnl": 0.529561707,
+    "gross_pct": 105.91
+   },
+   "thesis": "safety:too_fresh"
   }
  ],
  "books": {
@@ -1681,14 +1685,14 @@
    "realized_gross_pnl": -0.911025679
   },
   "S": {
-   "cash": 5.53066138,
-   "equity": 7.754685435,
-   "realized_pnl": -4.131383219,
-   "open": 2,
-   "closed": 27,
+   "cash": 5.829536187,
+   "equity": 7.852920487,
+   "realized_pnl": -4.000387014,
+   "open": 1,
+   "closed": 28,
    "fills_today": 15,
    "would_halt": [],
-   "realized_gross_pnl": -3.758476404
+   "realized_gross_pnl": -3.619587377
   }
  },
  "costs": {
@@ -1715,9 +1719,9 @@
   "started_at": "2026-10-29T00:30:25Z",
   "windows": {
    "7": {
-    "counted_closes": 44,
-    "net_pnl": -5.413754728,
-    "wins": 18,
+    "counted_closes": 45,
+    "net_pnl": -5.282758524,
+    "wins": 19,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
     "older_labels": {
@@ -1725,9 +1729,9 @@
     }
    },
    "28": {
-    "counted_closes": 44,
-    "net_pnl": -5.413754728,
-    "wins": 18,
+    "counted_closes": 45,
+    "net_pnl": -5.282758524,
+    "wins": 19,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
     "older_labels": {
