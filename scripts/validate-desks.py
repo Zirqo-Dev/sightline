@@ -31,7 +31,7 @@ def risk_maps(doc):
     return found
 
 os.chdir(sys.argv[1] if len(sys.argv)>1 else ROOT)
-S={k:Draft202012Validator(json.load(open(f"{SCHEMA}/{k}.schema.json"))) for k in("paper-book","run-log","brief","pulse","solada-vetoes","solana-rugger-log","x-buzz","x-buzz-history","buzz-outcomes","buzz-outcomes-summary","whale-roster")}
+S={k:Draft202012Validator(json.load(open(f"{SCHEMA}/{k}.schema.json"))) for k in("paper-book","run-log","brief","pulse","solada-vetoes","solana-rugger-log","x-buzz","x-buzz-history","buzz-outcomes","buzz-outcomes-summary","whale-roster","scan-timing")}
 for v in S.values(): v.check_schema(v.schema)
 jobs=[]
 for d in json.load(open("desks.json"))["desks"]:
@@ -81,6 +81,12 @@ if os.path.exists(sum_name): jobs.append((sum_name,"buzz-outcomes-summary"))
 else: print(f"skip {sum_name} (not written yet)")
 for fix in ("scripts/fixtures/buzz-outcomes-summary.json",):
     if os.path.exists(fix): jobs.append((fix,"buzz-outcomes-summary"))
+# One line per Solana desk scan: cron slot, actual start, delay. Logging only.
+# Absent on main until a desk-data run writes solana-desk/scan_timing.jsonl.
+timing=[]
+for cand in ("solana-desk/scan_timing.jsonl", "scripts/fixtures/solana-desk/scan_timing.jsonl"):
+    if os.path.exists(cand): timing.append(cand)
+    else: print(f"skip {cand} (not written yet)")
 bad=0
 risk_schema=S["run-log"].schema["properties"]["risk_check"]
 risk_check=Draft202012Validator(risk_schema)
@@ -118,6 +124,19 @@ def history_errors(path):
                 found.append(f"line {n} at /{'/'.join(map(str,e.path))}: {e.message[:200]}")
     return found
 
+def timing_errors(path):
+    """One scan-timing record per non-empty line."""
+    found=[]
+    with open(path,encoding="utf-8") as fh:
+        for n,line in enumerate(fh,1):
+            if not line.strip(): continue
+            try: row=json.loads(line)
+            except json.JSONDecodeError as e:
+                found.append(f"line {n}: {e.msg}"); continue
+            for e in S["scan-timing"].iter_errors(row):
+                found.append(f"line {n} at /{'/'.join(map(str,e.path))}: {e.message[:200]}")
+    return found
+
 def outcome_errors(path):
     """Schema plus privacy. A match reports the field, not the value."""
     found=[]
@@ -139,6 +158,12 @@ for f in history:
     for msg in errs[:20]: print(f"INVALID {f} (x-buzz-history) {msg}")
     bad+=bool(errs)
     if not errs: print(f"ok {f} (x-buzz-history)")
+for f in timing:
+    if not os.path.exists(f): print(f"MISSING {f}"); bad+=1; continue
+    errs=timing_errors(f)
+    for msg in errs[:20]: print(f"INVALID {f} (scan-timing) {msg}")
+    bad+=bool(errs)
+    if not errs: print(f"ok {f} (scan-timing)")
 for f in outcome_files:
     if not os.path.exists(f): print(f"MISSING {f}"); bad+=1; continue
     errs=outcome_errors(f)

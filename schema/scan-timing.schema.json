@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zirqo-dev.github.io/sightline/schema/scan-timing.schema.json",
+  "title": "Solana desk scan timing line",
+  "description": "One solana-desk/scan_timing.jsonl line. Logging only: the cron slot, the actual start, and the delay. Not an entry, exit, or skip.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["scheduled_utc", "started_utc", "delay_s", "run_id", "mode"],
+  "properties": {
+    "scheduled_utc": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "started_utc": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "delay_s": {"type": "number", "minimum": 0},
+    "run_id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{4}$"},
+    "mode": {"enum": ["scan", "fill"]}
+  }
+}
