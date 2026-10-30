@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793361630,
+ "last_run_ts": 1793363425,
  "voids": [],
  "books": {
   "F": {
@@ -410,7 +410,7 @@
      "liq0": 81.7837,
      "opened": 1793318429,
      "frac": 0.6666666666666667,
-     "last_mark": 0.0008208893945399203,
+     "last_mark": 0.0009142139233560569,
      "stale": 0,
      "no_route_count": 0,
      "mint": "4HSHFbFiKuMvZW7yGiDTab17B63MzBkkhadFKxhkpump",
@@ -425,7 +425,7 @@
      "entry_cost": 0.5037695672046832,
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "exit_haircut": 0.0071855461529883626
+     "exit_haircut": 0.007224161646721347
     }
    },
    "fills_day": "2026-10-30",
@@ -748,35 +748,11 @@
    "realized_gross": -0.5762801419985888
   },
   "S": {
-   "cash": 4.633629462908457,
-   "open": {
-    "S-20261030T1200-4L1Spump": {
-     "entry": 0.00011584700482372374,
-     "peak": 0.00011584700482372374,
-     "steps": 0,
-     "liq0": 26.232,
-     "opened": 1793361630,
-     "frac": 1.0,
-     "last_mark": 0.00011584700482372374,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "4L1Sj35H2KkCSNYDhv2S5M7YTmYZe5P2sxne8Eq7pump",
-     "symbol": "PEET",
-     "tokens": 4316037352548,
-     "run_id": "20261030T1200",
-     "why": "safety:too_fresh",
-     "book": "S",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
-     "entry_haircut": 0.010676043692952266,
-     "entry_cost": 0.5053480218464761,
-     "cost_model": "v3-exit-aware",
-     "cost_model_started_at": "2026-10-29T00:30:25Z"
-    }
-   },
+   "cash": 4.768698769398046,
+   "open": {},
    "fills_day": "2026-10-30",
    "fills_today": 9,
-   "realized_pnl": -4.861022515245068,
+   "realized_pnl": -5.2313012306019555,
    "closed": [
     {
      "id": "S-20261028T1330-5Zjdpump",
@@ -1391,6 +1367,23 @@
      "why_entered": "safety:too_fresh",
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z"
+    },
+    {
+     "id": "S-20261030T1200-4L1Spump",
+     "mint": "4L1Sj35H2KkCSNYDhv2S5M7YTmYZe5P2sxne8Eq7pump",
+     "symbol": "PEET",
+     "opened": 1793361630,
+     "closed": 1793363425,
+     "entry": 0.00011584700482372374,
+     "exit_px": 3.214034093521142e-05,
+     "why": "liquidity_pulled",
+     "pnl": -0.370278715,
+     "gross_pnl": -0.361281088,
+     "pct": -73.27,
+     "gross_pct": -72.26,
+     "why_entered": "safety:too_fresh",
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z"
     }
    ],
    "would_halt": [
@@ -1402,7 +1395,7 @@
     }
    ],
    "peak_equity": 10.89800187930826,
-   "realized_gross": -4.368791346971569
+   "realized_gross": -4.730072434971569
   }
  },
  "cost_model_started_at": "2026-10-29T00:30:25Z",
