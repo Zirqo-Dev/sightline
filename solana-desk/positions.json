@@ -1,10 +1,10 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793327424,
+ "last_run_ts": 1793329231,
  "voids": [],
  "books": {
   "F": {
-   "cash": 3.643571390983976,
+   "cash": 3.8850370653328095,
    "open": {
     "F-20261030T0000-4HSHpump": {
      "entry": 0.0005472785672236021,
@@ -13,7 +13,7 @@
      "liq0": 81.7837,
      "opened": 1793318429,
      "frac": 0.6666666666666667,
-     "last_mark": 0.0009181940499712018,
+     "last_mark": 0.0009754450907455236,
      "stale": 0,
      "no_route_count": 0,
      "mint": "4HSHFbFiKuMvZW7yGiDTab17B63MzBkkhadFKxhkpump",
@@ -28,39 +28,16 @@
      "entry_cost": 0.5037695672046832,
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "exit_haircut": 0.007226312842908104
-    },
-    "F-20261030T0230-AkN8pump": {
-     "entry": 0.001140887333359038,
-     "peak": 0.001140887333359038,
-     "steps": 0,
-     "liq0": 136.2076,
-     "opened": 1793327424,
-     "frac": 1.0,
-     "last_mark": 0.001140887333359038,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "AkN8CWevo77MjjkfY3hQ5R7vGsPb5zumqKaUJbr4pump",
-     "symbol": "SWAN",
-     "tokens": 438255369641,
-     "run_id": "20261030T0230",
-     "why": "pass",
-     "book": "F",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
-     "entry_haircut": 0.006914360284285584,
-     "entry_cost": 0.5034671801421428,
-     "cost_model": "v3-exit-aware",
-     "cost_model_started_at": "2026-10-29T00:30:25Z"
+     "exit_haircut": 0.007272013831097925
     },
     "F-20261030T0230-C31uZVUQ": {
      "entry": 0.0005815358494367985,
-     "peak": 0.0005815358494367985,
-     "steps": 0,
+     "peak": 0.0008172214917114427,
+     "steps": 1,
      "liq0": 83.9533,
      "opened": 1793327424,
-     "frac": 1.0,
-     "last_mark": 0.0005815358494367985,
+     "frac": 0.6666666666666667,
+     "last_mark": 0.0008172214917114427,
      "stale": 0,
      "no_route_count": 0,
      "mint": "C31uUcfLGPpQDHHieNtDkSWvp4PhNxeSs81cFQFdZVUQ",
@@ -69,17 +46,18 @@
      "run_id": "20261030T0230",
      "why": "pass",
      "book": "F",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
+     "pnl": 0.06477586178157008,
+     "gross_pnl": 0.067546894,
      "entry_haircut": 0.007480107941311944,
      "entry_cost": 0.503750053970656,
      "cost_model": "v3-exit-aware",
-     "cost_model_started_at": "2026-10-29T00:30:25Z"
+     "cost_model_started_at": "2026-10-29T00:30:25Z",
+     "exit_haircut": 0.006901248252173945
     }
    },
    "fills_day": "2026-10-30",
    "fills_today": 8,
-   "realized_pnl": -5.013364996766772,
+   "realized_pnl": -5.443283187216967,
    "closed": [
     {
      "id": "F-20261028T1330-96AUWRAY",
@@ -401,6 +379,23 @@
      "why_entered": "pass",
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z"
+    },
+    {
+     "id": "F-20261030T0230-AkN8pump",
+     "mint": "AkN8CWevo77MjjkfY3hQ5R7vGsPb5zumqKaUJbr4pump",
+     "symbol": "SWAN",
+     "opened": 1793327424,
+     "closed": 1793329231,
+     "entry": 0.001140887333359038,
+     "exit_px": 2.049364736216973e-05,
+     "why": "liquidity_pulled",
+     "pnl": -0.494694052,
+     "gross_pnl": -0.491018549,
+     "pct": -98.26,
+     "gross_pct": -98.2,
+     "why_entered": "pass",
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z"
     }
    ],
    "would_halt": [
@@ -418,10 +413,10 @@
     }
    ],
    "peak_equity": 10.0,
-   "realized_gross": -2.28407587633324
+   "realized_gross": -2.70754753133324
   },
   "R": {
-   "cash": 6.0359002881095325,
+   "cash": 6.063853141683531,
    "open": {
     "R-20261030T0000-4HSHpump": {
      "entry": 0.0005472785672236021,
@@ -430,7 +425,7 @@
      "liq0": 81.7837,
      "opened": 1793318429,
      "frac": 0.6666666666666667,
-     "last_mark": 0.0009181940499712018,
+     "last_mark": 0.0009754450907455236,
      "stale": 0,
      "no_route_count": 0,
      "mint": "4HSHFbFiKuMvZW7yGiDTab17B63MzBkkhadFKxhkpump",
@@ -445,16 +440,16 @@
      "entry_cost": 0.5037695672046832,
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "exit_haircut": 0.007226312842908104
+     "exit_haircut": 0.007272013831097925
     },
     "R-20261030T0230-C31uZVUQ": {
      "entry": 0.0005815358494367985,
-     "peak": 0.0005815358494367985,
+     "peak": 0.0008131314221444669,
      "steps": 0,
      "liq0": 83.9533,
      "opened": 1793327424,
      "frac": 1.0,
-     "last_mark": 0.0005815358494367985,
+     "last_mark": 0.0008131314221444669,
      "stale": 0,
      "no_route_count": 0,
      "mint": "C31uUcfLGPpQDHHieNtDkSWvp4PhNxeSs81cFQFdZVUQ",
@@ -468,35 +463,13 @@
      "entry_haircut": 0.007480107941311944,
      "entry_cost": 0.503750053970656,
      "cost_model": "v3-exit-aware",
-     "cost_model_started_at": "2026-10-29T00:30:25Z"
-    },
-    "R-20261030T0230-G8Tdpump": {
-     "entry": 0.0007607222624958401,
-     "peak": 0.0007607222624958401,
-     "steps": 0,
-     "liq0": 93.2793,
-     "opened": 1793327424,
-     "frac": 1.0,
-     "last_mark": 0.0007607222624958401,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "G8TdzgpUQXQAxJvarNKPXRGv2kh9CsJDK7dCC7Xupump",
-     "symbol": "HyPepe",
-     "tokens": 657270103230,
-     "run_id": "20261030T0230",
-     "why": "random_match",
-     "book": "R",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
-     "entry_haircut": 0.007332916752417644,
-     "entry_cost": 0.5036764583762088,
-     "cost_model": "v3-exit-aware",
-     "cost_model_started_at": "2026-10-29T00:30:25Z"
+     "cost_model_started_at": "2026-10-29T00:30:25Z",
+     "exit_haircut": 0.007342722548423418
     }
    },
    "fills_day": "2026-10-30",
    "fills_today": 7,
-   "realized_pnl": -2.6208268214071535,
+   "realized_pnl": -3.096550426209364,
    "closed": [
     {
      "id": "R-20261028T1400-Cd5npump",
@@ -773,42 +746,59 @@
      "why_entered": "random_match",
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z"
+    },
+    {
+     "id": "R-20261030T0230-G8Tdpump",
+     "mint": "G8TdzgpUQXQAxJvarNKPXRGv2kh9CsJDK7dCC7Xupump",
+     "symbol": "HyPepe",
+     "opened": 1793327424,
+     "closed": 1793329231,
+     "entry": 0.0007607222624958401,
+     "exit_px": 4.348596849231438e-05,
+     "why": "liquidity_pulled",
+     "pnl": -0.475723605,
+     "gross_pnl": -0.471417973,
+     "pct": -94.45,
+     "gross_pct": -94.28,
+     "why_entered": "random_match",
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z"
     }
    ],
    "would_halt": [],
    "peak_equity": 10.0,
-   "realized_gross": -0.9036299683331024
+   "realized_gross": -1.3750479413331025
   },
   "S": {
-   "cash": 6.870470803785941,
+   "cash": 6.3943701889711875,
    "open": {
-    "S-20261030T0230-G8Tdpump": {
-     "entry": 0.0007607222624958401,
-     "peak": 0.0007607222624958401,
+    "S-20261030T0300-FrE4pump": {
+     "entry": 0.0002731443289839701,
+     "peak": 0.0002731443289839701,
      "steps": 0,
-     "liq0": 93.2793,
-     "opened": 1793327424,
+     "liq0": 59.3964,
+     "opened": 1793329231,
      "frac": 1.0,
-     "last_mark": 0.0007607222624958401,
+     "last_mark": 0.0002731443289839701,
      "stale": 0,
      "no_route_count": 0,
-     "mint": "G8TdzgpUQXQAxJvarNKPXRGv2kh9CsJDK7dCC7Xupump",
-     "symbol": "HyPepe",
-     "tokens": 657270103230,
-     "run_id": "20261030T0230",
+     "mint": "FrE4wkPwzZ5Sxif28oabQD4P5ZbDT7oehBmZLm1Gpump",
+     "symbol": "laptop",
+     "tokens": 1830534069149,
+     "run_id": "20261030T0300",
      "why": "safety:too_fresh",
      "book": "S",
      "pnl": 0.0,
      "gross_pnl": 0.0,
-     "entry_haircut": 0.007332916752417644,
-     "entry_cost": 0.5036764583762088,
+     "entry_haircut": 0.008086936777502487,
+     "entry_cost": 0.5040534683887512,
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z"
     }
    },
    "fills_day": "2026-10-30",
-   "fills_today": 4,
-   "realized_pnl": -2.6258527378378527,
+   "fills_today": 5,
+   "realized_pnl": -3.101576342640063,
    "closed": [
     {
      "id": "S-20261028T1330-5Zjdpump",
@@ -1338,6 +1328,23 @@
      "why_entered": "safety:too_fresh",
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z"
+    },
+    {
+     "id": "S-20261030T0230-G8Tdpump",
+     "mint": "G8TdzgpUQXQAxJvarNKPXRGv2kh9CsJDK7dCC7Xupump",
+     "symbol": "HyPepe",
+     "opened": 1793327424,
+     "closed": 1793329231,
+     "entry": 0.0007607222624958401,
+     "exit_px": 4.348596849231438e-05,
+     "why": "liquidity_pulled",
+     "pnl": -0.475723605,
+     "gross_pnl": -0.471417973,
+     "pct": -94.45,
+     "gross_pct": -94.28,
+     "why_entered": "safety:too_fresh",
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z"
     }
    ],
    "would_halt": [
@@ -1349,7 +1356,7 @@
     }
    ],
    "peak_equity": 10.89800187930826,
-   "realized_gross": -2.159625853971569
+   "realized_gross": -2.631043826971569
   }
  },
  "cost_model_started_at": "2026-10-29T00:30:25Z",
