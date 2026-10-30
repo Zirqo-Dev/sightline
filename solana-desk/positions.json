@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793365229,
+ "last_run_ts": 1793367026,
  "voids": [],
  "books": {
   "F": {
@@ -410,7 +410,7 @@
      "liq0": 81.7837,
      "opened": 1793318429,
      "frac": 0.6666666666666667,
-     "last_mark": 0.0008922043014246276,
+     "last_mark": 0.0009158352919338724,
      "stale": 0,
      "no_route_count": 0,
      "mint": "4HSHFbFiKuMvZW7yGiDTab17B63MzBkkhadFKxhkpump",
@@ -425,7 +425,7 @@
      "entry_cost": 0.5037695672046832,
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "exit_haircut": 0.007226007836930339
+     "exit_haircut": 0.007227371058504768
     }
    },
    "fills_day": "2026-10-30",
@@ -748,58 +748,35 @@
    "realized_gross": -0.5762801419985888
   },
   "S": {
-   "cash": 3.7609310694255518,
+   "cash": 3.8029843128993677,
    "open": {
-    "S-20261030T1300-6GCPpump": {
-     "entry": 0.0024343754286228554,
-     "peak": 0.0024343754286228554,
+    "S-20261030T1330-9PCAR17i": {
+     "entry": 5.427026969898699e-05,
+     "peak": 5.427026969898699e-05,
      "steps": 0,
-     "liq0": 186.3027,
-     "opened": 1793365229,
+     "liq0": 14.02625,
+     "opened": 1793367026,
      "frac": 1.0,
-     "last_mark": 0.0024343754286228554,
+     "last_mark": 5.427026969898699e-05,
      "stale": 0,
      "no_route_count": 0,
-     "mint": "6GCPmGAvH986ZE9psfHK5viH8haFL1c4KLNGXWiKpump",
-     "symbol": "GTA",
-     "tokens": 205391491436,
-     "run_id": "20261030T1300",
+     "mint": "9PCAbwogmpxzTr3Sv3oQWeG5e62BMiEmMM9aH6hiR17i",
+     "symbol": "SOLZ",
+     "tokens": 9213147507342,
+     "run_id": "20261030T1330",
      "why": "safety:top10_heavy",
      "book": "S",
      "pnl": 0.0,
      "gross_pnl": 0.0,
-     "entry_haircut": 0.006669155210283362,
-     "entry_cost": 0.5033445776051416,
-     "cost_model": "v3-exit-aware",
-     "cost_model_started_at": "2026-10-29T00:30:25Z"
-    },
-    "S-20261030T1300-6PNqpump": {
-     "entry": 0.00022642385612714786,
-     "peak": 0.00022642385612714786,
-     "steps": 0,
-     "liq0": 43.7283,
-     "opened": 1793365229,
-     "frac": 1.0,
-     "last_mark": 0.00022642385612714786,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "6PNq3Dduz73HHFBFt1KYRqDEsgcPQE6BDDRgxAFupump",
-     "symbol": "Jesus",
-     "tokens": 2208247878789,
-     "run_id": "20261030T1300",
-     "why": "safety:too_fresh",
-     "book": "S",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
-     "entry_haircut": 0.00882624473470606,
-     "entry_cost": 0.504423122367353,
+     "entry_haircut": 0.014605111436193098,
+     "entry_cost": 0.5073125557180965,
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z"
     }
    },
    "fills_day": "2026-10-30",
-   "fills_today": 11,
-   "realized_pnl": -5.2313012306019555,
+   "fills_today": 12,
+   "realized_pnl": -5.689703131382538,
    "closed": [
     {
      "id": "S-20261028T1330-5Zjdpump",
@@ -1431,6 +1408,40 @@
      "why_entered": "safety:too_fresh",
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z"
+    },
+    {
+     "id": "S-20261030T1300-6GCPpump",
+     "mint": "6GCPmGAvH986ZE9psfHK5viH8haFL1c4KLNGXWiKpump",
+     "symbol": "GTA",
+     "opened": 1793365229,
+     "closed": 1793367026,
+     "entry": 0.0024343754286228554,
+     "exit_px": 0.0009296471955338882,
+     "why": "liquidity_pulled",
+     "pnl": -0.316504397,
+     "gross_pnl": -0.309058376,
+     "pct": -62.88,
+     "gross_pct": -61.81,
+     "why_entered": "safety:top10_heavy",
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z"
+    },
+    {
+     "id": "S-20261030T1300-6PNqpump",
+     "mint": "6PNq3Dduz73HHFBFt1KYRqDEsgcPQE6BDDRgxAFupump",
+     "symbol": "Jesus",
+     "opened": 1793365229,
+     "closed": 1793367026,
+     "entry": 0.00022642385612714786,
+     "exit_px": 0.0001680372758711731,
+     "why": "hard_stop",
+     "pnl": -0.141897504,
+     "gross_pnl": -0.128932042,
+     "pct": -28.13,
+     "gross_pct": -25.79,
+     "why_entered": "safety:too_fresh",
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z"
     }
    ],
    "would_halt": [
@@ -1442,7 +1453,7 @@
     }
    ],
    "peak_equity": 10.89800187930826,
-   "realized_gross": -4.730072434971569
+   "realized_gross": -5.168062852971569
   }
  },
  "cost_model_started_at": "2026-10-29T00:30:25Z",

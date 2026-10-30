@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-30T13:00:29Z",
+ "generated_at": "2026-10-30T13:30:26Z",
  "cfg_version": "v1-v6.5",
  "open": [
   {
@@ -25,58 +25,33 @@
     "px": 0.0005472785672236021
    },
    "frac": 0.666667,
-   "last_mark": 0.0008922043014246276,
+   "last_mark": 0.0009158352919338724,
    "thesis": "random_match",
    "result": {
     "pnl": 0.091159562,
-    "pct": 63.03,
+    "pct": 67.34,
     "unit": "SOL",
     "net_pnl": 0.091159562,
     "gross_pnl": 0.094147329
    }
   },
   {
-   "id": "S-20261030T1300-6GCPpump",
-   "ticker": "GTA",
-   "mint": "6GCPmGAvH986ZE9psfHK5viH8haFL1c4KLNGXWiKpump",
+   "id": "S-20261030T1330-9PCAR17i",
+   "ticker": "SOLZ",
+   "mint": "9PCAbwogmpxzTr3Sv3oQWeG5e62BMiEmMM9aH6hiR17i",
    "book": "S",
    "status": "open",
    "size": 0.5,
    "cost_model": "v3-exit-aware",
    "cost_model_started_at": "2026-10-29T00:30:25Z",
-   "opened_at": "2026-10-30T13:00:29Z",
-   "window_ends_at": "2026-10-30T15:00:29Z",
+   "opened_at": "2026-10-30T13:30:26Z",
+   "window_ends_at": "2026-10-30T15:30:26Z",
    "entry": {
-    "px": 0.0024343754286228554
+    "px": 5.427026969898699e-05
    },
    "frac": 1.0,
-   "last_mark": 0.0024343754286228554,
+   "last_mark": 5.427026969898699e-05,
    "thesis": "safety:top10_heavy",
-   "result": {
-    "pnl": 0.0,
-    "pct": 0.0,
-    "unit": "SOL",
-    "net_pnl": 0.0,
-    "gross_pnl": 0.0
-   }
-  },
-  {
-   "id": "S-20261030T1300-6PNqpump",
-   "ticker": "Jesus",
-   "mint": "6PNq3Dduz73HHFBFt1KYRqDEsgcPQE6BDDRgxAFupump",
-   "book": "S",
-   "status": "open",
-   "size": 0.5,
-   "cost_model": "v3-exit-aware",
-   "cost_model_started_at": "2026-10-29T00:30:25Z",
-   "opened_at": "2026-10-30T13:00:29Z",
-   "window_ends_at": "2026-10-30T15:00:29Z",
-   "entry": {
-    "px": 0.00022642385612714786
-   },
-   "frac": 1.0,
-   "last_mark": 0.00022642385612714786,
-   "thesis": "safety:too_fresh",
    "result": {
     "pnl": 0.0,
     "pct": 0.0,
@@ -2429,6 +2404,64 @@
     "gross_pct": -72.26
    },
    "thesis": "safety:too_fresh"
+  },
+  {
+   "id": "S-20261030T1300-6GCPpump",
+   "ticker": "GTA",
+   "mint": "6GCPmGAvH986ZE9psfHK5viH8haFL1c4KLNGXWiKpump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-10-30T13:00:29Z",
+   "closed_at": "2026-10-30T13:30:26Z",
+   "entry": {
+    "px": 0.0024343754286228554
+   },
+   "exit": {
+    "px": 0.0009296471955338882
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": -0.316504397,
+    "pct": -62.88,
+    "unit": "SOL",
+    "net_pnl": -0.316504397,
+    "net_pct": -62.88,
+    "gross_pnl": -0.309058376,
+    "gross_pct": -61.81
+   },
+   "thesis": "safety:top10_heavy"
+  },
+  {
+   "id": "S-20261030T1300-6PNqpump",
+   "ticker": "Jesus",
+   "mint": "6PNq3Dduz73HHFBFt1KYRqDEsgcPQE6BDDRgxAFupump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-10-30T13:00:29Z",
+   "closed_at": "2026-10-30T13:30:26Z",
+   "entry": {
+    "px": 0.00022642385612714786
+   },
+   "exit": {
+    "px": 0.0001680372758711731
+   },
+   "exit_reason": "hard_stop",
+   "result": {
+    "pnl": -0.141897504,
+    "pct": -28.13,
+    "unit": "SOL",
+    "net_pnl": -0.141897504,
+    "net_pct": -28.13,
+    "gross_pnl": -0.128932042,
+    "gross_pct": -25.79
+   },
+   "thesis": "safety:too_fresh"
   }
  ],
  "books": {
@@ -2457,7 +2490,7 @@
   },
   "R": {
    "cash": 7.346330793,
-   "equity": 7.885812793,
+   "equity": 7.900101058,
    "realized_pnl": -2.317822829,
    "open": 1,
    "closed": 20,
@@ -2466,12 +2499,12 @@
    "realized_gross_pnl": -0.576280142
   },
   "S": {
-   "cash": 3.760931069,
-   "equity": 4.753163369,
-   "realized_pnl": -5.231301231,
-   "open": 2,
-   "closed": 39,
-   "fills_today": 11,
+   "cash": 3.802984313,
+   "equity": 4.295671757,
+   "realized_pnl": -5.689703131,
+   "open": 1,
+   "closed": 41,
+   "fills_today": 12,
    "would_halt": [
     {
      "day": "2026-10-30",
@@ -2480,7 +2513,7 @@
      "drawdown": 0.328
     }
    ],
-   "realized_gross_pnl": -4.730072435
+   "realized_gross_pnl": -5.168062853
   }
  },
  "costs": {
@@ -2507,8 +2540,8 @@
   "started_at": "2026-10-29T00:30:25Z",
   "windows": {
    "7": {
-    "counted_closes": 80,
-    "net_pnl": -7.51708557,
+    "counted_closes": 82,
+    "net_pnl": -7.975487471,
     "wins": 35,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
@@ -2517,8 +2550,8 @@
     }
    },
    "28": {
-    "counted_closes": 80,
-    "net_pnl": -7.51708557,
+    "counted_closes": 82,
+    "net_pnl": -7.975487471,
     "wins": 35,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
