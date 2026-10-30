@@ -1,211 +1,52 @@
 {
- "at": "2026-10-30T18:11:10Z",
+ "at": "2026-10-30T20:11:14Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "coordinated_buys",
-   "ticker": "ANGRY",
-   "wallets": [
-    "w-004fae92",
-    "w-5659186a",
-    "w-85cb4310",
-    "w-b17ff6fb",
-    "w-c00cdb1c",
-    "w-c14f8e99"
-   ],
-   "window_s": 120,
-   "at": "2026-10-30T18:11:10Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "ANGRY",
-   "wallets": [
-    "w-004fae92",
-    "w-b17ff6fb",
-    "w-c00cdb1c",
-    "w-c14f8e99"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-10-30T18:11:10Z"
-  },
-  {
-   "kind": "coordinated_buys",
-   "ticker": "VIP",
-   "wallets": [
-    "w-3180aaec",
-    "w-391a793b",
-    "w-5659186a",
-    "w-d806f324"
-   ],
-   "window_s": 120,
-   "at": "2026-10-30T18:11:10Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-5659186a",
-   "launches": [
-    "ANGRY",
-    "TCM",
-    "VIP"
-   ],
-   "at": "2026-10-30T18:11:10Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-8d3b7f11",
-   "launches": [
-    "ANGRY",
-    "KING"
-   ],
-   "at": "2026-10-30T18:11:10Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-9d7e7db5",
-   "launches": [
-    "EVIL",
-    "FOXII",
-    "HALLOW",
-    "NITE",
-    "SSSS",
-    "TCM",
-    "TOT",
-    "VALHALLA",
-    "VEPE",
-    "VIP"
-   ],
-   "at": "2026-10-30T18:11:10Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "ELONTROL",
-   "wallet": "w-13a0b26a",
-   "tags": [],
-   "at": "2026-10-30T18:11:10Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "VIP",
-   "wallet": "w-391a793b",
-   "tags": [],
-   "at": "2026-10-30T18:11:10Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "ANGRY",
-   "wallet": "w-004fae92",
-   "tags": [],
-   "at": "2026-10-30T18:11:10Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "VALHALLA",
-   "wallet": "w-77c0afa3",
-   "tags": [],
-   "at": "2026-10-30T18:11:10Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "VIP",
-   "wallet": "w-2f4199ed",
-   "tags": [],
-   "at": "2026-10-30T18:11:10Z"
-  },
-  {
-   "kind": "ada_side_drop",
-   "ticker": "VIP",
-   "from": 203,
-   "to": 37,
-   "at": "2026-10-30T18:11:10Z"
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 76.3,
+   "top_cluster_pct": 76.3,
+   "top_cluster": "w-13d53c47",
+   "basis": "ex-fe819d",
+   "at": "2026-10-30T20:11:14Z"
   },
   {
    "kind": "whale_move",
-   "ticker": "MEPE",
+   "ticker": "NIGHT",
    "tag": "w-f3186187",
-   "delta": 9795854915526,
+   "delta": -19957295702,
    "decimals": 6,
-   "qty": 9795854.9155,
-   "ada_equiv": 8002,
+   "qty": -19957.2957,
+   "ada_equiv": 4070,
    "value_basis": "ada_leg",
-   "pct": 65.3,
-   "at": "2026-10-30T18:11:10Z"
+   "pct": 2.2,
+   "at": "2026-10-30T20:11:14Z"
   },
   {
    "kind": "whale_move",
-   "ticker": "CRAWJU",
+   "ticker": "VAL",
    "tag": "w-f3186187",
-   "delta": -2000000,
-   "decimals": 0,
-   "qty": -2000000.0,
-   "ada_equiv": 948,
-   "value_basis": "ada_leg",
-   "pct": 40.0,
-   "at": "2026-10-30T18:11:10Z"
+   "delta": 7161365,
+   "pct": 10.0,
+   "at": "2026-10-30T20:11:14Z"
   },
   {
    "kind": "whale_move",
    "ticker": "ASCEND",
    "tag": "w-f3186187",
-   "delta": 1288210774,
+   "delta": 2162861346,
    "decimals": 6,
-   "qty": 1288.2108,
-   "ada_equiv": 1658,
+   "qty": 2162.8613,
+   "ada_equiv": 2760,
    "value_basis": "ada_leg",
-   "pct": 0.4,
-   "at": "2026-10-30T18:11:10Z"
+   "pct": 0.6,
+   "at": "2026-10-30T20:11:14Z"
   }
  ],
  "recent": [
-  {
-   "kind": "identical_size_buys",
-   "ticker": "MASCOT",
-   "wallets": [
-    "w-24b88f52",
-    "w-4f099c3c",
-    "w-f7844f67"
-   ],
-   "ada_each": 40.32,
-   "window_s": 600,
-   "at": "2026-10-29T04:11:51Z"
-  },
-  {
-   "kind": "coordinated_buys",
-   "ticker": "MIKU",
-   "wallets": [
-    "w-18171145",
-    "w-192b7c8a",
-    "w-4cc745cd",
-    "w-c66abf4f",
-    "w-e851e525",
-    "w-e97f4aa3",
-    "w-fb7afd7e"
-   ],
-   "window_s": 120,
-   "at": "2026-10-29T04:11:51Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "MIKU",
-   "wallets": [
-    "w-18171145",
-    "w-192b7c8a",
-    "w-4cc745cd",
-    "w-e851e525"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-10-29T04:11:51Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-11c0b186",
-   "launches": [
-    "MIKU",
-    "MSNEK"
-   ],
-   "at": "2026-10-29T04:11:51Z"
-  },
   {
    "kind": "repeat_early_buyer",
    "wallet": "w-24b88f52",
@@ -3372,11 +3213,51 @@
    "value_basis": "ada_leg",
    "pct": 0.4,
    "at": "2026-10-30T18:11:10Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 76.3,
+   "top_cluster_pct": 76.3,
+   "top_cluster": "w-13d53c47",
+   "basis": "ex-fe819d",
+   "at": "2026-10-30T20:11:14Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "NIGHT",
+   "tag": "w-f3186187",
+   "delta": -19957295702,
+   "decimals": 6,
+   "qty": -19957.2957,
+   "ada_equiv": 4070,
+   "value_basis": "ada_leg",
+   "pct": 2.2,
+   "at": "2026-10-30T20:11:14Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "VAL",
+   "tag": "w-f3186187",
+   "delta": 7161365,
+   "pct": 10.0,
+   "at": "2026-10-30T20:11:14Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 2162861346,
+   "decimals": 6,
+   "qty": 2162.8613,
+   "ada_equiv": 2760,
+   "value_basis": "ada_leg",
+   "pct": 0.6,
+   "at": "2026-10-30T20:11:14Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 4,
-  "koios": 16
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,
