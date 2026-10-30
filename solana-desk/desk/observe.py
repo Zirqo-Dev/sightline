@@ -7,19 +7,23 @@ module does not fetch. A bad payload becomes null fields and a short error code.
 import json, os, sys, time
 from . import config as C
 
-# pump.fun BOOST mode: pools migrated on or after this instant, entered within 10 minutes.
-BOOST_SINCE = 1784592000  # 2026-07-21T00:00:00Z
-BOOST_WINDOW_S = 600
+# pump.fun BOOST mode: pools migrated on or after this instant, entered within 5 minutes.
+# Book F cannot land in the window: a pass requires the pool to be at least 15 minutes old.
+BOOST_SINCE = 1784643780  # 2026-07-21T14:23:00Z
+BOOST_WINDOW_S = 300
 TIMING_NAME = "scan_timing.jsonl"
 SNAP_CAP = 48  # latest scans only; entry_* and exit_* are stored on their own
 PUMPSWAP = "pumpswap"
+OBS_V = 1
 
 PUBLIC_KEYS = (
+    "obs_v",
     "entry_sol_reserve", "entry_token_reserve", "entry_k", "entry_reserve_error",
     "exit_sol_reserve", "exit_token_reserve", "exit_k", "exit_reserve_error",
     "last_sol_reserve", "last_token_reserve", "last_k", "last_reserve_error",
     "reserve_snaps",
-    "pool_created_at", "graduated_pump", "boost_window",
+    "entry_pool", "exit_pool", "same_pool",
+    "pool_created_at", "pool_age_at_entry_s", "graduated_pump", "boost_window",
     "entry_quote_out", "entry_quote_px", "entry_quote_impact", "entry_quote_error",
     "exit_quote_out", "exit_quote_px", "exit_quote_impact", "exit_quote_error",
     "max_price_held", "min_price_held", "max_price_held_pct", "min_price_held_pct",
@@ -64,9 +68,20 @@ def graduated_pump(pair):
     return dex.strip().lower() == PUMPSWAP
 
 
+def pool_addr(raw):
+    """DexScreener pairAddress, or None when the snapshot has no pool id."""
+    if not isinstance(raw, dict):
+        return None
+    addr = raw.get("pairAddress")
+    if isinstance(addr, str) and addr:
+        return addr
+    return None
+
+
 def boost_window(created_s, entry_s, graduated):
-    """True only for a PumpSwap pool migrated on or after 2026-07-21 whose entry is 0..600s later.
+    """True only for a PumpSwap pool migrated on or after 2026-07-21T14:23:00Z whose entry is 0..300s later.
     False when the pool is known and the window does not apply. None when migration time or dex is unknown.
+    Book F's 15-minute age rule is longer than this window, so an F pass is never inside it.
     """
     if graduated is False:
         return False
@@ -111,8 +126,8 @@ def snapshot_reserves(raw):
         return None, None, None, "log_failed"
 
 
-def _snap(now, sol, tok, k, err):
-    row = {"t": iso(now), "sol": sol, "token": tok, "k": k}
+def _snap(now, sol, tok, k, err, pool):
+    row = {"t": iso(now), "sol": sol, "token": tok, "k": k, "pool": pool}
     if err:
         row["error"] = err
     return row
@@ -123,7 +138,9 @@ def quote_numbers(quote, side, amount_in=None):
 
     implied_px is lamports per raw token, the same units as the book fill.
     Buy: ticket lamports / tokens out. Sell: lamports out / tokens in.
-    impact_fraction is Jupiter priceImpactPct (0.01 means 1%). Missing impact is null, not an error.
+    impact_fraction is the raw Jupiter priceImpactPct field, parsed as a float and not rescaled.
+    0.01 means 1%. The trade row's impact_pct is that fraction times 100 and is a different cell.
+    Missing impact is null, not an error.
     """
     try:
         if not isinstance(quote, dict) or not quote.get("outAmount"):
@@ -171,11 +188,16 @@ def entry_log(lead, entry_px, now):
         sol, tok, k, err = snapshot_reserves(pair)
         created = pair_created_s(pair)
         grad = graduated_pump(pair)
+        addr = pool_addr(pair)
+        age = None if created is None else round(float(now) - float(created), 1)
         fields = {
+            "obs_v": OBS_V,
             "entry_sol_reserve": sol, "entry_token_reserve": tok, "entry_k": k, "entry_reserve_error": err,
             "last_sol_reserve": sol, "last_token_reserve": tok, "last_k": k, "last_reserve_error": err,
-            "reserve_snaps": [_snap(now, sol, tok, k, err)],
+            "reserve_snaps": [_snap(now, sol, tok, k, err, addr)],
+            "entry_pool": addr,
             "pool_created_at": iso(created) if created is not None else None,
+            "pool_age_at_entry_s": age,
             "graduated_pump": grad,
             "boost_window": boost_window(created, now, grad),
         }
@@ -192,6 +214,7 @@ def entry_log(lead, entry_px, now):
         return {
             "entry_sol_reserve": None, "entry_token_reserve": None, "entry_k": None,
             "entry_reserve_error": "log_failed",
+            "obs_v": OBS_V, "entry_pool": None, "pool_age_at_entry_s": None,
             "pool_created_at": None, "graduated_pump": None, "boost_window": None,
             "entry_quote_out": None, "entry_quote_px": None, "entry_quote_impact": None,
             "entry_quote_error": "log_failed",
@@ -203,7 +226,7 @@ def note_held(pos, raw, now):
     try:
         sol, tok, k, err = snapshot_reserves(raw)
         snaps = [s for s in (pos.get("reserve_snaps") or []) if isinstance(s, dict)]
-        snaps.append(_snap(now, sol, tok, k, err))
+        snaps.append(_snap(now, sol, tok, k, err, pool_addr(raw)))
         return {
             "last_sol_reserve": sol, "last_token_reserve": tok, "last_k": k, "last_reserve_error": err,
             "reserve_snaps": snaps[-SNAP_CAP:],
@@ -246,6 +269,14 @@ def stamp_exit(pos, raw, quote, amount, fetched):
         out.update(exit_sol_reserve=sol, exit_token_reserve=tok, exit_k=k, exit_reserve_error=err)
     except Exception:
         out.update(exit_sol_reserve=None, exit_token_reserve=None, exit_k=None, exit_reserve_error="log_failed")
+    exit_pool = pool_addr(raw) if fetched else None
+    entry_pool = pos.get("entry_pool")
+    if isinstance(entry_pool, str) and entry_pool and isinstance(exit_pool, str) and exit_pool:
+        same = entry_pool == exit_pool
+    else:
+        same = None
+    out["exit_pool"] = exit_pool
+    out["same_pool"] = same
     try:
         o, px, impact, qerr = quote_numbers(quote, "sell", amount)
         out.update(exit_quote_out=o, exit_quote_px=px, exit_quote_impact=impact, exit_quote_error=qerr)
@@ -258,21 +289,29 @@ def stamp_exit(pos, raw, quote, amount, fetched):
             out["min_price_held_pct"] = held_pct(pos.get("min_price_held"), pos.get("entry"))
     except Exception:
         pass
+    # A zero fill (no route, pool gone) is a real low. The mark loop does not record a non-positive price.
+    if pos.get("last_mark") == 0:
+        out["min_price_held"] = 0.0
+        out["min_price_held_pct"] = -100.0
     return out
 
 
-def append_scan_timing(data_dir, slot, started, run_id, mode):
-    """One jsonl line: cron slot, actual start, delay seconds. Failures are printed and swallowed."""
+def append_scan_timing(data_dir, slot, started, run_id, mode, trigger=None):
+    """One jsonl line: cron slot, actual start, delay seconds, workflow trigger. Failures are printed and swallowed."""
     try:
         delay = round(float(started) - float(slot), 3)
         if delay < 0:
             delay = 0.0
+        if not isinstance(trigger, str) or not trigger.strip():
+            trigger = os.environ.get("GITHUB_EVENT_NAME") or "local"
+        trigger = trigger.strip()[:40] or "local"
         row = {
             "scheduled_utc": iso(slot),
             "started_utc": iso(started),
             "delay_s": delay,
             "run_id": str(run_id),
             "mode": mode if mode in ("scan", "fill") else "scan",
+            "trigger": trigger,
         }
         os.makedirs(data_dir, exist_ok=True)
         path = os.path.join(data_dir, TIMING_NAME)

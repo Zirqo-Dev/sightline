@@ -22,7 +22,7 @@ def lead(i, sol=100.0, token=1_000_000.0, dex="pumpswap", created_s=None, out=TO
         mint=M(i), stype=None, reason=None,
         quote={"outAmount": str(out), "priceImpactPct": "0.01", "routePlan": [1]},
         pair={
-            "dexId": dex, "pairCreatedAt": int(created_s * 1000),
+            "dexId": dex, "pairAddress": "Pentry", "pairCreatedAt": int(created_s * 1000),
             "liquidity": {"quote": sol, "base": token},
             "baseToken": {"symbol": f"T{i}"},
         },
@@ -50,7 +50,7 @@ class Pool:
         if self.mode == "float":
             return sol
         return {
-            "dexId": "pumpswap", "pairCreatedAt": (T0 - 300) * 1000,
+            "dexId": "pumpswap", "pairAddress": "Pentry", "pairCreatedAt": (T0 - 300) * 1000,
             "baseToken": {"symbol": "T"},
             "liquidity": {"quote": sol, "base": self.token.get(m, 1_000_000.0)},
         }
@@ -123,6 +123,12 @@ class Decisions(unittest.TestCase):
         self.assertTrue(closed["graduated_pump"])
         self.assertIs(closed["boost_window"], True)
         self.assertEqual(closed["pool_created_at"], observe.iso(T0 - 300))
+        self.assertEqual(closed["pool_age_at_entry_s"], 300.0)
+        self.assertEqual(closed["obs_v"], 1)
+        self.assertEqual(closed["entry_pool"], "Pentry")
+        self.assertEqual(closed["exit_pool"], "Pentry")
+        self.assertIs(closed["same_pool"], True)
+        self.assertEqual(closed["reserve_snaps"][0]["pool"], "Pentry")
         entry = 0.5 * 1e9 / TOK
         self.assertEqual(closed["entry"], entry)
         self.assertEqual(closed["entry_quote_out"], TOK)
@@ -294,9 +300,9 @@ class ReserveShapes(unittest.TestCase):
 class Migration(unittest.TestCase):
     def test_boost_window_boundaries(self):
         start = observe.BOOST_SINCE
-        self.assertEqual(observe.iso(start), "2026-07-21T00:00:00Z")
-        self.assertIs(observe.boost_window(start, start + 600, True), True)
-        self.assertIs(observe.boost_window(start, start + 601, True), False)
+        self.assertEqual(observe.iso(start), "2026-07-21T14:23:00Z")
+        self.assertIs(observe.boost_window(start, start + 300, True), True)
+        self.assertIs(observe.boost_window(start, start + 301, True), False)
         self.assertIs(observe.boost_window(start - 1, start + 60, True), False)
         self.assertIs(observe.boost_window(start, start - 1, True), False)
         self.assertIsNone(observe.boost_window(None, start, True))
@@ -313,6 +319,15 @@ class Migration(unittest.TestCase):
         self.assertIs(fields["graduated_pump"], False)
         self.assertIs(fields["boost_window"], False)
         self.assertIsNone(observe.entry_log({"pair": None, "quote": None}, 0.5, start)["boost_window"])
+        aged = observe.entry_log(lead(1, created_s=start - 120.4), 0.5, start)
+        self.assertEqual(aged["pool_age_at_entry_s"], 120.4)
+        self.assertIsNone(observe.pool_addr({"pairAddress": ""}))
+        self.assertEqual(observe.pool_addr({"pairAddress": "PoolA"}), "PoolA")
+        zero = observe.stamp_exit({"entry": 1.0, "last_mark": 0, "entry_pool": "PoolA", "min_price_held": 0.4}, None, {}, 0, False)
+        self.assertEqual(zero["min_price_held"], 0.0)
+        self.assertEqual(zero["min_price_held_pct"], -100.0)
+        self.assertIsNone(zero["exit_pool"])
+        self.assertIsNone(zero["same_pool"])
 
 
 class ScanTiming(unittest.TestCase):
@@ -339,6 +354,7 @@ class ScanTiming(unittest.TestCase):
             self.assertEqual(lines[0]["delay_s"], 12.5)
             self.assertEqual(lines[0]["run_id"], h["last_run_utc"])
             self.assertEqual(lines[0]["mode"], "scan")
+            self.assertEqual(lines[0]["trigger"], "local")
             run.scan(d, self._get(), now=now + 10, mode="scan", sleep=lambda s: None)
             self.assertEqual(sum(1 for x in open(path) if x.strip()), 1)
             run.scan(d, self._get(), now=slot + 1800 + 3, mode="fill", sleep=lambda s: None)
@@ -404,7 +420,7 @@ class ApiCalls(unittest.TestCase):
             self.assertEqual(pos["entry_token_reserve"], 2_000_000)
             self.assertEqual(pos["entry_k"], 500 * 2_000_000)
             self.assertIs(pos["graduated_pump"], True)
-            self.assertIs(pos["boost_window"], False)  # pool is an hour old, outside the 600s window
+            self.assertIs(pos["boost_window"], False)  # pool is an hour old, outside the 300s window
             self.assertEqual(pos["entry_quote_out"], TOK)
             self.assertEqual(pos["entry_quote_px"], pos["entry"])
             n_open = sum(len(json.load(open(os.path.join(d, "positions.json")))["books"][b]["open"]) for b in "FRS")

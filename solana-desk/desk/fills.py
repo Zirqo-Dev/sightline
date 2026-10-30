@@ -200,8 +200,10 @@ def manage(d, s, now, sell_quote, liquidity, sleep, log=True):
         for pid, pos in list(b["open"].items()):
             if n: sleep(1.2)
             n += 1; t0 = time.time()
-            try: held_amt = int(pos["tokens"] * pos["frac"])
-            except (TypeError, ValueError, KeyError): held_amt = 0
+            held_amt = 0
+            if log:
+                try: held_amt = int(pos["tokens"] * pos["frac"])
+                except (TypeError, ValueError, KeyError): held_amt = 0
             status, px, q = mark_status(sell_quote, pos)
             liq = None
             raw = None
@@ -217,6 +219,7 @@ def manage(d, s, now, sell_quote, liquidity, sleep, log=True):
                     raw = None
                     fetched = True
             acts = exits.check(pos, px, liq, now, status)  # raw quote price; the haircut is not an exit input
+            delay = time.time() - t0
             if log:
                 try:
                     if fetched:
@@ -225,7 +228,6 @@ def manage(d, s, now, sell_quote, liquidity, sleep, log=True):
                         _apply_log(pos, observe.note_price(pos, px))
                 except Exception:
                     pass
-            delay = time.time() - t0
             pool = liq if liq is not None else pos.get("liq0")
             if status == "ok" and px is not None and px > 0:
                 # Open mark is not an exit, so it does not take the stress add-on.

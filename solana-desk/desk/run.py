@@ -379,7 +379,7 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
     with open(os.path.join(data_dir, "health.json"), "w") as f: json.dump(h, f, indent=1)
     # Cron slot vs the start of this call. A write failure leaves the scan result in place.
     try:
-        observe.append_scan_timing(data_dir, slot, now, run_id, mode)
+        observe.append_scan_timing(data_dir, slot, now, run_id, mode, os.environ.get("GITHUB_EVENT_NAME") or "local")
     except Exception:
         print("scan timing: skipped", file=sys.stderr)
     return h

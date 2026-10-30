@@ -65,13 +65,19 @@
               "sol": {"type": ["number", "null"]},
               "token": {"type": ["number", "null"]},
               "k": {"type": ["number", "null"]},
+              "pool": {"type": ["string", "null"]},
               "error": {"type": "string"}
             }
           }
         },
+        "entry_pool": {"type": ["string", "null"]},
+        "exit_pool": {"type": ["string", "null"]},
+        "same_pool": {"type": ["boolean", "null"]},
         "pool_created_at": {"type": ["string", "null"]},
+        "pool_age_at_entry_s": {"type": ["number", "null"]},
         "graduated_pump": {"type": ["boolean", "null"]},
         "boost_window": {"type": ["boolean", "null"]},
+        "obs_v": {"type": "integer"},
         "entry_quote_out": {"type": ["number", "null"]},
         "entry_quote_px": {"type": ["number", "null"]},
         "entry_quote_impact": {"type": ["number", "null"]},
