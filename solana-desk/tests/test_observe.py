@@ -343,25 +343,34 @@ class ScanTiming(unittest.TestCase):
         slot = 1_800_000_000
         now = slot + 12.5
         sch = Draft202012Validator(json.load(open(os.path.join(SCH, "scan-timing.schema.json"))))
-        with tempfile.TemporaryDirectory() as d:
-            h = run.scan(d, self._get(), now=now, mode="scan", sleep=lambda s: None)
-            path = os.path.join(d, observe.TIMING_NAME)
-            lines = [json.loads(x) for x in open(path) if x.strip()]
-            self.assertEqual(len(lines), 1)
-            self.assertEqual(list(sch.iter_errors(lines[0])), [])
-            self.assertEqual(lines[0]["scheduled_utc"], time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(slot)))
-            self.assertEqual(lines[0]["started_utc"], time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)))
-            self.assertEqual(lines[0]["delay_s"], 12.5)
-            self.assertEqual(lines[0]["run_id"], h["last_run_utc"])
-            self.assertEqual(lines[0]["mode"], "scan")
-            self.assertEqual(lines[0]["trigger"], "local")
-            run.scan(d, self._get(), now=now + 10, mode="scan", sleep=lambda s: None)
-            self.assertEqual(sum(1 for x in open(path) if x.strip()), 1)
-            run.scan(d, self._get(), now=slot + 1800 + 3, mode="fill", sleep=lambda s: None)
-            lines = [json.loads(x) for x in open(path) if x.strip()]
-            self.assertEqual(len(lines), 2)
-            self.assertEqual(lines[1]["delay_s"], 3.0)
-            self.assertEqual(lines[1]["mode"], "fill")
+        saved = os.environ.get("GITHUB_EVENT_NAME")
+        os.environ["GITHUB_EVENT_NAME"] = "workflow_dispatch"
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                h = run.scan(d, self._get(), now=now, mode="scan", sleep=lambda s: None)
+                path = os.path.join(d, observe.TIMING_NAME)
+                lines = [json.loads(x) for x in open(path) if x.strip()]
+                self.assertEqual(len(lines), 1)
+                self.assertEqual(list(sch.iter_errors(lines[0])), [])
+                self.assertEqual(lines[0]["scheduled_utc"], time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(slot)))
+                self.assertEqual(lines[0]["started_utc"], time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)))
+                self.assertEqual(lines[0]["delay_s"], 12.5)
+                self.assertEqual(lines[0]["run_id"], h["last_run_utc"])
+                self.assertEqual(lines[0]["mode"], "scan")
+                self.assertEqual(lines[0]["trigger"], "workflow_dispatch")
+                run.scan(d, self._get(), now=now + 10, mode="scan", sleep=lambda s: None)
+                self.assertEqual(sum(1 for x in open(path) if x.strip()), 1)
+                run.scan(d, self._get(), now=slot + 1800 + 3, mode="fill", sleep=lambda s: None)
+                lines = [json.loads(x) for x in open(path) if x.strip()]
+                self.assertEqual(len(lines), 2)
+                self.assertEqual(lines[1]["delay_s"], 3.0)
+                self.assertEqual(lines[1]["mode"], "fill")
+                self.assertEqual(lines[1]["trigger"], "workflow_dispatch")
+        finally:
+            if saved is None:
+                os.environ.pop("GITHUB_EVENT_NAME", None)
+            else:
+                os.environ["GITHUB_EVENT_NAME"] = saved
 
     def test_a_timing_failure_still_returns_the_scan(self):
         saved = observe.append_scan_timing
