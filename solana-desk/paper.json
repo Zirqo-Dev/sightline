@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-30T15:00:30Z",
+ "generated_at": "2026-10-30T15:30:30Z",
  "cfg_version": "v1-v6.5",
  "open": [
   {
@@ -25,15 +25,88 @@
     "px": 0.0005472785672236021
    },
    "frac": 0.666667,
-   "last_mark": 0.0009555144974519155,
+   "last_mark": 0.0009032241516053695,
    "thesis": "random_match",
    "result": {
     "pnl": 0.091159562,
-    "pct": 74.59,
+    "pct": 65.04,
     "unit": "SOL",
     "net_pnl": 0.091159562,
     "gross_pnl": 0.094147329
-   }
+   },
+   "last_sol_reserve": 113.8022,
+   "last_token_reserve": 138823774.0,
+   "last_k": 15798450893.5028,
+   "last_reserve_error": null,
+   "reserve_snaps": [
+    {
+     "t": "2026-10-30T15:30:30Z",
+     "sol": 113.8022,
+     "token": 138823774.0,
+     "k": 15798450893.5028,
+     "pool": "AngiC41JCzghSDbXVygYVYZHFaGq8G9PycXFSEHg15oh"
+    }
+   ],
+   "max_price_held": 0.0009032241516053695,
+   "min_price_held": 0.0009032241516053695,
+   "max_price_held_pct": 65.0392,
+   "min_price_held_pct": 65.0392
+  },
+  {
+   "id": "S-20261030T1530-BLN4pump",
+   "ticker": "SPACECAT",
+   "mint": "BLN4c4FERWn8pf3PysRDapSKzB5JoHx9HbaxjYkEpump",
+   "book": "S",
+   "status": "open",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-10-30T15:30:30Z",
+   "window_ends_at": "2026-10-30T17:30:30Z",
+   "entry": {
+    "px": 0.0008620342991987871
+   },
+   "frac": 1.0,
+   "last_mark": 0.0008620342991987871,
+   "thesis": "safety:too_fresh",
+   "result": {
+    "pnl": 0.0,
+    "pct": 0.0,
+    "unit": "SOL",
+    "net_pnl": 0.0,
+    "gross_pnl": 0.0
+   },
+   "obs_v": 1,
+   "entry_sol_reserve": 121.204,
+   "entry_token_reserve": 137321429.0,
+   "entry_k": 16643906480.515999,
+   "entry_reserve_error": null,
+   "last_sol_reserve": 121.204,
+   "last_token_reserve": 137321429.0,
+   "last_k": 16643906480.515999,
+   "last_reserve_error": null,
+   "reserve_snaps": [
+    {
+     "t": "2026-10-30T15:30:30Z",
+     "sol": 121.204,
+     "token": 137321429.0,
+     "k": 16643906480.515999,
+     "pool": "8tCfyhnF3A4CZJkXhvK1oXWjXJyNhL7kMsaFGbdVGyzr"
+    }
+   ],
+   "entry_pool": "8tCfyhnF3A4CZJkXhvK1oXWjXJyNhL7kMsaFGbdVGyzr",
+   "pool_created_at": "2026-10-30T15:23:49Z",
+   "pool_age_at_entry_s": 401.0,
+   "graduated_pump": true,
+   "boost_window": false,
+   "entry_quote_out": 580023324437,
+   "entry_quote_px": 0.0008620342991987871,
+   "entry_quote_impact": 0.013548768276599232,
+   "entry_quote_error": null,
+   "max_price_held": 0.0008620342991987871,
+   "min_price_held": 0.0008620342991987871,
+   "max_price_held_pct": 0.0,
+   "min_price_held_pct": 0.0
   }
  ],
  "closed": [
@@ -2494,7 +2567,7 @@
   },
   "R": {
    "cash": 7.346330793,
-   "equity": 7.924076829,
+   "equity": 7.892489018,
    "realized_pnl": -2.317822829,
    "open": 1,
    "closed": 20,
@@ -2503,12 +2576,12 @@
    "realized_gross_pnl": -0.576280142
   },
   "S": {
-   "cash": 4.148060879,
-   "equity": 4.148060879,
+   "cash": 3.644537338,
+   "equity": 4.141013797,
    "realized_pnl": -5.851939121,
-   "open": 0,
+   "open": 1,
    "closed": 42,
-   "fills_today": 12,
+   "fills_today": 13,
    "would_halt": [
     {
      "day": "2026-10-30",
