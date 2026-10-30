@@ -6,7 +6,7 @@ Mode "auto" (workflow default) = fill when allowed, else scan.
 Free public APIs only: DexScreener, RugCheck, Jupiter quote (optional free key in JUPITER_API_KEY).
 """
 import argparse, json, os, sys, time, urllib.request, urllib.error
-from . import config as C, skips, ledger, fills
+from . import config as C, skips, ledger, fills, observe
 
 SOL = "So11111111111111111111111111111111111111112"
 DEX = "https://api.dexscreener.com"
@@ -360,7 +360,9 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
     if mode == "fill":
         def sell_quote(m, amount): return quote(get, m, key, sleep, input_mint=m, amount=amount)
         def liquidity(m):
-            p = best_pair(get, m); return ((p or {}).get("liquidity") or {}).get("quote")
+            # The whole pair, from the same best_pair call as before. fills.sol_liq reads liquidity.quote
+            # for the exit rule. Reserve and migration logs read the rest. No second request.
+            return best_pair(get, m)
         fill = fills.step(data_dir, now, run_id, seed, run_leads, st, sell_quote, liquidity, sleep)
         if fill["void"]: notes.append("new entries voided: " + ", ".join(fill["void"]))
     h = ledger.health(data_dir, st["runs"], RUNS_PER_DAY, st["checks"], st["errors"], st["data_failures"], day)
@@ -375,6 +377,11 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
         except Exception:
             h["rugger_status"] = {"store": "miss", "entries": 0, "edges": 0}
     with open(os.path.join(data_dir, "health.json"), "w") as f: json.dump(h, f, indent=1)
+    # Cron slot vs the start of this call. A write failure leaves the scan result in place.
+    try:
+        observe.append_scan_timing(data_dir, slot, now, run_id, mode, os.environ.get("GITHUB_EVENT_NAME") or "local")
+    except Exception:
+        print("scan timing: skipped", file=sys.stderr)
     return h
 
 def main(argv=None):

@@ -67,5 +67,19 @@ does not by itself produce `known_rugger_funded`. The hook stops after 5 seconds
 It does not change skip reasons, paper entries, exits, or the timing of quotes and fills. The v6.5 freeze is unchanged.
 There is no LP-pull or dump event feed; `lp_unlocked` stays a per-token safety skip.
 
+## Logging only
+These fields are records. Skips, book selection, the exit rule, ticket size, and the fill price stay on the frozen v6.5 rules. The fill the book uses is still the Jupiter quote it already requested. A failure in this layer stores null and a short error code and the scan continues.
+
+No extra HTTP call. Reserves and migration come from the DexScreener pair already loaded for the lead (entry) and for the open-position liquidity check (each later scan and the exit). The quote fields are that same Jupiter quote: the buy for the 0.5 SOL ticket at entry, and the sell for the tokens still held at exit. Scan timing is the local clock.
+
+On the position, and kept on the closed row:
+
+- `entry_sol_reserve`, `entry_token_reserve`, `entry_k` at entry. `k` is `sol_reserve * token_reserve`. `exit_sol_reserve`, `exit_token_reserve`, `exit_k` at close. While the position is open, `last_sol_reserve`, `last_token_reserve`, `last_k` are the latest scan, and `reserve_snaps` keeps up to 48 of those scans. Reserves are DexScreener `liquidity.quote` (SOL) and `liquidity.base` (token). A missing side nulls all three (`reserves_incomplete`) so a partial snapshot is not read as a real `k`. Raw on-chain vault balances are not fetched.
+- `pool_created_at` is DexScreener `pairCreatedAt`. `pool_age_at_entry_s` is entry time minus that instant, in seconds. `graduated_pump` is true for dex `pumpswap` and false for any other known dex. `boost_window` is true only when that pool was created on or after 2026-07-21T14:23:00Z and the entry is 0 to 300 seconds later. Unknown dex or unknown time is null. Book F cannot be inside the window: a pass requires the pool to be at least 15 minutes old, and 15 minutes is longer than 300 seconds. There is no separate pump.fun migration API; for a PumpSwap pool, `pairCreatedAt` is the pool creation time used as the migration time. `entry_pool` and `exit_pool` are the DexScreener `pairAddress`. `same_pool` is true when both are known and equal. Each `reserve_snaps` row carries that scan's `pool`.
+- `entry_quote_out`, `entry_quote_px`, `entry_quote_impact` and the `exit_quote_*` trio. `*_px` is lamports per raw token, the same units as the fill. `*_impact` is the raw Jupiter `priceImpactPct` field (a fraction, not rescaled; `0.01` means 1%). The trade row's `impact_pct` is that fraction times 100 and is a different cell. The trade row's `quote_px` is unchanged. A missing mark quote stays null (`no_quote`); the desk does not send a second quote. A close whose mark is 0 stores `min_price_held` 0 and `min_price_held_pct` -100.
+- `max_price_held` and `min_price_held`, updated on each successful mark, plus `max_price_held_pct` and `min_price_held_pct` versus entry. The exit rule's `peak` is a different field.
+
+`scan_timing.jsonl` in the desk data directory (desk-data `solana-desk/scan_timing.jsonl`) gets one line per completed scan: `scheduled_utc` (the 30-minute cron slot), `started_utc`, `delay_s`, `run_id`, `mode`, and `trigger` (the workflow event name, or `local`). A duplicate slot does not append. Position rows are stamped `obs_v` 1.
+
 ## Tests
     cd solana-desk && python3 -m unittest discover -s tests -t .

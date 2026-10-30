@@ -15,9 +15,11 @@ plus stress_exit_bps on hard_stop, trailing_stop and liquidity_pulled, capped at
 Jupiter priceImpactPct is logged and is not an input. Exits still use the raw quote price.
 Gross and net PnL are both recorded; pnl stays the net figure. New rows carry cost_model
 v3-exit-aware and the time that model started. Older rows are not rewritten.
+desk.observe adds reserve, migration, quote, and held-price fields. Those fields are
+logs. They are not read by exits, books, or the fill price. log=False skips them.
 """
 import csv, json, os, time
-from . import config as C, books, exits, ledger
+from . import config as C, books, exits, ledger, observe
 
 STATE = "positions.json"
 LAMPORTS = 1e9
@@ -41,6 +43,31 @@ def save(d, s):
     p = os.path.join(d, STATE); tmp = p + ".tmp"
     with open(tmp, "w") as f: json.dump(s, f, indent=1)
     os.replace(tmp, p)  # atomic: a killed run never leaves a half-written book
+
+# Position keys the fill and the exit rule own. A log dict that repeats one of these is dropped.
+_DECISION = {
+    "entry", "peak", "steps", "liq0", "opened", "frac", "last_mark", "stale", "no_route_count",
+    "mint", "symbol", "tokens", "run_id", "why", "book", "pnl", "gross_pnl",
+    "entry_haircut", "entry_cost", "cost_model", "cost_model_started_at", "exit_haircut",
+}
+
+def sol_liq(snap):
+    """SOL-side number exits.check already uses.
+    A non-dict is the historical liquidity callback (a float or None) and is returned unchanged.
+    A pair uses ((pair or {}).get("liquidity") or {}).get("quote"), including a falsy liquidity object.
+    """
+    if not isinstance(snap, dict):
+        return snap
+    return ((snap or {}).get("liquidity") or {}).get("quote")
+
+def _apply_log(pos, fields):
+    """Write logging fields. Decision keys already on the position stay as they are."""
+    if not isinstance(fields, dict):
+        return
+    for k, v in fields.items():
+        if k in _DECISION:
+            continue
+        pos[k] = v
 
 def _f(x):
     try:
@@ -160,23 +187,47 @@ def close(b, pid, pos, now, why, pnl_total, gross_total):
     if pos.get("cost_model"):
         rec["cost_model"] = pos["cost_model"]
         rec["cost_model_started_at"] = pos.get("cost_model_started_at") or ""
+    for k in observe.PUBLIC_KEYS:
+        if k in pos:
+            rec[k] = pos[k]
     b["closed"].append(rec)
     b["closed"] = b["closed"][-CLOSED_KEEP:]
 
-def manage(d, s, now, sell_quote, liquidity, sleep):
+def manage(d, s, now, sell_quote, liquidity, sleep, log=True):
     n = 0
     for name in "FRS":
         b = s["books"][name]
         for pid, pos in list(b["open"].items()):
             if n: sleep(1.2)
             n += 1; t0 = time.time()
+            held_amt = 0
+            if log:
+                try: held_amt = int(pos["tokens"] * pos["frac"])
+                except (TypeError, ValueError, KeyError): held_amt = 0
             status, px, q = mark_status(sell_quote, pos)
             liq = None
+            raw = None
+            fetched = False
             if status == "ok":
-                try: liq = liquidity(pos["mint"])
-                except Exception: liq = None
+                try:
+                    raw = liquidity(pos["mint"])
+                    liq = sol_liq(raw)
+                    fetched = True
+                except Exception:
+                    # The exit rule already treats a failed read as no liquidity. The log records null.
+                    liq = None
+                    raw = None
+                    fetched = True
             acts = exits.check(pos, px, liq, now, status)  # raw quote price; the haircut is not an exit input
             delay = time.time() - t0
+            if log:
+                try:
+                    if fetched:
+                        _apply_log(pos, observe.note_held(pos, raw, now))
+                    if status == "ok" and isinstance(px, (int, float)) and not isinstance(px, bool) and px > 0:
+                        _apply_log(pos, observe.note_price(pos, px))
+                except Exception:
+                    pass
             pool = liq if liq is not None else pos.get("liq0")
             if status == "ok" and px is not None and px > 0:
                 # Open mark is not an exit, so it does not take the stress add-on.
@@ -209,6 +260,11 @@ def manage(d, s, now, sell_quote, liquidity, sleep):
                 full = not why.startswith("take_profit")
                 if full: pos["frac"] = 0.0
             if pos["frac"] <= 1e-9:
+                if log:
+                    try:
+                        _apply_log(pos, observe.stamp_exit(pos, raw if fetched else None, q, held_amt, fetched))
+                    except Exception:
+                        _apply_log(pos, {"exit_reserve_error": "log_failed", "exit_quote_error": "log_failed"})
                 close(b, pid, pos, now, acts[-1][2] if acts else "closed", pos.get("pnl", 0.0), pos.get("gross_pnl", 0.0))
 
 def void_reasons(s, st, now):
@@ -217,7 +273,7 @@ def void_reasons(s, st, now):
     if st.get("checks") and st.get("data_failures", 0) / st["checks"] > C.DATA_FAIL_VOID: out.append("data_failures_over_10pct")
     return out
 
-def enter(d, s, now, run_id, seed, leads, day):
+def enter(d, s, now, run_id, seed, leads, day, log=True):
     """leads: list of dicts mint, stype, reason, quote, pair (from this run's scan, in scan order)."""
     shim = {}
     for name in "FRS":
@@ -246,6 +302,11 @@ def enter(d, s, now, run_id, seed, leads, day):
                        run_id=run_id, why=why, book=name, pnl=0.0, gross_pnl=0.0,
                        entry_haircut=h_entry, entry_cost=cost,
                        cost_model=model[0], cost_model_started_at=model[1])
+            if log:
+                try:
+                    _apply_log(pos, observe.entry_log(l, px, int(now)))
+                except Exception:
+                    _apply_log(pos, {"entry_reserve_error": "log_failed", "entry_quote_error": "log_failed"})
             pid = f"{name}-{run_id}-{m[:4]}{m[-4:]}"
             b["open"][pid] = pos; b["cash"] -= cost; b["fills_today"] += 1; held.add(m); opened += 1
             imp = round(float(l["quote"].get("priceImpactPct", 0) or 0) * 100, 4)
@@ -320,6 +381,9 @@ def ticket(pid, p, closed=False):
         t.update(opened_at=iso(p["opened"]), window_ends_at=iso(p["opened"] + C.EXIT["time_stop_min"] * 60),
                  entry=dict(px=p["entry"]), frac=round(p["frac"], 6), last_mark=p["last_mark"], thesis=p.get("why", ""),
                  result=res)
+    for k in observe.PUBLIC_KEYS:
+        if k in p:
+            t[k] = p[k]
     return t
 
 def _book_public(b):
@@ -353,15 +417,17 @@ def paper_json(d, s, now):
     with open(os.path.join(d, "paper.json"), "w") as f: json.dump(out, f, indent=1)
     return out
 
-def step(d, now, run_id, seed, leads, st, sell_quote, liquidity, sleep=lambda s: None):
-    """One fill-mode run. Returns a small summary for health.json."""
+def step(d, now, run_id, seed, leads, st, sell_quote, liquidity, sleep=lambda s: None, *, log=True):
+    """One fill-mode run. Returns a small summary for health.json.
+    log=False skips the additive reserve, quote, and held-price fields. Decisions stay on the same path.
+    """
     day = time.strftime("%Y-%m-%d", time.gmtime(now))
     s = load(d)
-    manage(d, s, now, sell_quote, liquidity, sleep)
+    manage(d, s, now, sell_quote, liquidity, sleep, log=log)
     v = void_reasons(s, st, now)
     opened = 0
     if v: s["voids"].append(dict(ts=iso(now), run_id=run_id, why=v)); s["voids"] = s["voids"][-100:]
-    else: opened = enter(d, s, now, run_id, seed, leads, day)
+    else: opened = enter(d, s, now, run_id, seed, leads, day, log=log)
     would_halt(s, now, day)
     s["last_run_ts"] = int(now); s["cfg_version"] = C.CFG_VERSION
     save(d, s); paper_json(d, s, now)
