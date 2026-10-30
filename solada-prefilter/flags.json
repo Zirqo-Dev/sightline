@@ -1,100 +1,50 @@
 {
- "at": "2026-10-30T20:11:14Z",
+ "at": "2026-10-30T22:10:44Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
+   "kind": "sniper_full_exit",
+   "ticker": "HALLOW",
+   "wallet": "w-f7844f67",
+   "tags": [],
+   "at": "2026-10-30T22:10:44Z"
+  },
+  {
    "kind": "holder_concentration",
    "ticker": "CORE",
-   "top_addr_pct": 76.3,
-   "top_cluster_pct": 76.3,
+   "top_addr_pct": 76.5,
+   "top_cluster_pct": 76.5,
    "top_cluster": "w-13d53c47",
    "basis": "ex-fe819d",
-   "at": "2026-10-30T20:11:14Z"
+   "at": "2026-10-30T22:10:44Z"
   },
   {
-   "kind": "whale_move",
-   "ticker": "NIGHT",
-   "tag": "w-f3186187",
-   "delta": -19957295702,
-   "decimals": 6,
-   "qty": -19957.2957,
-   "ada_equiv": 4070,
-   "value_basis": "ada_leg",
-   "pct": 2.2,
-   "at": "2026-10-30T20:11:14Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "VAL",
-   "tag": "w-f3186187",
-   "delta": 7161365,
-   "pct": 10.0,
-   "at": "2026-10-30T20:11:14Z"
+   "kind": "volume_without_holders",
+   "ticker": "VAMP",
+   "vol_h24_ada": 10960,
+   "ada_side": 3203,
+   "holders": [
+    49,
+    47
+   ],
+   "at": "2026-10-30T22:10:44Z"
   },
   {
    "kind": "whale_move",
    "ticker": "ASCEND",
    "tag": "w-f3186187",
-   "delta": 2162861346,
+   "delta": 349736834,
    "decimals": 6,
-   "qty": 2162.8613,
-   "ada_equiv": 2760,
+   "qty": 349.7368,
+   "ada_equiv": 454,
    "value_basis": "ada_leg",
-   "pct": 0.6,
-   "at": "2026-10-30T20:11:14Z"
+   "pct": 0.1,
+   "at": "2026-10-30T22:10:44Z"
   }
  ],
  "recent": [
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-24b88f52",
-   "launches": [
-    "MASCOT",
-    "MEOW",
-    "NERF"
-   ],
-   "at": "2026-10-29T04:11:51Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-2a5c78a9",
-   "launches": [
-    "MIKU",
-    "MPIG",
-    "MSNEK"
-   ],
-   "at": "2026-10-29T04:11:51Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-4f099c3c",
-   "launches": [
-    "MASCOT",
-    "MSNEK",
-    "PINU",
-    "PUG"
-   ],
-   "at": "2026-10-29T04:11:51Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-c66abf4f",
-   "launches": [
-    "MEPE",
-    "MIKU",
-    "MONKEY",
-    "MPIG",
-    "MSNEK",
-    "NERF",
-    "PUG",
-    "RTB",
-    "SHEF",
-    "UNFAZED"
-   ],
-   "at": "2026-10-29T04:11:51Z"
-  },
   {
    "kind": "repeat_early_buyer",
    "wallet": "w-e97f4aa3",
@@ -3254,6 +3204,45 @@
    "value_basis": "ada_leg",
    "pct": 0.6,
    "at": "2026-10-30T20:11:14Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "HALLOW",
+   "wallet": "w-f7844f67",
+   "tags": [],
+   "at": "2026-10-30T22:10:44Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 76.5,
+   "top_cluster_pct": 76.5,
+   "top_cluster": "w-13d53c47",
+   "basis": "ex-fe819d",
+   "at": "2026-10-30T22:10:44Z"
+  },
+  {
+   "kind": "volume_without_holders",
+   "ticker": "VAMP",
+   "vol_h24_ada": 10960,
+   "ada_side": 3203,
+   "holders": [
+    49,
+    47
+   ],
+   "at": "2026-10-30T22:10:44Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 349736834,
+   "decimals": 6,
+   "qty": 349.7368,
+   "ada_equiv": 454,
+   "value_basis": "ada_leg",
+   "pct": 0.1,
+   "at": "2026-10-30T22:10:44Z"
   }
  ],
  "api_calls": {
