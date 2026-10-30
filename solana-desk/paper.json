@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-30T10:30:24Z",
+ "generated_at": "2026-10-30T11:00:30Z",
  "cfg_version": "v1-v6.5",
  "open": [
   {
@@ -25,14 +25,39 @@
     "px": 0.0005472785672236021
    },
    "frac": 0.666667,
-   "last_mark": 0.000903034329128885,
+   "last_mark": 0.0009100447410017001,
    "thesis": "random_match",
    "result": {
     "pnl": 0.091159562,
-    "pct": 65.0,
+    "pct": 66.29,
     "unit": "SOL",
     "net_pnl": 0.091159562,
     "gross_pnl": 0.094147329
+   }
+  },
+  {
+   "id": "S-20261030T1100-5yappump",
+   "ticker": "DAEMON",
+   "mint": "5yappSXzEFBAqJufBqhpRJq29BVFbd5iyAkLvZgBpump",
+   "book": "S",
+   "status": "open",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-10-30T11:00:30Z",
+   "window_ends_at": "2026-10-30T13:00:30Z",
+   "entry": {
+    "px": 0.0006645983002566384
+   },
+   "frac": 1.0,
+   "last_mark": 0.0006645983002566384,
+   "thesis": "safety:too_fresh",
+   "result": {
+    "pnl": 0.0,
+    "pct": 0.0,
+    "unit": "SOL",
+    "net_pnl": 0.0,
+    "gross_pnl": 0.0
    }
   }
  ],
@@ -2349,7 +2374,7 @@
   },
   "R": {
    "cash": 7.346330793,
-   "equity": 7.892353675,
+   "equity": 7.896597149,
    "realized_pnl": -2.317822829,
    "open": 1,
    "closed": 20,
@@ -2358,12 +2383,12 @@
    "realized_gross_pnl": -0.576280142
   },
   "S": {
-   "cash": 5.525373201,
-   "equity": 5.525373201,
+   "cash": 5.021674314,
+   "equity": 5.517975426,
    "realized_pnl": -4.474626799,
-   "open": 0,
+   "open": 1,
    "closed": 37,
-   "fills_today": 7,
+   "fills_today": 8,
    "would_halt": [
     {
      "day": "2026-10-30",
