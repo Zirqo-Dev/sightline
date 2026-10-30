@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-10-30T11:30:27Z",
+ "generated_at": "2026-10-30T12:00:30Z",
  "cfg_version": "v1-v6.5",
  "open": [
   {
@@ -25,14 +25,39 @@
     "px": 0.0005472785672236021
    },
    "frac": 0.666667,
-   "last_mark": 0.0008815739258672007,
+   "last_mark": 0.0008208893945399203,
    "thesis": "random_match",
    "result": {
     "pnl": 0.091159562,
-    "pct": 61.08,
+    "pct": 49.99,
     "unit": "SOL",
     "net_pnl": 0.091159562,
     "gross_pnl": 0.094147329
+   }
+  },
+  {
+   "id": "S-20261030T1200-4L1Spump",
+   "ticker": "PEET",
+   "mint": "4L1Sj35H2KkCSNYDhv2S5M7YTmYZe5P2sxne8Eq7pump",
+   "book": "S",
+   "status": "open",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-10-30T12:00:30Z",
+   "window_ends_at": "2026-10-30T14:00:30Z",
+   "entry": {
+    "px": 0.00011584700482372374
+   },
+   "frac": 1.0,
+   "last_mark": 0.00011584700482372374,
+   "thesis": "safety:too_fresh",
+   "result": {
+    "pnl": 0.0,
+    "pct": 0.0,
+    "unit": "SOL",
+    "net_pnl": 0.0,
+    "gross_pnl": 0.0
    }
   }
  ],
@@ -2378,7 +2403,7 @@
   },
   "R": {
    "cash": 7.346330793,
-   "equity": 7.879392,
+   "equity": 7.842710813,
    "realized_pnl": -2.317822829,
    "open": 1,
    "closed": 20,
@@ -2387,12 +2412,12 @@
    "realized_gross_pnl": -0.576280142
   },
   "S": {
-   "cash": 5.138977485,
-   "equity": 5.138977485,
+   "cash": 4.633629463,
+   "equity": 5.128281441,
    "realized_pnl": -4.861022515,
-   "open": 0,
+   "open": 1,
    "closed": 38,
-   "fills_today": 8,
+   "fills_today": 9,
    "would_halt": [
     {
      "day": "2026-10-30",
