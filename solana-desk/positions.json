@@ -1,10 +1,10 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793329231,
+ "last_run_ts": 1793331024,
  "voids": [],
  "books": {
   "F": {
-   "cash": 3.8850370653328095,
+   "cash": 4.276123673610231,
    "open": {
     "F-20261030T0000-4HSHpump": {
      "entry": 0.0005472785672236021,
@@ -13,7 +13,7 @@
      "liq0": 81.7837,
      "opened": 1793318429,
      "frac": 0.6666666666666667,
-     "last_mark": 0.0009754450907455236,
+     "last_mark": 0.0008581382267891628,
      "stale": 0,
      "no_route_count": 0,
      "mint": "4HSHFbFiKuMvZW7yGiDTab17B63MzBkkhadFKxhkpump",
@@ -28,16 +28,16 @@
      "entry_cost": 0.5037695672046832,
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "exit_haircut": 0.007272013831097925
+     "exit_haircut": 0.007201340559127091
     },
     "F-20261030T0230-C31uZVUQ": {
      "entry": 0.0005815358494367985,
-     "peak": 0.0008172214917114427,
-     "steps": 1,
+     "peak": 0.001373752870933123,
+     "steps": 2,
      "liq0": 83.9533,
      "opened": 1793327424,
-     "frac": 0.6666666666666667,
-     "last_mark": 0.0008172214917114427,
+     "frac": 0.3333333333333334,
+     "last_mark": 0.001373752870933123,
      "stale": 0,
      "no_route_count": 0,
      "mint": "C31uUcfLGPpQDHHieNtDkSWvp4PhNxeSs81cFQFdZVUQ",
@@ -46,18 +46,18 @@
      "run_id": "20261030T0230",
      "why": "pass",
      "book": "F",
-     "pnl": 0.06477586178157008,
-     "gross_pnl": 0.067546894,
+     "pnl": 0.2879457854021064,
+     "gross_pnl": 0.29459423833356224,
      "entry_haircut": 0.007480107941311944,
      "entry_cost": 0.503750053970656,
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "exit_haircut": 0.006901248252173945
+     "exit_haircut": 0.006647979623985782
     }
    },
    "fills_day": "2026-10-30",
    "fills_today": 8,
-   "realized_pnl": -5.443283187216967,
+   "realized_pnl": -5.220113263596431,
    "closed": [
     {
      "id": "F-20261028T1330-96AUWRAY",
@@ -413,10 +413,10 @@
     }
    ],
    "peak_equity": 10.0,
-   "realized_gross": -2.70754753133324
+   "realized_gross": -2.4805001869996777
   },
   "R": {
-   "cash": 6.063853141683531,
+   "cash": 6.849863621510082,
    "open": {
     "R-20261030T0000-4HSHpump": {
      "entry": 0.0005472785672236021,
@@ -425,7 +425,7 @@
      "liq0": 81.7837,
      "opened": 1793318429,
      "frac": 0.6666666666666667,
-     "last_mark": 0.0009754450907455236,
+     "last_mark": 0.0008581382267891628,
      "stale": 0,
      "no_route_count": 0,
      "mint": "4HSHFbFiKuMvZW7yGiDTab17B63MzBkkhadFKxhkpump",
@@ -440,16 +440,16 @@
      "entry_cost": 0.5037695672046832,
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "exit_haircut": 0.007272013831097925
+     "exit_haircut": 0.007201340559127091
     },
     "R-20261030T0230-C31uZVUQ": {
      "entry": 0.0005815358494367985,
-     "peak": 0.0008131314221444669,
-     "steps": 0,
+     "peak": 0.0013804966013982348,
+     "steps": 2,
      "liq0": 83.9533,
      "opened": 1793327424,
-     "frac": 1.0,
-     "last_mark": 0.0008131314221444669,
+     "frac": 0.3333333333333334,
+     "last_mark": 0.0013804966013982348,
      "stale": 0,
      "no_route_count": 0,
      "mint": "C31uUcfLGPpQDHHieNtDkSWvp4PhNxeSs81cFQFdZVUQ",
@@ -458,18 +458,18 @@
      "run_id": "20261030T0230",
      "why": "random_match",
      "book": "R",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
+     "pnl": 0.4501771105127802,
+     "gross_pnl": 0.45796016,
      "entry_haircut": 0.007480107941311944,
      "entry_cost": 0.503750053970656,
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "exit_haircut": 0.007342722548423418
+     "exit_haircut": 0.006651152260347716
     }
    },
    "fills_day": "2026-10-30",
    "fills_today": 7,
-   "realized_pnl": -3.096550426209364,
+   "realized_pnl": -2.6463733156965836,
    "closed": [
     {
      "id": "R-20261028T1400-Cd5npump",
@@ -767,38 +767,14 @@
    ],
    "would_halt": [],
    "peak_equity": 10.0,
-   "realized_gross": -1.3750479413331025
+   "realized_gross": -0.9170877813331025
   },
   "S": {
-   "cash": 6.3943701889711875,
-   "open": {
-    "S-20261030T0300-FrE4pump": {
-     "entry": 0.0002731443289839701,
-     "peak": 0.0002731443289839701,
-     "steps": 0,
-     "liq0": 59.3964,
-     "opened": 1793329231,
-     "frac": 1.0,
-     "last_mark": 0.0002731443289839701,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "FrE4wkPwzZ5Sxif28oabQD4P5ZbDT7oehBmZLm1Gpump",
-     "symbol": "laptop",
-     "tokens": 1830534069149,
-     "run_id": "20261030T0300",
-     "why": "safety:too_fresh",
-     "book": "S",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
-     "entry_haircut": 0.008086936777502487,
-     "entry_cost": 0.5040534683887512,
-     "cost_model": "v3-exit-aware",
-     "cost_model_started_at": "2026-10-29T00:30:25Z"
-    }
-   },
+   "cash": 6.445082547469068,
+   "open": {},
    "fills_day": "2026-10-30",
    "fills_today": 5,
-   "realized_pnl": -3.101576342640063,
+   "realized_pnl": -3.554917452530934,
    "closed": [
     {
      "id": "S-20261028T1330-5Zjdpump",
@@ -1345,6 +1321,23 @@
      "why_entered": "safety:too_fresh",
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z"
+    },
+    {
+     "id": "S-20261030T0300-FrE4pump",
+     "mint": "FrE4wkPwzZ5Sxif28oabQD4P5ZbDT7oehBmZLm1Gpump",
+     "symbol": "laptop",
+     "opened": 1793329231,
+     "closed": 1793331024,
+     "entry": 0.0002731443289839701,
+     "exit_px": 2.8378609759582458e-05,
+     "why": "liquidity_pulled",
+     "pnl": -0.45334111,
+     "gross_pnl": -0.448051988,
+     "pct": -89.94,
+     "gross_pct": -89.61,
+     "why_entered": "safety:too_fresh",
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z"
     }
    ],
    "would_halt": [
@@ -1356,7 +1349,7 @@
     }
    ],
    "peak_equity": 10.89800187930826,
-   "realized_gross": -2.631043826971569
+   "realized_gross": -3.079095814971569
   }
  },
  "cost_model_started_at": "2026-10-29T00:30:25Z",
