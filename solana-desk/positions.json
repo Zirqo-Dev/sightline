@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793363425,
+ "last_run_ts": 1793365229,
  "voids": [],
  "books": {
   "F": {
@@ -410,7 +410,7 @@
      "liq0": 81.7837,
      "opened": 1793318429,
      "frac": 0.6666666666666667,
-     "last_mark": 0.0009142139233560569,
+     "last_mark": 0.0008922043014246276,
      "stale": 0,
      "no_route_count": 0,
      "mint": "4HSHFbFiKuMvZW7yGiDTab17B63MzBkkhadFKxhkpump",
@@ -425,7 +425,7 @@
      "entry_cost": 0.5037695672046832,
      "cost_model": "v3-exit-aware",
      "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "exit_haircut": 0.007224161646721347
+     "exit_haircut": 0.007226007836930339
     }
    },
    "fills_day": "2026-10-30",
@@ -748,10 +748,57 @@
    "realized_gross": -0.5762801419985888
   },
   "S": {
-   "cash": 4.768698769398046,
-   "open": {},
+   "cash": 3.7609310694255518,
+   "open": {
+    "S-20261030T1300-6GCPpump": {
+     "entry": 0.0024343754286228554,
+     "peak": 0.0024343754286228554,
+     "steps": 0,
+     "liq0": 186.3027,
+     "opened": 1793365229,
+     "frac": 1.0,
+     "last_mark": 0.0024343754286228554,
+     "stale": 0,
+     "no_route_count": 0,
+     "mint": "6GCPmGAvH986ZE9psfHK5viH8haFL1c4KLNGXWiKpump",
+     "symbol": "GTA",
+     "tokens": 205391491436,
+     "run_id": "20261030T1300",
+     "why": "safety:top10_heavy",
+     "book": "S",
+     "pnl": 0.0,
+     "gross_pnl": 0.0,
+     "entry_haircut": 0.006669155210283362,
+     "entry_cost": 0.5033445776051416,
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z"
+    },
+    "S-20261030T1300-6PNqpump": {
+     "entry": 0.00022642385612714786,
+     "peak": 0.00022642385612714786,
+     "steps": 0,
+     "liq0": 43.7283,
+     "opened": 1793365229,
+     "frac": 1.0,
+     "last_mark": 0.00022642385612714786,
+     "stale": 0,
+     "no_route_count": 0,
+     "mint": "6PNq3Dduz73HHFBFt1KYRqDEsgcPQE6BDDRgxAFupump",
+     "symbol": "Jesus",
+     "tokens": 2208247878789,
+     "run_id": "20261030T1300",
+     "why": "safety:too_fresh",
+     "book": "S",
+     "pnl": 0.0,
+     "gross_pnl": 0.0,
+     "entry_haircut": 0.00882624473470606,
+     "entry_cost": 0.504423122367353,
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z"
+    }
+   },
    "fills_day": "2026-10-30",
-   "fills_today": 9,
+   "fills_today": 11,
    "realized_pnl": -5.2313012306019555,
    "closed": [
     {
