@@ -1,6 +1,7 @@
 """tasks.csv, trades.csv, health.json, lock file."""
-import csv, json, os, time, fcntl
-TASK_COLS = ["time","run_id","agent","task","mint","book","result","skip_type","reason","source","check_delay_s","cfg_version","seed","error_src"]  # error_src: APIs that failed (dexscreener/rugcheck/jupiter), ";"-joined
+import calendar, csv, json, os, time, fcntl
+TASK_COLS = ["time","run_id","agent","task","mint","book","result","skip_type","reason","source","check_delay_s","cfg_version","seed","error_src","fail_reason"]  # error_src: APIs that failed (dexscreener/rugcheck/jupiter), ";"-joined. fail_reason: source:code for each failed fetch, ";"-joined. Log only.
+FAIL_SOURCES = ("rugcheck", "jupiter", "dexscreener")
 # pnl stays the net SOL result (sells and partial exits). gross_pnl / net_pnl are appended so
 # older trades.csv files (header is a prefix of this list) keep their pnl cell and gain blank cells.
 # haircut_pct is the haircut on this fill, in percent. entry_haircut_pct / exit_haircut_pct split the two sides.
@@ -23,6 +24,37 @@ def _append(path, cols, row):
 
 def task(d, row): _append(os.path.join(d, "tasks.csv"), TASK_COLS, row)
 def trade(d, row): _append(os.path.join(d, "trades.csv"), TRADE_COLS, row)
+
+def fail_tallies(d, day):
+    """Fetch-failure counts for one UTC day, from tasks.csv fail_reason. Not a decision input."""
+    sources = {k: 0 for k in FAIL_SOURCES}
+    reasons = {}
+    path = os.path.join(d, "tasks.csv")
+    if not os.path.exists(path):
+        return sources, reasons
+    start = calendar.timegm(time.strptime(day, "%Y-%m-%d"))
+    end = start + 86400
+    with open(path, newline="") as f:
+        for row in csv.DictReader(f):
+            try:
+                t = int(float(row.get("time") or ""))
+            except (TypeError, ValueError):
+                continue
+            if t < start or t >= end:
+                continue
+            cell = (row.get("fail_reason") or "").strip()
+            if not cell:
+                continue
+            for part in cell.split(";"):
+                part = part.strip()
+                src, sep, code = part.partition(":")
+                if not sep or src not in sources or not code:
+                    continue
+                if any(c not in "abcdefghijklmnopqrstuvwxyz0123456789" for c in code):
+                    continue
+                sources[src] += 1
+                reasons[part] = reasons.get(part, 0) + 1
+    return sources, {k: reasons[k] for k in sorted(reasons)}
 
 def health(d, runs, expected_runs, checks, errors, data_failures, day=None):
     h = dict(day=day or time.strftime("%Y-%m-%d"), loop_ran=runs > 0, runs=runs, expected_runs=expected_runs,
