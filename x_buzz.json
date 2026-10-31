@@ -4,9 +4,9 @@
  "measured_factor": true,
  "veto": false,
  "buy_signal": false,
- "asof": "2026-10-31T06:33:00Z",
+ "asof": "2026-10-31T08:33:00Z",
  "window": {
-  "h24_start": "2026-10-30T06:00:00Z"
+  "h24_start": "2026-10-30T08:00:00Z"
  },
  "definitions": {
   "bot_like": "account under 30 days old OR under 50 followers",
@@ -18,7 +18,7 @@
  },
  "shortlist_sources": {
   "cardano": "desk-data:solada/log.json -> cardano_top10[] (ticker, policy_short) minus desk-data:solada-prefilter/vetoes.json tokens[] (empty this run)",
-  "solana": "desk-data:solana-desk/tasks.csv rows agent=scanner,task=scan,result=pass for the latest two run_ids 20261031T0600 and 20261031T0630 (mint); 0 pass rows this run"
+  "solana": "desk-data:solana-desk/tasks.csv rows agent=scanner,task=scan,result=pass for the latest two run_ids 20261031T0800 and 20261031T0830 (mint); 0 pass rows this run"
  },
  "x_calls": {
   "counts": 10,
@@ -40,8 +40,6 @@
     0,
     0,
     0,
-    0,
-    0,
     1,
     0,
     0,
@@ -53,6 +51,8 @@
     0,
     0,
     1,
+    0,
+    0,
     0,
     0,
     0,
@@ -81,16 +81,14 @@
    "id_short": "0691b2fecc",
    "query": "NIGHT (cardano OR ADA OR midnight OR minswap) -is:retweet",
    "query_basis": "ticker+context",
-   "mentions_24h": 1214,
-   "mentions_1h": 36,
+   "mentions_24h": 1260,
+   "mentions_1h": 48,
    "hourly_24h": [
-    26,
-    20,
     42,
     43,
     41,
     61,
-    63,
+    62,
     71,
     72,
     72,
@@ -100,26 +98,28 @@
     57,
     43,
     42,
-    45,
+    44,
     57,
     38,
     53,
     63,
     62,
     38,
-    19
+    42,
+    41,
+    30
    ],
    "velocity": {
     "per_5m_sample": 3,
-    "per_1h": 36,
-    "ratio_1h_vs_prev_hr": 0.61
+    "per_1h": 48,
+    "ratio_1h_vs_prev_hr": 0.98
    },
    "sample": {
     "posts": 25,
     "unique_authors": 25,
-    "median_followers": 872,
-    "bot_like_share": 0.2,
-    "authors_over_10k": 1
+    "median_followers": 716,
+    "bot_like_share": 0.28,
+    "authors_over_10k": 4
    },
    "false_positive_risk": "high: raw word NIGHT = 208,826 posts/24h; even with cardano/midnight context, sample had 0 $NIGHT cashtags (mostly Midnight-network chatter, not token talk)",
    "confidence": "low"
@@ -130,11 +130,9 @@
    "id_short": "f13ac4d66b",
    "query": "STRIKE (cardano OR ADA OR minswap OR snekfun) -is:retweet",
    "query_basis": "ticker+context",
-   "mentions_24h": 32,
-   "mentions_1h": 1,
+   "mentions_24h": 29,
+   "mentions_1h": 0,
    "hourly_24h": [
-    1,
-    2,
     0,
     2,
     3,
@@ -156,12 +154,14 @@
     0,
     1,
     2,
-    1
+    1,
+    0,
+    0
    ],
    "velocity": {
     "per_5m_sample": 0,
-    "per_1h": 1,
-    "ratio_1h_vs_prev_hr": 2.0
+    "per_1h": 0,
+    "ratio_1h_vs_prev_hr": 0.0
    },
    "sample": {
     "posts": 25,
@@ -179,11 +179,9 @@
    "id_short": "29d222ce76",
    "query": "MIN (cardano OR ADA OR minswap) -is:retweet",
    "query_basis": "ticker+context",
-   "mentions_24h": 607,
+   "mentions_24h": 568,
    "mentions_1h": 29,
    "hourly_24h": [
-    55,
-    35,
     40,
     23,
     34,
@@ -205,19 +203,21 @@
     28,
     34,
     22,
-    19
+    31,
+    18,
+    21
    ],
    "velocity": {
-    "per_5m_sample": 1,
+    "per_5m_sample": 6,
     "per_1h": 29,
-    "ratio_1h_vs_prev_hr": 0.65
+    "ratio_1h_vs_prev_hr": 0.58
    },
    "sample": {
     "posts": 25,
-    "unique_authors": 21,
-    "median_followers": 409,
-    "bot_like_share": 0.29,
-    "authors_over_10k": 3
+    "unique_authors": 22,
+    "median_followers": 31.0,
+    "bot_like_share": 0.59,
+    "authors_over_10k": 1
    },
    "false_positive_risk": "high: raw MIN = 57,326/24h; context-filtered 649 still dominated by 'min' as minutes/minimum, 0 $MIN cashtags in sample",
    "confidence": "low"
@@ -228,11 +228,9 @@
    "id_short": "279c909f34",
    "query": "SNEK (cardano OR ADA OR minswap OR snekfun) -is:retweet",
    "query_basis": "ticker+context",
-   "mentions_24h": 37,
+   "mentions_24h": 35,
    "mentions_1h": 1,
    "hourly_24h": [
-    1,
-    2,
     0,
     1,
     1,
@@ -254,17 +252,19 @@
     1,
     1,
     1,
+    1,
+    0,
     1
    ],
    "velocity": {
     "per_5m_sample": 0,
     "per_1h": 1,
-    "ratio_1h_vs_prev_hr": 1.0
+    "ratio_1h_vs_prev_hr": 0.0
    },
    "sample": {
     "posts": 25,
     "unique_authors": 20,
-    "median_followers": 163.5,
+    "median_followers": 164.0,
     "bot_like_share": 0.3,
     "authors_over_10k": 0
    },
@@ -337,8 +337,6 @@
     0,
     0,
     0,
-    0,
-    0,
     1,
     0,
     0,
@@ -346,6 +344,8 @@
     0,
     0,
     1,
+    0,
+    0,
     0,
     0,
     0,
@@ -377,10 +377,8 @@
    "query": "COCK (cardano OR ADA OR minswap OR snekfun) -is:retweet",
    "query_basis": "ticker+context",
    "mentions_24h": 6,
-   "mentions_1h": 3,
+   "mentions_1h": 0,
    "hourly_24h": [
-    0,
-    0,
     0,
     0,
     0,
@@ -402,17 +400,19 @@
     0,
     0,
     3,
+    0,
+    0,
     0
    ],
    "velocity": {
     "per_5m_sample": 0,
-    "per_1h": 3,
+    "per_1h": 0,
     "ratio_1h_vs_prev_hr": null
    },
    "sample": {
     "posts": 5,
     "unique_authors": 5,
-    "median_followers": 20677,
+    "median_followers": 20679,
     "bot_like_share": 0.2,
     "authors_over_10k": 3
    },
@@ -425,11 +425,9 @@
    "id_short": "e7c77b2784",
    "query": "SOLADA -is:retweet",
    "query_basis": "ticker+context",
-   "mentions_24h": 54,
-   "mentions_1h": 0,
+   "mentions_24h": 52,
+   "mentions_1h": 1,
    "hourly_24h": [
-    1,
-    2,
     0,
     1,
     2,
@@ -451,17 +449,19 @@
     1,
     1,
     2,
-    0
+    0,
+    0,
+    1
    ],
    "velocity": {
     "per_5m_sample": 0,
-    "per_1h": 0,
-    "ratio_1h_vs_prev_hr": 2.0
+    "per_1h": 1,
+    "ratio_1h_vs_prev_hr": null
    },
    "sample": {
     "posts": 25,
     "unique_authors": 18,
-    "median_followers": 111.0,
+    "median_followers": 111.5,
     "bot_like_share": 0.39,
     "authors_over_10k": 0
    },
@@ -474,14 +474,12 @@
    "id_short": "c1b89ed48d",
    "query": "CLOVE (cardano OR ADA OR minswap OR snekfun) -is:retweet",
    "query_basis": "ticker+context",
-   "mentions_24h": 5,
-   "mentions_1h": 0,
+   "mentions_24h": 6,
+   "mentions_1h": 1,
    "hourly_24h": [
     0,
     0,
     0,
-    0,
-    0,
     1,
     1,
     0,
@@ -500,17 +498,19 @@
     0,
     0,
     0,
+    0,
+    1,
     0
    ],
    "velocity": {
     "per_5m_sample": 0,
-    "per_1h": 0,
+    "per_1h": 1,
     "ratio_1h_vs_prev_hr": null
    },
    "sample": {
-    "posts": 5,
-    "unique_authors": 2,
-    "median_followers": 1844.0,
+    "posts": 6,
+    "unique_authors": 3,
+    "median_followers": 298,
     "bot_like_share": 0.0,
     "authors_over_10k": 0
    },
