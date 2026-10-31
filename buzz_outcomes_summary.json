@@ -1,5 +1,5 @@
 {
-  "asof": "2026-10-31T18:37:13Z",
+  "asof": "2026-10-31T20:34:13Z",
   "buy_signal": false,
   "definitions": {
     "adverse": "later veto, rug, kill, or lp_pull is true. A null flag means that file or time was missing.",
@@ -33,12 +33,12 @@
       "up_24h_reason": "small_sample"
     },
     {
-      "adverse_rate": 0.0556,
+      "adverse_rate": 0.0526,
       "adverse_reason": null,
       "by": "author_pattern",
-      "n": 36,
+      "n": 38,
       "n_adverse": 2,
-      "n_adverse_known": 36,
+      "n_adverse_known": 38,
       "n_h24_priced": 12,
       "n_h24_up": 0,
       "pattern": "many_authors",
@@ -50,9 +50,9 @@
       "adverse_rate": null,
       "adverse_reason": "small_sample",
       "by": "author_pattern",
-      "n": 1,
+      "n": 2,
       "n_adverse": 0,
-      "n_adverse_known": 1,
+      "n_adverse_known": 2,
       "n_h24_priced": 0,
       "n_h24_up": 0,
       "pattern": "mixed",
@@ -64,9 +64,9 @@
       "adverse_rate": null,
       "adverse_reason": "small_sample",
       "by": "spike_kind",
-      "n": 5,
+      "n": 6,
       "n_adverse": 1,
-      "n_adverse_known": 5,
+      "n_adverse_known": 6,
       "n_h24_priced": 3,
       "n_h24_up": 0,
       "pattern": "ratio",
@@ -75,12 +75,12 @@
       "up_24h_reason": "small_sample"
     },
     {
-      "adverse_rate": 0.0286,
+      "adverse_rate": 0.027,
       "adverse_reason": null,
       "by": "spike_kind",
-      "n": 35,
+      "n": 37,
       "n_adverse": 1,
-      "n_adverse_known": 35,
+      "n_adverse_known": 37,
       "n_h24_priced": 11,
       "n_h24_up": 0,
       "pattern": "zero_start",
@@ -89,12 +89,12 @@
       "up_24h_reason": null
     },
     {
-      "adverse_rate": 0.05,
+      "adverse_rate": 0.0465,
       "adverse_reason": null,
       "by": "chain",
-      "n": 40,
+      "n": 43,
       "n_adverse": 2,
-      "n_adverse_known": 40,
+      "n_adverse_known": 43,
       "n_h24_priced": 14,
       "n_h24_up": 0,
       "pattern": "solana",
@@ -120,9 +120,9 @@
       "adverse_rate": null,
       "adverse_reason": "small_sample",
       "by": "combined",
-      "n": 1,
+      "n": 2,
       "n_adverse": 0,
-      "n_adverse_known": 1,
+      "n_adverse_known": 2,
       "n_h24_priced": 0,
       "n_h24_up": 0,
       "pattern": "solana|ratio|mixed",
@@ -145,12 +145,12 @@
       "up_24h_reason": "small_sample"
     },
     {
-      "adverse_rate": 0.0312,
+      "adverse_rate": 0.0294,
       "adverse_reason": null,
       "by": "combined",
-      "n": 32,
+      "n": 34,
       "n_adverse": 1,
-      "n_adverse_known": 32,
+      "n_adverse_known": 34,
       "n_h24_priced": 9,
       "n_h24_up": 0,
       "pattern": "solana|zero_start|many_authors",
@@ -165,9 +165,9 @@
   "note": "Research tally only. Not a buy signal and not a veto.",
   "schema_version": 1,
   "totals": {
-    "events": 40,
+    "events": 43,
     "excluded": 0,
-    "scored": 40
+    "scored": 43
   },
   "up_pct": 20.0,
   "veto": false
