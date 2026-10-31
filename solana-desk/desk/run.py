@@ -64,6 +64,38 @@ def quote(get, mint, key, sleep=time.sleep, input_mint=SOL, amount=None):
             raise
 
 ERR_NAMES = {"dex": "dexscreener", "rug": "rugcheck", "jup": "jupiter"}
+
+def fetch_fail_code(exc):
+    """Short token for one failed fetch. Log only: skips.classify does not read it.
+
+    429, 5xx, timeout, conn, parse. Any other HTTP status is its number.
+    Anything else is error. The exception text is not kept.
+    """
+    if isinstance(exc, urllib.error.HTTPError):
+        code = getattr(exc, "code", None)
+        if code == 429:
+            return "429"
+        if isinstance(code, int) and 500 <= code <= 599:
+            return "5xx"
+        if isinstance(code, int):
+            return str(code)
+        return "http"
+    if isinstance(exc, TimeoutError):
+        return "timeout"
+    if isinstance(exc, urllib.error.URLError):
+        if isinstance(getattr(exc, "reason", None), TimeoutError):
+            return "timeout"
+        return "conn"
+    if isinstance(exc, (json.JSONDecodeError, UnicodeError)):
+        return "parse"
+    if isinstance(exc, (ConnectionError, OSError)):
+        return "conn"
+    return "error"
+
+def _fail_reason(label, exc):
+    return f"{ERR_NAMES[label]}:{fetch_fail_code(exc)}"
+
+
 WOULD_NAME = "rugger_would_veto.json"
 WOULD_NOTE = (
     "Log only. A known rugger or a wallet they funded would have been vetoed. "
@@ -305,13 +337,13 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
     for i, mint in enumerate(m for m, _ in ls):
         src = ls[i][1]
         if i: sleep(QUOTE_GAP_S)  # pace Jupiter (and RugCheck) instead of bursting 12 calls
-        t0 = time.time(); errs = set()
+        t0 = time.time(); errs = set(); reasons = []
         try: pair = best_pair(get, mint)
-        except Exception: pair = None; errs.add("dex")
+        except Exception as e: pair = None; errs.add("dex"); reasons.append(_fail_reason("dex", e))
         try: rc = get(RUG.format(mint))
-        except Exception: rc = None; errs.add("rug")
+        except Exception as e: rc = None; errs.add("rug"); reasons.append(_fail_reason("rug", e))
         try: q = quote(get, mint, key, sleep)
-        except Exception: q = None; errs.add("jup")
+        except Exception as e: q = None; errs.add("jup"); reasons.append(_fail_reason("jup", e))
         stype, reason = skips.classify(pair, rc, q, now, errs)
         err = bool(errs)
         st["checks"] += 1; st["errors"] += int(err); st["data_failures"] += int(stype == "data")
@@ -320,7 +352,8 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
         ledger.task(data_dir, dict(time=int(now), run_id=run_id, agent="scanner", task="scan", mint=mint, book="",
                     result="pass" if stype is None else "skip", skip_type=stype or "", reason=reason or "",
                     source=src, check_delay_s=round(time.time() - t0, 2), cfg_version=C.CFG_VERSION, seed=seed,
-                    error_src=";".join(sorted(ERR_NAMES[e] for e in errs))))
+                    error_src=";".join(sorted(ERR_NAMES[e] for e in errs)),
+                    fail_reason=";".join(sorted(reasons))))
         # Log-only. stype, reason, and run_leads are already fixed. Fills do not read this.
         # The 5s budget is time inside this hook only. Quote pacing and HTTP are not counted.
         hook_t0 = time.monotonic()
@@ -376,6 +409,10 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
             h["rugger_status"] = book.status()
         except Exception:
             h["rugger_status"] = {"store": "miss", "entries": 0, "edges": 0}
+    # Counts of fetch failures today. data_failure_rate / void_day stay on st["data_failures"].
+    src_counts, reason_counts = ledger.fail_tallies(data_dir, day)
+    h["data_fail_by_source"] = src_counts
+    h["data_fail_by_reason"] = reason_counts
     with open(os.path.join(data_dir, "health.json"), "w") as f: json.dump(h, f, indent=1)
     # Cron slot vs the start of this call. A write failure leaves the scan result in place.
     try:

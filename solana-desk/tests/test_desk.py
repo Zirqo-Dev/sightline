@@ -168,10 +168,11 @@ class ErrorSource(unittest.TestCase):
         import csv, os
         from desk import ledger
         d = tempfile.mkdtemp(); p = os.path.join(d, "tasks.csv")
-        old = ledger.TASK_COLS[:-1]
+        old = [c for c in ledger.TASK_COLS if c not in ("error_src", "fail_reason")]
         with open(p, "w", newline="") as f:
             w = csv.writer(f); w.writerow(old); w.writerow(["1"] * len(old))
-        ledger.task(d, dict(time=2, result="skip", error_src="rugcheck"))
+        ledger.task(d, dict(time=2, result="skip", error_src="rugcheck", fail_reason="rugcheck:429"))
         rows = list(csv.DictReader(open(p)))
         self.assertEqual(list(rows[0].keys()), ledger.TASK_COLS)
-        self.assertEqual(rows[0]["error_src"], ""); self.assertEqual(rows[1]["error_src"], "rugcheck")
+        self.assertEqual(rows[0]["error_src"], ""); self.assertEqual(rows[0]["fail_reason"], "")
+        self.assertEqual(rows[1]["error_src"], "rugcheck"); self.assertEqual(rows[1]["fail_reason"], "rugcheck:429")

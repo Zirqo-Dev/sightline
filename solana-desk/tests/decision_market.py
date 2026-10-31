@@ -199,25 +199,34 @@ def _strip(node, keys):
     return node
 
 
+# Logging only. The golden file is the decision record; these keys are not inputs.
+_TASK_LOG = {"check_delay_s", "fail_reason"}
+_HEALTH_LOG = ("data_fail_by_source", "data_fail_by_reason")
+
+
 def _rows(data_dir, name):
     path = os.path.join(data_dir, name)
+    drop = _TASK_LOG if name == "tasks.csv" else {"check_delay_s"}
     with open(path, newline="") as fh:
-        return [{k: v for k, v in row.items() if k != "check_delay_s"} for row in csv.DictReader(fh)]
+        return [{k: v for k, v in row.items() if k not in drop} for row in csv.DictReader(fh)]
 
 
 def snapshot(data_dir, calls, strip_keys):
-    """Decision view. Log-only position keys and check_delay_s are removed."""
+    """Decision view. Log-only position keys, check_delay_s, and fetch-failure logs are removed."""
     keys = set(strip_keys)
     def load(name):
         with open(os.path.join(data_dir, name)) as fh:
             return json.load(fh)
+    health = load("health.json")
+    for k in _HEALTH_LOG:
+        health.pop(k, None)
     return {
         "positions": _strip(load("positions.json"), keys),
         "paper": _strip(load("paper.json"), keys),
         "trades": _rows(data_dir, "trades.csv"),
         "tasks": _rows(data_dir, "tasks.csv"),
         "state": load("state.json"),
-        "health": load("health.json"),
+        "health": health,
         "calls": list(calls),
     }
 

@@ -70,6 +70,8 @@ There is no LP-pull or dump event feed; `lp_unlocked` stays a per-token safety s
 ## Logging only
 These fields are records. Skips, book selection, the exit rule, ticket size, and the fill price stay on the frozen v6.5 rules. The fill the book uses is still the Jupiter quote it already requested. A failure in this layer stores null and a short error code and the scan continues.
 
+A failed DexScreener, RugCheck, or Jupiter fetch on a lead writes `fail_reason` on that `tasks.csv` row. The token is `source:code`, and several failures on one lead are joined with `;`. `code` is `429`, `5xx`, `timeout`, `conn`, or `parse`. Any other HTTP status is its number. Anything else is `error`. The exception text is not stored. `health.json` adds `data_fail_by_source` and `data_fail_by_reason` for the UTC day (how many of those fetches failed). `data_failure_rate` and `void_day` stay the share of checks whose skip type is data. Skips, books, exits, and the v6.5 freeze do not read `fail_reason`. A Jupiter 429 or 5xx still gets the one existing retry; a retry that returns a quote is not a failure.
+
 No extra HTTP call. Reserves and migration come from the DexScreener pair already loaded for the lead (entry) and for the open-position liquidity check (each later scan and the exit). The quote fields are that same Jupiter quote: the buy for the 0.5 SOL ticket at entry, and the sell for the tokens still held at exit. Scan timing is the local clock.
 
 On the position, and kept on the closed row:
