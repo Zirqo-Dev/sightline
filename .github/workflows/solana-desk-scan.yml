@@ -26,7 +26,11 @@ concurrency:
 jobs:
   scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 11
+    # Issue writes are only for the data-health alert. Actions cannot scope a token to one step.
+    permissions:
+      contents: write
+      issues: write
     steps:
       - name: Check out main (code)
         uses: actions/checkout@v4
@@ -106,3 +110,13 @@ jobs:
         with:
           path: ${{ runner.temp }}/solana-desk-cache
           key: solana-desk-rugger-${{ github.run_id }}
+      - name: Data health alert
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 "$GITHUB_WORKSPACE/code/scripts/data_health_alert.py" \
+            --data-dir "$GITHUB_WORKSPACE/data/solana-desk" \
+            || echo "::warning::data health alert did not finish"
