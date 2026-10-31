@@ -1,5 +1,5 @@
 {
- "at": "2026-10-31T20:15:29Z",
+ "at": "2026-10-31T22:15:04Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -256,10 +256,9 @@
    "policy_short": "eb7a93eb",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~c9d8143f",
-   "reserve_ada": 1141585.21,
-   "reserve_qty": 870258939850,
-   "asof": "2026-10-28T16:12:04Z",
-   "stale": true
+   "reserve_ada": 1109571.85,
+   "reserve_qty": 899060950720,
+   "asof": "2026-10-31T22:12:24Z"
   },
   {
    "ticker": "CLOVE",
@@ -267,10 +266,9 @@
    "policy_short": "c1b89ed4",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~511d5cf7",
-   "reserve_ada": 25000.69,
-   "reserve_qty": 103393222478245,
-   "asof": "2026-10-31T11:39:16Z",
-   "stale": true
+   "reserve_ada": 26091.96,
+   "reserve_qty": 90161304948434,
+   "asof": "2026-10-29T03:54:45Z"
   },
   {
    "ticker": "COCK",
@@ -280,7 +278,8 @@
    "pool_key": "minswap_v2~71183c8b",
    "reserve_ada": 162914.21,
    "reserve_qty": 28891129,
-   "asof": "2026-10-29T01:17:24Z"
+   "asof": "2026-10-29T01:17:24Z",
+   "stale": true
   },
   {
    "ticker": "IAG",
@@ -332,10 +331,9 @@
    "policy_short": "e7c77b27",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~d494ef2a",
-   "reserve_ada": 4470.24,
-   "reserve_qty": 2609167,
-   "asof": "2026-10-29T09:59:25Z",
-   "stale": true
+   "reserve_ada": 4479.84,
+   "reserve_qty": 2623801,
+   "asof": "2026-10-31T22:11:09Z"
   },
   {
    "ticker": "STRIKE",
@@ -345,7 +343,8 @@
    "pool_key": "minswap_v2~b4f379d0",
    "reserve_ada": 1211513.53,
    "reserve_qty": 548629040544,
-   "asof": "2026-10-29T21:27:58Z"
+   "asof": "2026-10-29T21:27:58Z",
+   "stale": true
   },
   {
    "ticker": "STRIKE",
@@ -355,7 +354,8 @@
    "pool_key": "sundaeswap_v3~968b2e79",
    "reserve_ada": 661587.4,
    "reserve_qty": 301954042679,
-   "asof": "2026-10-30T21:02:47Z"
+   "asof": "2026-10-30T21:02:47Z",
+   "stale": true
   }
  ],
  "tokens": [
@@ -364,7 +364,7 @@
    "policy_short": "eb7a93eb",
    "rank": 1,
    "unit_source": "cache",
-   "last_checked": "2026-10-31T12:15:28Z"
+   "last_checked": "2026-10-31T22:15:04Z"
   },
   {
    "ticker": "NIGHT",
@@ -413,14 +413,14 @@
    "policy_short": "e7c77b27",
    "rank": 9,
    "unit_source": "listed",
-   "last_checked": "2026-10-31T12:15:28Z"
+   "last_checked": "2026-10-31T22:15:04Z"
   },
   {
    "ticker": "CLOVE",
    "policy_short": "c1b89ed4",
    "rank": 10,
    "unit_source": "listed",
-   "last_checked": "2026-10-31T12:15:28Z"
+   "last_checked": "2026-10-31T22:15:04Z"
   }
  ],
  "skipped": [
@@ -430,35 +430,20 @@
   }
  ],
  "coverage": {
-  "STRIKE": {
-   "read": 30,
-   "complete": false,
-   "pools": 2
-  },
-  "COCK": {
-   "read": 15,
+  "ASCEND": {
+   "read": 27,
    "complete": false,
    "pools": 1
   },
-  "MIN": {
-   "read": 0,
-   "complete": false,
-   "pools": 0
-  },
-  "ASCEND": {
-   "read": 0,
-   "complete": false,
-   "skipped": "budget"
-  },
   "SOLADA": {
-   "read": 0,
+   "read": 27,
    "complete": false,
-   "skipped": "budget"
+   "pools": 1
   },
   "CLOVE": {
-   "read": 0,
+   "read": 15,
    "complete": false,
-   "skipped": "budget"
+   "pools": 1
   },
   "SNEK": {
    "read": 0,
@@ -474,20 +459,35 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "STRIKE": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
+  },
+  "MIN": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
+  },
+  "COCK": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "STRIKE",
-  "COCK",
-  "MIN",
   "ASCEND",
   "SOLADA",
   "CLOVE",
   "SNEK",
   "NIGHT",
-  "IAG"
+  "IAG",
+  "STRIKE",
+  "MIN",
+  "COCK"
  ],
- "koios_calls": 10,
+ "koios_calls": 14,
  "blockfrost_calls": 0,
  "blockfrost_fallbacks": 0,
  "blockfrost_available": true,
