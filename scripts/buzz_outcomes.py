@@ -13,6 +13,14 @@ buzz_outcomes.jsonl is rewritten each run: one line per spike, sorted, latest st
 A second run with the same inputs and the same --now leaves the file unchanged. Filled
 price checkpoints are never replaced. Pending checkpoints stay pending until their window
 opens. A window that closes with no observation is missed, and the field stays null.
+The next run still scores every spike whose window is open, including windows
+that opened while an earlier run failed. Existing outcome lines stay.
+x_buzz_history.jsonl is only read.
+
+Solana desk position and trade times may be ISO 8601 or unix epoch seconds
+(an int, a float, or a numeric string). A value above 1e12 is milliseconds.
+A row with any other time is skipped with a warning. The rest of the run
+still writes.
 
 Spike (a history line):
   (ratio_1h_vs_prev_hr >= 3 and mentions_1h >= 20)
@@ -70,21 +78,82 @@ FORBIDDEN_KEYS = frozenset({
 })
 
 
+# A desk row whose time is neither ISO nor an epoch. Callers skip that row.
+_BAD_TIME = object()
+
+
 def parse_time(value):
-    """UTC seconds. Accepts a Zulu or offset timestamp, or a unix number. None if blank."""
+    """UTC seconds for one timezone-aware UTC instant, or None if blank.
+
+    ISO 8601 (trailing Z or a numeric offset; a naive value is UTC) and unix
+    epoch seconds as an int, a float, or a numeric string. An epoch above
+    1e12 is milliseconds. None, False, and a blank string return None.
+    Any other value raises ValueError.
+    """
     if value is None or value is False:
         return None
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
-        return float(value)
-    text = str(value).strip()
-    if not text:
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        number = _epoch_literal(text)
+        if number is not None:
+            return _epoch_to_utc_seconds(number)
+        return _iso_to_utc_seconds(text)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"Invalid isoformat string: {value!r}")
+    return _epoch_to_utc_seconds(float(value))
+
+
+def _epoch_literal(text):
+    """A finite float when text is an epoch. None when it is not, so ISO can run.
+
+    A digit-only calendar date such as YYYYMMDD is left for ISO parsing.
+    """
+    try:
+        number = float(text)
+    except ValueError:
         return None
-    if text.endswith("Z"):
-        text = text[:-1] + "+00:00"
-    dt = datetime.fromisoformat(text)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.timestamp()
+    if number != number or number in (float("inf"), float("-inf")):
+        return None
+    digits = text.lstrip("+-")
+    if "." not in text and "e" not in text.lower() and digits.isdigit():
+        try:
+            datetime.fromisoformat(text)
+        except ValueError:
+            return number
+        return None
+    return number
+
+
+def _epoch_to_utc_seconds(number):
+    if number != number or number in (float("inf"), float("-inf")):
+        raise ValueError(f"Invalid epoch: {number!r}")
+    seconds = number / 1000.0 if number > 1e12 else float(number)
+    try:
+        instant = datetime.fromtimestamp(seconds, timezone.utc)
+    except (OverflowError, OSError, ValueError) as exc:
+        raise ValueError(f"Invalid epoch: {number!r}") from exc
+    return instant.timestamp()
+
+
+def _iso_to_utc_seconds(text):
+    raw = text[:-1] + "+00:00" if text.endswith("Z") else text
+    instant = datetime.fromisoformat(raw)
+    if instant.tzinfo is None:
+        instant = instant.replace(tzinfo=timezone.utc)
+    else:
+        instant = instant.astimezone(timezone.utc)
+    return instant.timestamp()
+
+
+def _record_time(value, where):
+    """parse_time for one desk or market row. A bad value is logged and skipped."""
+    try:
+        return parse_time(value)
+    except ValueError as exc:
+        sys.stderr.write(f"buzz_outcomes: skip {where}: unreadable time {value!r}: {exc}\n")
+        return _BAD_TIME
 
 
 def iso(ts):
@@ -457,14 +526,20 @@ def _oldest_created(pairs):
     for pair in pairs:
         if not isinstance(pair, dict):
             continue
-        ts = pair.get("pairCreatedAt")
-        if isinstance(ts, bool) or not isinstance(ts, (int, float)):
-            continue
-        if ts > 10 ** 12:
-            ts = ts / 1000.0
-        if ts > 0:
-            found.append(float(ts))
+        ts = _created_seconds(pair.get("pairCreatedAt"), "pairCreatedAt")
+        if ts is not None:
+            found.append(ts)
     return min(found) if found else None
+
+
+def _created_seconds(raw, where):
+    """UTC seconds from a pair or pool creation stamp. None when unusable."""
+    if raw is None or raw is False or raw == "":
+        return None
+    ts = _record_time(raw, where)
+    if ts is _BAD_TIME or not isinstance(ts, (int, float)) or ts <= 0:
+        return None
+    return ts
 
 
 def _market(price, liquidity, unit, source, created, reason):
@@ -520,7 +595,7 @@ def _gt_created(pools):
     found = []
     for pool in pools:
         raw = ((pool.get("attributes") or {}).get("pool_created_at")) if isinstance(pool, dict) else None
-        ts = parse_time(raw) if isinstance(raw, str) else None
+        ts = _created_seconds(raw, "pool_created_at")
         if ts:
             found.append(ts)
     return min(found) if found else None
@@ -905,8 +980,8 @@ class Desk:
         row = self.kills.get(str(event["ticker"]).upper())
         if not row or row.get("hit") is not True:
             return False
-        hit_at = parse_time(row.get("first_hit_at"))
-        if hit_at is None:
+        hit_at = _record_time(row.get("first_hit_at"), "kill first_hit_at")
+        if hit_at is _BAD_TIME or hit_at is None:
             reasons.append("kill: hit has no first_hit_at")
             return None
         return hit_at >= parse_time(event["asof"])
@@ -926,7 +1001,9 @@ class Desk:
             for trade in self.trades:
                 if trade.get("why") != "liquidity_pulled" or trade.get("mint") != tid:
                     continue
-                when = parse_time(trade.get("time"))
+                when = _record_time(trade.get("time"), "trade")
+                if when is _BAD_TIME:
+                    continue
                 if when is None:
                     untimed = True
                 elif when >= spike:
@@ -939,7 +1016,9 @@ class Desk:
                 pull = move.get("kind") == "lp_remove" or move.get("ahead_of_dump") is True
                 if not pull or not _cardano_match(event, move.get("ticker"), move.get("policy_short")):
                     continue
-                when = parse_time(move.get("time"))
+                when = _record_time(move.get("time"), "liquidity move")
+                if when is _BAD_TIME:
+                    continue
                 if when is None:
                     untimed = True
                 elif when >= spike:
@@ -1001,11 +1080,14 @@ def _paper_rows(doc):
         for ticket in bucket:
             if not isinstance(ticket, dict):
                 continue
+            opened = _record_time(ticket.get("opened_at") or ticket.get("opened"), "paper ticket")
+            if opened is _BAD_TIME:
+                continue
             rows.append({
                 "ticker": ticket.get("ticker") or ticket.get("symbol"),
                 "mint": ticket.get("mint"),
                 "unit": ticket.get("asset_id") or ticket.get("unit"),
-                "opened": parse_time(ticket.get("opened_at") or ticket.get("opened")),
+                "opened": opened,
                 "open": (ticket.get("status") or status_name) == "open",
             })
     books = doc.get("books")
@@ -1017,20 +1099,26 @@ def _paper_rows(doc):
             closed = book.get("closed") if isinstance(book.get("closed"), list) else []
             for pos in open_map.values():
                 if isinstance(pos, dict):
+                    opened = _record_time(pos.get("opened") or pos.get("opened_at"), "position")
+                    if opened is _BAD_TIME:
+                        continue
                     rows.append({
                         "ticker": pos.get("symbol") or pos.get("ticker"),
                         "mint": pos.get("mint"),
                         "unit": pos.get("asset_id"),
-                        "opened": parse_time(pos.get("opened") or pos.get("opened_at")),
+                        "opened": opened,
                         "open": True,
                     })
             for pos in closed:
                 if isinstance(pos, dict):
+                    opened = _record_time(pos.get("opened") or pos.get("opened_at"), "position")
+                    if opened is _BAD_TIME:
+                        continue
                     rows.append({
                         "ticker": pos.get("symbol") or pos.get("ticker"),
                         "mint": pos.get("mint"),
                         "unit": pos.get("asset_id"),
-                        "opened": parse_time(pos.get("opened") or pos.get("opened_at")),
+                        "opened": opened,
                         "open": False,
                     })
     return rows
