@@ -1,5 +1,5 @@
 {
- "at": "2026-10-31T14:15:54Z",
+ "at": "2026-10-31T16:16:07Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -29,22 +29,66 @@
  "actor_tags": true,
  "moves": [
   {
-   "time": "2026-10-28T14:23:28Z",
-   "tx_short": "b0e9c305bb",
+   "time": "2026-10-28T16:33:00Z",
+   "tx_short": "4abaa46325",
    "kind": "swap",
-   "ticker": "ASCEND",
-   "token": "ASCEND",
-   "policy_short": "eb7a93eb",
+   "ticker": "NIGHT",
+   "token": "NIGHT",
+   "policy_short": "0691b2fe",
    "dex": "minswap_v2",
-   "pool_key": "minswap_v2~c9d8143f",
-   "direction": "sell",
-   "ada": 14101.84,
+   "pool_key": "minswap_v2~8d92b947",
+   "direction": "buy",
+   "ada": 19000.0,
    "ada_basis": "ada_leg",
-   "qty": 10727767201,
+   "qty": 94688807057,
    "qty_basis": "raw",
-   "reserve_ada_after": 1141436.21,
+   "reserve_ada_after": 3817578.46,
    "lp": false,
    "actor_tag": null,
+   "ahead_of_dump": false,
+   "dump_tx_short": null,
+   "dump_ada": null,
+   "level": "pool"
+  },
+  {
+   "time": "2026-10-28T16:33:24Z",
+   "tx_short": "4107f41bd2",
+   "kind": "swap",
+   "ticker": "NIGHT",
+   "token": "NIGHT",
+   "policy_short": "0691b2fe",
+   "dex": "minswap_v2",
+   "pool_key": "minswap_v2~8d92b947",
+   "direction": "sell",
+   "ada": 11491.93,
+   "ada_basis": "ada_leg",
+   "qty": 57503235357,
+   "qty_basis": "raw",
+   "reserve_ada_after": 3806086.53,
+   "lp": false,
+   "actor_tag": null,
+   "ahead_of_dump": false,
+   "dump_tx_short": null,
+   "dump_ada": null,
+   "level": "pool"
+  },
+  {
+   "time": "2026-10-28T19:49:38Z",
+   "tx_short": "6289a37c1a",
+   "kind": "lp_add",
+   "ticker": "NIGHT",
+   "token": "NIGHT",
+   "policy_short": "0691b2fe",
+   "dex": "sundaeswap_v3",
+   "pool_key": "sundaeswap_v3~72c38cd2",
+   "direction": null,
+   "ada": 19907.11,
+   "ada_basis": "ada_leg",
+   "qty": 99411976551,
+   "qty_basis": "raw",
+   "reserve_ada_after": 479791.41,
+   "lp": false,
+   "actor_tag": "w-120c15ea",
    "ahead_of_dump": false,
    "dump_tx_short": null,
    "dump_ada": null,
@@ -300,10 +344,9 @@
    "policy_short": "0691b2fe",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~8d92b947",
-   "reserve_ada": 3635781.02,
-   "reserve_qty": 17635248041653,
-   "asof": "2026-10-31T06:12:25Z",
-   "stale": true
+   "reserve_ada": 3805944.89,
+   "reserve_qty": 19045804576660,
+   "asof": "2026-10-28T16:37:42Z"
   },
   {
    "ticker": "NIGHT",
@@ -311,10 +354,9 @@
    "policy_short": "0691b2fe",
    "dex": "sundaeswap_v3",
    "pool_key": "sundaeswap_v3~72c38cd2",
-   "reserve_ada": 458254.22,
-   "reserve_qty": 2169913275590,
-   "asof": "2026-10-31T06:13:51Z",
-   "stale": true
+   "reserve_ada": 480312.38,
+   "reserve_qty": 2340120275221,
+   "asof": "2026-10-28T20:46:05Z"
   },
   {
    "ticker": "SNEK",
@@ -374,7 +416,7 @@
    "policy_short": "0691b2fe",
    "rank": 2,
    "unit_source": "cache",
-   "last_checked": "2026-10-31T06:13:49Z"
+   "last_checked": "2026-10-31T16:16:07Z"
   },
   {
    "ticker": "STRIKE",
@@ -433,20 +475,15 @@
   }
  ],
  "coverage": {
-  "SNEK": {
-   "read": 0,
-   "complete": false,
-   "pools": 0
-  },
   "NIGHT": {
-   "read": 0,
+   "read": 30,
    "complete": false,
-   "skipped": "budget"
+   "pools": 2
   },
   "IAG": {
    "read": 0,
    "complete": false,
-   "skipped": "budget"
+   "pools": 0
   },
   "STRIKE": {
    "read": 0,
@@ -477,10 +514,14 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "SNEK": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "SNEK",
   "NIGHT",
   "IAG",
   "STRIKE",
@@ -488,9 +529,10 @@
   "MIN",
   "ASCEND",
   "SOLADA",
-  "CLOVE"
+  "CLOVE",
+  "SNEK"
  ],
- "koios_calls": 4,
+ "koios_calls": 7,
  "blockfrost_calls": 0,
  "blockfrost_fallbacks": 0,
  "blockfrost_available": true,

@@ -1,11 +1,11 @@
 {
- "at": "2026-10-31T14:13:01Z",
+ "at": "2026-10-31T16:13:07Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14137991,
+ "height": 14140241,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 916.514765,
+ "ada_balance": 891.032514,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 341175761926,
@@ -102,7 +102,7 @@
   "TRUMP": 2094958,
   "USDCx": 1543388,
   "USDM": 172487,
-  "VAL": 82581604,
+  "VAL": 82685879,
   "VAMP": 65127836716455,
   "Viperions_2558": 1,
   "WJB": 110000000,
@@ -218,7 +218,7 @@
   "TRUMP": 2094958,
   "USDCx": 1543388,
   "USDM": 172487,
-  "VAL": 82581604,
+  "VAL": 82685879,
   "VAMP": 65127836716455,
   "Viperions_2558": 1,
   "WJB": 110000000,
@@ -717,7 +717,7 @@
   {
    "token": "VAL",
    "policy": "74aee0dc",
-   "qty": 82581604
+   "qty": 82685879
   },
   {
    "token": "VAMP",
@@ -19911,6 +19911,24 @@
    "order_ref_short": "7160223c6c#0",
    "order_status": "filled",
    "sold": "ADA"
+  },
+  {
+   "time": "2026-10-31T15:18:55Z",
+   "tx_short": "74bdaf73a7",
+   "kind": "transfer_out",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 26.782251,
+   "counterparty_tag": "w-8733bb5a"
+  },
+  {
+   "time": "2026-10-31T15:19:10Z",
+   "tx_short": "f2510d75e0",
+   "kind": "transfer_in",
+   "token": "VAL",
+   "qty": 104275,
+   "ada_leg": null,
+   "counterparty_tag": "w-8733bb5a"
   }
  ],
  "capped": false,
@@ -19921,7 +19939,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 7,
+ "koios_calls": 8,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
