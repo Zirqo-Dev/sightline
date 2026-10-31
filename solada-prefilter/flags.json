@@ -1,71 +1,44 @@
 {
- "at": "2026-10-31T08:10:31Z",
+ "at": "2026-10-31T10:10:39Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
- "new": [],
+ "new": [
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-f24dee62",
+   "launches": [
+    "BOAR",
+    "INTEL",
+    "MCFA",
+    "MEPE",
+    "TCM"
+   ],
+   "at": "2026-10-31T10:10:39Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "CHARLFG",
+   "wallet": "w-727fb9d1",
+   "tags": [],
+   "at": "2026-10-31T10:10:39Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "BOAR",
+   "wallet": "w-f2625538",
+   "tags": [],
+   "at": "2026-10-31T10:10:39Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "BOAR",
+   "wallet": "w-f24dee62",
+   "tags": [],
+   "at": "2026-10-31T10:10:39Z"
+  }
+ ],
  "recent": [
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-d91422be",
-   "launches": [
-    "FLUIDY",
-    "FUKU",
-    "MCFA",
-    "MEOW",
-    "MEPE",
-    "MONKEY",
-    "NERF",
-    "PUG",
-    "SENSE",
-    "SLIP"
-   ],
-   "at": "2026-10-29T16:10:31Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-e97f4aa3",
-   "launches": [
-    "KING",
-    "MIKU",
-    "MSNEK",
-    "PUG",
-    "ROCKET",
-    "RTB",
-    "SENSE",
-    "SHEF",
-    "SLIP",
-    "VEPE"
-   ],
-   "at": "2026-10-29T16:10:31Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-e9e4c704",
-   "launches": [
-    "FLUIDY",
-    "MEPE",
-    "SLIP"
-   ],
-   "at": "2026-10-29T16:10:31Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-f7844f67",
-   "launches": [
-    "GM",
-    "MASCOT",
-    "MCFA",
-    "MEPE",
-    "MONKEY",
-    "ROCKET",
-    "SENSE",
-    "SHEF",
-    "TCM",
-    "UNFAZED"
-   ],
-   "at": "2026-10-29T16:10:31Z"
-  },
   {
    "kind": "sniper_full_exit",
    "ticker": "BMEPE",
@@ -3136,10 +3109,44 @@
    "value_basis": "ada_leg_rate",
    "pct": 0.1,
    "at": "2026-10-31T04:10:49Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-f24dee62",
+   "launches": [
+    "BOAR",
+    "INTEL",
+    "MCFA",
+    "MEPE",
+    "TCM"
+   ],
+   "at": "2026-10-31T10:10:39Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "CHARLFG",
+   "wallet": "w-727fb9d1",
+   "tags": [],
+   "at": "2026-10-31T10:10:39Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "BOAR",
+   "wallet": "w-f2625538",
+   "tags": [],
+   "at": "2026-10-31T10:10:39Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "BOAR",
+   "wallet": "w-f24dee62",
+   "tags": [],
+   "at": "2026-10-31T10:10:39Z"
   }
  ],
  "api_calls": {
-  "koios": 1
+  "blockfrost": 1,
+  "koios": 3
  },
  "thresholds": {
   "enabled": true,
