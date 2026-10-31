@@ -1,5 +1,6 @@
 """Buzz spike outcomes. Offline. No network."""
-import json, os, subprocess, sys, tempfile, unittest, urllib.error
+import contextlib, io, json, os, subprocess, sys, tempfile, unittest, urllib.error
+from datetime import datetime, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -483,6 +484,128 @@ class Guard(unittest.TestCase):
             rejected = subprocess.run([sys.executable, script, d], capture_output=True, text=True)
             self.assertNotEqual(rejected.returncode, 0)
             self.assertNotIn(stake, rejected.stdout + rejected.stderr)
+
+
+class ParseTime(unittest.TestCase):
+    def test_iso_and_epoch_seconds_and_milliseconds(self):
+        expected = datetime(2026, 10, 29, tzinfo=timezone.utc).timestamp()
+        self.assertEqual(buzz.parse_time("2026-10-29T00:00:00Z"), expected)
+        self.assertEqual(buzz.parse_time("2026-10-29T00:00:00"), expected)
+        self.assertEqual(buzz.parse_time("2026-10-29"), expected)
+        self.assertEqual(buzz.parse_time("20261029"), expected)
+        self.assertEqual(buzz.parse_time("2026-10-28T20:00:00-04:00"), expected)
+        self.assertEqual(buzz.parse_time(int(expected)), expected)
+        self.assertEqual(buzz.parse_time(expected + 0.5), expected + 0.5)
+        self.assertEqual(buzz.parse_time(str(int(expected))), expected)
+        self.assertEqual(buzz.parse_time(format(expected + 0.5, ".1f")), expected + 0.5)
+        self.assertEqual(buzz.parse_time("  " + str(int(expected)) + "\n"), expected)
+        ms = int(expected) * 1000
+        self.assertGreater(ms, 1e12)
+        self.assertEqual(buzz.parse_time(ms), expected)
+        self.assertEqual(buzz.parse_time(float(ms)), expected)
+        self.assertEqual(buzz.parse_time(str(ms)), expected)
+        self.assertEqual(buzz.parse_time(ms + 1000), expected + 1)
+        self.assertEqual(buzz.parse_time(1_000_000_001_000), buzz.parse_time(1_000_000_001))
+
+    def test_blank_is_none_and_other_garbage_raises(self):
+        self.assertIsNone(buzz.parse_time(None))
+        self.assertIsNone(buzz.parse_time(False))
+        self.assertIsNone(buzz.parse_time(""))
+        self.assertIsNone(buzz.parse_time("   "))
+        for bad in ("not-a-time", "nan", "inf", True, {"time": 1}):
+            with self.assertRaises(ValueError):
+                buzz.parse_time(bad)
+
+
+class EpochDeskTimes(unittest.TestCase):
+    def test_mixed_formats_score_the_backlog_and_keep_history(self):
+        asof = ASOF
+        spike = buzz.parse_time(asof)
+        after = int(spike) + 3600
+        before = int(spike) - 86400
+        extra = {
+            "solana-desk/paper.json": {"open": [], "closed": [{
+                "ticker": "NOPE", "mint": "othermint", "status": "closed",
+                "opened_at": "2026-10-28T00:00:00Z",
+            }]},
+            "solana-desk/positions.json": {"books": {"F": {
+                "open": {"a": {"mint": MINT, "symbol": "NOPE", "opened": after}},
+                "closed": [
+                    {"mint": "floatmint", "symbol": "OLD", "opened": float(before) + 0.25},
+                    {"mint": "strmint", "symbol": "STR", "opened": str(before)},
+                    {"mint": "msmint", "symbol": "MS", "opened": before * 1000},
+                    {"mint": "badmint", "symbol": "BAD", "opened": "not-a-time"},
+                ],
+            }}},
+            "solana-desk/trades.csv": (
+                "time,mint,why\n"
+                f"2026-10-29T04:00:00Z,othermint,liquidity_pulled\n"
+                f"{after},{MINT},liquidity_pulled\n"
+                f"not-a-time,{MINT},liquidity_pulled\n"
+            ),
+        }
+        d = _desk(_row(), extra=extra)
+        self.addCleanup(d.cleanup)
+        history = os.path.join(d.name, "x_buzz_history.jsonl")
+        outcomes = os.path.join(d.name, "buzz_outcomes.jsonl")
+        with open(history, encoding="utf-8") as fh:
+            history_before = fh.read()
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            events, _ = _run(d, "2026-10-29T00:20:00Z", price=1.0)
+        with open(history, encoding="utf-8") as fh:
+            self.assertEqual(fh.read(), history_before)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["at_spike"]["status"], "filled")
+        self.assertEqual(events[0]["at_spike"]["price"], 1.0)
+        self.assertEqual(events[0]["followups"]["h1"]["status"], "pending")
+        self.assertTrue(events[0]["later"]["paper"])
+        self.assertTrue(events[0]["later"]["lp_pull"])
+        notes = err.getvalue()
+        self.assertIn("skip position", notes)
+        self.assertIn("skip trade", notes)
+        self.assertIn("not-a-time", notes)
+        self.assertNotIn(str(after), notes)
+
+        with open(outcomes, encoding="utf-8") as fh:
+            first = json.loads(fh.read())
+        prior = json.loads(json.dumps(first))
+        prior["event_id"] = "2026-10-20T00:00:00Z|solana|OLDER|9B5u…pump"
+        prior["asof"] = "2026-10-20T00:00:00Z"
+        prior["ticker"] = "OLDER"
+        prior["at_spike"]["price"] = 7
+        with open(outcomes, "w", encoding="utf-8") as fh:
+            fh.write(json.dumps(prior) + "\n")
+            fh.write(json.dumps(first) + "\n")
+        with open(history, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(_row(asof="2026-10-29T02:00:00Z")) + "\n")
+        with open(history, encoding="utf-8") as fh:
+            history_after = fh.read()
+        self.assertIn(asof, history_after)
+        self.assertIn("2026-10-29T02:00:00Z", history_after)
+
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            events, summary = _run(d, "2026-10-29T03:00:00Z", price=3)
+        with open(history, encoding="utf-8") as fh:
+            self.assertEqual(fh.read(), history_after)
+        by_id = {e["event_id"]: e for e in events}
+        self.assertEqual(set(by_id), {
+            prior["event_id"], first["event_id"],
+            "2026-10-29T02:00:00Z|solana|unknown|9B5u…pump",
+        })
+        kept = by_id[first["event_id"]]
+        self.assertEqual(kept["at_spike"]["price"], 1.0)
+        self.assertEqual(kept["at_spike"]["status"], "filled")
+        self.assertEqual(kept["followups"]["h1"]["status"], "filled")
+        self.assertEqual(kept["followups"]["h1"]["price"], 3)
+        caught_up = by_id["2026-10-29T02:00:00Z|solana|unknown|9B5u…pump"]
+        self.assertEqual(caught_up["at_spike"]["status"], "filled")
+        self.assertEqual(caught_up["at_spike"]["price"], 3)
+        self.assertTrue(caught_up["scored"])
+        self.assertEqual(by_id[prior["event_id"]]["at_spike"]["price"], 7)
+        self.assertEqual(summary["totals"]["events"], 3)
+        self.assertIn("not-a-time", err.getvalue())
 
 
 if __name__ == "__main__":
