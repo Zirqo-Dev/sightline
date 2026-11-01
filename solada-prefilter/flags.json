@@ -1,53 +1,32 @@
 {
- "at": "2026-11-01T04:11:02Z",
+ "at": "2026-11-01T07:11:16Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 78.5,
+   "top_cluster_pct": 78.5,
+   "top_cluster": "w-13d53c47",
+   "basis": "ex-fe819d",
+   "at": "2026-11-01T07:11:16Z"
+  },
+  {
    "kind": "whale_move",
    "ticker": "ASCEND",
    "tag": "w-f3186187",
-   "delta": -1000000000,
+   "delta": -2000000000,
    "decimals": 6,
-   "qty": -1000.0,
-   "ada_equiv": 1054,
-   "value_basis": "ada_leg",
-   "pct": 0.3,
-   "at": "2026-11-01T04:11:02Z"
+   "qty": -2000.0,
+   "ada_equiv": 2133,
+   "value_basis": "ada_leg_rate",
+   "pct": 0.6,
+   "at": "2026-11-01T07:11:16Z"
   }
  ],
  "recent": [
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-d91422be",
-   "launches": [
-    "FUKU",
-    "MCFA",
-    "MEOW",
-    "MEPE",
-    "MONKEY",
-    "NERF",
-    "PINHEAD",
-    "PUG",
-    "SENSE",
-    "SLIP"
-   ],
-   "at": "2026-10-30T04:11:25Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-db1f4ab3",
-   "launches": [
-    "CZT",
-    "HALLOW",
-    "PATRICK",
-    "PINHEAD",
-    "PUG",
-    "ROCKET"
-   ],
-   "at": "2026-10-30T04:11:25Z"
-  },
   {
    "kind": "sniper_full_exit",
    "ticker": "BET",
@@ -3192,11 +3171,32 @@
    "value_basis": "ada_leg",
    "pct": 0.3,
    "at": "2026-11-01T04:11:02Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 78.5,
+   "top_cluster_pct": 78.5,
+   "top_cluster": "w-13d53c47",
+   "basis": "ex-fe819d",
+   "at": "2026-11-01T07:11:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": -2000000000,
+   "decimals": 6,
+   "qty": -2000.0,
+   "ada_equiv": 2133,
+   "value_basis": "ada_leg_rate",
+   "pct": 0.6,
+   "at": "2026-11-01T07:11:16Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 3,
-  "koios": 6
+  "blockfrost": 1,
+  "koios": 3
  },
  "thresholds": {
   "enabled": true,
