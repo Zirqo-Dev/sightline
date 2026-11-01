@@ -1315,7 +1315,22 @@
    "verdict_rule": "Validated if >= 10 qualifying tickets and mean 48h return after costs > 0 and above the failed-gate group's mean; Invalidated if mean <= 0 at 10; judge at 10 tickets or 2026-12-15, whichever first; under 10 by 2026-12-15 = insufficient, no extension",
    "locked": "No term changes after peeking; any change may only make passing harder, owner approval required",
    "tickets": [],
-   "comparison_group": [],
+   "comparison_group": [
+    {
+     "ticker": "ANAKIN",
+     "status": "pending_gate",
+     "swarm_flagged_at": "2026-11-01T21:11:03Z",
+     "first_seen": "2026-11-01T16:15:00-05:00",
+     "flags": [
+      "coordinated_buys (11 wallets, 120s)",
+      "7 sniper full exits"
+     ],
+     "bonded": false,
+     "entry_curve_price_ada": null,
+     "entry_note": "curve price not readable this run (no Solada API read, no DEX pool)",
+     "gate_check_due": "launch+24h"
+    }
+   ],
    "unverifiable": [],
    "measurement_locked_at": "2026-11-01T14:41:00-05:00",
    "measurement": {
