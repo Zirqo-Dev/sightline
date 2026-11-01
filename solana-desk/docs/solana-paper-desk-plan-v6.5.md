@@ -118,6 +118,8 @@ Earlier rounds already added: the hypothesis and pre-set rules, F/R/S shadow boo
 | Loop outage | Over 2 hours: new entries in that window are voided; open positions keep being tracked |
 | Data failures | Above 10% in a day: that day's new entries voided in all books |
 
+Day-14 application (recorded 2026-11-01, not a new rule). `specs/day14_verdict.py` is the register for how the frozen row is read. Pre-v3 closes are counted. The dashboard's v3-only 7-day and 28-day stats do not govern the verdict; dropping closes on a cost label is barred once the sample has been seen. `trades.csv` `net_pnl` is incomplete and is not the input; the sell row's `pnl` cell is. The void is the committed window `[2026-10-31T01:30:00Z, 2026-11-01T00:00:00Z)`, not the whole UTC day: RugCheck `missing_data` starts at slot `20261031T0130`, and the frozen code voids later runs only. Closes land 22–37s after their slot, so the last slot that can count at the 15:00 UTC cutoff is `20261111T1430`. The line is `VERDICT: NOT_FINAL` until the data's last run is at or after that cutoff, the F closes reconcile with `trades.csv`, close ids are unique, and the cutoff is the default.
+
 ## Recommendation
 
 > **A separate `solana/` desk with a zero-AI loop plus a time-matched random shadow book, and one unscored KING review a day. No new bot.** Code runs SCAN, the hard-skip VERIFY, paper EXECUTE and EXIT for all books. KING's "Solana paper desk" routine reviews at most 3 survivors a day as a judgment pass (no score, no metric). Day 14 is an early stop for clear failure only; day 28 is the one real test (decision table above). A dedicated bot stays a later option only if a much longer paper test passes.
