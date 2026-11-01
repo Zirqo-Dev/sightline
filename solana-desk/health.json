@@ -1,18 +1,18 @@
 {
  "day": "2026-11-01",
  "loop_ran": true,
- "runs": 24,
+ "runs": 25,
  "expected_runs": 48,
- "checks": 288,
- "error_rate": 0.0174,
- "data_failure_rate": 0.0104,
+ "checks": 300,
+ "error_rate": 0.0167,
+ "data_failure_rate": 0.01,
  "void_day": false,
  "ai": false,
- "eligibility_skips": 27,
+ "eligibility_skips": 29,
  "mode": "fill",
  "cfg_version": "v1-v6.5",
  "frozen": true,
- "last_run_utc": "20261101T1130",
+ "last_run_utc": "20261101T1200",
  "leads_this_run": 12,
  "runner": "github-actions",
  "notes": [],
@@ -40,22 +40,23 @@
   "2026-11-01T10:00:29Z",
   "2026-11-01T10:30:24Z",
   "2026-11-01T11:00:27Z",
-  "2026-11-01T11:30:26Z"
+  "2026-11-01T11:30:26Z",
+  "2026-11-01T12:00:29Z"
  ],
  "max_gap_min": 30.1,
  "trigger": "workflow_dispatch",
  "fill": {
-  "opened": 0,
+  "opened": 1,
   "void": [],
   "open": {
    "F": 2,
    "R": 2,
-   "S": 1
+   "S": 2
   },
   "equity": {
-   "F": 6.6418,
-   "R": 8.8333,
-   "S": 0.9335
+   "F": 6.6047,
+   "R": 8.7949,
+   "S": 0.9276
   }
  },
  "rugger_status": {
@@ -72,6 +73,5 @@
  "data_fail_by_reason": {
   "jupiter:400": 5,
   "rugcheck:400": 3
- },
- "last_skipped_duplicate_utc": "2026-11-01T11:58:42Z"
+ }
 }
