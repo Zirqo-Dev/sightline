@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zirqo-dev.github.io/sightline/schema/v2-death.schema.json",
+  "title": "Solana desk v2 death-log line",
+  "description": "One solana-desk/v2/death-YYYYMMDD.jsonl line. An observation or a label recomputed from observations. Logging only. Not a trade.",
+  "oneOf": [
+    {"$ref": "#/$defs/obs"},
+    {"$ref": "#/$defs/label"}
+  ],
+  "$defs": {
+    "obs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "v", "mint", "pool", "t0", "t0_s", "t", "t_s", "sol", "token", "k", "price", "txns_h1", "error", "scan_id"],
+      "properties": {
+        "type": {"const": "obs"},
+        "v": {"const": 1},
+        "mint": {"type": "string", "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$"},
+        "pool": {"type": ["string", "null"], "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$"},
+        "t0": {"type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+        "t0_s": {"type": ["integer", "null"]},
+        "t": {"type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+        "t_s": {"type": ["integer", "null"]},
+        "sol": {"type": ["number", "null"]},
+        "token": {"type": ["number", "null"]},
+        "k": {"type": ["number", "null"]},
+        "price": {"type": ["number", "null"]},
+        "txns_h1": {"type": ["object", "null"], "additionalProperties": {"type": ["number", "null"]}},
+        "error": {"type": ["string", "null"], "maxLength": 32},
+        "scan_id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{4}$"}
+      }
+    },
+    "label": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "v", "mint", "t0_s", "t_s", "scan_id", "dead", "pending", "reason", "price_drop", "obs_n"],
+      "properties": {
+        "type": {"const": "label"},
+        "v": {"const": 1},
+        "mint": {"type": "string", "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$"},
+        "t0_s": {"type": ["integer", "null"]},
+        "t_s": {"type": ["integer", "null"]},
+        "scan_id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{4}$"},
+        "dead": {"type": ["boolean", "null"]},
+        "pending": {"type": "boolean"},
+        "reason": {"enum": ["price", "swaps", "swaps_unknown", "swaps_gap", "swaps_unattributed", null]},
+        "price_drop": {"type": ["number", "null"]},
+        "obs_n": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

@@ -6,7 +6,7 @@ Mode "auto" (workflow default) = fill when allowed, else scan.
 Free public APIs only: DexScreener, RugCheck, Jupiter quote (optional free key in JUPITER_API_KEY).
 """
 import argparse, json, os, sys, time, urllib.request, urllib.error
-from . import config as C, skips, ledger, fills, observe
+from . import config as C, skips, ledger, fills, observe, v2log
 
 SOL = "So11111111111111111111111111111111111111112"
 DEX = "https://api.dexscreener.com"
@@ -24,16 +24,59 @@ def http_json(url, headers=None, timeout=15):
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read().decode())
 
-def leads(get, n):
-    out, seen = [], set()
-    for path in ("/token-profiles/latest/v1", "/token-boosts/latest/v1"):
-        try: items = get(DEX + path)
-        except Exception: continue
+# One page from each source. The manifest records this list and these filters.
+LEAD_PATHS = ("/token-profiles/latest/v1", "/token-boosts/latest/v1")
+LEAD_PRE_FILTERS = (
+    "chainId=solana",
+    "tokenAddress non-empty",
+    "dedupe by mint, first source wins",
+)
+
+def _lead_pages(get, n):
+    """Lead list, plus every solana mint on those pages. Same HTTP as the old leads() call.
+    The prefix of length n is the list the scan looks up. The tail is logged and not fetched.
+    Page status and fetch time are for the manifest only.
+    """
+    selected, seen_rows, seen, pages = [], [], set(), []
+    for path in LEAD_PATHS:
+        source = path.split("/")[1]
+        status = "ok"
+        try:
+            items = get(DEX + path)
+        except Exception as exc:
+            items = None
+            status = "429" if getattr(exc, "code", None) == 429 else "failed"
+        fetched = time.time()
+        pages.append({
+            "source": source, "path": path, "status": status,
+            "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(fetched)),
+            "fetched_at_s": int(fetched),
+            "rows": len(items) if isinstance(items, list) else 0,
+        })
+        if items is None:
+            continue
         for it in items or []:
             m = it.get("tokenAddress")
             if it.get("chainId") == "solana" and m and m not in seen:
-                seen.add(m); out.append((m, path.split("/")[1]))
-    return out[:n]
+                seen.add(m)
+                seen_rows.append((m, source))
+                if len(selected) < n:
+                    selected.append((m, source))
+    return selected, seen_rows, pages
+
+def leads(get, n):
+    selected, _seen, _pages = _lead_pages(get, n)
+    return selected
+
+
+def _follow_get(get, timeout):
+    """Same transport as the scan, with a short timeout when the caller accepts it."""
+    def one(url, headers=None):
+        try:
+            return get(url, headers, timeout=timeout)
+        except TypeError:
+            return get(url, headers)
+    return one
 
 def best_pair(get, mint):
     d = get(f"{DEX}/latest/dex/tokens/{mint}") or {}
@@ -301,7 +344,7 @@ def _touch_cache(cache_dir, data_dir):
 RUGGER_BUDGET_S = 5.0
 
 
-def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, cache_dir=None):
+def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, cache_dir=None, *, v2_log=None):
     _touch_cache(cache_dir, data_dir)
     now = now or time.time(); day = time.strftime("%Y-%m-%d", time.gmtime(now))
     os.makedirs(data_dir, exist_ok=True)
@@ -315,7 +358,7 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
         with open(os.path.join(data_dir, "health.json"), "w") as f: json.dump(h, f, indent=1)
         h["duplicate"] = True; return h
     if not key: notes.append("JUPITER_API_KEY missing: using keyless lite-api")
-    ls = leads(get, C.LEADS_PER_RUN)
+    ls, seen_mints, source_pages = _lead_pages(get, C.LEADS_PER_RUN)
     if not ls: notes.append("no leads (DexScreener empty or unreachable)")
     if sleep is None: sleep = time.sleep if get is http_json else (lambda s: None)
     st.setdefault("eligibility_skips", 0); run_leads = []
@@ -334,14 +377,19 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
     would = []
     rugger_spent = 0.0
     rugger_stopped = False
+    v2_on = v2log.enabled(v2_log)
+    v2_fetched = []
+    v2_errors = 0
     for i, mint in enumerate(m for m, _ in ls):
         src = ls[i][1]
         if i: sleep(QUOTE_GAP_S)  # pace Jupiter (and RugCheck) instead of bursting 12 calls
         t0 = time.time(); errs = set(); reasons = []
         try: pair = best_pair(get, mint)
         except Exception as e: pair = None; errs.add("dex"); reasons.append(_fail_reason("dex", e))
+        pair_at = time.time()
         try: rc = get(RUG.format(mint))
         except Exception as e: rc = None; errs.add("rug"); reasons.append(_fail_reason("rug", e))
+        rug_at = time.time()
         try: q = quote(get, mint, key, sleep)
         except Exception as e: q = None; errs.add("jup"); reasons.append(_fail_reason("jup", e))
         stype, reason = skips.classify(pair, rc, q, now, errs)
@@ -373,6 +421,22 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
             print(f"rugger log: skipped ({type(e).__name__})", file=sys.stderr)
         finally:
             rugger_spent += time.monotonic() - hook_t0
+        # Log-only. stype, reason, run_leads, and the task row are already fixed.
+        if v2_on:
+            try:
+                if "dex" in errs:
+                    pool_lookup = "failed"
+                elif pair is None:
+                    pool_lookup = "no_pair"
+                else:
+                    pool_lookup = "ok"
+                rug_lookup = "failed" if "rug" in errs or rc is None else "ok"
+                v2_fetched.append(dict(
+                    mint=mint, pair=pair, rc=rc, pair_at=pair_at, rug_at=rug_at,
+                    pool_lookup=pool_lookup, rug_lookup=rug_lookup,
+                ))
+            except Exception:
+                v2_errors += 1
     if book is not None:
         try:
             _rugger().mark_hold(cache_dir, book)
@@ -419,6 +483,18 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
         observe.append_scan_timing(data_dir, slot, now, run_id, mode, os.environ.get("GITHUB_EVENT_NAME") or "local")
     except Exception:
         print("scan timing: skipped", file=sys.stderr)
+    # After timing, health, and fills. A failure here cannot change this scan's decisions.
+    if v2_on:
+        try:
+            v2log.record(
+                data_dir, seen_mints, v2_fetched, now, run_id,
+                sources=LEAD_PATHS, pre_filters=LEAD_PRE_FILTERS,
+                fetch_pair=lambda m, _get=get: best_pair(_follow_get(_get, v2log.FOLLOW_CALL_TIMEOUT_S), m),
+                sleep=sleep, leads_per_run=C.LEADS_PER_RUN, log_errors=v2_errors,
+                source_pages=source_pages,
+            )
+        except Exception:
+            print("v2 log: skipped", file=sys.stderr)
     return h
 
 def main(argv=None):

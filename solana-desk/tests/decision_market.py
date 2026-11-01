@@ -171,7 +171,7 @@ class Market:
         return respond(kind, mint, self.scan, amount)
 
 
-def run_scenario(scan, data_dir):
+def run_scenario(scan, data_dir, **scan_kw):
     """Drive scan(mode='fill') across OFFSETS. Env that health.json copies is pinned for the run."""
     saved = {k: os.environ.get(k) for k in ("GITHUB_ACTIONS", "GITHUB_EVENT_NAME")}
     os.environ.pop("GITHUB_ACTIONS", None)
@@ -181,7 +181,7 @@ def run_scenario(scan, data_dir):
         os.makedirs(data_dir, exist_ok=True)
         for i, off in enumerate(OFFSETS):
             mk.scan = i
-            scan(data_dir, get=mk.get, now=T0 + off, mode="fill", sleep=lambda s: None)
+            scan(data_dir, get=mk.get, now=T0 + off, mode="fill", sleep=lambda s: None, **scan_kw)
         return list(mk.calls)
     finally:
         for k, v in saved.items():
