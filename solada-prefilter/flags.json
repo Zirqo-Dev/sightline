@@ -1,131 +1,9 @@
 {
- "at": "2026-11-01T00:10:54Z",
+ "at": "2026-11-01T02:10:56Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
- "new": [
-  {
-   "kind": "coordinated_buys",
-   "ticker": "UHH",
-   "wallets": [
-    "w-024bfb2f",
-    "w-3af23222",
-    "w-736d63ad",
-    "w-ade6b44c",
-    "w-c4719a10",
-    "w-c5af9630",
-    "w-dde3be1c",
-    "w-e97f4aa3",
-    "w-eee93909"
-   ],
-   "window_s": 120,
-   "at": "2026-11-01T00:10:54Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "UHH",
-   "wallets": [
-    "w-024bfb2f",
-    "w-736d63ad",
-    "w-c4719a10",
-    "w-dde3be1c",
-    "w-eee93909"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-01T00:10:54Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-ade6b44c",
-   "launches": [
-    "GARRETT",
-    "MEPE",
-    "PINU",
-    "SLIP",
-    "UHH"
-   ],
-   "at": "2026-11-01T00:10:54Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-c4719a10",
-   "launches": [
-    "BUTTHOLE",
-    "GARRETT",
-    "GM",
-    "JSON",
-    "MOON",
-    "ROCKET",
-    "UHH"
-   ],
-   "at": "2026-11-01T00:10:54Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-c5af9630",
-   "launches": [
-    "BET",
-    "BUTTHOLE",
-    "EVIL",
-    "PINU",
-    "ROCKET",
-    "UHH"
-   ],
-   "at": "2026-11-01T00:10:54Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-e97f4aa3",
-   "launches": [
-    "MEPI",
-    "MIKU",
-    "MOON",
-    "MSNEK",
-    "PATRICK",
-    "PLUG",
-    "ROCKET",
-    "SENSE",
-    "UHH",
-    "VEPE"
-   ],
-   "at": "2026-11-01T00:10:54Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "UHH",
-   "wallet": "w-dde3be1c",
-   "tags": [],
-   "at": "2026-11-01T00:10:54Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "UHH",
-   "wallet": "w-3af23222",
-   "tags": [],
-   "at": "2026-11-01T00:10:54Z"
-  },
-  {
-   "kind": "holder_concentration",
-   "ticker": "CORE",
-   "top_addr_pct": 78.4,
-   "top_cluster_pct": 78.4,
-   "top_cluster": "w-13d53c47",
-   "basis": "ex-fe819d",
-   "at": "2026-11-01T00:10:54Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "ASCEND",
-   "tag": "w-f3186187",
-   "delta": 400800257,
-   "decimals": 6,
-   "qty": 400.8003,
-   "ada_equiv": 507,
-   "value_basis": "ada_leg_rate",
-   "pct": 0.1,
-   "at": "2026-11-01T00:10:54Z"
-  }
- ],
+ "new": [],
  "recent": [
   {
    "kind": "repeat_early_buyer",
@@ -3303,8 +3181,7 @@
   }
  ],
  "api_calls": {
-  "blockfrost": 1,
-  "koios": 8
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,
