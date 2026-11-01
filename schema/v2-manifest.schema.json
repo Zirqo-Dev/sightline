@@ -17,10 +17,11 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "type", "v", "scan_id", "t", "t_s", "sources", "pre_filters", "page_limits",
+        "type", "v", "scan_id", "t", "t_s", "sources", "source_pages", "pre_filters", "page_limits",
         "candidates_seen", "candidates_selected", "pool_lookups_attempted", "pool_lookups_failed",
-        "pool_lookups", "g5_rate", "extra_calls", "extra_call_cap", "follow_skipped_budget",
-        "s2_picks", "twin_candidates", "twin_draws", "log_errors", "s2_thresholds"
+        "pool_lookups", "g5_rate", "rug_lookups_attempted", "rug_lookups_failed", "rug_fail_rate",
+        "extra_calls", "extra_call_cap", "follow_budget_s", "follow_skipped_budget", "follow_stop",
+        "snap_files", "s2_picks", "twin_candidates", "twin_draws", "log_errors", "s2_thresholds"
       ],
       "properties": {
         "type": {"const": "scan"},
@@ -29,6 +30,22 @@
         "t": {"$ref": "#/$defs/iso"},
         "t_s": {"type": "integer"},
         "sources": {"type": "array", "items": {"type": "string", "maxLength": 80}},
+        "source_pages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["source", "path", "status", "fetched_at", "fetched_at_s", "rows"],
+            "properties": {
+              "source": {"type": "string", "maxLength": 40},
+              "path": {"type": "string", "maxLength": 80},
+              "status": {"enum": ["ok", "failed", "429"]},
+              "fetched_at": {"$ref": "#/$defs/iso"},
+              "fetched_at_s": {"type": "integer"},
+              "rows": {"type": "integer", "minimum": 0}
+            }
+          }
+        },
         "pre_filters": {"type": "array", "items": {"type": "string", "maxLength": 80}},
         "page_limits": {
           "type": "object",
@@ -46,10 +63,8 @@
         "pool_lookups": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["attempted", "failed", "scan_attempted", "scan_failed", "extra_attempted", "extra_failed"],
+          "required": ["scan_attempted", "scan_failed", "extra_attempted", "extra_failed"],
           "properties": {
-            "attempted": {"type": "integer", "minimum": 0},
-            "failed": {"type": "integer", "minimum": 0},
             "scan_attempted": {"type": "integer", "minimum": 0},
             "scan_failed": {"type": "integer", "minimum": 0},
             "extra_attempted": {"type": "integer", "minimum": 0},
@@ -57,9 +72,15 @@
           }
         },
         "g5_rate": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "rug_lookups_attempted": {"type": "integer", "minimum": 0},
+        "rug_lookups_failed": {"type": "integer", "minimum": 0},
+        "rug_fail_rate": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
         "extra_calls": {"type": "integer", "minimum": 0},
         "extra_call_cap": {"type": "integer", "minimum": 0},
+        "follow_budget_s": {"type": "number", "minimum": 0},
         "follow_skipped_budget": {"type": "integer", "minimum": 0},
+        "follow_stop": {"enum": ["cap", "budget", "429", null]},
+        "snap_files": {"type": "array", "items": {"type": "string", "maxLength": 80}},
         "s2_picks": {"type": "array", "items": {"$ref": "#/$defs/mint"}},
         "twin_candidates": {"type": "array", "items": {"$ref": "#/$defs/mint"}},
         "twin_draws": {"type": "null"},
@@ -86,7 +107,8 @@
       "additionalProperties": false,
       "required": [
         "type", "v", "scan_id", "t", "t_s", "mint", "source", "seen_index", "selected",
-        "pool_lookup", "pair_fetched_at", "rug_fetched_at", "inputs", "reserve", "k_series", "rules"
+        "pool_lookup", "pair_fetched_at", "rug_fetched_at", "inputs", "reserve", "rules",
+        "k_series_n", "k_last", "k_max_drop", "snap_stems", "first_pick"
       ],
       "properties": {
         "type": {"const": "candidate"},
@@ -111,19 +133,20 @@
             "t_s": {"type": ["integer", "null"]}
           }
         },
-        "k_series": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["t_s", "k", "pool"],
-            "properties": {
-              "t_s": {"type": ["integer", "null"]},
-              "k": {"$ref": "#/$defs/num"},
-              "pool": {"type": ["string", "null"], "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$"}
-            }
+        "k_series_n": {"type": "integer", "minimum": 0},
+        "k_last": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["t_s", "k", "pool"],
+          "properties": {
+            "t_s": {"type": ["integer", "null"]},
+            "k": {"$ref": "#/$defs/num"},
+            "pool": {"type": ["string", "null"], "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$"}
           }
         },
+        "k_max_drop": {"$ref": "#/$defs/num"},
+        "snap_stems": {"type": "array", "items": {"type": "string", "maxLength": 80}},
+        "first_pick": {"type": "boolean"},
         "rules": {
           "type": "object",
           "additionalProperties": false,

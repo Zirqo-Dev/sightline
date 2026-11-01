@@ -72,7 +72,7 @@ Each mint is entered at most once.
   - every S2 input as fetched, with its fetch timestamp
   - pass or fail for each rule
   - the twin candidate list and the draws
-- **Recomputability:** eligibility must be recomputable from the manifest alone, with no re-fetch or backfill of RugCheck, holders or `txns.h1`.
+- **Recomputability:** RugCheck, holders, and `txns.h1` are on the manifest and are not re-fetched. The k history is the G6 pool-snap files named on the manifest. The manifest plus those files together are enough; no backfill.
 - **Twin universe:** manifest pools on that scan with `graduated_pump`, age ≥ 6h and ≥1 trade h1, minus S2's picks.
 - **Twin draw:** n draws without replacement, at most one entry per mint, using `random.Random(f"{SEED}:{scan_id}")`. The draw is a sample of the candidate mints sorted by address. **SEED = 20261031.** If there are fewer than n candidates, the twin enters all of them and logs the shortfall.
 
@@ -213,3 +213,4 @@ Everything else is fixed above.
   - "Base edge only" outcome.
   - SH-06/SH-07/XB-02 text.
 - **Rev 3, Oct 31 2026:** owner fixed alpha = 0.05 one-sided family-wise (Holm, 2 tests). Committed as pre-registration before day-14 data viewed.
+- **Rev 4, Nov 1 2026 (logging note, before v2 start):** the manifest plus the G6 pool-snap files together count as no re-fetch. The manifest stores `k_series_n`, the last k point, the max consecutive drop, and the pool-snap file stems. It does not copy the series. No book, threshold, or test change.

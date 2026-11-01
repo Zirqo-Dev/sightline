@@ -125,6 +125,10 @@ class Sample(unittest.TestCase):
         status = g8.authority_status(account(key, key))
         self.assertEqual(status, {"mint_authority": "set", "freeze_authority": "set"})
         self.assertEqual(g8.authority_status({"value": None})["mint_authority"], "unknown")
+        missing = {"value": {"data": {"parsed": {"type": "mint", "info": {"supply": "1", "decimals": 6}}}}}
+        self.assertEqual(g8.authority_status(missing), {"mint_authority": "unknown", "freeze_authority": "unknown"})
+        self.assertEqual(v2log.authority_status({}, "mintAuthority"), "unknown")
+        self.assertEqual(v2log.authority_status({"mintAuthority": None}, "mintAuthority"), "revoked")
 
 
 if __name__ == "__main__":

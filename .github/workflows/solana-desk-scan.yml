@@ -59,6 +59,8 @@ jobs:
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
           RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
           RUGGER_ACCEPT_RESET: ${{ vars.RUGGER_ACCEPT_RESET }}
+          # Logging-only v2 records. Set the repo variable to 0 to skip them. Default on.
+          SOLANA_DESK_V2_LOG: ${{ vars.SOLANA_DESK_V2_LOG || '1' }}
           # Mode: manual input > repo variable SOLANA_DESK_MODE (set to 'scan' to pause fills without a PR) > auto
           MODE: ${{ github.event.inputs.mode || vars.SOLANA_DESK_MODE || 'auto' }}
         working-directory: code/solana-desk
@@ -77,22 +79,44 @@ jobs:
         run: |
           git config user.name "solana-desk-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # v6.5 ledger first. v2/ is a second commit so a log-file guard miss cannot drop the scan.
           git add -A solana-desk
-          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
-          # Privacy guard on the staged desk-data files before commit/push (run-forensics.yml pattern).
-          # A failure aborts the push; nothing is committed or pushed.
-          if ! bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"; then
-            echo "::error::privacy guard failed on desk-data changes; not committing or pushing"
-            git reset -q
-            exit 1
+          git reset -q -- solana-desk/v2 || true
+          if ! git diff --cached --quiet; then
+            if ! bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"; then
+              echo "::error::privacy guard failed on desk-data changes; not committing or pushing"
+              git reset -q
+              exit 1
+            fi
+            git commit -q -m "desk scan $(date -u +%Y-%m-%dT%H:%MZ)"
+            pushed=0
+            for i in 1 2 3 4 5; do
+              git push origin HEAD:desk-data && { pushed=1; break; }
+              echo "push conflict, retry $i"; sleep $((i * 5))
+              git pull --rebase origin desk-data || { git rebase --abort; exit 1; }
+            done
+            [ "$pushed" = 1 ] || exit 1
+          else
+            echo "nothing to commit for the v6.5 files"
           fi
-          git commit -q -m "desk scan $(date -u +%Y-%m-%dT%H:%MZ)"
+          git add -A solana-desk/v2
+          if git diff --cached --quiet; then
+            echo "no v2 log to commit"
+            exit 0
+          fi
+          if ! bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"; then
+            echo "::warning::privacy guard failed on v2 logs; the v6.5 scan commit is already pushed"
+            git reset -q
+            exit 0
+          fi
+          git commit -q -m "desk scan v2 log $(date -u +%Y-%m-%dT%H:%MZ)"
           for i in 1 2 3 4 5; do
             git push origin HEAD:desk-data && exit 0
-            echo "push conflict, retry $i"; sleep $((i * 5))
-            git pull --rebase origin desk-data || { git rebase --abort; exit 1; }
+            echo "v2 push conflict, retry $i"; sleep $((i * 5))
+            git pull --rebase origin desk-data || { git rebase --abort; echo "::warning::v2 log push did not finish"; exit 0; }
           done
-          exit 1
+          echo "::warning::v2 log push did not finish"
+          exit 0
       - name: Sync private rugger list
         if: always()
         timeout-minutes: 2

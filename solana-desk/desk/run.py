@@ -35,12 +35,26 @@ LEAD_PRE_FILTERS = (
 def _lead_pages(get, n):
     """Lead list, plus every solana mint on those pages. Same HTTP as the old leads() call.
     The prefix of length n is the list the scan looks up. The tail is logged and not fetched.
+    Page status and fetch time are for the manifest only.
     """
-    selected, seen_rows, seen = [], [], set()
+    selected, seen_rows, seen, pages = [], [], set(), []
     for path in LEAD_PATHS:
         source = path.split("/")[1]
-        try: items = get(DEX + path)
-        except Exception: continue
+        status = "ok"
+        try:
+            items = get(DEX + path)
+        except Exception as exc:
+            items = None
+            status = "429" if getattr(exc, "code", None) == 429 else "failed"
+        fetched = time.time()
+        pages.append({
+            "source": source, "path": path, "status": status,
+            "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(fetched)),
+            "fetched_at_s": int(fetched),
+            "rows": len(items) if isinstance(items, list) else 0,
+        })
+        if items is None:
+            continue
         for it in items or []:
             m = it.get("tokenAddress")
             if it.get("chainId") == "solana" and m and m not in seen:
@@ -48,11 +62,21 @@ def _lead_pages(get, n):
                 seen_rows.append((m, source))
                 if len(selected) < n:
                     selected.append((m, source))
-    return selected, seen_rows
+    return selected, seen_rows, pages
 
 def leads(get, n):
-    selected, _seen = _lead_pages(get, n)
+    selected, _seen, _pages = _lead_pages(get, n)
     return selected
+
+
+def _follow_get(get, timeout):
+    """Same transport as the scan, with a short timeout when the caller accepts it."""
+    def one(url, headers=None):
+        try:
+            return get(url, headers, timeout=timeout)
+        except TypeError:
+            return get(url, headers)
+    return one
 
 def best_pair(get, mint):
     d = get(f"{DEX}/latest/dex/tokens/{mint}") or {}
@@ -334,7 +358,7 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
         with open(os.path.join(data_dir, "health.json"), "w") as f: json.dump(h, f, indent=1)
         h["duplicate"] = True; return h
     if not key: notes.append("JUPITER_API_KEY missing: using keyless lite-api")
-    ls, seen_mints = _lead_pages(get, C.LEADS_PER_RUN)
+    ls, seen_mints, source_pages = _lead_pages(get, C.LEADS_PER_RUN)
     if not ls: notes.append("no leads (DexScreener empty or unreachable)")
     if sleep is None: sleep = time.sleep if get is http_json else (lambda s: None)
     st.setdefault("eligibility_skips", 0); run_leads = []
@@ -406,8 +430,10 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
                     pool_lookup = "no_pair"
                 else:
                     pool_lookup = "ok"
+                rug_lookup = "failed" if "rug" in errs or rc is None else "ok"
                 v2_fetched.append(dict(
-                    mint=mint, pair=pair, rc=rc, pair_at=pair_at, rug_at=rug_at, pool_lookup=pool_lookup,
+                    mint=mint, pair=pair, rc=rc, pair_at=pair_at, rug_at=rug_at,
+                    pool_lookup=pool_lookup, rug_lookup=rug_lookup,
                 ))
             except Exception:
                 v2_errors += 1
@@ -463,8 +489,9 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
             v2log.record(
                 data_dir, seen_mints, v2_fetched, now, run_id,
                 sources=LEAD_PATHS, pre_filters=LEAD_PRE_FILTERS,
-                fetch_pair=lambda m: best_pair(get, m), sleep=sleep,
-                leads_per_run=C.LEADS_PER_RUN, log_errors=v2_errors,
+                fetch_pair=lambda m, _get=get: best_pair(_follow_get(_get, v2log.FOLLOW_CALL_TIMEOUT_S), m),
+                sleep=sleep, leads_per_run=C.LEADS_PER_RUN, log_errors=v2_errors,
+                source_pages=source_pages,
             )
         except Exception:
             print("v2 log: skipped", file=sys.stderr)

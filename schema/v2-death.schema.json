@@ -11,7 +11,7 @@
     "obs": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "v", "mint", "pool", "t0", "t0_s", "t", "t_s", "sol", "token", "k", "price", "txns_h1", "scan_id"],
+      "required": ["type", "v", "mint", "pool", "t0", "t0_s", "t", "t_s", "sol", "token", "k", "price", "txns_h1", "error", "scan_id"],
       "properties": {
         "type": {"const": "obs"},
         "v": {"const": 1},
@@ -26,6 +26,7 @@
         "k": {"type": ["number", "null"]},
         "price": {"type": ["number", "null"]},
         "txns_h1": {"type": ["object", "null"], "additionalProperties": {"type": ["number", "null"]}},
+        "error": {"type": ["string", "null"], "maxLength": 32},
         "scan_id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{4}$"}
       }
     },

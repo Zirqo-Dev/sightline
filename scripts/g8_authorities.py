@@ -95,8 +95,8 @@ def authority_status(result):
     if not isinstance(info, dict):
         return unknown
     return {
-        "mint_authority": "revoked" if not info.get("mintAuthority") else "set",
-        "freeze_authority": "revoked" if not info.get("freezeAuthority") else "set",
+        "mint_authority": v2log.authority_status(info, "mintAuthority"),
+        "freeze_authority": v2log.authority_status(info, "freezeAuthority"),
     }
 
 

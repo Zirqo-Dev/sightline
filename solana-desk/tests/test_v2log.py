@@ -1,7 +1,7 @@
 """v2 prerequisite logs. Decisions and trades stay byte-identical with the log on or off."""
-import json, os, tempfile, time, unittest
+import io, json, os, tempfile, time, unittest, urllib.error
 from desk import config as C, observe, run, skips, v2log
-from tests.decision_market import run_scenario, snapshot
+from tests.decision_market import snapshot
 
 T0 = 1_800_000_000
 POOL = "1" * 32
@@ -100,7 +100,24 @@ class Rules(unittest.TestCase):
         self.assertEqual(v2log.rules_from_logged(inputs, dropped, True)["k_stable"], "fail")
         kept = [{"t_s": T0, "k": 100.0, "pool": POOL}, {"t_s": T0 + 60, "k": 50.1, "pool": POOL}]
         self.assertEqual(v2log.rules_from_logged(inputs, kept, True)["k_stable"], "pass")
+        skipped = [
+            {"t_s": T0, "k": 100.0, "pool": POOL},
+            {"t_s": T0 + 30, "k": None, "pool": POOL},
+            {"t_s": T0 + 60, "k": 40.0, "pool": POOL},
+        ]
+        self.assertTrue(v2log.k_dropped(skipped))
+        other = "2" * 32
+        switched = [
+            {"t_s": T0, "k": 100.0, "pool": POOL},
+            {"t_s": T0 + 60, "k": 10.0, "pool": other},
+        ]
+        self.assertFalse(v2log.k_dropped(switched))
         self.assertEqual(v2log.rules_from_logged(inputs, series, False)["sol_reserve"], "unknown")
+        bare = {"freezeAuthority": None, "topHolders": [], "score_normalised": 1}
+        missing_key = v2log._inputs_from(pair(MINT_A), bare, T0)
+        self.assertEqual(missing_key["mint_authority"], "unknown")
+        self.assertEqual(missing_key["freeze_authority"], "revoked")
+        self.assertEqual(v2log.rules_from_logged(missing_key, series, True)["authorities"], "unknown")
 
     def test_top10_excludes_pool_accounts_without_storing_them(self):
         pool_owner = "P" * 32
@@ -162,6 +179,15 @@ class Death(unittest.TestCase):
         lied = [obs(t0, 10), obs(t0 + 1800, 10)]
         lied[1]["price"] = 0
         self.assertNotEqual(v2log.death_label(lied)["reason"], "price")
+        # The t0 hour looks backward. Trades before t0 do not keep a quiet pool alive.
+        before = [obs(t0, 10, buys=4, sells=2)] + [obs(t0 + i * 1800, 10) for i in range(1, 5)]
+        quiet_after = v2log.death_label(before)
+        self.assertEqual((quiet_after["dead"], quiet_after["reason"]), (True, "swaps"))
+        failed = {"t_s": t0 + 1800, "sol": None, "token": None, "txns_h1": None, "error": "lookup_failed"}
+        with_hole = [obs(t0, 10, buys=3, sells=1), failed, obs(t0 + 3600, 10), obs(t0 + 5400, 10), obs(t0 + 7200, 10)]
+        hole = v2log.death_label(with_hole)
+        self.assertEqual((hole["dead"], hole["reason"]), (True, "swaps"))
+        self.assertNotEqual(hole["reason"], "swaps_unknown")
 
 
 class Files(unittest.TestCase):
@@ -201,8 +227,23 @@ class Files(unittest.TestCase):
         self.assertFalse(cands[MINT_C]["selected"])
         self.assertEqual(cands[MINT_C]["pool_lookup"], "failed")
         self.assertEqual(cands[MINT_C]["rules"]["sol_reserve"], "unknown")
-        again = v2log.rules_from_logged(cands[MINT_A]["inputs"], cands[MINT_A]["k_series"], True)
+        self.assertNotIn("k_series", cands[MINT_A])
+        self.assertEqual(cands[MINT_A]["k_series_n"], 1)
+        self.assertIsNone(cands[MINT_A]["k_max_drop"])
+        self.assertTrue(cands[MINT_A]["first_pick"])
+        self.assertFalse(cands[MINT_B]["first_pick"])
+        self.assertEqual(cands[MINT_A]["reserve"]["t_s"], T0)
+        first_snaps = []
+        for name in sorted(os.listdir(os.path.join(d, "v2"))):
+            if name.startswith("pool-snaps-"):
+                first_snaps.extend(lines(os.path.join(d, "v2", name)))
+        series = [
+            {"t_s": row["t_s"], "k": row["k"], "pool": row["pool"]}
+            for row in first_snaps if row["mint"] == MINT_A
+        ]
+        again = v2log.rules_from_logged(cands[MINT_A]["inputs"], series, True)
         self.assertEqual(again, cands[MINT_A]["rules"])
+        self.assertTrue(cands[MINT_A]["snap_stems"])
         self.assertEqual(cands[MINT_A]["reserve"]["sol"], 80)
         self.assertEqual(cands[MINT_A]["reserve"]["pool"], POOL)
         self.assertEqual(cands[MINT_A]["inputs"]["txns_h1"], {"buys": 3, "sells": 2})
@@ -217,13 +258,17 @@ class Files(unittest.TestCase):
             T0 + 1800, "20261101T0030",
             sources=run.LEAD_PATHS, pre_filters=run.LEAD_PRE_FILTERS,
             fetch_pair=follow, sleep=lambda _s: None, leads_per_run=12, cap=1,
+            now_fn=lambda: T0 + 1800,
         )
         self.assertEqual(summary["extra_calls"], 1)
         self.assertEqual(calls, [MINT_A])
         body = manifest(d)
         second = [row for row in body if row.get("scan_id") == "20261101T0030" and row["type"] == "scan"][0]
         self.assertEqual(second["extra_calls"], 1)
+        self.assertEqual(second["follow_stop"], "cap")
         self.assertGreaterEqual(second["follow_skipped_budget"], 1)
+        self.assertEqual(second["g5_rate"], 0.0)
+        self.assertEqual(second["pool_lookups"]["extra_attempted"], 1)
         # A's k series is on the follow path, not this scan's candidate. Death file has the drop.
         death = []
         for name in sorted(os.listdir(os.path.join(d, "v2"))):
@@ -253,11 +298,8 @@ class Files(unittest.TestCase):
                 snap_rows.extend(lines(os.path.join(d, "v2", name)))
         self.assertGreaterEqual(sum(1 for row in snap_rows if row["mint"] == MINT_A), 49)
 
-    def test_rollover_and_corrupt_index_do_not_raise(self):
+    def test_rollover_starts_a_new_file(self):
         d = tempfile.mkdtemp()
-        os.makedirs(os.path.join(d, "v2"))
-        with open(os.path.join(d, "v2", "seen.json"), "w", encoding="utf-8") as fh:
-            fh.write("{")
         row = {"v": 1, "scan_id": "20261101T0000", "mint": MINT_A, "pool": POOL,
                "t": "2026-11-01T00:00:00Z", "t_s": T0, "sol": 1, "token": 1, "k": 1,
                "txns_h1": None, "origin": "scan", "error": None}
@@ -265,13 +307,80 @@ class Files(unittest.TestCase):
         v2log.append_jsonl(d, v2log.SNAPS, row, T0, max_bytes=80)
         names = [n for n in os.listdir(os.path.join(d, "v2")) if n.startswith("pool-snaps-")]
         self.assertGreaterEqual(len(names), 2)
+
+    def test_corrupt_seen_is_not_overwritten(self):
+        d = tempfile.mkdtemp()
+        os.makedirs(os.path.join(d, "v2"))
+        path = os.path.join(d, "v2", "seen.json")
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write("{")
+        before = open(path, "rb").read()
         summary = v2log.record(
             d, [(MINT_A, "token-profiles")], [fetched(MINT_A, pair(MINT_A), rc_for())],
             T0, "20261101T0000", sources=run.LEAD_PATHS, pre_filters=run.LEAD_PRE_FILTERS,
             fetch_pair=None, sleep=lambda _s: None,
         )
-        self.assertIsNone(summary["error"])
-        self.assertTrue(manifest(d))
+        self.assertEqual(summary["error"], "seen_corrupt")
+        self.assertGreaterEqual(summary["log_errors"], 1)
+        self.assertEqual(open(path, "rb").read(), before)
+        self.assertFalse(any(name.startswith("manifest-") for name in os.listdir(os.path.join(d, "v2"))))
+
+    def test_rows_are_stamped_with_the_fetch_time(self):
+        d = tempfile.mkdtemp()
+        row = fetched(MINT_A, pair(MINT_A, age_s=7 * 3600), rc_for())
+        row["pair_at"] = T0 + 25
+        v2log.record(
+            d, [(MINT_A, "token-profiles")], [row], T0, "20261101T0000",
+            sources=run.LEAD_PATHS, pre_filters=run.LEAD_PRE_FILTERS,
+            fetch_pair=None, sleep=lambda _s: None,
+        )
+        body = manifest(d)
+        cand = next(item for item in body if item["type"] == "candidate")
+        self.assertEqual(body[0]["t_s"], T0)
+        self.assertEqual(cand["reserve"]["t_s"], T0 + 25)
+        self.assertEqual(cand["inputs"]["age_s"], 7 * 3600 + 25)
+        obs = []
+        for name in os.listdir(os.path.join(d, "v2")):
+            if name.startswith("death-"):
+                obs.extend(item for item in lines(os.path.join(d, "v2", name)) if item["type"] == "obs")
+        self.assertEqual(obs[0]["t_s"], T0 + 25)
+
+    def test_follow_stops_for_budget_and_for_429(self):
+        d = tempfile.mkdtemp()
+        v2log.record(
+            d, [(MINT_A, "token-profiles"), (MINT_B, "token-boosts")],
+            [fetched(MINT_A, pair(MINT_A), rc_for()), fetched(MINT_B, pair(MINT_B), rc_for())],
+            T0, "20261101T0000", sources=run.LEAD_PATHS, pre_filters=run.LEAD_PRE_FILTERS,
+            fetch_pair=None, sleep=lambda _s: None,
+        )
+        calls = []
+
+        def fetch(mint):
+            calls.append(mint)
+            return pair(mint)
+
+        stopped = v2log.record(
+            d, [], [], T0 + 30, "20261101T0030",
+            sources=run.LEAD_PATHS, pre_filters=run.LEAD_PRE_FILTERS,
+            fetch_pair=fetch, sleep=lambda _s: None, cap=10, budget_s=0,
+        )
+        self.assertEqual(calls, [])
+        self.assertEqual(stopped["follow_stop"], "budget")
+        self.assertEqual(stopped["follow_skipped_budget"], 2)
+
+        def limited(mint):
+            calls.append(mint)
+            raise urllib.error.HTTPError("u", 429, "rate", {}, io.BytesIO(b""))
+
+        calls.clear()
+        blocked = v2log.record(
+            d, [], [], T0 + 60, "20261101T0100",
+            sources=run.LEAD_PATHS, pre_filters=run.LEAD_PRE_FILTERS,
+            fetch_pair=limited, sleep=lambda _s: None, cap=10, budget_s=45,
+        )
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(blocked["follow_stop"], "429")
+        self.assertEqual(blocked["follow_skipped_budget"], 1)
 
     def test_a_logger_error_is_swallowed(self):
         d = tempfile.mkdtemp()
@@ -292,8 +401,10 @@ class Files(unittest.TestCase):
             fetch_pair=boom, sleep=lambda _s: None, cap=4,
         )
         self.assertEqual(summary["extra_calls"], 1)
-        self.assertEqual(summary["pool_lookups_failed"], 1)
+        self.assertEqual(summary["pool_lookups_failed"], 0)
         self.assertIsNone(summary["error"])
+        header = [row for row in manifest(d) if row["type"] == "scan"][-1]
+        self.assertEqual(header["pool_lookups"]["extra_failed"], 1)
 
 
 class ScanIntegration(unittest.TestCase):
@@ -348,6 +459,11 @@ class ScanIntegration(unittest.TestCase):
         self.assertTrue(all(row["pool_lookup"] == "not_attempted" for row in tail))
         self.assertTrue(all(row["rules"]["activity_h1"] == "unknown" for row in tail))
         self.assertEqual(header["extra_calls"], 0)
+        self.assertEqual(header["log_errors"], 0)
+        self.assertEqual(len(header["source_pages"]), 2)
+        self.assertTrue(all(page["status"] == "ok" and page["fetched_at"] for page in header["source_pages"]))
+        self.assertEqual(header["rug_lookups_attempted"], C.LEADS_PER_RUN)
+        self.assertEqual(header["rug_fail_rate"], 0.0)
 
     def test_follow_calls_are_capped_and_decisions_match_when_logging_is_off(self):
         first = [_mint(1), _mint(2), _mint(3)]
@@ -420,12 +536,60 @@ class ScanIntegration(unittest.TestCase):
         self.assertFalse(os.path.isdir(os.path.join(off_dir, "v2")))
 
     def test_decisions_and_trades_are_byte_identical_on_and_off(self):
-        on_dir = tempfile.mkdtemp()
-        off_dir = tempfile.mkdtemp()
-        on_calls = run_scenario(run.scan, on_dir, v2_log=True)
-        off_calls = run_scenario(run.scan, off_dir, v2_log=False)
+        """Valid base58 mints, so the log actually writes. The golden mints contain 0 and are a different test."""
+        pool = "3" * 32
+        kept = _mint(1)
+        dropped = _mint(2)
+        fresh = _mint(3)
+        rc = rc_for()
+        rc["markets"] = [{"marketType": "pump_fun_amm", "pubkey": pool, "lp": {"lpLockedPct": 100}}]
+        pairs = {
+            kept: pair(kept, pool=pool),
+            dropped: pair(dropped, pool=pool, sol=12, age_s=1000),
+            fresh: pair(fresh, pool=pool, sol=12, age_s=1000),
+        }
+        rcs = {m: rc for m in pairs}
+
+        def run_once(flag):
+            step = {"n": 0}
+            timeouts = []
+
+            def get(url, headers=None, timeout=None):
+                if timeout is not None:
+                    timeouts.append(timeout)
+                if url.endswith("/token-profiles/latest/v1"):
+                    src = [kept, dropped] if step["n"] == 0 else [fresh]
+                    step["n"] += 1
+                    return [{"chainId": "solana", "tokenAddress": m} for m in src]
+                if url.endswith("/token-boosts/latest/v1"):
+                    return []
+                if "/latest/dex/tokens/" in url:
+                    mint = url.rstrip("/").split("/")[-1]
+                    return {"pairs": [pairs[mint]]}
+                if "rugcheck" in url:
+                    mint = url.split("/tokens/")[1].split("/report")[0]
+                    return rcs[mint]
+                if "jup.ag" in url:
+                    return {"outAmount": "1000000", "priceImpactPct": "0.01", "routePlan": [1]}
+                raise AssertionError(url)
+
+            calls = []
+
+            def wrapped(url, headers=None, timeout=None):
+                calls.append(url)
+                return get(url, headers, timeout)
+
+            d = tempfile.mkdtemp()
+            run.scan(d, wrapped, now=T0, mode="fill", sleep=lambda s: None, v2_log=flag)
+            run.scan(d, wrapped, now=T0 + 1800, mode="fill", sleep=lambda s: None, v2_log=flag)
+            return d, calls, timeouts
+
+        on_dir, on_calls, on_timeouts = run_once(True)
+        off_dir, off_calls, off_timeouts = run_once(False)
         on_view = snapshot(on_dir, on_calls, observe.PUBLIC_KEYS)
         off_view = snapshot(off_dir, off_calls, observe.PUBLIC_KEYS)
+        on_view.pop("calls")
+        off_view.pop("calls")
         self.assertEqual(
             json.dumps(on_view, sort_keys=True, separators=(",", ":")).encode(),
             json.dumps(off_view, sort_keys=True, separators=(",", ":")).encode(),
@@ -436,9 +600,25 @@ class ScanIntegration(unittest.TestCase):
             with open(os.path.join(off_dir, name), "rb") as fh:
                 right = fh.read()
             self.assertEqual(left, right, name)
-        self.assertTrue(os.path.isdir(os.path.join(on_dir, "v2")))
+        self.assertEqual(on_calls[:len(off_calls)], off_calls)
+        self.assertGreater(len(on_calls), len(off_calls))
+        self.assertTrue(any("/latest/dex/tokens/" in url for url in on_calls[len(off_calls):]))
+        self.assertEqual(off_timeouts, [])
+        self.assertIn(v2log.FOLLOW_CALL_TIMEOUT_S, on_timeouts)
+        body = manifest(on_dir)
+        self.assertTrue(any(row["type"] == "candidate" for row in body))
+        self.assertTrue(all(row["log_errors"] == 0 for row in body if row["type"] == "scan"))
+        folder = os.path.join(on_dir, "v2")
+        snaps, death = [], []
+        for name in os.listdir(folder):
+            if name.startswith("pool-snaps-"):
+                snaps.extend(lines(os.path.join(folder, name)))
+            if name.startswith("death-"):
+                death.extend(lines(os.path.join(folder, name)))
+        self.assertTrue(snaps)
+        self.assertTrue(any(row["type"] == "obs" for row in death))
+        self.assertTrue(any(row["mint"] == kept and row.get("origin") == "follow" for row in snaps))
         self.assertFalse(os.path.isdir(os.path.join(off_dir, "v2")))
-        self.assertEqual(on_calls, off_calls)
 
     def test_a_raised_recorder_does_not_change_the_scan(self):
         def get(url, headers=None):

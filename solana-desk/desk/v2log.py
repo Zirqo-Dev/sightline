@@ -12,14 +12,13 @@ Files (under data_dir/v2/, the desk-data solana-desk folder):
   seen.json                   mint index (first-seen, k series). Not a decision input.
 
 Each JSONL rolls on the UTC day and again at 5 MB. Typical growth is about
-1–2 MB/day. If the same pools are snapshotted every 30 minutes for two weeks,
-the manifest can reach about 5–12 MB/day because each row copies its k series;
-the 5 MB roll keeps a single file at that size.
+1–2 MB/day. The manifest does not copy the k series, so a long history does
+not multiply that figure. The 5 MB roll is the backstop.
 
 S2 rules are spec section 4. They are recorded. This module does not enter,
 does not draw a twin sample, and does not read or write config.py.
 """
-import json, os, re, sys, time
+import json, os, re, sys, time, urllib.error
 from . import config as C, observe, skips
 
 MANIFEST = "manifest"
@@ -30,6 +29,9 @@ MAX_BYTES = 5 * 1024 * 1024
 DEFAULT_EXTRA_CALLS = 24
 EXTRA_CALL_HARD_MAX = 100
 DEFAULT_EXTRA_GAP_S = 0.3
+DEFAULT_FOLLOW_BUDGET_S = 45
+FOLLOW_BUDGET_HARD_MAX = 60
+FOLLOW_CALL_TIMEOUT_S = 5
 DEATH_WINDOW_S = 2 * 3600
 H1_S = 3600
 PRICE_DROP = 0.80
@@ -75,6 +77,20 @@ def extra_cap():
     if n < 0:
         return 0
     return min(n, EXTRA_CALL_HARD_MAX)
+
+
+def follow_budget():
+    """Seconds the follow-up reads may spend. Hard-capped so a scan stays far from the 420s job limit."""
+    raw = os.environ.get("SOLANA_DESK_V2_FOLLOW_BUDGET_S", "").strip()
+    if not raw:
+        return DEFAULT_FOLLOW_BUDGET_S
+    try:
+        n = float(raw)
+    except ValueError:
+        return DEFAULT_FOLLOW_BUDGET_S
+    if n < 0:
+        return 0.0
+    return min(n, FOLLOW_BUDGET_HARD_MAX)
 
 
 def extra_gap():
@@ -225,29 +241,66 @@ def dev_from_rows(rows):
     return total
 
 
-def authority_status(value):
-    """revoked when the RugCheck field is missing or falsy. set when it is truthy. The value is not returned."""
-    return "set" if value else "revoked"
+def authority_status(container, key):
+    """revoked only when the key is present and null. unknown when the key is missing. set when it is truthy.
+
+    The value itself is never returned. A missing RugCheck field is not treated as revoked.
+    """
+    if not isinstance(container, dict) or key not in container:
+        return "unknown"
+    value = container.get(key)
+    if value is None:
+        return "revoked"
+    if value:
+        return "set"
+    return "unknown"
+
+
+def _pool_same(a, b):
+    return a == b
 
 
 def k_dropped(series):
-    """True when any consecutive numeric k is at least 50% below the earlier k.
+    """True when any comparable consecutive k is at least 50% below the earlier k.
 
-    A missing k breaks the chain. It is not treated as a fall. The points stay in the series.
+    A missing k is skipped, so 100, None, 40 is a drop. A change of pool address
+    breaks the chain: the new pool's k is not compared with the previous pool.
+    """
+    drop = k_stats(series)[2]
+    return drop is not None and drop >= S2_MAX_K_DROP - 1e-12
+
+
+def k_stats(series):
+    """(n, last point, max consecutive fractional drop).
+
+    n counts every point, including a missing k. The drop skips missing k and
+    restarts when the pool address changes. None when no pair was compared.
     """
     prev = None
+    prev_pool = None
+    last = None
+    max_drop = None
+    n = 0
     for point in series or []:
         if not isinstance(point, dict):
-            prev = None
             continue
-        k = _num(point.get("k"))
+        n += 1
+        last = {"t_s": point.get("t_s"), "k": _num(point.get("k")), "pool": point.get("pool")}
+        k = last["k"]
+        pool = point.get("pool")
         if k is None:
-            prev = None
             continue
-        if prev is not None and prev > 0 and (prev - k) / prev >= S2_MAX_K_DROP - 1e-12:
-            return True
+        if prev is not None and not _pool_same(pool, prev_pool):
+            prev = k
+            prev_pool = pool
+            continue
+        if prev is not None and prev > 0:
+            drop = (prev - k) / prev
+            if max_drop is None or drop > max_drop:
+                max_drop = drop
         prev = k
-    return False
+        prev_pool = pool
+    return n, last, max_drop
 
 
 def rules_from_logged(inputs, k_series, looked_up):
@@ -324,10 +377,11 @@ def death_label(obs):
     full 2h that the observations actually cover.
 
     Price uses sol/token at each row. A stored price field is ignored.
-    Zero-swap needs an observation at or after t0+2h, every buys and sells count
-    from t0 through that observation, and no gap over 1h (h1 would not cover it).
-    A positive h1 on an observation after the window is not counted as an
-    in-window swap and is not counted as zero either (swaps_unattributed).
+    The t0 row's txns.h1 looks back to t0-1h, so it is not part of the zero-swap
+    test. A later row with an error, or with no buys/sells count, is missing
+    data: it does not freeze the label as unknown. Consecutive timestamps still
+    have to be within 1h or the gap rule applies. A positive h1 after the window
+    is swaps_unattributed.
 
     dead is true, false, or null. null with pending means the 2h has not elapsed
     and price has not hit the line. null without pending means the swap coverage
@@ -365,17 +419,24 @@ def death_label(obs):
         return base
     close = closing[0]
     span = [row for row in rows if t0 <= _num(row.get("t_s")) <= _num(close.get("t_s"))]
-    counts = [_swaps(row.get("txns_h1")) for row in span]
-    if any(count is None for count in counts):
-        return {"dead": None, "pending": False, "reason": "swaps_unknown", "price_drop": worst, "obs_n": len(rows)}
     gaps = [_num(b.get("t_s")) - _num(a.get("t_s")) for a, b in zip(span, span[1:])]
     if any(gap > H1_S for gap in gaps):
         return {"dead": None, "pending": False, "reason": "swaps_gap", "price_drop": worst, "obs_n": len(rows)}
-    if any((_swaps(row.get("txns_h1")) or 0) > 0 for row in in_window):
+
+    def after_t0(row):
+        return _num(row.get("t_s")) > t0
+
+    def missing(row):
+        return bool(row.get("error")) or _swaps(row.get("txns_h1")) is None
+
+    counted = [row for row in span if after_t0(row) and not missing(row)]
+    if any((_swaps(row.get("txns_h1")) or 0) > 0 for row in counted if _num(row.get("t_s")) <= end):
         return {"dead": False, "pending": False, "reason": None, "price_drop": worst, "obs_n": len(rows)}
-    if _num(close.get("t_s")) > end and (_swaps(close.get("txns_h1")) or 0) > 0:
+    if _num(close.get("t_s")) > end and not missing(close) and (_swaps(close.get("txns_h1")) or 0) > 0:
         return {"dead": None, "pending": False, "reason": "swaps_unattributed", "price_drop": worst, "obs_n": len(rows)}
-    if all(count == 0 for count in counts):
+    if not counted or (missing(close) and _num(close.get("t_s")) >= end and not any(_num(row.get("t_s")) >= end and not missing(row) for row in span)):
+        return {"dead": None, "pending": False, "reason": "swaps_gap", "price_drop": worst, "obs_n": len(rows)}
+    if all((_swaps(row.get("txns_h1")) or 0) == 0 for row in counted):
         return {"dead": True, "pending": False, "reason": "swaps", "price_drop": worst, "obs_n": len(rows)}
     return {"dead": False, "pending": False, "reason": None, "price_drop": worst, "obs_n": len(rows)}
 
@@ -437,15 +498,18 @@ def _seen_path(data_dir):
 
 
 def load_seen(data_dir):
+    """(doc, corrupt). A missing file is a new index. A present file that does not parse is left untouched."""
     path = _seen_path(data_dir)
+    if not os.path.exists(path):
+        return {"v": V, "pools": {}}, False
     try:
         with open(path, encoding="utf-8") as fh:
             doc = json.load(fh)
         if isinstance(doc, dict) and isinstance(doc.get("pools"), dict):
-            return doc
+            return doc, False
     except (OSError, ValueError):
         pass
-    return {"v": V, "pools": {}}
+    return None, True
 
 
 def save_seen(data_dir, doc):
@@ -489,8 +553,8 @@ def _inputs_from(pair, rc, now):
     base = _num((pair.get("liquidity") or {}).get("base")) if isinstance(pair, dict) and isinstance(pair.get("liquidity"), dict) else None
     score = _num(rc.get("score_normalised")) if isinstance(rc, dict) else None
     if isinstance(rc, dict):
-        mint_a = authority_status(rc.get("mintAuthority"))
-        freeze_a = authority_status(rc.get("freezeAuthority"))
+        mint_a = authority_status(rc, "mintAuthority")
+        freeze_a = authority_status(rc, "freezeAuthority")
     else:
         mint_a = freeze_a = None
     return {
@@ -548,13 +612,13 @@ def _follow_key(info, mint, now):
     return (1, last, mint)
 
 
-def _obs(mint, pool, t0_s, now, sol, token, k, h1, scan_id):
-    t_s = _t_s(now)
+def _obs(mint, pool, t0_s, at, sol, token, k, h1, scan_id, error):
+    t_s = _t_s(at)
     return {
         "type": "obs", "v": V, "mint": mint, "pool": pool,
         "t0": _iso(t0_s), "t0_s": t0_s, "t": _iso(t_s) if t_s is not None else None, "t_s": t_s,
         "sol": sol, "token": token, "k": k, "price": reserve_price(sol, token),
-        "txns_h1": h1, "scan_id": scan_id,
+        "txns_h1": h1, "error": error, "scan_id": scan_id,
     }
 
 
@@ -579,19 +643,19 @@ def _snap_row(mint, pool, now, sol, token, k, h1, scan_id, origin, error):
     }
 
 
-def _touch_pool(pools, mint, now, pool, sol, token, k, h1, scan_id):
-    """First-seen stays. This observation is appended. Returns the pool record."""
-    t_s = _t_s(now)
+def _touch_pool(pools, mint, at, pool, sol, token, k, h1, scan_id, error=None):
+    """First-seen stays. This observation is stamped with the fetch time. Returns the pool record."""
+    t_s = _t_s(at)
     info = pools.get(mint)
     if not isinstance(info, dict):
         info = {
             "t0_s": t_s, "pool": pool, "first_scan": scan_id,
-            "last_snap_s": None, "k_series": [], "obs": [],
+            "last_snap_s": None, "k_series": [], "obs": [], "snap_stems": [],
         }
         pools[mint] = info
     if info.get("t0_s") is None:
         info["t0_s"] = t_s
-    point = _k_point(now, k, pool)
+    point = _k_point(at, k, pool)
     series = info.get("k_series")
     if not isinstance(series, list):
         series = []
@@ -601,7 +665,8 @@ def _touch_pool(pools, mint, now, pool, sol, token, k, h1, scan_id):
     if not isinstance(obs, list):
         obs = []
     obs.append({
-        "t_s": t_s, "sol": sol, "token": token, "k": k, "pool": pool, "txns_h1": h1,
+        "t_s": t_s, "sol": sol, "token": token, "k": k, "pool": pool,
+        "txns_h1": h1, "error": error,
     })
     info["obs"] = obs
     info["last_snap_s"] = t_s
@@ -610,8 +675,29 @@ def _touch_pool(pools, mint, now, pool, sol, token, k, h1, scan_id):
     return info
 
 
+def _note_stem(info, path, written):
+    stem = os.path.basename(path)
+    if stem.endswith(".jsonl"):
+        stem = stem[:-len(".jsonl")]
+    stems = info.setdefault("snap_stems", [])
+    if stem not in stems:
+        stems.append(stem)
+    written.add(stem)
+    return stem
+
+
+def _k_public(series):
+    n, last, drop = k_stats(series)
+    return {
+        "k_series_n": n,
+        "k_last": last,
+        "k_max_drop": drop,
+    }
+
+
 def record(data_dir, seen, fetched, now, run_id, *, sources, pre_filters, fetch_pair=None,
-           sleep=None, leads_per_run=None, cap=None, log_errors=0, max_bytes=MAX_BYTES):
+           sleep=None, leads_per_run=None, cap=None, log_errors=0, max_bytes=MAX_BYTES,
+           source_pages=None, budget_s=None, now_fn=None):
     """Write this scan's manifest, snapshots, and death rows. Never raises.
 
     seen: every candidate (mint, source) in scanner order, including those past the lead cap.
@@ -628,6 +714,7 @@ def record(data_dir, seen, fetched, now, run_id, *, sources, pre_filters, fetch_
             data_dir, seen, fetched, now, run_id, sources=sources, pre_filters=pre_filters,
             fetch_pair=fetch_pair, sleep=sleep, leads_per_run=leads_per_run, cap=cap,
             log_errors=log_errors, max_bytes=max_bytes, summary=summary,
+            source_pages=source_pages, budget_s=budget_s, now_fn=now_fn or time.time,
         )
     except Exception:
         print("v2 log: skipped", file=sys.stderr)
@@ -636,19 +723,34 @@ def record(data_dir, seen, fetched, now, run_id, *, sources, pre_filters, fetch_
 
 
 def _record(data_dir, seen, fetched, now, run_id, *, sources, pre_filters, fetch_pair,
-            sleep, leads_per_run, cap, log_errors, max_bytes, summary):
+            sleep, leads_per_run, cap, log_errors, max_bytes, summary, source_pages, budget_s, now_fn):
     if leads_per_run is None:
         leads_per_run = C.LEADS_PER_RUN
     if cap is None:
         cap = extra_cap()
+    if budget_s is None:
+        budget_s = follow_budget()
     gap = extra_gap()
     t_s = _t_s(now)
     by_mint = {}
+    rug_attempted = 0
+    rug_failed = 0
     for row in fetched or []:
         if isinstance(row, dict) and public_id(row.get("mint")):
             by_mint[row["mint"]] = row
-    state = load_seen(data_dir)
+            rug_state = row.get("rug_lookup")
+            if rug_state in ("ok", "failed"):
+                rug_attempted += 1
+                if rug_state == "failed":
+                    rug_failed += 1
+    state, corrupt = load_seen(data_dir)
+    if corrupt:
+        summary["error"] = "seen_corrupt"
+        summary["log_errors"] = log_errors + 1
+        print("v2 log: skipped (seen index)", file=sys.stderr)
+        return summary
     pools = state.setdefault("pools", {})
+    written_stems = set()
     candidates = []
     scan_attempted = 0
     scan_failed = 0
@@ -690,62 +792,95 @@ def _record(data_dir, seen, fetched, now, run_id, *, sources, pre_filters, fetch
         if row["mint"] not in pick_set and twin_candidate(row["inputs"], row["rules"], row["pool_lookup"])
     )
     attempted_mints = set(by_mint)
+    clock = t_s if t_s is not None else now
     pending = [mint for mint in pools if public_id(mint) and mint not in attempted_mints and isinstance(pools.get(mint), dict)]
-    pending.sort(key=lambda mint: _follow_key(pools[mint], mint, now if t_s is None else t_s))
+    pending.sort(key=lambda mint: _follow_key(pools[mint], mint, clock))
     extra_attempted = 0
     extra_failed = 0
-    follow_skipped = 0
+    follow_stop = None
+    hit_budget = False
+    saw_429 = False
     if fetch_pair is None or cap <= 0:
-        follow_skipped = len(pending)
         pending_run = []
     else:
         pending_run = pending[:cap]
-        follow_skipped = len(pending) - len(pending_run)
+    started = time.monotonic()
     for mint in pending_run:
+        if time.monotonic() - started >= budget_s:
+            hit_budget = True
+            break
         if sleep is not None and gap > 0:
             try:
                 sleep(gap)
             except Exception:
                 log_errors += 1
+            if time.monotonic() - started >= budget_s:
+                hit_budget = True
+                break
         extra_attempted += 1
         try:
             pair = fetch_pair(mint)
             error = None
+        except urllib.error.HTTPError as exc:
+            pair = None
+            error = "lookup_failed"
+            extra_failed += 1
+            if getattr(exc, "code", None) == 429:
+                saw_429 = True
         except Exception:
             pair = None
             error = "lookup_failed"
             extra_failed += 1
+        fetched_at = now_fn()
         try:
-            _follow_snapshot(pools, mint, pair, error, now, run_id, data_dir, max_bytes)
+            _follow_snapshot(
+                pools, mint, pair, error, fetched_at, run_id, data_dir, max_bytes, written_stems,
+            )
         except Exception:
             log_errors += 1
+        if saw_429:
+            break
+    if saw_429:
+        follow_stop = "429"
+    elif hit_budget:
+        follow_stop = "budget"
+    elif len(pending) > extra_attempted:
+        follow_stop = "cap"
+    follow_skipped = len(pending) - extra_attempted
     for row in candidates:
         if row["pool_lookup"] != "ok":
             continue
         try:
-            _write_observation(data_dir, pools, row["mint"], now, run_id, "scan", max_bytes, row["inputs"])
+            _write_observation(
+                data_dir, pools, row["mint"], row.get("_fetch_at", now), run_id, "scan",
+                max_bytes, row["inputs"], written_stems,
+            )
         except Exception:
             log_errors += 1
-    attempted = scan_attempted + extra_attempted
-    failed = scan_failed + extra_failed
     header = {
         "type": "scan", "v": V, "scan_id": str(run_id), "t": _iso(t_s) if t_s is not None else None, "t_s": t_s,
         "sources": list(sources or []),
+        "source_pages": list(source_pages or []),
         "pre_filters": list(pre_filters or []),
         "page_limits": {"leads_per_run": int(leads_per_run), "pages_per_source": 1},
         "candidates_seen": len(candidates),
         "candidates_selected": sum(1 for row in candidates if row["selected"]),
-        "pool_lookups_attempted": attempted,
-        "pool_lookups_failed": failed,
+        "pool_lookups_attempted": scan_attempted,
+        "pool_lookups_failed": scan_failed,
         "pool_lookups": {
-            "attempted": attempted, "failed": failed,
             "scan_attempted": scan_attempted, "scan_failed": scan_failed,
             "extra_attempted": extra_attempted, "extra_failed": extra_failed,
         },
-        "g5_rate": None if attempted == 0 else round(failed / attempted, 6),
+        "g5_rate": None if scan_attempted == 0 else round(scan_failed / scan_attempted, 6),
+        "rug_lookups_attempted": rug_attempted,
+        "rug_lookups_failed": rug_failed,
+        "rug_fail_rate": None if rug_attempted == 0 else round(rug_failed / rug_attempted, 6),
         "extra_calls": extra_attempted,
         "extra_call_cap": int(cap),
+        "follow_budget_s": budget_s,
         "follow_skipped_budget": follow_skipped,
+        "follow_stop": follow_stop,
+        "snap_files": sorted(written_stems),
         "s2_picks": picks,
         "twin_candidates": twins,
         "twin_draws": None,
@@ -757,14 +892,21 @@ def _record(data_dir, seen, fetched, now, run_id, *, sources, pre_filters, fetch
             "max_k_drop": S2_MAX_K_DROP, "authority_rule": True,
         },
     }
+    for row in candidates:
+        info = pools.get(row["mint"])
+        if isinstance(info, dict):
+            row["snap_stems"] = list(info.get("snap_stems") or [])
     append_jsonl(data_dir, MANIFEST, header, now, max_bytes=max_bytes)
     for row in candidates:
-        append_jsonl(data_dir, MANIFEST, row, now, max_bytes=max_bytes)
+        public = dict(row)
+        public.pop("_fetch_at", None)
+        append_jsonl(data_dir, MANIFEST, public, now, max_bytes=max_bytes)
     state["v"] = V
     save_seen(data_dir, state)
     summary.update(
         extra_calls=extra_attempted, log_errors=log_errors,
-        pool_lookups_attempted=attempted, pool_lookups_failed=failed, error=None,
+        pool_lookups_attempted=scan_attempted, pool_lookups_failed=scan_failed, error=None,
+        follow_stop=follow_stop, follow_skipped_budget=follow_skipped,
     )
     return summary
 
@@ -772,34 +914,47 @@ def _record(data_dir, seen, fetched, now, run_id, *, sources, pre_filters, fetch
 def _candidate_row(pools, mint, source, index, selected, rec, pool_lookup, looked_up, now, run_id):
     pair = rec.get("pair") if isinstance(rec, dict) else None
     rc = rec.get("rc") if isinstance(rec, dict) else None
+    pair_at = rec.get("pair_at") if isinstance(rec, dict) else None
+    fetch_at = pair_at if pair_at is not None else now
     if pool_lookup == "ok" and isinstance(pair, dict):
-        inputs = _inputs_from(pair, rc, now)
+        inputs = _inputs_from(pair, rc, fetch_at)
         info = _touch_pool(
-            pools, mint, now, inputs.get("pairAddress"), inputs.get("sol"), inputs.get("token"),
-            inputs.get("k"), inputs.get("txns_h1"), str(run_id),
+            pools, mint, fetch_at, inputs.get("pairAddress"), inputs.get("sol"), inputs.get("token"),
+            inputs.get("k"), inputs.get("txns_h1"), str(run_id), error=inputs.get("reserve_error"),
         )
         k_series = list(info.get("k_series") or [])
-        reserve = _reserve_row(inputs.get("sol"), inputs.get("token"), inputs.get("k"), inputs.get("pairAddress"), now)
+        reserve = _reserve_row(inputs.get("sol"), inputs.get("token"), inputs.get("k"), inputs.get("pairAddress"), fetch_at)
+        snap_stems = list(info.get("snap_stems") or [])
     else:
         inputs = _blank_inputs()
-        k_series = []
         reserve = None
-        looked_up = looked_up and pool_lookup == "ok"
+        info = pools.get(mint) if isinstance(pools.get(mint), dict) else None
+        k_series = list((info or {}).get("k_series") or [])
+        snap_stems = list((info or {}).get("snap_stems") or [])
+        looked_up = False
     rules = rules_from_logged(inputs, k_series, looked_up and pool_lookup == "ok")
-    pair_at = _t_s(rec.get("pair_at")) if isinstance(rec, dict) else None
+    picked = bool(isinstance(info, dict) and info.get("s2_picked"))
+    first_pick = bool(s2_pick(rules, pool_lookup) and not picked)
+    if first_pick and isinstance(info, dict):
+        info["s2_picked"] = True
+    pair_s = _t_s(pair_at) if isinstance(rec, dict) else None
     rug_at = _t_s(rec.get("rug_at")) if isinstance(rec, dict) else None
-    return {
+    row = {
         "type": "candidate", "v": V, "scan_id": str(run_id),
         "t": _iso(_t_s(now)), "t_s": _t_s(now),
         "mint": mint, "source": source, "seen_index": index, "selected": bool(selected),
         "pool_lookup": pool_lookup,
-        "pair_fetched_at": _iso(pair_at) if pair_at is not None else None,
+        "pair_fetched_at": _iso(pair_s) if pair_s is not None else None,
         "rug_fetched_at": _iso(rug_at) if rug_at is not None else None,
-        "inputs": inputs, "reserve": reserve, "k_series": k_series, "rules": rules,
+        "inputs": inputs, "reserve": reserve, "rules": rules,
+        "snap_stems": snap_stems, "first_pick": first_pick,
+        "_fetch_at": fetch_at,
     }
+    row.update(_k_public(k_series))
+    return row
 
 
-def _follow_snapshot(pools, mint, pair, error, now, run_id, data_dir, max_bytes):
+def _follow_snapshot(pools, mint, pair, error, at, run_id, data_dir, max_bytes, written):
     if error or not isinstance(pair, dict):
         sol = token = k = None
         h1 = None
@@ -811,31 +966,35 @@ def _follow_snapshot(pools, mint, pair, error, now, run_id, data_dir, max_bytes)
         pool = public_id(observe.pool_addr(pair)) or (
             public_id(pools.get(mint, {}).get("pool")) if isinstance(pools.get(mint), dict) else None
         )
-    info = _touch_pool(pools, mint, now, pool, sol, token, k, h1, str(run_id))
-    append_jsonl(
+    info = _touch_pool(pools, mint, at, pool, sol, token, k, h1, str(run_id), error=err)
+    path = append_jsonl(
         data_dir, SNAPS,
-        _snap_row(mint, pool, now, sol, token, k, h1, str(run_id), "follow", err),
-        now, max_bytes=max_bytes,
+        _snap_row(mint, pool, at, sol, token, k, h1, str(run_id), "follow", err),
+        at, max_bytes=max_bytes,
     )
-    _write_death(data_dir, mint, info, now, run_id, max_bytes, sol, token, k, h1, pool)
+    _note_stem(info, path, written)
+    _write_death(data_dir, mint, info, at, run_id, max_bytes, sol, token, k, h1, pool, err)
 
 
-def _write_observation(data_dir, pools, mint, now, run_id, origin, max_bytes, inputs):
+def _write_observation(data_dir, pools, mint, at, run_id, origin, max_bytes, inputs, written):
     info = pools.get(mint) or {}
     sol, token, k = inputs.get("sol"), inputs.get("token"), inputs.get("k")
     pool = inputs.get("pairAddress")
     h1 = inputs.get("txns_h1")
-    append_jsonl(
+    err = inputs.get("reserve_error")
+    path = append_jsonl(
         data_dir, SNAPS,
-        _snap_row(mint, pool, now, sol, token, k, h1, str(run_id), origin, inputs.get("reserve_error")),
-        now, max_bytes=max_bytes,
+        _snap_row(mint, pool, at, sol, token, k, h1, str(run_id), origin, err),
+        at, max_bytes=max_bytes,
     )
-    _write_death(data_dir, mint, info, now, run_id, max_bytes, sol, token, k, h1, pool)
+    if isinstance(info, dict):
+        _note_stem(info, path, written)
+    _write_death(data_dir, mint, info, at, run_id, max_bytes, sol, token, k, h1, pool, err)
 
 
-def _write_death(data_dir, mint, info, now, run_id, max_bytes, sol, token, k, h1, pool):
-    t0_s = _t_s(info.get("t0_s")) if isinstance(info, dict) else _t_s(now)
-    obs_line = _obs(mint, pool, t0_s, now, sol, token, k, h1, str(run_id))
-    append_jsonl(data_dir, DEATH, obs_line, now, max_bytes=max_bytes)
+def _write_death(data_dir, mint, info, at, run_id, max_bytes, sol, token, k, h1, pool, error):
+    t0_s = _t_s(info.get("t0_s")) if isinstance(info, dict) else _t_s(at)
+    obs_line = _obs(mint, pool, t0_s, at, sol, token, k, h1, str(run_id), error)
+    append_jsonl(data_dir, DEATH, obs_line, at, max_bytes=max_bytes)
     label = death_label(info.get("obs") if isinstance(info, dict) else [obs_line])
-    append_jsonl(data_dir, DEATH, _label_row(mint, t0_s, now, str(run_id), label), now, max_bytes=max_bytes)
+    append_jsonl(data_dir, DEATH, _label_row(mint, t0_s, at, str(run_id), label), at, max_bytes=max_bytes)
