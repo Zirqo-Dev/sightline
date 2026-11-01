@@ -1,14 +1,14 @@
 {
- "at": "2026-11-01T02:12:50Z",
+ "at": "2026-11-01T04:12:40Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14141724,
+ "height": 14142450,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 129.191121,
+ "ada_balance": 1182.747834,
  "positions": {
   "6e917b+fda00259": 2790905,
-  "ASCEND": 343152277750,
+  "ASCEND": 342152277750,
   "ATLAS": 132543787,
   "ATM": 19024975734573,
   "BABYBOLT": 13368031015248,
@@ -124,7 +124,7 @@
  },
  "positions_counted": {
   "6e917b+fda00259": 2790905,
-  "ASCEND": 343152277750,
+  "ASCEND": 342152277750,
   "ATLAS": 132543787,
   "ATM": 19024975734573,
   "BABYBOLT": 13368031015248,
@@ -247,7 +247,7 @@
   {
    "token": "ASCEND",
    "policy": "eb7a93eb",
-   "qty": 343152277750
+   "qty": 342152277750
   },
   {
    "token": "ATLAS",
@@ -6615,6 +6615,19 @@
    "closed_at": "2026-10-31T22:42:53Z",
    "filled_token": "COCK",
    "filled_qty": 13095
+  },
+  "15805665ba#0": {
+   "ref_short": "15805665ba#0",
+   "token": "ASCEND",
+   "qty_raw": 1000000000,
+   "ada": 4.0,
+   "status": "filled",
+   "opened_tx": "15805665ba",
+   "opened_at": "2026-11-01T03:44:23Z",
+   "own_stake": true,
+   "closed_tx": "8c1b68a207",
+   "closed_at": "2026-11-01T03:44:33Z",
+   "filled_ada": 1054.00289
   }
  },
  "rows": [
@@ -21304,17 +21317,35 @@
    "qty": 67863,
    "ada_leg": null,
    "counterparty_tag": "w-8733bb5a"
+  },
+  {
+   "time": "2026-11-01T03:44:23Z",
+   "tx_short": "15805665ba",
+   "kind": "order_open",
+   "token": "ASCEND",
+   "qty": 1000000000,
+   "ada_leg": 4.0,
+   "counterparty_tag": null,
+   "order_ref_short": "15805665ba#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-01T03:44:33Z",
+   "tx_short": "8c1b68a207",
+   "kind": "order_fill",
+   "token": "ASCEND",
+   "qty": 1000000000,
+   "ada_leg": 1054.00289,
+   "counterparty_tag": null,
+   "order_ref_short": "15805665ba#0",
+   "order_status": "filled"
   }
  ],
  "capped": false,
  "state_source": "cache",
  "counterparty_tags": true,
- "reconcile": {
-  "ada_drift": 0.0,
-  "token_drift": {},
-  "ok": true
- },
- "koios_calls": 7,
+ "reconcile_skipped": "account tip moved past the applied height (or unreadable); next run",
+ "koios_calls": 5,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
