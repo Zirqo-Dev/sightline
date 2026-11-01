@@ -1,126 +1,25 @@
 {
- "at": "2026-11-01T11:11:00Z",
+ "at": "2026-11-01T13:10:41Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "coordinated_buys",
+   "kind": "sniper_full_exit",
    "ticker": "TIPR",
-   "wallets": [
-    "w-227c4046",
-    "w-2ebea9dd",
-    "w-9d7e7db5",
-    "w-a6fb6815",
-    "w-adb28a4e",
-    "w-b3a0f8e8",
-    "w-f7844f67",
-    "w-fe9f2451"
-   ],
-   "window_s": 120,
-   "at": "2026-11-01T11:11:00Z"
+   "wallet": "w-fe9f2451",
+   "tags": [],
+   "at": "2026-11-01T13:10:41Z"
   },
   {
-   "kind": "fresh_wallet_swarm",
+   "kind": "sniper_full_exit",
    "ticker": "TIPR",
-   "wallets": [
-    "w-2ebea9dd",
-    "w-a6fb6815",
-    "w-adb28a4e",
-    "w-b3a0f8e8",
-    "w-fe9f2451"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-01T11:11:00Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
    "wallet": "w-2ebea9dd",
-   "launches": [
-    "BUTTHOLE",
-    "PLUG",
-    "TIPR"
-   ],
-   "at": "2026-11-01T11:11:00Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-9d7e7db5",
-   "launches": [
-    "JSON",
-    "LEVERHED",
-    "MOON",
-    "NITE",
-    "PILLSEY",
-    "PLUG",
-    "SATURWEE",
-    "TIPR",
-    "VALHALLA",
-    "VIP"
-   ],
-   "at": "2026-11-01T11:11:00Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-f7844f67",
-   "launches": [
-    "LAPTOP",
-    "LEVERHED",
-    "NIO",
-    "NITE",
-    "PILLSEY",
-    "SATURWEE",
-    "SSSS",
-    "TCM",
-    "TIPR",
-    "TOT"
-   ],
-   "at": "2026-11-01T11:11:00Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "TIPR",
-   "wallet": "w-b3a0f8e8",
    "tags": [],
-   "at": "2026-11-01T11:11:00Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "TIPR",
-   "wallet": "w-a6fb6815",
-   "tags": [],
-   "at": "2026-11-01T11:11:00Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "TIPR",
-   "wallet": "w-227c4046",
-   "tags": [],
-   "at": "2026-11-01T11:11:00Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "TIPR",
-   "wallet": "w-adb28a4e",
-   "tags": [],
-   "at": "2026-11-01T11:11:00Z"
+   "at": "2026-11-01T13:10:41Z"
   }
  ],
  "recent": [
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "HALLOW",
-   "wallet": "w-4a962a70",
-   "tags": [],
-   "at": "2026-10-30T04:11:25Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "CZT",
-   "wallet": "w-5be52d08",
-   "tags": [],
-   "at": "2026-10-30T04:11:25Z"
-  },
   {
    "kind": "ada_side_drop",
    "ticker": "BET",
@@ -3314,11 +3213,24 @@
    "wallet": "w-adb28a4e",
    "tags": [],
    "at": "2026-11-01T11:11:00Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "TIPR",
+   "wallet": "w-fe9f2451",
+   "tags": [],
+   "at": "2026-11-01T13:10:41Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "TIPR",
+   "wallet": "w-2ebea9dd",
+   "tags": [],
+   "at": "2026-11-01T13:10:41Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 1,
-  "koios": 9
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,

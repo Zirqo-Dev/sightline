@@ -7,7 +7,7 @@
   "line": 6000.0,
   "metric": "ada_side",
   "text": "pool ADA side under 6k or holders under 50",
-  "value": 6657
+  "value": 6633
  },
  "BET": {
   "changed_since_last": false,
@@ -32,7 +32,7 @@
   "line": 265.0,
   "metric": "holders",
   "text": "pool mcap under 400k ADA or holders under 265 (net-sell driven; LP pulls confirm next pulse, rule u)",
-  "value": 257
+  "value": 256
  },
  "CLOVE": {
   "changed_since_last": false,
@@ -46,13 +46,15 @@
  },
  "COCK": {
   "changed_since_last": true,
-  "crossed": [],
-  "first_hit_at": null,
-  "hit": false,
+  "crossed": [
+   "ada_side"
+  ],
+  "first_hit_at": "2026-11-01T13:08:13Z",
+  "hit": true,
   "line": 150000.0,
   "metric": "ada_side",
   "text": "Grumpy Walrus selling COCK into the pool or pulling its LP, or the pool ADA side under ~150k ADA",
-  "value": 150569
+  "value": 147566
  },
  "CORE": {
   "changed_since_last": false,
@@ -75,7 +77,7 @@
   "line": 13000.0,
   "metric": "ada_side",
   "text": "pool ADA side under 13k, on-chain holders under 80, or the swarm keys exiting in one hour",
-  "value": 3546
+  "value": 3533
  },
  "EVIL": {
   "changed_since_last": false,
@@ -97,7 +99,7 @@
   "line": 7000.0,
   "metric": "ada_side",
   "text": "pool ADA side under 7k or holders under 50",
-  "value": 9634
+  "value": 9600
  },
  "GOLFY": {
   "changed_since_last": false,
@@ -122,7 +124,7 @@
   "line": 4000.0,
   "metric": "ada_side",
   "text": "hit: pool ADA side under ~4k with 29 holders",
-  "value": 3057
+  "value": 3048
  },
  "HIVE": {
   "changed_since_last": false,
@@ -134,7 +136,7 @@
   "line": 7000.0,
   "metric": "ada_side",
   "text": "pool ADA side under 7k or on-chain holders under 60",
-  "value": 5341
+  "value": 5322
  },
  "HOWDY": {
   "changed_since_last": false,
@@ -146,7 +148,7 @@
   "line": 7000.0,
   "metric": "ada_side",
   "text": "pool ADA side under 7k, holders under 40, or Grumpy Walrus selling HOWDY into the pool",
-  "value": 6470
+  "value": 6297
  },
  "JUICE": {
   "changed_since_last": false,
@@ -159,7 +161,7 @@
   "line": 4000.0,
   "metric": "ada_side",
   "text": "pool ADA side under 4k or holders under 40",
-  "value": 2821
+  "value": 2811
  },
  "SER": {
   "changed_since_last": false,
@@ -172,7 +174,7 @@
   "line": 13000.0,
   "metric": "ada_side",
   "text": "pool ADA side under 13k, holders under 80, or Grumpy Walrus selling SER into the pool",
-  "value": 6825
+  "value": 6804
  },
  "SHARKY": {
   "changed_since_last": false,
@@ -192,18 +194,16 @@
   "line": 430.0,
   "metric": "holders",
   "text": "on-chain holders under 430 or a 1M+ SOLADA dump into the pool from Grumpy Walrus or its side wallets",
-  "value": 508
+  "value": 510
  },
  "VAMP": {
-  "changed_since_last": false,
-  "crossed": [
-   "holders"
-  ],
-  "first_hit_at": "2026-11-01T09:10:32Z",
-  "hit": true,
+  "changed_since_last": true,
+  "crossed": [],
+  "first_hit_at": null,
+  "hit": false,
   "line": 40.0,
   "metric": "holders",
   "text": "curve under 50% or holders under 40",
-  "value": 39
+  "value": 40
  }
 }
