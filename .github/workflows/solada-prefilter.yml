@@ -65,6 +65,10 @@ jobs:
         with:
           ref: desk-data
           path: data
+          # Whale roster reads older big_moves.json and liquidity_moves.json
+          # revisions so a trade is scored once across runs. Depth 1 would
+          # keep only the 72h file.
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         if: github.event.inputs.ping != 'true'
         with:

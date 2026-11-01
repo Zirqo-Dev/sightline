@@ -5,12 +5,14 @@
   "measured_factor": true,
   "min_sample": 8,
   "asof": "2026-10-29T16:00:00Z",
-  "note": "Research tally. A hit is a favorable price or liquidity change at +1h, +6h, or +24h. Rates stay blank under 8 events. Not a buy signal.",
+  "note": "Research tally. A hit is when every measured series (price and liquidity) moves the whale's way at +1h, +6h, or +24h. Rates stay blank under 8 events. eligible_for_active needs at least 25 scored events and a hit rate above 55% at both 6h and 24h. Nothing is promoted automatically. Not a buy signal.",
   "whales": [
     {
       "codename": "Grumpy Walrus",
       "role": "lead",
       "status": "active",
+      "eligible_for_active": false,
+      "eligible_reason": "not eligible: 3 scored events (need 25); 6h blank (need > 0.55); 24h blank (need > 0.55); promotion is a manual owner decision",
       "scores": {
         "events": 3,
         "accumulate": 1,
@@ -33,6 +35,8 @@
       "codename": "Sleepy Otter",
       "role": "watch",
       "status": "candidate",
+      "eligible_for_active": false,
+      "eligible_reason": "not eligible: 0 scored events (need 25); 6h blank (need > 0.55); 24h blank (need > 0.55); promotion is a manual owner decision",
       "scores": {
         "events": 0,
         "accumulate": 0,

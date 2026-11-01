@@ -23,6 +23,8 @@
           "codename": {"type": "string", "minLength": 3, "maxLength": 40},
           "role": {"enum": ["lead", "watch"]},
           "status": {"enum": ["candidate", "active", "dropped"]},
+          "eligible_for_active": {"type": "boolean"},
+          "eligible_reason": {"type": "string", "maxLength": 400},
           "scores": {
             "type": "object",
             "additionalProperties": false,

@@ -1,13 +1,20 @@
 """Build the whale roster from desk-data and write the public summary.
 
 The private roster and event log stay in the Actions cache. This step does not
-post a webhook and does not change desk rules.
+post a webhook and does not change desk rules. It does not promote a whale.
+
+Candidate events come from tagged big_moves rows and tagged liquidity rows.
+When data-dir is a git checkout, older revisions of those files are read too,
+and a trade that shows up in several runs is kept once. Wallets stay in the
+cache. The public file gets codename, role, status, scores, and the
+eligible_for_active flag.
 
     python3 -m whale_roster.build --repo . --data-dir DIR --cache-dir DIR --public-dir DIR
 """
 import argparse
 import json
 import os
+import subprocess
 import tempfile
 import time
 
@@ -36,6 +43,48 @@ def _load(path):
     return doc
 
 
+def _git_docs(data_dir, rel):
+    """Older revisions of one desk-data file. Empty when this dir is not a checkout."""
+    try:
+        listed = subprocess.run(
+            ["git", "-C", data_dir, "rev-list", "HEAD", "--", rel],
+            capture_output=True, text=True, timeout=60, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if listed.returncode != 0:
+        return []
+    docs = []
+    for commit in listed.stdout.split():
+        try:
+            shown = subprocess.run(
+                ["git", "-C", data_dir, "show", "%s:%s" % (commit, rel)],
+                capture_output=True, timeout=60, check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if shown.returncode != 0 or not shown.stdout:
+            continue
+        try:
+            doc = json.loads(shown.stdout.decode())
+        except (UnicodeError, ValueError):
+            continue
+        if isinstance(doc, dict):
+            docs.append(doc)
+    return docs
+
+
+def _history(data_dir, rel):
+    """Working copy first, then git history. Callers dedupe trades."""
+    docs = []
+    current = _load(os.path.join(data_dir, rel))
+    if isinstance(current, dict):
+        docs.append(current)
+    for doc in _git_docs(data_dir, rel):
+        docs.append(doc)
+    return docs
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Whale roster research summary")
     parser.add_argument("--repo", required=True)
@@ -51,7 +100,13 @@ def main(argv=None):
         return 1
     log = _load(os.path.join(args.data_dir, "solada", "log.json"))
     ledger = _load(os.path.join(args.data_dir, "solada-prefilter", "whale_ledger.json"))
-    liquidity = _load(os.path.join(args.data_dir, "solada-prefilter", "liquidity_moves.json"))
+    liquidity = _load(os.path.join(args.data_dir, "solada-prefilter", "liquidity_moves.json")) or {}
+    liq_rows = list(liquidity.get("moves") or [])
+    for old in _history(args.data_dir, "solada-prefilter/liquidity_moves.json"):
+        liq_rows.extend(old.get("moves") or [])
+    liquidity = dict(liquidity)
+    liquidity["moves"] = WR.dedupe_rows(liq_rows)
+    big_moves = _history(args.data_dir, "solada-prefilter/big_moves.json")
     config = _load(os.path.join(args.repo, "solada-prefilter", "config.json"))
     known = _load(os.path.join(args.repo, "solada-prefilter", "known_units.json"))
     previous = _load(os.path.join(args.public_dir, WR.PUBLIC_NAME))
@@ -79,6 +134,7 @@ def main(argv=None):
             return cache[unit]
     roster, events, public = WR.build(
         log, ledger, liquidity, config, known, cache_roster, events, time.time(), quote, WR.social_counts(previous),
+        big_moves,
     )
     _write(os.path.join(args.cache_dir, WR.CACHE_ROSTER), roster)
     _write(os.path.join(args.cache_dir, WR.CACHE_EVENTS), {"events": events})

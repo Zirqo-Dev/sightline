@@ -334,5 +334,196 @@ class GuardTests(unittest.TestCase):
         self.assertEqual(ok.returncode, 0, ok.stderr)
 
 
+class CandidateScoreTests(unittest.TestCase):
+    def big(self, rows):
+        return {"moves": rows, "coverage": {"AAA": {}, "BBB": {}}}
+
+    def row(self, tag, ticker, direction, ada, tx, when="2026-10-29T15:00:00Z"):
+        return {"tag": tag, "ticker": ticker, "direction": direction, "ada": ada, "tx_short": tx, "time": when}
+
+    def test_big_moves_tags_qualify_and_the_lead_tag_does_not(self):
+        rows = [
+            self.row("m-aaaaaaaa", "AAA", "in", 1500, "txaaa1"),
+            self.row("m-aaaaaaaa", "BBB", "in", 800, "txaaa2"),
+            self.row("m-f3186187", "AAA", "in", 3000, "txlead1"),
+            self.row("m-f3186187", "BBB", "out", 2500, "txlead2"),
+            self.row("w-bbbbbbbb", "AAA", "in", 100, "txbbb1"),
+        ]
+        found = WR.discover(
+            {"cardano_top10": [{"ticker": "AAA"}, {"ticker": "BBB"}]},
+            {"moves": []},
+            ["w-f3186187"],
+            {"AAA", "BBB"},
+            self.big(rows),
+        )
+        self.assertEqual(found, ["m-aaaaaaaa"])
+        self.assertNotIn("m-f3186187", found)
+        self.assertNotIn("w-bbbbbbbb", found)
+
+    def test_a_balanced_router_is_not_a_candidate(self):
+        rows = []
+        for i in range(100):
+            ticker = "AAA" if i % 2 == 0 else "BBB"
+            direction = "in" if i < 50 else "out"
+            rows.append(self.row("m-cccccccc", ticker, direction, 1000, "tx%03d" % i))
+        self.assertTrue(WR.market_maker(100, 50000, 50000))
+        self.assertTrue(WR.market_maker(100, 100, 90))
+        self.assertFalse(WR.market_maker(99, 50000, 50000))
+        self.assertFalse(WR.market_maker(100, 100, 80))
+        self.assertFalse(WR.market_maker(100, 100, 0))
+        found = WR.discover({}, {"moves": []}, [], {"AAA", "BBB"}, self.big(rows))
+        self.assertEqual(found, [])
+        self.assertEqual(WR.router_tags(self.big(rows)), ["m-cccccccc"])
+        roster = WR.empty_roster()
+        blocked = WR.codename_for("m-cccccccc")
+        WR.add_candidates(roster, ["m-cccccccc"], ["big-move overlap"], reserved=[blocked])
+        self.assertNotEqual(roster["whales"][0]["codename"], blocked)
+        self.assertEqual(roster["whales"][0]["status"], "candidate")
+        uneven = [self.row("m-dddddddd", "AAA" if i % 2 == 0 else "BBB", "in", 1000, "u%03d" % i) for i in range(40)]
+        uneven += [self.row("m-dddddddd", "AAA", "out", 1000, "s%03d" % i) for i in range(10)]
+        found = WR.discover({}, {"moves": []}, [], {"AAA", "BBB"}, self.big(uneven))
+        self.assertEqual(found, ["m-dddddddd"])
+
+    def test_the_same_trade_in_two_runs_is_one_event(self):
+        first = self.row("m-aaaaaaaa", "AAA", "in", 1500, "txaaa1")
+        second = self.row("m-aaaaaaaa", "BBB", "in", 900, "txaaa2", "2026-10-29T15:05:00Z")
+        again = dict(first)
+        again["ada"] = 1501
+        rows = WR.dedupe_rows([first, second, again])
+        self.assertEqual(len(rows), 2)
+        moves = WR.moves_from_tagged(rows)
+        self.assertEqual([m["action"] for m in moves], ["accumulate", "accumulate"])
+        log = {"cardano_top10": [{"ticker": "AAA"}, {"ticker": "BBB"}]}
+        roster, events, public = WR.build(
+            log, {"whale_tag": "w-f3186187", "rows": []}, {"moves": []},
+            {"whale": {}, "units": {}}, {}, None, [], 1_700_000_000, None, None,
+            [self.big([first, second]), self.big([again])],
+        )
+        names = {w["codename"]: w for w in public["whales"]}
+        candidate = [w for w in roster["whales"] if w["status"] == "candidate"]
+        self.assertEqual(len(candidate), 1)
+        self.assertEqual(names[candidate[0]["codename"]]["scores"]["events"], 2)
+        self.assertTrue(WR.public_text_ok(public))
+        self.assertNotIn("m-aaaaaaaa", json.dumps(public))
+
+    def test_candidate_hits_use_the_lead_horizons(self):
+        at = 1_700_000_000
+        move = {"at": at, "ticker": "AAA", "action": "accumulate", "tx": "tx1", "tag": "m-aaaaaaaa"}
+        event = WR.new_event(move, "Sleepy Otter", "unit")
+        prices = {0: (1.0, 100.0), 1: (1.2, 110.0)}
+        step = {"n": 0}
+
+        def quote(unit):
+            price, liq = prices[step["n"]]
+            step["n"] += 1
+            return reading(price, liq)
+
+        WR.advance_event(event, at + 10, quote)
+        WR.advance_event(event, at + 2 * WR.H1_S, quote)
+        scores = WR.summarize([event])["Sleepy Otter"]
+        self.assertEqual(scores["hits_h1"], 1)
+        self.assertIs(WR.favorable("accumulate", 20.0, 10.0), True)
+        # Same window boundaries the lead uses.
+        self.assertEqual(event["followups"]["h1"]["status"], "filled")
+        self.assertEqual(event["followups"]["h6"]["reason"], "not due")
+
+    def test_eligibility_is_a_flag_and_not_a_promotion(self):
+        low = WR.empty_scores()
+        low["events"] = 25
+        low["small_sample"] = False
+        low["hit_rate_h6"] = 0.55
+        low["hit_rate_h24"] = 0.90
+        eligible, reason = WR.promotion_eligibility(low)
+        self.assertFalse(eligible)
+        self.assertIn("need > 0.55", reason)
+        high = dict(low)
+        high["hit_rate_h6"] = 0.551
+        high["hit_rate_h24"] = 0.56
+        eligible, reason = WR.promotion_eligibility(high)
+        self.assertTrue(eligible)
+        self.assertIn("manual owner decision", reason)
+        short = dict(high)
+        short["events"] = 24
+        eligible, _reason = WR.promotion_eligibility(short)
+        self.assertFalse(eligible)
+        blank = WR.empty_scores()
+        blank["events"] = 30
+        eligible, reason = WR.promotion_eligibility(blank)
+        self.assertFalse(eligible)
+        self.assertIn("blank", reason)
+        roster = {"whales": [{"codename": "Sleepy Otter", "role": "watch", "status": "candidate"}]}
+        event = WR.new_event({"at": 1, "ticker": "AAA", "action": "accumulate", "tx": "t"}, "Sleepy Otter", None)
+        public = WR.public_summary(roster, [event] * 25, "2026-10-29T00:00:00Z")
+        whale = public["whales"][0]
+        self.assertIn("eligible_for_active", whale)
+        self.assertEqual(whale["status"], "candidate")
+        self.assertIs(whale["eligible_for_active"], False)
+
+    def test_public_output_has_scores_and_no_wallet(self):
+        stake = "stake1u" + "p" * 53
+        digest = __import__("hashlib").sha256(stake.encode()).hexdigest()[:8]
+        tag = "m-" + digest
+        when = "2026-10-29T15:00:00Z"
+        rows = [
+            self.row(tag, "AAA", "in", 2200, "txw1", when),
+            self.row(tag, "BBB", "out", 900, "txw2", "2026-10-29T16:00:00Z"),
+        ]
+        cache = {"schema": 1, "private": True, "kind": "whale_roster", "whales": [{
+            "codename": "Sleepy Otter", "wallets": [stake], "tags": [], "role": "watch",
+            "added": "", "source": "cache", "evidence": [], "status": "candidate",
+            "social": {"accounts": []},
+        }]}
+        log = {"cardano_top10": [{"ticker": "AAA"}, {"ticker": "BBB"}]}
+        _roster, events, public = WR.build(
+            log, {"rows": []}, {"moves": []}, {"whale": {}, "units": {}}, {},
+            cache, [], 1_700_000_000, None, None, self.big(rows),
+        )
+        blob = json.dumps(public)
+        self.assertNotIn(stake, blob)
+        self.assertNotIn(tag, blob)
+        self.assertNotIn("wallets", blob)
+        self.assertTrue(WR.public_text_ok(public))
+        whale = [w for w in public["whales"] if w["codename"] == "Sleepy Otter"][0]
+        self.assertEqual(whale["scores"]["events"], 2)
+        self.assertEqual(whale["status"], "candidate")
+        self.assertEqual(len(events), 2)
+        self.assertTrue(all(e["codename"] == "Sleepy Otter" for e in events))
+
+    def test_a_tagged_liquidity_row_is_scored_for_that_whale(self):
+        cache = {"schema": 1, "private": True, "kind": "whale_roster", "whales": [{
+            "codename": "Sleepy Otter", "wallets": [], "tags": ["m-aaaaaaaa"], "role": "watch",
+            "added": "", "source": "cache", "evidence": [], "status": "active",
+            "social": {"accounts": []},
+        }]}
+        liquidity = {"moves": [{
+            "actor_tag": "m-aaaaaaaa", "ticker": "AAA", "direction": "sell", "kind": "swap",
+            "ada": 1200, "tx_short": "liq1", "time": "2026-10-29T15:00:00Z",
+        }, {
+            "actor_tag": "m-aaaaaaaa", "ticker": "AAA", "direction": "sell", "kind": "swap",
+            "ada": 1200, "tx_short": "liq1", "time": "2026-10-29T15:00:00Z",
+        }]}
+        _roster, events, public = WR.build(
+            {}, {"rows": []}, liquidity, {"units": {}}, {}, cache, [], 1_700_000_000, None, None, [],
+        )
+        whale = [w for w in public["whales"] if w["codename"] == "Sleepy Otter"][0]
+        self.assertEqual(whale["status"], "active")
+        self.assertEqual(whale["scores"]["events"], 1)
+        self.assertEqual(whale["scores"]["trim"], 1)
+        self.assertEqual(len(events), 1)
+
+    def test_log_big_moves_count_once_across_history_snapshots(self):
+        row = {"tag": "m-aaaaaaaa", "ticker": "AAA", "direction": "in", "ada": 1500, "tx_short": "tx1", "time": "2026-10-29T15:00:00Z"}
+        other = {"tag": "m-aaaaaaaa", "ticker": "BBB", "direction": "in", "ada": 800, "tx_short": "tx2", "time": "2026-10-29T15:05:00Z"}
+        log = {
+            "cardano_top10": [{"ticker": "AAA"}, {"ticker": "BBB"}],
+            "liquidity_flows": {"big_moves": [row, other]},
+            "history": [{"liquidity_flows": {"big_moves": [row, other]}}],
+        }
+        found = WR.discover(log, {"moves": []}, [], {"AAA", "BBB"})
+        self.assertEqual(found, ["m-aaaaaaaa"])
+        moves = WR.moves_from_tagged(WR.dedupe_rows([row, other, row]))
+        self.assertEqual(len(moves), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

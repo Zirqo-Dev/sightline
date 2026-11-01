@@ -3,10 +3,16 @@
 Private file (sightline-private whales/roster.json): codename, raw wallets,
 role, added date, source, evidence, status, and a social-account slot.
 Public desk-data file solada-prefilter/whale_roster.json: codename, role,
-status, and scores. No wallets.
+status, scores, and eligible_for_active with its reason. No wallets.
 
 Readers of the run log accept whales[] and the previous single-object key.
 Writers emit whales[] only.
+
+SPD-81 scores every roster whale with the lead's +1h/+6h/+24h hit rule.
+Candidate and active rows are built from tagged big_moves (and tagged
+liquidity moves), deduped across desk-data runs. eligible_for_active is a
+research flag. Nothing in this module promotes a whale. Promotion stays a
+manual owner decision. Whales remain confirmation-only flags.
 """
 import hashlib
 import json
@@ -26,6 +32,22 @@ LEAD_ADDED = "2026-10-26"
 MIN_SAMPLE = 8
 MIN_TOKENS = 2
 MIN_ADA = 2000
+# SPD-81 router / market-maker exclusion. A tag with at least this many
+# moves, whose buy ADA and sell ADA are within MM_BALANCE of each other
+# (|buy-sell| / max(buy, sell) <= MM_BALANCE, both sides above zero), is
+# not proposed as a candidate. Box research flagged Brisk Stoat (387 moves,
+# 131k ADA, buy and sell within 10%, hit rate about 50% at 1h, 6h, and 24h)
+# as one of these. The filter does not change a desk rule and does not drop
+# a whale the owner already kept.
+MM_MIN_MOVES = 100
+MM_BALANCE = 0.10
+# SPD-81 pre-registered promotion bar. eligible_for_active is true only when
+# scored events (the events tally) are at least PROMOTE_MIN_EVENTS and the
+# hit rate is strictly above PROMOTE_MIN_HIT_RATE at both 6h and 24h. Rates
+# stay blank under MIN_SAMPLE events, so a small sample cannot pass. Nothing
+# here sets status to active. Promotion stays a manual owner decision.
+PROMOTE_MIN_EVENTS = 25
+PROMOTE_MIN_HIT_RATE = 0.55
 H1_S = 3600
 H6_S = 6 * 3600
 H24_S = 24 * 3600
@@ -44,10 +66,13 @@ OLD_FLAG = "founder_whale_move"
 OLD_ROLE = "founder_whale"
 NEW_FLAG = "whale_move"
 NEW_ROLE = "lead_whale"
-_W = re.compile(r"^w-[0-9a-f]{8}$")
+# w- is the flags/ledger hash. m- is the big_moves hash of the same owner
+# string. The 8 hex digits match when both hashed the same stake key.
+_TAG = re.compile(r"^[wm]-[0-9a-f]{8}$")
 _STAKE = re.compile(r"^stake1[02-9ac-hj-np-z]{20,}$")
 _ADDR = re.compile(r"^addr1[02-9ac-hj-np-z]{20,}$")
 _LEAK = re.compile(r"stake1[02-9ac-hj-np-z]{20,}|addr1[02-9ac-hj-np-z]{20,}")
+_TICKER = re.compile(r"[A-Z][A-Z0-9-]{0,15}")
 
 ADJECTIVES = (
     "Sleepy", "Bold", "Quiet", "Swift", "Rusty", "Lucky", "Calm", "Dapper",
@@ -100,7 +125,23 @@ def clean_num(value):
 
 
 def is_tag(value):
-    return isinstance(value, str) and bool(_W.fullmatch(value.strip().lower()))
+    return isinstance(value, str) and bool(_TAG.fullmatch(value.strip().lower()))
+
+
+def tag_body(value):
+    """8 hex digits shared by a w- tag, an m- tag, and the hash of that owner."""
+    if not is_tag(value):
+        return None
+    return value.strip().lower().split("-", 1)[1]
+
+
+def _watch_ticker(value):
+    if not isinstance(value, str):
+        return None
+    name = value.strip().upper()
+    if not _TICKER.fullmatch(name) or name in ("ADA", "LP"):
+        return None
+    return name
 
 
 def is_wallet(value):
@@ -340,22 +381,94 @@ def moves_from_ledger(doc):
 def _add(bucket_tokens, bucket_ada, tag, ticker, ada):
     if not is_tag(tag) or not ticker:
         return
-    name = str(ticker).upper()
-    if not re.fullmatch(r"[A-Z][A-Z0-9-]{0,15}", name) or name == "ADA":
+    name = _watch_ticker(ticker)
+    if not name:
         return
-    bucket_tokens.setdefault(tag.lower(), set()).add(name)
+    bucket_tokens.setdefault(tag.strip().lower(), set()).add(name)
     if isinstance(ada, (int, float)) and not isinstance(ada, bool) and ada > 0:
-        bucket_ada[tag.lower()] = bucket_ada.get(tag.lower(), 0) + float(ada)
+        key = tag.strip().lower()
+        bucket_ada[key] = bucket_ada.get(key, 0) + float(ada)
 
 
-def discover(log, liquidity, lead_tags, shortlist):
-    """Candidate tags from clusters, heat, and liquidity moves. Never active.
+def market_maker(moves_n, buy_ada, sell_ada):
+    """True for a router-like tag. See MM_MIN_MOVES and MM_BALANCE."""
+    if isinstance(moves_n, bool) or not isinstance(moves_n, (int, float)):
+        return False
+    if moves_n < MM_MIN_MOVES:
+        return False
+    buy = buy_ada if isinstance(buy_ada, (int, float)) and not isinstance(buy_ada, bool) else 0
+    sell = sell_ada if isinstance(sell_ada, (int, float)) and not isinstance(sell_ada, bool) else 0
+    if buy <= 0 or sell <= 0:
+        return False
+    return abs(buy - sell) / max(buy, sell) <= MM_BALANCE
 
-    A tag qualifies when it shows up on at least two shortlist tokens with
-    enough ADA, or on at least two shortlist tokens alongside another tag
-    (they move together). The lead tag is skipped.
+
+def _tally(stats, tag, direction, ada):
+    if not is_tag(tag):
+        return
+    key = tag.strip().lower()
+    row = stats.setdefault(key, {"n": 0, "buy": 0.0, "sell": 0.0})
+    row["n"] += 1
+    amount = float(ada) if isinstance(ada, (int, float)) and not isinstance(ada, bool) and ada > 0 else 0.0
+    side = str(direction or "").lower()
+    if side in ("in", "buy", "add"):
+        row["buy"] += amount
+    elif side in ("out", "sell", "remove"):
+        row["sell"] += amount
+
+
+def router_tags(doc):
+    """Tags in one big_moves document that look like routers. Sorted."""
+    stats = {}
+    for row in (doc or {}).get("moves") or []:
+        if isinstance(row, dict):
+            _tally(stats, row.get("tag") or row.get("actor_tag"), row.get("direction"), row.get("ada"))
+    return sorted(tag for tag, row in stats.items() if market_maker(row["n"], row["buy"], row["sell"]))
+
+
+def _big_move_docs(log, big_moves):
+    """Explicit big_moves docs win. Otherwise read big_moves off the log.
+
+    Passing a document (even an empty one) does not also read the log summary.
+    Those summaries repeat the same trade across history rows and would
+    double-count ADA next to the desk-data file.
     """
-    tokens, ada = {}, {}
+    if isinstance(big_moves, list):
+        return [d for d in big_moves if isinstance(d, dict)]
+    if isinstance(big_moves, dict):
+        return [big_moves]
+    if not isinstance(log, dict):
+        return []
+    docs = []
+
+    def take(snap):
+        if not isinstance(snap, dict):
+            return
+        block = snap.get("big_moves")
+        if isinstance(block, dict):
+            docs.append(block)
+        elif isinstance(block, list):
+            docs.append({"moves": block})
+        flows = snap.get("liquidity_flows")
+        if isinstance(flows, dict) and flows.get("big_moves"):
+            docs.append({"moves": flows.get("big_moves")})
+
+    take(log)
+    for snap in log.get("history") or []:
+        take(snap)
+    return docs
+
+
+def discover(log, liquidity, lead_tags, shortlist, big_moves=None):
+    """Candidate tags from clusters, heat, liquidity, and big moves. Never active.
+
+    A tag qualifies when it shows up on at least two watchlist tokens and
+    either has at least MIN_ADA total or shares those tokens with another tag.
+    Watchlist tokens are the shortlist plus tickers big_moves was asked to
+    scan (coverage). The lead tag is skipped. A router-like tag is skipped
+    (MM_MIN_MOVES / MM_BALANCE). Nothing returned here is active.
+    """
+    tokens, ada, stats = {}, {}, {}
     v2 = (log or {}).get("cardano_v2") if isinstance(log, dict) else None
     v2 = v2 if isinstance(v2, dict) else {}
     for cluster in v2.get("clusters") or []:
@@ -371,14 +484,41 @@ def discover(log, liquidity, lead_tags, shortlist):
         for ticker, cell in cells.items():
             amount = cell.get("ada") if isinstance(cell, dict) else None
             _add(tokens, ada, row.get("tag"), ticker, amount)
+    short = {str(t).upper() for t in (shortlist or []) if _watch_ticker(str(t))}
+    tagged = []
     for move in (liquidity or {}).get("moves") or []:
         if isinstance(move, dict):
-            _add(tokens, ada, move.get("actor_tag"), move.get("ticker"), move.get("ada"))
-    short = {str(t).upper() for t in (shortlist or [])}
-    lead = {t.lower() for t in (lead_tags or []) if is_tag(t)}
+            tagged.append(move)
+    for doc in _big_move_docs(log, big_moves):
+        cov = doc.get("coverage")
+        if isinstance(cov, dict):
+            for name in cov:
+                ticker = _watch_ticker(name)
+                if ticker:
+                    short.add(ticker)
+        tagged.extend(doc.get("moves") or [])
+    for move in dedupe_rows(tagged):
+        tag = move.get("tag") or move.get("actor_tag")
+        _add(tokens, ada, tag, move.get("ticker"), move.get("ada"))
+        _tally(stats, tag, move.get("direction") or move.get("kind"), move.get("ada"))
+    routers = set()
+    for tag, row in stats.items():
+        if market_maker(row["n"], row["buy"], row["sell"]):
+            body = tag_body(tag)
+            if body:
+                routers.add(body)
+    lead = set()
+    for tag in lead_tags or []:
+        if not is_tag(tag):
+            continue
+        body = tag_body(tag)
+        lead.add(tag.strip().lower())
+        if body:
+            lead.add("w-" + body)
+            lead.add("m-" + body)
     found = []
     for tag, names in tokens.items():
-        if tag in lead:
+        if tag in lead or tag_body(tag) in routers:
             continue
         on_list = sorted(n for n in names if not short or n in short)
         if len(on_list) < MIN_TOKENS:
@@ -418,10 +558,17 @@ def _ids(whale):
     found = set()
     for wallet in whale.get("wallets") or []:
         if is_wallet(wallet):
-            found.add("wallet:" + wallet.strip())
+            text = wallet.strip()
+            found.add("wallet:" + text)
+            # Same 8 hex as a w- or m- tag of this owner. Used only to merge
+            # rows in memory. The wallet itself is not copied onto public output.
+            found.add("id:" + hashlib.sha256(text.encode()).hexdigest()[:8])
     for tag in whale.get("tags") or []:
         if is_tag(tag):
             found.add("tag:" + tag.strip().lower())
+            body = tag_body(tag)
+            if body:
+                found.add("id:" + body)
     name = whale.get("codename")
     if isinstance(name, str) and name.strip():
         found.add("name:" + name.strip())
@@ -534,9 +681,17 @@ def ensure_lead(roster, wallet, tag):
     return roster
 
 
-def add_candidates(roster, tags, evidence):
-    """Insert candidates. Never changes an existing whale to active."""
+def add_candidates(roster, tags, evidence, reserved=()):
+    """Insert candidates. Never changes an existing whale to active.
+
+    reserved codenames (router-like tags) stay unused so a later tag does
+    not inherit a label research already set aside. Status is never set
+    to active here.
+    """
     taken = [w.get("codename") for w in roster.get("whales") or []]
+    for name in reserved or ():
+        if isinstance(name, str) and name and name not in taken:
+            taken.append(name)
     for tag in tags:
         if not is_tag(tag):
             continue
@@ -613,6 +768,46 @@ def flag_kind(kind):
     return kind in (NEW_FLAG, OLD_FLAG)
 
 
+def promotion_eligibility(scores):
+    """(eligible_for_active, reason). The flag does not change status.
+
+    Pre-registered bar: >= PROMOTE_MIN_EVENTS scored events and a hit rate
+    strictly above PROMOTE_MIN_HIT_RATE at both 6h and 24h. A blank rate
+    (small sample, or nothing priced) does not pass. Promotion stays a
+    manual owner decision.
+    """
+    scores = scores or {}
+    n = scores.get("events") or 0
+    if isinstance(n, bool) or not isinstance(n, (int, float)):
+        n = 0
+    n = int(n)
+    r6 = scores.get("hit_rate_h6")
+    r24 = scores.get("hit_rate_h24")
+
+    def rate_ok(rate):
+        return isinstance(rate, (int, float)) and not isinstance(rate, bool) and rate > PROMOTE_MIN_HIT_RATE
+
+    ok_n = n >= PROMOTE_MIN_EVENTS
+    ok_6 = rate_ok(r6)
+    ok_24 = rate_ok(r24)
+
+    def shown(rate):
+        return "blank" if rate is None else str(rate)
+
+    if ok_n and ok_6 and ok_24:
+        reason = "eligible: %d scored events, 6h %s, 24h %s; promotion is a manual owner decision" % (n, r6, r24)
+        return True, reason
+    parts = []
+    if ok_n:
+        parts.append("%d scored events" % n)
+    else:
+        parts.append("%d scored events (need %d)" % (n, PROMOTE_MIN_EVENTS))
+    parts.append("6h " + shown(r6) + ("" if ok_6 else " (need > %s)" % PROMOTE_MIN_HIT_RATE))
+    parts.append("24h " + shown(r24) + ("" if ok_24 else " (need > %s)" % PROMOTE_MIN_HIT_RATE))
+    reason = "not eligible: " + "; ".join(parts) + "; promotion is a manual owner decision"
+    return False, reason
+
+
 def public_summary(roster, events, asof, social_by_name=None):
     scores = summarize(events, social_by_name)
     whales = []
@@ -622,11 +817,15 @@ def public_summary(roster, events, asof, social_by_name=None):
         name = whale["codename"]
         role = "lead" if whale.get("role") == "lead" else "watch"
         status = whale.get("status") if whale.get("status") in ("candidate", "active", "dropped") else "candidate"
+        row_scores = scores.get(name) or empty_scores((social_by_name or {}).get(name))
+        eligible, reason = promotion_eligibility(row_scores)
         whales.append({
             "codename": name,
             "role": role,
             "status": status,
-            "scores": scores.get(name) or empty_scores((social_by_name or {}).get(name)),
+            "eligible_for_active": eligible,
+            "eligible_reason": reason,
+            "scores": row_scores,
         })
     return {
         "schema": SCHEMA,
@@ -635,7 +834,12 @@ def public_summary(roster, events, asof, social_by_name=None):
         "measured_factor": True,
         "min_sample": MIN_SAMPLE,
         "asof": asof,
-        "note": "Research tally. A hit is a favorable price or liquidity change at +1h, +6h, or +24h. Rates stay blank under 8 events. Not a buy signal.",
+        "note": (
+            "Research tally. A hit is when every measured series (price and liquidity) "
+            "moves the whale's way at +1h, +6h, or +24h. Rates stay blank under 8 events. "
+            "eligible_for_active needs at least 25 scored events and a hit rate above 55% "
+            "at both 6h and 24h. Nothing is promoted automatically. Not a buy signal."
+        ),
         "whales": whales,
     }
 
@@ -651,13 +855,20 @@ def public_text_ok(doc):
     blob = json.dumps(doc)
     if _LEAK.search(blob) or re.search(r"founder", blob, re.I):
         return False
+    if re.search(r"\b[wm]-[0-9a-f]{8}\b", blob):
+        return False
     if re.search(r"@[A-Za-z0-9_]{2,}", blob) or re.search(r"\$[A-Za-z]", blob):
         return False
-    allowed = {"codename", "role", "status", "scores"}
+    allowed = {"codename", "role", "status", "scores", "eligible_for_active", "eligible_reason"}
     for whale in doc.get("whales") or []:
         if not isinstance(whale, dict) or set(whale) - allowed:
             return False
-        if "wallets" in whale or "handle" in whale or "stake" in whale:
+        if "wallets" in whale or "handle" in whale or "stake" in whale or "tag" in whale:
+            return False
+        if "eligible_for_active" in whale and whale["eligible_for_active"] not in (True, False):
+            return False
+        reason = whale.get("eligible_reason")
+        if reason is not None and not isinstance(reason, str):
             return False
     return True
 
@@ -716,11 +927,122 @@ def social_counts(previous):
     return found
 
 
-def build(log, ledger, liquidity, config, known, cache_roster, cache_events, now, quote=None, social_by_name=None):
+def dedupe_rows(rows):
+    """One row per trade. The same tx in several desk-data runs counts once.
+
+    A row with no tx hash is kept apart by its time so two untagged-time
+    rows are not collapsed into each other.
+    """
+    seen = set()
+    out = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        tag = str(row.get("tag") or row.get("actor_tag") or "").strip().lower()
+        tx = str(row.get("tx_short") or "")
+        ticker = str(row.get("ticker") or row.get("token") or "").upper()
+        direction = str(row.get("direction") or row.get("kind") or "").lower()
+        if tx:
+            key = (tag, tx, ticker, direction)
+        else:
+            key = (tag, "", ticker, direction, str(row.get("time") or row.get("at") or ""))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(row)
+    return out
+
+
+def combine_big_moves(docs):
+    """Merge big_moves documents. Coverage is the union of scanned tickers."""
+    rows = []
+    coverage = {}
+    for doc in docs or []:
+        if not isinstance(doc, dict):
+            continue
+        rows.extend(doc.get("moves") or [])
+        cov = doc.get("coverage")
+        if isinstance(cov, dict):
+            for name, value in cov.items():
+                if name not in coverage:
+                    coverage[name] = value
+    return {"moves": dedupe_rows(rows), "coverage": coverage}
+
+
+def action_from_move(row):
+    """accumulate, trim, exit, or None. big_moves and liquidity rows share this."""
+    if not isinstance(row, dict):
+        return None
+    direction = str(row.get("direction") or "").lower()
+    kind = str(row.get("kind") or "")
+    ticker = str(row.get("ticker") or row.get("token") or "").upper()
+    lp = row.get("lp") is True or ticker == "LP"
+    if kind == "lp_remove" or (lp and direction in ("out", "remove", "sell")):
+        return "exit"
+    if kind == "lp_add" or direction in ("in", "buy", "add"):
+        return "accumulate"
+    if direction in ("out", "sell", "remove"):
+        return "trim"
+    return None
+
+
+def moves_from_tagged(rows):
+    """Moves for any w- or m- tag. Ledger rows stay on moves_from_ledger."""
+    moves = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        tag = row.get("tag") or row.get("actor_tag")
+        if not is_tag(tag):
+            continue
+        action = action_from_move(row)
+        if not action:
+            continue
+        at = parse_time(row.get("time") or row.get("at"))
+        token = row.get("ticker") or row.get("token")
+        if at is None or not token or not _watch_ticker(str(token)):
+            continue
+        moves.append({
+            "at": at,
+            "ticker": str(token),
+            "action": action,
+            "tx": row.get("tx_short") or "",
+            "tag": tag.strip().lower(),
+        })
+    return moves
+
+
+def _whale_by_body(roster):
+    found = {}
+    for whale in (roster or {}).get("whales") or []:
+        if not isinstance(whale, dict):
+            continue
+        for ident in _ids(whale):
+            if ident.startswith("id:"):
+                found.setdefault(ident[3:], whale)
+    return found
+
+
+def _append_event(events, known_ids, move, codename, config, known):
+    unit = unit_for(move.get("ticker"), config, known)
+    event = new_event(move, codename, unit)
+    if event["id"] in known_ids:
+        return
+    events.append(event)
+    known_ids.add(event["id"])
+
+
+def build(log, ledger, liquidity, config, known, cache_roster, cache_events, now, quote=None, social_by_name=None, big_moves=None):
     """Update the private roster and events. Returns (roster, events, public_doc).
 
     quote is optional. Without it, open windows stay pending. Candidates stay
     candidates. The lead row is seeded once and is not reactivated if dropped.
+    big_moves is one document or a list of them (current file plus older
+    desk-data revisions). Rows are deduped by trade. The lead is scored from
+    the whale ledger. Every other roster whale is scored from its tagged
+    big_moves and liquidity rows, with the same horizons. Wallets are read
+    only to match a tag and are not written to the public document.
+    eligible_for_active is recorded. Status is not changed to active.
     """
     roster = union_roster(cache_roster, None)
     tag = (ledger or {}).get("whale_tag") if isinstance(ledger, dict) else None
@@ -728,19 +1050,48 @@ def build(log, ledger, liquidity, config, known, cache_roster, cache_events, now
     ensure_lead(roster, wallet, tag)
     lead_tags = [tag] if is_tag(tag or "") else []
     for whale in roster.get("whales") or []:
-        if whale.get("codename") == LEAD_CODENAME:
+        if whale.get("role") == "lead" or whale.get("codename") == LEAD_CODENAME:
             lead_tags.extend(whale.get("tags") or [])
-    add_candidates(roster, discover(log, liquidity, lead_tags, shortlist_of(log, liquidity)), ["cluster or liquidity overlap"])
+    combined = combine_big_moves(big_moves if isinstance(big_moves, list) else ([big_moves] if isinstance(big_moves, dict) else []))
+    router_rows = list(combined.get("moves") or [])
+    if isinstance(liquidity, dict):
+        router_rows.extend(liquidity.get("moves") or [])
+    routers = router_tags({"moves": dedupe_rows(router_rows)})
+    reserved = [codename_for(item) for item in routers]
+    router_bodies = {tag_body(item) for item in routers if tag_body(item)}
+    short = shortlist_of(log, liquidity)
+    # Empty big_moves keeps this pass on clusters, heat, and liquidity only.
+    # The log's summary rows are not mixed in here; the file history is the
+    # big-move source and is applied on the next pass.
+    cluster_tags = [item for item in discover(log, liquidity, lead_tags, short, {}) if tag_body(item) not in router_bodies]
+    # Cluster tags first so a fresh roster keeps the codenames already published.
+    add_candidates(roster, cluster_tags, ["cluster or liquidity overlap"])
+    add_candidates(
+        roster,
+        discover(log, liquidity, lead_tags, short, combined),
+        ["big-move overlap"],
+        reserved,
+    )
     events = list(cache_events or [])
     known_ids = {e.get("id") for e in events if isinstance(e, dict)}
     lead_name = LEAD_CODENAME
     for move in moves_from_ledger(ledger):
-        unit = unit_for(move["ticker"], config, known)
-        event = new_event(move, lead_name, unit)
-        if event["id"] in known_ids:
+        _append_event(events, known_ids, move, lead_name, config, known)
+    by_body = _whale_by_body(roster)
+    lead_bodies = {tag_body(item) for item in lead_tags if tag_body(item)}
+    tagged_rows = list(combined.get("moves") or [])
+    if isinstance(liquidity, dict):
+        tagged_rows.extend(liquidity.get("moves") or [])
+    for move in moves_from_tagged(dedupe_rows(tagged_rows)):
+        body = tag_body(move.get("tag"))
+        whale = by_body.get(body) if body else None
+        if whale is None:
             continue
-        events.append(event)
-        known_ids.add(event["id"])
+        if whale.get("role") == "lead" or whale.get("codename") == LEAD_CODENAME:
+            continue
+        if body in lead_bodies:
+            continue
+        _append_event(events, known_ids, move, whale.get("codename"), config, known)
     if quote is not None:
         for event in events:
             advance_event(event, now, quote, one_per_run=True)
