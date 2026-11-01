@@ -1296,5 +1296,31 @@
    "type": "weekly",
    "note": "Week of Oct 19-25: no tickets opened; 0 open, 4 closed lifetime. Nothing passed k/y all week (best: CLOVE ~29k side/304 holders, BOLT under its mcap line). Swarm launches (BET) and kill-hit fades (JUICE, GOLFY, HERO) were the week's pattern. Research/lottery/NFA."
   }
- ]
+ ],
+ "tests": [
+  {
+   "id": "SW-01",
+   "title": "Swarm-launch exception (paper only)",
+   "status": "active",
+   "registered_at": "2026-11-01T14:40:00-05:00",
+   "scope": "Swarm-flagged launches first seen after registered_at; MEPE excluded (it generated the idea)",
+   "qualify": [
+    "bonded to a DEX pool",
+    "rule k numbers met: 120+ holders, pool ADA side >= 25000, 6h buys > 6h sells (if buys/sells unverifiable: log as unverifiable, do not count)",
+    "a tracked whale still net-accumulating after the first 24h since launch"
+   ],
+   "qualify_at": "first run where all three hold",
+   "action": "one 100 ADA paper ticket at that run's price; exit at exactly 48h; no manual or kill-line exits; same cost haircut as this book",
+   "comparison": "every in-scope swarm launch that fails the gate, entry at first-flagged run price, 48h return (curve price if never bonded; -100% if no price or liquidity remains)",
+   "verdict_rule": "Validated if >= 10 qualifying tickets and mean 48h return after costs > 0 and above the failed-gate group's mean; Invalidated if mean <= 0 at 10; judge at 10 tickets or 2026-12-15, whichever first; under 10 by 2026-12-15 = insufficient, no extension",
+   "locked": "No term changes after peeking; any change may only make passing harder, owner approval required",
+   "tickets": [],
+   "comparison_group": [],
+   "unverifiable": []
+  }
+ ],
+ "book_status": {
+  "at": "2026-11-01T14:40:00-05:00",
+  "note": "Normal launch tickets are shelved as of 2026-11-01 (rules k and y unchanged). Only paper test SW-01 may open tickets."
+ }
 }
