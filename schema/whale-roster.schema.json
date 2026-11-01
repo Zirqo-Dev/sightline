@@ -11,6 +11,7 @@
     "buy_signal": {"const": false},
     "measured_factor": {"const": true},
     "min_sample": {"const": 8},
+    "dormant_count": {"type": "integer", "minimum": 0},
     "asof": {"type": "string"},
     "note": {"type": "string"},
     "whales": {
@@ -37,6 +38,9 @@
               "priced_h1": {"type": "integer", "minimum": 0},
               "priced_h6": {"type": "integer", "minimum": 0},
               "priced_h24": {"type": "integer", "minimum": 0},
+              "n_observed_h1": {"type": "integer", "minimum": 0},
+              "n_observed_h6": {"type": "integer", "minimum": 0},
+              "n_observed_h24": {"type": "integer", "minimum": 0},
               "hits_h1": {"type": "integer", "minimum": 0},
               "hits_h6": {"type": "integer", "minimum": 0},
               "hits_h24": {"type": "integer", "minimum": 0},

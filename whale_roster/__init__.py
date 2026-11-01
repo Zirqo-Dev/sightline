@@ -10,9 +10,12 @@ Writers emit whales[] only.
 
 SPD-81 scores every roster whale with the lead's +1h/+6h/+24h hit rule.
 Candidate and active rows are built from tagged big_moves (and tagged
-liquidity moves), deduped across desk-data runs. eligible_for_active is a
-research flag. Nothing in this module promotes a whale. Promotion stays a
-manual owner decision. Whales remain confirmation-only flags.
+liquidity moves), deduped across desk-data runs. A checkpoint is a hit, a
+wrong-way miss, or unobserved. Rates and the eligibility count use observed
+checkpoints only. Past checkpoints use the nearest desk-data ADA/qty print.
+eligible_for_active is a research flag. Nothing in this module promotes a
+whale. Promotion stays a manual owner decision. Whales remain
+confirmation-only flags. Candidates that fall off the bar become dormant.
 """
 import hashlib
 import json
@@ -42,12 +45,27 @@ MIN_ADA = 2000
 MM_MIN_MOVES = 100
 MM_BALANCE = 0.10
 # SPD-81 pre-registered promotion bar. eligible_for_active is true only when
-# scored events (the events tally) are at least PROMOTE_MIN_EVENTS and the
-# hit rate is strictly above PROMOTE_MIN_HIT_RATE at both 6h and 24h. Rates
-# stay blank under MIN_SAMPLE events, so a small sample cannot pass. Nothing
-# here sets status to active. Promotion stays a manual owner decision.
+# each of 6h and 24h has at least PROMOTE_MIN_EVENTS observed checkpoints
+# and a hit rate strictly above PROMOTE_MIN_HIT_RATE. Observed means a hit
+# or a wrong-way miss. Unobserved checkpoints are not in that count and are
+# not misses. Rates stay blank under MIN_SAMPLE observed checkpoints on that
+# horizon. Nothing here sets status to active. Promotion stays a manual
+# owner decision.
 PROMOTE_MIN_EVENTS = 25
 PROMOTE_MIN_HIT_RATE = 0.55
+# SPD-81 candidacy floors. The first cut (two tokens, or 2,000 ADA, no
+# recency) made 48 names, most with 2-10 moves. A candidate now needs every
+# one of these: MIN_CANDIDATE_MOVES deduped moves, MIN_ADA across at least
+# MIN_TOKENS watchlist tokens, and a move inside CANDIDATE_ACTIVE_S. The
+# list is then the top MAX_CANDIDATES by total ADA (a tie goes to more
+# moves). Research filter only. It does not change a desk rule.
+MIN_CANDIDATE_MOVES = 10
+CANDIDATE_ACTIVE_S = 14 * 24 * 3600
+MAX_CANDIDATES = 12
+# Nearest desk-data print used as the price (ADA/qty) or the pool size.
+# A horizon with no print inside its tolerance is unobserved, never a miss.
+# The baseline print at the move uses the 1h tolerance.
+OBS_TOL_S = {"at_move": 20 * 60, "h1": 20 * 60, "h6": 60 * 60, "h24": 3 * 3600}
 H1_S = 3600
 H6_S = 6 * 3600
 H24_S = 24 * 3600
@@ -227,6 +245,7 @@ def new_event(move, codename, unit):
         "action": move["action"],
         "at": at,
         "unit": unit,
+        "tx": move.get("tx") or "",
         "at_move": _blank(at),
         "followups": {name: _blank(at + offset) for name, offset in (("h1", H1_S), ("h6", H6_S), ("h24", H24_S))},
     }
@@ -259,34 +278,62 @@ def _fill(event, name, cp, now, reading):
         cp["reason"] = "no price at move"
 
 
+def _mark_outcome(event, name):
+    """hit, miss, or unobserved. A flat or missing series is unobserved."""
+    if name == "at_move":
+        return
+    cp = _cp(event, name)
+    if cp.get("status") != "filled":
+        cp["outcome"] = "unobserved"
+        return
+    vote = favorable(event.get("action"), cp.get("price_change_pct"), cp.get("liquidity_change_pct"))
+    if vote is True:
+        cp["outcome"] = "hit"
+    elif vote is False:
+        cp["outcome"] = "miss"
+    else:
+        cp["outcome"] = "unobserved"
+
+
 def advance_event(event, now, quote, one_per_run=True):
-    """Fill the open window. Later windows that already ended are missed.
+    """Fill the one open window. A closed window with no reading is unobserved.
 
     quote(unit) -> {answered, price, liquidity, reason}. One open window at a
-    time, matching the buzz outcome tracker.
+    time, matching the buzz outcome tracker. Unobserved is not a miss: it
+    stays out of hit rates and out of the eligibility count.
     """
     filled = False
     at = event["at"]
     for name, start, end in WINDOWS:
         cp = _cp(event, name)
-        if cp["status"] in ("filled", "missed"):
+        if cp.get("outcome") in ("hit", "miss"):
+            continue
+        if cp["status"] in ("filled", "unobserved", "missed"):
+            if cp["status"] == "missed":
+                cp["status"] = "unobserved"
+                cp["outcome"] = "unobserved"
+                cp["reason"] = "no observation in the window"
             continue
         if now < at + start:
             cp["status"] = "pending"
             cp["reason"] = "not due"
+            cp["outcome"] = "unobserved"
             continue
         if now >= at + end:
-            cp["status"] = "missed"
+            cp["status"] = "unobserved"
+            cp["outcome"] = "unobserved"
             cp["observed_at"] = None
-            cp["reason"] = "window passed before a run observed it"
+            cp["reason"] = "no observation in the window"
             continue
         if one_per_run and filled:
             cp["status"] = "pending"
             cp["reason"] = "deferred; one checkpoint per run"
+            cp["outcome"] = "unobserved"
             continue
         filled = True
         reading = quote(event.get("unit")) if event.get("unit") else {"answered": False, "reason": "full token id unavailable"}
         _fill(event, name, cp, now, reading)
+        _mark_outcome(event, name)
 
 
 def favorable(action, price_pct, liq_pct):
@@ -302,6 +349,23 @@ def favorable(action, price_pct, liq_pct):
     return all(votes)
 
 
+def checkpoint_outcome(action, cp):
+    """hit, miss, or unobserved. Legacy filled rows with no outcome still score."""
+    if not isinstance(cp, dict):
+        return "unobserved"
+    outcome = cp.get("outcome")
+    if outcome in ("hit", "miss", "unobserved"):
+        return outcome
+    if cp.get("status") != "filled":
+        return "unobserved"
+    vote = favorable(action, cp.get("price_change_pct"), cp.get("liquidity_change_pct"))
+    if vote is True:
+        return "hit"
+    if vote is False:
+        return "miss"
+    return "unobserved"
+
+
 def empty_scores(social=None):
     scores = {
         "events": 0,
@@ -310,6 +374,7 @@ def empty_scores(social=None):
         "exit": 0,
     }
     for name in HORIZONS:
+        scores["n_observed_" + name] = 0
         scores["priced_" + name] = 0
         scores["hits_" + name] = 0
         scores["hit_rate_" + name] = None
@@ -319,7 +384,13 @@ def empty_scores(social=None):
 
 
 def summarize(events, social_by_name=None):
-    """Per-codename counts and hit rates. Rates stay null under 8 events."""
+    """Per-codename counts and hit rates.
+
+    n_observed is hits plus wrong-way misses on that horizon. Unobserved
+    checkpoints are left out. A rate stays null under MIN_SAMPLE observed
+    checkpoints on that horizon. small_sample is true when no horizon has
+    that many observations.
+    """
     social_by_name = social_by_name or {}
     grouped = {}
     for event in events or []:
@@ -339,19 +410,18 @@ def summarize(events, social_by_name=None):
                 scores[action] += 1
             for horizon in HORIZONS:
                 cp = (event.get("followups") or {}).get(horizon) or {}
-                if cp.get("status") != "filled":
+                outcome = checkpoint_outcome(action, cp)
+                if outcome not in ("hit", "miss"):
                     continue
-                vote = favorable(action, cp.get("price_change_pct"), cp.get("liquidity_change_pct"))
-                if vote is None:
-                    continue
+                scores["n_observed_" + horizon] += 1
                 scores["priced_" + horizon] += 1
-                if vote:
+                if outcome == "hit":
                     scores["hits_" + horizon] += 1
-        scores["small_sample"] = scores["events"] < MIN_SAMPLE
-        if not scores["small_sample"]:
-            for horizon in HORIZONS:
-                priced = scores["priced_" + horizon]
-                scores["hit_rate_" + horizon] = round(scores["hits_" + horizon] / priced, 3) if priced else None
+        scores["small_sample"] = all(scores["n_observed_" + horizon] < MIN_SAMPLE for horizon in HORIZONS)
+        for horizon in HORIZONS:
+            observed = scores["n_observed_" + horizon]
+            if observed >= MIN_SAMPLE:
+                scores["hit_rate_" + horizon] = round(scores["hits_" + horizon] / observed, 3)
         out[name] = scores
     return out
 
@@ -459,14 +529,15 @@ def _big_move_docs(log, big_moves):
     return docs
 
 
-def discover(log, liquidity, lead_tags, shortlist, big_moves=None):
+def discover(log, liquidity, lead_tags, shortlist, big_moves=None, now=None):
     """Candidate tags from clusters, heat, liquidity, and big moves. Never active.
 
-    A tag qualifies when it shows up on at least two watchlist tokens and
-    either has at least MIN_ADA total or shares those tokens with another tag.
-    Watchlist tokens are the shortlist plus tickers big_moves was asked to
-    scan (coverage). The lead tag is skipped. A router-like tag is skipped
-    (MM_MIN_MOVES / MM_BALANCE). Nothing returned here is active.
+    A tag qualifies only when it has MIN_CANDIDATE_MOVES deduped moves and
+    MIN_ADA across at least MIN_TOKENS watchlist tokens, and (when now is
+    set) a move inside CANDIDATE_ACTIVE_S. Watchlist tokens are the shortlist
+    plus tickers big_moves was asked to scan. The result is the top
+    MAX_CANDIDATES by total ADA, ties broken by more moves. The lead tag is
+    skipped. A router-like tag is skipped. Nothing returned here is active.
     """
     tokens, ada, stats = {}, {}, {}
     v2 = (log or {}).get("cardano_v2") if isinstance(log, dict) else None
@@ -497,10 +568,25 @@ def discover(log, liquidity, lead_tags, shortlist, big_moves=None):
                 if ticker:
                     short.add(ticker)
         tagged.extend(doc.get("moves") or [])
+    last_at = {}
+    watch_n = {}
+    watch_ada = {}
     for move in dedupe_rows(tagged):
         tag = move.get("tag") or move.get("actor_tag")
         _add(tokens, ada, tag, move.get("ticker"), move.get("ada"))
         _tally(stats, tag, move.get("direction") or move.get("kind"), move.get("ada"))
+        if not is_tag(tag):
+            continue
+        key = tag.strip().lower()
+        at = parse_time(move.get("time") or move.get("at"))
+        if isinstance(at, (int, float)) and at > last_at.get(key, 0):
+            last_at[key] = at
+        ticker = _watch_ticker(move.get("ticker") or "")
+        amount = move.get("ada")
+        amount = float(amount) if isinstance(amount, (int, float)) and not isinstance(amount, bool) and amount > 0 else 0.0
+        if ticker and (not short or ticker in short):
+            watch_n[key] = watch_n.get(key, 0) + 1
+            watch_ada[key] = watch_ada.get(key, 0.0) + amount
     routers = set()
     for tag, row in stats.items():
         if market_maker(row["n"], row["buy"], row["sell"]):
@@ -516,24 +602,23 @@ def discover(log, liquidity, lead_tags, shortlist, big_moves=None):
         if body:
             lead.add("w-" + body)
             lead.add("m-" + body)
-    found = []
+    ranked = []
+    cutoff = None if now is None else now - CANDIDATE_ACTIVE_S
     for tag, names in tokens.items():
         if tag in lead or tag_body(tag) in routers:
             continue
-        on_list = sorted(n for n in names if not short or n in short)
+        on_list = [n for n in names if not short or n in short]
         if len(on_list) < MIN_TOKENS:
             continue
-        others = False
-        for other, other_names in tokens.items():
-            if other == tag:
-                continue
-            if len(set(on_list) & set(other_names)) >= MIN_TOKENS:
-                others = True
-                break
-        large = ada.get(tag, 0) >= MIN_ADA
-        if large or others:
-            found.append(tag)
-    return sorted(found)
+        if watch_n.get(tag, 0) < MIN_CANDIDATE_MOVES:
+            continue
+        if watch_ada.get(tag, 0) < MIN_ADA:
+            continue
+        if cutoff is not None and last_at.get(tag, 0) < cutoff:
+            continue
+        ranked.append((ada.get(tag, 0), watch_n.get(tag, 0), tag))
+    ranked.sort(key=lambda item: (-item[0], -item[1], item[2]))
+    return [tag for _ada, _count, tag in ranked[:MAX_CANDIDATES]]
 
 
 def _whale(codename, role, status, added, source, evidence, wallets=None, tags=None, social=None):
@@ -597,6 +682,8 @@ def _merge_status(left, right):
         return "dropped"
     if "active" in states:
         return "active"
+    if "dormant" in states:
+        return "dormant"
     return "candidate"
 
 
@@ -678,6 +765,34 @@ def ensure_lead(roster, wallet, tag):
         found["role"] = "lead"
     if "whale ledger" not in (found.get("evidence") or []):
         found.setdefault("evidence", []).append("whale ledger")
+    return roster
+
+
+def settle_candidates(roster, qualified_tags):
+    """Park candidates that missed the bar. Do not delete them and do not activate them.
+
+    A candidate whose tag is outside qualified_tags becomes dormant. A dormant
+    whale that is back inside the list returns to candidate. That is a return
+    to the watch list, not a promotion to active. Lead, active, and dropped
+    rows are left as they are.
+    """
+    qualified = {tag_body(tag) for tag in qualified_tags or [] if tag_body(tag)}
+    for whale in (roster or {}).get("whales") or []:
+        if not isinstance(whale, dict):
+            continue
+        if whale.get("role") == "lead" or whale.get("codename") == LEAD_CODENAME:
+            continue
+        if whale.get("status") in ("active", "dropped"):
+            continue
+        bodies = set()
+        for ident in _ids(whale):
+            if ident.startswith("id:"):
+                bodies.add(ident[3:])
+        inside = bool(bodies & qualified)
+        if whale.get("status") == "candidate" and not inside:
+            whale["status"] = "dormant"
+        elif whale.get("status") == "dormant" and inside:
+            whale["status"] = "candidate"
     return roster
 
 
@@ -768,43 +883,54 @@ def flag_kind(kind):
     return kind in (NEW_FLAG, OLD_FLAG)
 
 
+def _observed_count(scores, horizon):
+    value = (scores or {}).get("n_observed_" + horizon)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return 0
+    return int(value)
+
+
 def promotion_eligibility(scores):
     """(eligible_for_active, reason). The flag does not change status.
 
-    Pre-registered bar: >= PROMOTE_MIN_EVENTS scored events and a hit rate
-    strictly above PROMOTE_MIN_HIT_RATE at both 6h and 24h. A blank rate
-    (small sample, or nothing priced) does not pass. Promotion stays a
-    manual owner decision.
+    Pre-registered bar: n_observed at both 6h and 24h is at least
+    PROMOTE_MIN_EVENTS, and each of those hit rates is strictly above
+    PROMOTE_MIN_HIT_RATE. Unobserved checkpoints are not in n_observed.
+    A blank rate does not pass. Promotion stays a manual owner decision.
     """
     scores = scores or {}
-    n = scores.get("events") or 0
-    if isinstance(n, bool) or not isinstance(n, (int, float)):
-        n = 0
-    n = int(n)
+    n6 = _observed_count(scores, "h6")
+    n24 = _observed_count(scores, "h24")
     r6 = scores.get("hit_rate_h6")
     r24 = scores.get("hit_rate_h24")
 
     def rate_ok(rate):
         return isinstance(rate, (int, float)) and not isinstance(rate, bool) and rate > PROMOTE_MIN_HIT_RATE
 
-    ok_n = n >= PROMOTE_MIN_EVENTS
+    ok_6n = n6 >= PROMOTE_MIN_EVENTS
+    ok_24n = n24 >= PROMOTE_MIN_EVENTS
     ok_6 = rate_ok(r6)
     ok_24 = rate_ok(r24)
 
     def shown(rate):
         return "blank" if rate is None else str(rate)
 
-    if ok_n and ok_6 and ok_24:
-        reason = "eligible: %d scored events, 6h %s, 24h %s; promotion is a manual owner decision" % (n, r6, r24)
+    def horizon_text(label, count, rate, count_ok, rate_ok_flag):
+        text = "%s observed %d" % (label, count)
+        if not count_ok:
+            text += " (need %d)" % PROMOTE_MIN_EVENTS
+        text += ", rate " + shown(rate)
+        if not rate_ok_flag:
+            text += " (need > %s)" % PROMOTE_MIN_HIT_RATE
+        return text
+
+    if ok_6n and ok_24n and ok_6 and ok_24:
+        reason = "eligible: 6h observed %d rate %s, 24h observed %d rate %s; promotion is a manual owner decision" % (n6, r6, n24, r24)
         return True, reason
-    parts = []
-    if ok_n:
-        parts.append("%d scored events" % n)
-    else:
-        parts.append("%d scored events (need %d)" % (n, PROMOTE_MIN_EVENTS))
-    parts.append("6h " + shown(r6) + ("" if ok_6 else " (need > %s)" % PROMOTE_MIN_HIT_RATE))
-    parts.append("24h " + shown(r24) + ("" if ok_24 else " (need > %s)" % PROMOTE_MIN_HIT_RATE))
-    reason = "not eligible: " + "; ".join(parts) + "; promotion is a manual owner decision"
+    reason = "not eligible: %s; %s; promotion is a manual owner decision" % (
+        horizon_text("6h", n6, r6, ok_6n, ok_6),
+        horizon_text("24h", n24, r24, ok_24n, ok_24),
+    )
     return False, reason
 
 
@@ -813,6 +939,8 @@ def public_summary(roster, events, asof, social_by_name=None):
     whales = []
     for whale in (roster or {}).get("whales") or []:
         if not isinstance(whale, dict) or not whale.get("codename"):
+            continue
+        if whale.get("status") == "dormant":
             continue
         name = whale["codename"]
         role = "lead" if whale.get("role") == "lead" else "watch"
@@ -827,18 +955,24 @@ def public_summary(roster, events, asof, social_by_name=None):
             "eligible_reason": reason,
             "scores": row_scores,
         })
+    dormant = sum(1 for whale in (roster or {}).get("whales") or [] if isinstance(whale, dict) and whale.get("status") == "dormant")
     return {
         "schema": SCHEMA,
         "kind": PUBLIC_KIND,
         "buy_signal": False,
         "measured_factor": True,
         "min_sample": MIN_SAMPLE,
+        "dormant_count": dormant,
         "asof": asof,
         "note": (
-            "Research tally. A hit is when every measured series (price and liquidity) "
-            "moves the whale's way at +1h, +6h, or +24h. Rates stay blank under 8 events. "
-            "eligible_for_active needs at least 25 scored events and a hit rate above 55% "
-            "at both 6h and 24h. Nothing is promoted automatically. Not a buy signal."
+            "Research tally. A hit is an observed checkpoint where every measured series "
+            "(price and liquidity) moves the whale's way at +1h, +6h, or +24h. A wrong-way "
+            "observation is a miss. No observation is unobserved and is not a miss. "
+            "n_observed is hits plus misses. Rates stay blank under 8 observed checkpoints "
+            "on that horizon. eligible_for_active needs at least 25 observed checkpoints "
+            "and a hit rate above 55% at both 6h and 24h. Past checkpoints use the nearest "
+            "desk-data print (ADA/qty, and pool ADA when a snapshot is inside the tolerance). "
+            "Nothing is promoted automatically. Not a buy signal."
         ),
         "whales": whales,
     }
@@ -1023,6 +1157,211 @@ def _whale_by_body(roster):
     return found
 
 
+def _nearest_point(points, target, tol, skip_tx=None):
+    best = None
+    for point in points or []:
+        if skip_tx and point.get("tx") and point.get("tx") == skip_tx:
+            continue
+        at = point.get("t")
+        if not isinstance(at, (int, float)):
+            continue
+        gap = abs(at - target)
+        if gap <= tol and (best is None or gap < best[0]):
+            best = (gap, point)
+    return None if best is None else best[1]
+
+
+def price_series(rows):
+    """ticker -> sorted prints {t, price, tx}.
+
+    Price is ADA per token (ada/qty) from big_moves. Whole-token rows win
+    when a ticker has any; otherwise raw rows are used. The two scales are
+    never mixed on one ticker. ada_basis tx or price only.
+    """
+    parsed = []
+    whole = set()
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        if row.get("ada_basis") not in ("tx", "price"):
+            continue
+        ticker = _watch_ticker(row.get("ticker") or "")
+        at = parse_time(row.get("time") or row.get("at"))
+        ada = row.get("ada")
+        qty = row.get("qty")
+        basis = row.get("qty_basis")
+        if not ticker or at is None or basis not in ("whole", "raw"):
+            continue
+        if isinstance(ada, bool) or isinstance(qty, bool):
+            continue
+        if not isinstance(ada, (int, float)) or not isinstance(qty, (int, float)):
+            continue
+        if ada <= 0 or qty == 0:
+            continue
+        if basis == "whole":
+            whole.add(ticker)
+        parsed.append({
+            "ticker": ticker,
+            "t": at,
+            "price": abs(float(ada)) / abs(float(qty)),
+            "tx": str(row.get("tx_short") or ""),
+            "basis": basis,
+        })
+    series = {}
+    for point in parsed:
+        if point["ticker"] in whole and point["basis"] != "whole":
+            continue
+        if point["ticker"] not in whole and point["basis"] != "raw":
+            continue
+        series.setdefault(point["ticker"], []).append(point)
+    for ticker in series:
+        series[ticker].sort(key=lambda point: point["t"])
+    return series
+
+
+def liquidity_series(log, rows):
+    """ticker -> sorted {t, liquidity} pool ADA from the log and liquidity rows.
+
+    Log snapshots contribute cardano_top10 ada_side_depth, verdict pool_ada,
+    and liquidity_flows pool depth. liquidity_moves contribute
+    reserve_ada_after. Same timestamp keeps the latest value seen.
+    """
+    found = {}
+
+    def put(ticker, at, liquidity):
+        name = _watch_ticker(ticker or "")
+        if not name or not isinstance(at, (int, float)):
+            return
+        if isinstance(liquidity, bool) or not isinstance(liquidity, (int, float)) or liquidity <= 0:
+            return
+        found.setdefault(name, {})[at] = float(liquidity)
+
+    def take_snap(snap):
+        if not isinstance(snap, dict):
+            return
+        at = parse_time(snap.get("asof"))
+        for row in (snap.get("cardano_top10") or []):
+            if isinstance(row, dict):
+                put(row.get("ticker"), at, row.get("ada_side_depth"))
+        for row in (snap.get("verdicts") or []):
+            if isinstance(row, dict):
+                put(row.get("ticker"), at, row.get("pool_ada"))
+        flows = snap.get("liquidity_flows")
+        if isinstance(flows, dict):
+            for row in (flows.get("pools") or []):
+                if isinstance(row, dict):
+                    put(row.get("ticker"), at, row.get("ada_side_depth"))
+
+    if isinstance(log, dict):
+        take_snap(log)
+        for snap in log.get("history") or []:
+            take_snap(snap)
+    for row in rows or []:
+        if isinstance(row, dict):
+            put(row.get("ticker"), parse_time(row.get("time") or row.get("at")), row.get("reserve_ada_after"))
+    series = {}
+    for ticker, points in found.items():
+        series[ticker] = [{"t": at, "liquidity": liquidity} for at, liquidity in sorted(points.items())]
+    return series
+
+
+def _horizon_offset(name):
+    for label, start, _end in WINDOWS:
+        if label == name:
+            return start
+    return 0
+
+
+def _horizon_closed(event, name, now):
+    at = event.get("at")
+    if not isinstance(at, (int, float)) or not isinstance(now, (int, float)):
+        return False
+    for label, _start, end in WINDOWS:
+        if label == name:
+            return now >= at + end
+    return False
+
+
+def apply_desk_observations(events, prices, liquidity, now):
+    """Fill checkpoints from desk-data prints. Unobserved is not a miss.
+
+    Price is the nearest big_moves ADA/qty inside OBS_TOL_S of the horizon.
+    Liquidity is the nearest pool ADA snapshot inside the same tolerance,
+    when one exists. A live filled checkpoint (outcome hit or miss, or
+    status filled) is left alone. A closed horizon with no print is
+    unobserved and stays out of n_observed.
+    """
+    prices = prices or {}
+    liquidity = liquidity or {}
+    for event in events or []:
+        if not isinstance(event, dict):
+            continue
+        ticker = _watch_ticker(event.get("ticker") or "")
+        price_points = prices.get(ticker) or []
+        liq_points = liquidity.get(ticker) or []
+        tx = str(event.get("tx") or "")
+        at = event.get("at")
+        if not isinstance(at, (int, float)):
+            continue
+        base_cp = event.get("at_move") if isinstance(event.get("at_move"), dict) else None
+        base_price = None
+        base_liq = None
+        if base_cp and base_cp.get("status") == "filled" and base_cp.get("price"):
+            base_price = base_cp.get("price")
+            base_liq = base_cp.get("liquidity")
+        else:
+            base = _nearest_point(price_points, at, OBS_TOL_S["at_move"], skip_tx=None)
+            if base:
+                base_price = base.get("price")
+                if base_cp is not None and base_cp.get("status") != "filled":
+                    base_cp["status"] = "filled"
+                    base_cp["price"] = base_price
+                    base_cp["observed_at"] = iso(base["t"])
+                    base_cp["reason"] = None
+                    base_cp["source"] = "desk-data"
+            liq = _nearest_point(liq_points, at, OBS_TOL_S["at_move"])
+            if liq:
+                base_liq = liq.get("liquidity")
+                if base_cp is not None and base_cp.get("liquidity") is None:
+                    base_cp["liquidity"] = base_liq
+        for name in HORIZONS:
+            cp = (event.get("followups") or {}).get(name)
+            if not isinstance(cp, dict):
+                continue
+            if cp.get("outcome") in ("hit", "miss") or cp.get("status") == "filled":
+                continue
+            if cp.get("status") == "missed":
+                cp["status"] = "unobserved"
+                cp["outcome"] = "unobserved"
+            target = at + _horizon_offset(name)
+            obs = _nearest_point(price_points, target, OBS_TOL_S[name], skip_tx=tx or None)
+            if base_price and obs and obs.get("price"):
+                cp["status"] = "filled"
+                cp["price"] = obs["price"]
+                cp["observed_at"] = iso(obs["t"])
+                cp["reason"] = None
+                cp["source"] = "desk-data"
+                cp["price_change_pct"] = change_pct(obs["price"], base_price)
+                liq = _nearest_point(liq_points, target, OBS_TOL_S[name])
+                if base_liq and liq and liq.get("liquidity"):
+                    cp["liquidity"] = liq["liquidity"]
+                    cp["liquidity_change_pct"] = change_pct(liq["liquidity"], base_liq)
+                else:
+                    cp["liquidity_change_pct"] = None
+                _mark_outcome(event, name)
+                if cp.get("outcome") == "unobserved":
+                    # Flat series: keep it out of the rate. Status stays filled
+                    # only when a direction was measured; otherwise unobserved.
+                    cp["status"] = "unobserved"
+                continue
+            if _horizon_closed(event, name, now):
+                cp["status"] = "unobserved"
+                cp["outcome"] = "unobserved"
+                cp["reason"] = "no observation in the window"
+                cp["price_change_pct"] = None
+                cp["liquidity_change_pct"] = None
+
+
 def _append_event(events, known_ids, move, codename, config, known):
     unit = unit_for(move.get("ticker"), config, known)
     event = new_event(move, codename, unit)
@@ -1060,18 +1399,15 @@ def build(log, ledger, liquidity, config, known, cache_roster, cache_events, now
     reserved = [codename_for(item) for item in routers]
     router_bodies = {tag_body(item) for item in routers if tag_body(item)}
     short = shortlist_of(log, liquidity)
-    # Empty big_moves keeps this pass on clusters, heat, and liquidity only.
-    # The log's summary rows are not mixed in here; the file history is the
-    # big-move source and is applied on the next pass.
-    cluster_tags = [item for item in discover(log, liquidity, lead_tags, short, {}) if tag_body(item) not in router_bodies]
-    # Cluster tags first so a fresh roster keeps the codenames already published.
-    add_candidates(roster, cluster_tags, ["cluster or liquidity overlap"])
-    add_candidates(
-        roster,
-        discover(log, liquidity, lead_tags, short, combined),
-        ["big-move overlap"],
-        reserved,
-    )
+    # One pass. The tightened bar already includes cluster tags that also
+    # have enough big-move history. An empty big_moves document is not passed,
+    # so the log's repeated summary rows are not mixed with the file history.
+    qualified = [
+        item for item in discover(log, liquidity, lead_tags, short, combined, now)
+        if tag_body(item) not in router_bodies
+    ]
+    add_candidates(roster, qualified, ["big-move overlap"], reserved)
+    settle_candidates(roster, qualified)
     events = list(cache_events or [])
     known_ids = {e.get("id") for e in events if isinstance(e, dict)}
     lead_name = LEAD_CODENAME
@@ -1092,6 +1428,12 @@ def build(log, ledger, liquidity, config, known, cache_roster, cache_events, now
         if body in lead_bodies:
             continue
         _append_event(events, known_ids, move, whale.get("codename"), config, known)
+    apply_desk_observations(
+        events,
+        price_series(combined.get("moves") or []),
+        liquidity_series(log, (liquidity or {}).get("moves") if isinstance(liquidity, dict) else []),
+        now,
+    )
     if quote is not None:
         for event in events:
             advance_event(event, now, quote, one_per_run=True)
