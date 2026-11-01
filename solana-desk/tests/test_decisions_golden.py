@@ -29,6 +29,16 @@ class GoldenDecisions(unittest.TestCase):
         for key in ("calls", "tasks", "trades", "state", "health", "positions", "paper"):
             self.assertEqual(got[key], want[key], key)
 
+    def test_analysis_scripts_are_outside_the_decision_path(self):
+        desk = os.path.join(os.path.dirname(__file__), "..", "desk")
+        for name in os.listdir(desk):
+            if not name.endswith(".py"):
+                continue
+            with open(os.path.join(desk, name)) as fh:
+                src = fh.read()
+            self.assertNotIn("day14_verdict", src, name)
+            self.assertNotIn("r_overlap_check", src, name)
+
 
 if __name__ == "__main__":
     unittest.main()

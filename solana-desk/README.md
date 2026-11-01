@@ -99,3 +99,11 @@ A scan that already fetched a mint makes no extra call for it. Pools that have l
 
 ## Tests
     cd solana-desk && python3 -m unittest discover -s tests -t .
+
+## Frozen checks (no decision change)
+These read a desk-data `solana-desk` directory (`positions.json`, `tasks.csv`, `trades.csv`). They do not write a book and they do not change a v6.5 entry, exit, or sample.
+
+    python3 specs/day14_verdict.py --data-dir DESK_DATA_DIR --data-commit SHA
+    python3 specs/r_overlap_check.py --data-dir DESK_DATA_DIR --data-commit SHA
+
+The day-14 script prints `VERDICT: STOP` or `VERDICT: CONTINUE`. The overlap script does not.
