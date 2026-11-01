@@ -69,13 +69,21 @@ class DiscoverTests(unittest.TestCase):
             {"ticker": "FLOW", "wallets": ["w-cccccccc"]},
         ], "rotation": {"trends": [{"token": "ASCEND", "trend": "accumulating"}]},
             "hot": [{"ticker": "ASCEND", "line": "overlap"}]}}
+        # Two shared tokens and no sized moves are not enough for a candidate.
         found = WR.discover(log, {"moves": []}, ["w-cccccccc"], {"ASCEND", "STRIKE", "FLOW"})
-        self.assertEqual(found, ["w-aaaaaaaa", "w-bbbbbbbb"])
+        self.assertEqual(found, [])
+        moves = []
+        for i in range(10):
+            moves.append({"tag": "w-aaaaaaaa", "ticker": "ASCEND" if i % 2 == 0 else "STRIKE",
+                          "direction": "in", "ada": 300, "tx_short": "a%02d" % i, "time": "2026-10-29T15:%02d:00Z" % i,
+                          "ada_basis": "tx", "qty_basis": "whole", "qty": 1})
+        found = WR.discover(log, {"moves": []}, ["w-cccccccc"], {"ASCEND", "STRIKE", "FLOW"}, {"moves": moves}, 1_793_000_000)
+        self.assertEqual(found, ["w-aaaaaaaa"])
         roster = WR.empty_roster()
         WR.add_candidates(roster, found, ["cluster overlap"])
         self.assertTrue(all(w["status"] == "candidate" for w in roster["whales"]))
         self.assertTrue(all(not w["wallets"] for w in roster["whales"]))
-        self.assertEqual(len({w["codename"] for w in roster["whales"]}), 2)
+        self.assertEqual(len({w["codename"] for w in roster["whales"]}), 1)
 
     def test_large_positions_across_tokens_qualify_without_a_partner(self):
         liquidity = {"moves": [
@@ -83,6 +91,12 @@ class DiscoverTests(unittest.TestCase):
             {"actor_tag": "w-dddddddd", "ticker": "STRIKE", "ada": 800},
         ]}
         found = WR.discover({"cardano_v2": {}}, liquidity, [], {"ASCEND", "STRIKE"})
+        self.assertEqual(found, [])
+        rows = []
+        for i in range(10):
+            rows.append({"actor_tag": "w-dddddddd", "ticker": "ASCEND" if i % 2 == 0 else "STRIKE",
+                         "direction": "buy", "ada": 250, "tx_short": "d%02d" % i, "time": "2026-10-29T16:%02d:00Z" % i})
+        found = WR.discover({"cardano_v2": {}}, {"moves": rows}, [], {"ASCEND", "STRIKE"}, {}, 1_793_000_000)
         self.assertEqual(found, ["w-dddddddd"])
 
     def test_lead_tag_is_not_proposed_again(self):
@@ -90,7 +104,12 @@ class DiscoverTests(unittest.TestCase):
             {"ticker": "ASCEND", "wallets": ["w-f3186187", "w-aaaaaaaa"]},
             {"ticker": "STRIKE", "wallets": ["w-f3186187", "w-aaaaaaaa"]},
         ]}}
-        found = WR.discover(log, {}, ["w-f3186187"], {"ASCEND", "STRIKE"})
+        moves = []
+        for tag in ("w-f3186187", "w-aaaaaaaa"):
+            for i in range(10):
+                moves.append({"tag": tag, "ticker": "ASCEND" if i % 2 == 0 else "STRIKE", "direction": "in",
+                              "ada": 300, "tx_short": tag[-2:] + "%02d" % i, "time": "2026-10-29T15:%02d:00Z" % i})
+        found = WR.discover(log, {}, ["w-f3186187"], {"ASCEND", "STRIKE"}, {"moves": moves}, 1_793_000_000)
         self.assertEqual(found, ["w-aaaaaaaa"])
 
 
@@ -114,24 +133,28 @@ class ScoreTests(unittest.TestCase):
 
         late = WR.new_event({"at": at, "ticker": "ASCEND", "action": "accumulate", "tx": "cd"}, "Grumpy Walrus", "unit")
         WR.advance_event(late, at + 2 * WR.H1_S, quote)
-        self.assertEqual(late["at_move"]["status"], "missed")
-        self.assertEqual(late["at_move"]["reason"], "window passed before a run observed it")
+        self.assertEqual(late["at_move"]["status"], "unobserved")
+        self.assertEqual(late["at_move"]["reason"], "no observation in the window")
         self.assertEqual(late["followups"]["h1"]["status"], "filled")
         self.assertIsNone(late["followups"]["h1"]["price_change_pct"])
 
         missed = WR.new_event({"at": at, "ticker": "ASCEND", "action": "trim", "tx": "ef"}, "Grumpy Walrus", "unit")
         WR.advance_event(missed, at + 7 * WR.H1_S, quote)
-        self.assertEqual(missed["followups"]["h1"]["status"], "missed")
+        self.assertEqual(missed["followups"]["h1"]["status"], "unobserved")
+        self.assertEqual(missed["followups"]["h1"]["outcome"], "unobserved")
         self.assertEqual(missed["followups"]["h6"]["status"], "filled")
 
         day = WR.new_event({"at": at, "ticker": "ASCEND", "action": "exit", "tx": "gh"}, "Grumpy Walrus", "unit")
         WR.advance_event(day, at + 25 * WR.H1_S, quote)
-        self.assertEqual(day["followups"]["h6"]["status"], "missed")
+        self.assertEqual(day["followups"]["h6"]["status"], "unobserved")
         self.assertEqual(day["followups"]["h24"]["status"], "filled")
 
         gone = WR.new_event({"at": at, "ticker": "ASCEND", "action": "exit", "tx": "ij"}, "Grumpy Walrus", "unit")
         WR.advance_event(gone, at + 31 * WR.H1_S, quote)
-        self.assertEqual(gone["followups"]["h24"]["status"], "missed")
+        self.assertEqual(gone["followups"]["h24"]["status"], "unobserved")
+        scores = WR.summarize([gone])["Grumpy Walrus"]
+        self.assertEqual(scores["n_observed_h24"], 0)
+        self.assertEqual(scores["hits_h24"], 0)
 
     def test_hit_uses_price_and_liquidity_after_the_move(self):
         at = 1_700_000_000
@@ -251,6 +274,15 @@ class RosterTests(unittest.TestCase):
                 ]}, fh)
             with open(os.path.join(data, "solada-prefilter", "liquidity_moves.json"), "w") as fh:
                 json.dump({"moves": []}, fh)
+            moves = []
+            for i in range(10):
+                moves.append({
+                    "tag": "w-aaaaaaaa", "ticker": "ASCEND" if i % 2 == 0 else "STRIKE",
+                    "direction": "in", "ada": 300, "tx_short": "m%02d" % i,
+                    "time": "2026-10-29T15:%02d:00Z" % i, "ada_basis": "tx", "qty_basis": "whole", "qty": 1,
+                })
+            with open(os.path.join(data, "solada-prefilter", "big_moves.json"), "w") as fh:
+                json.dump({"moves": moves, "coverage": {"ASCEND": {}, "STRIKE": {}}}, fh)
             proc = subprocess.run(
                 [sys.executable, "-m", "whale_roster.build", "--repo", repo, "--data-dir", data,
                  "--cache-dir", cache, "--public-dir", public],
@@ -332,6 +364,333 @@ class GuardTests(unittest.TestCase):
             {"whales": [{"codename": "Grumpy Walrus", "role": "lead", "status": "active"}]}, [], "2026-10-29T00:00:00Z")
         ok = self.run_guard("solada-prefilter/whale_roster.json", clean)
         self.assertEqual(ok.returncode, 0, ok.stderr)
+
+
+class CandidateScoreTests(unittest.TestCase):
+    def big(self, rows):
+        return {"moves": rows, "coverage": {"AAA": {}, "BBB": {}}}
+
+    def row(self, tag, ticker, direction, ada, tx, when="2026-10-29T15:00:00Z"):
+        return {"tag": tag, "ticker": ticker, "direction": direction, "ada": ada, "tx_short": tx, "time": when,
+                "ada_basis": "tx", "qty_basis": "whole", "qty": 10}
+
+    def _sized(self, tag, n=10, ada=300):
+        rows = []
+        for i in range(n):
+            rows.append(self.row(
+                tag, "AAA" if i % 2 == 0 else "BBB", "in", ada, "%s%02d" % (tag[-4:], i),
+                "2026-10-29T15:%02d:00Z" % i,
+            ))
+        return rows
+
+    def test_big_moves_tags_qualify_and_the_lead_tag_does_not(self):
+        rows = self._sized("m-aaaaaaaa") + self._sized("m-f3186187", ada=400) + [
+            self.row("w-bbbbbbbb", "AAA", "in", 100, "txbbb1"),
+        ]
+        found = WR.discover(
+            {"cardano_top10": [{"ticker": "AAA"}, {"ticker": "BBB"}]},
+            {"moves": []},
+            ["w-f3186187"],
+            {"AAA", "BBB"},
+            self.big(rows),
+            1_793_500_000,
+        )
+        self.assertEqual(found, ["m-aaaaaaaa"])
+        self.assertNotIn("m-f3186187", found)
+        self.assertNotIn("w-bbbbbbbb", found)
+
+    def test_a_balanced_router_is_not_a_candidate(self):
+        rows = []
+        for i in range(100):
+            ticker = "AAA" if i % 2 == 0 else "BBB"
+            direction = "in" if i < 50 else "out"
+            rows.append(self.row("m-cccccccc", ticker, direction, 1000, "tx%03d" % i))
+        self.assertTrue(WR.market_maker(100, 50000, 50000))
+        self.assertTrue(WR.market_maker(100, 100, 90))
+        self.assertFalse(WR.market_maker(99, 50000, 50000))
+        self.assertFalse(WR.market_maker(100, 100, 80))
+        self.assertFalse(WR.market_maker(100, 100, 0))
+        found = WR.discover({}, {"moves": []}, [], {"AAA", "BBB"}, self.big(rows))
+        self.assertEqual(found, [])
+        self.assertEqual(WR.router_tags(self.big(rows)), ["m-cccccccc"])
+        roster = WR.empty_roster()
+        blocked = WR.codename_for("m-cccccccc")
+        WR.add_candidates(roster, ["m-cccccccc"], ["big-move overlap"], reserved=[blocked])
+        self.assertNotEqual(roster["whales"][0]["codename"], blocked)
+        self.assertEqual(roster["whales"][0]["status"], "candidate")
+        uneven = [self.row("m-dddddddd", "AAA" if i % 2 == 0 else "BBB", "in", 1000, "u%03d" % i) for i in range(40)]
+        uneven += [self.row("m-dddddddd", "AAA", "out", 1000, "s%03d" % i) for i in range(10)]
+        found = WR.discover({}, {"moves": []}, [], {"AAA", "BBB"}, self.big(uneven))
+        self.assertEqual(found, ["m-dddddddd"])
+
+    def test_the_same_trade_in_two_runs_is_one_event(self):
+        first = self.row("m-aaaaaaaa", "AAA", "in", 1500, "txaaa1")
+        second = self.row("m-aaaaaaaa", "BBB", "in", 900, "txaaa2", "2026-10-29T15:05:00Z")
+        again = dict(first)
+        again["ada"] = 1501
+        rows = WR.dedupe_rows([first, second, again])
+        self.assertEqual(len(rows), 2)
+        moves = WR.moves_from_tagged(rows)
+        self.assertEqual([m["action"] for m in moves], ["accumulate", "accumulate"])
+        log = {"cardano_top10": [{"ticker": "AAA"}, {"ticker": "BBB"}]}
+        cache = {"schema": 1, "private": True, "kind": "whale_roster", "whales": [{
+            "codename": "Sleepy Otter", "wallets": [], "tags": ["m-aaaaaaaa"], "role": "watch",
+            "added": "", "source": "cache", "evidence": [], "status": "candidate", "social": {"accounts": []},
+        }]}
+        roster, events, public = WR.build(
+            log, {"whale_tag": "w-f3186187", "rows": []}, {"moves": []},
+            {"whale": {}, "units": {}}, {}, cache, [], 1_793_500_000, None, None,
+            [self.big([first, second]), self.big([again])],
+        )
+        otter = [w for w in roster["whales"] if w["codename"] == "Sleepy Otter"][0]
+        self.assertEqual(otter["status"], "dormant")
+        self.assertEqual(sum(1 for event in events if event["codename"] == "Sleepy Otter"), 2)
+        self.assertEqual(public["dormant_count"], 1)
+        self.assertFalse(any(w["codename"] == "Sleepy Otter" for w in public["whales"]))
+        self.assertTrue(WR.public_text_ok(public))
+        self.assertNotIn("m-aaaaaaaa", json.dumps(public))
+
+    def test_candidate_hits_use_the_lead_horizons(self):
+        at = 1_700_000_000
+        move = {"at": at, "ticker": "AAA", "action": "accumulate", "tx": "tx1", "tag": "m-aaaaaaaa"}
+        event = WR.new_event(move, "Sleepy Otter", "unit")
+        prices = {0: (1.0, 100.0), 1: (1.2, 110.0)}
+        step = {"n": 0}
+
+        def quote(unit):
+            price, liq = prices[step["n"]]
+            step["n"] += 1
+            return reading(price, liq)
+
+        WR.advance_event(event, at + 10, quote)
+        WR.advance_event(event, at + 2 * WR.H1_S, quote)
+        scores = WR.summarize([event])["Sleepy Otter"]
+        self.assertEqual(scores["hits_h1"], 1)
+        self.assertIs(WR.favorable("accumulate", 20.0, 10.0), True)
+        # Same window boundaries the lead uses.
+        self.assertEqual(event["followups"]["h1"]["status"], "filled")
+        self.assertEqual(event["followups"]["h6"]["reason"], "not due")
+
+    def _live(self, scores, n6, n24, r6, r24):
+        scores["live"]["h6"]["n_observed"] = n6
+        scores["live"]["h6"]["hit_rate"] = r6
+        scores["live"]["h24"]["n_observed"] = n24
+        scores["live"]["h24"]["hit_rate"] = r24
+
+    def test_eligibility_is_a_flag_and_not_a_promotion(self):
+        low = WR.empty_scores()
+        self._live(low, 25, 25, 0.55, 0.90)
+        eligible, reason = WR.promotion_eligibility(low)
+        self.assertFalse(eligible)
+        self.assertIn("need > 0.55", reason)
+        high = WR.empty_scores()
+        self._live(high, 25, 25, 0.551, 0.56)
+        eligible, reason = WR.promotion_eligibility(high)
+        self.assertTrue(eligible)
+        self.assertIn("manual owner decision", reason)
+        short = WR.empty_scores()
+        self._live(short, 24, 25, 0.551, 0.56)
+        eligible, _reason = WR.promotion_eligibility(short)
+        self.assertFalse(eligible)
+        blank = WR.empty_scores()
+        blank["events"] = 30
+        eligible, reason = WR.promotion_eligibility(blank)
+        self.assertFalse(eligible)
+        self.assertIn("blank", reason)
+        roster = {"whales": [{"codename": "Sleepy Otter", "role": "watch", "status": "candidate"}]}
+        event = WR.new_event({"at": 1, "ticker": "AAA", "action": "accumulate", "tx": "t"}, "Sleepy Otter", None)
+        public = WR.public_summary(roster, [event] * 25, "2026-10-29T00:00:00Z")
+        whale = public["whales"][0]
+        self.assertIn("eligible_for_active", whale)
+        self.assertEqual(whale["status"], "candidate")
+        self.assertIs(whale["eligible_for_active"], False)
+
+    def test_public_output_has_scores_and_no_wallet(self):
+        stake = "stake1u" + "p" * 53
+        digest = __import__("hashlib").sha256(stake.encode()).hexdigest()[:8]
+        tag = "m-" + digest
+        rows = self._sized(tag, ada=250)
+        cache = {"schema": 1, "private": True, "kind": "whale_roster", "whales": [{
+            "codename": "Sleepy Otter", "wallets": [stake], "tags": [], "role": "watch",
+            "added": "", "source": "cache", "evidence": [], "status": "candidate",
+            "social": {"accounts": []},
+        }]}
+        log = {"cardano_top10": [{"ticker": "AAA"}, {"ticker": "BBB"}]}
+        _roster, events, public = WR.build(
+            log, {"rows": []}, {"moves": []}, {"whale": {}, "units": {}}, {},
+            cache, [], 1_793_500_000, None, None, self.big(rows),
+        )
+        blob = json.dumps(public)
+        self.assertNotIn(stake, blob)
+        self.assertNotIn(tag, blob)
+        self.assertNotIn("wallets", blob)
+        self.assertTrue(WR.public_text_ok(public))
+        whale = [w for w in public["whales"] if w["codename"] == "Sleepy Otter"][0]
+        self.assertEqual(whale["scores"]["events"], 10)
+        self.assertEqual(whale["status"], "candidate")
+        self.assertEqual(len([event for event in events if event["codename"] == "Sleepy Otter"]), 10)
+        self.assertTrue(all(e["codename"] == "Sleepy Otter" for e in events))
+
+    def test_a_tagged_liquidity_row_is_scored_for_that_whale(self):
+        cache = {"schema": 1, "private": True, "kind": "whale_roster", "whales": [{
+            "codename": "Sleepy Otter", "wallets": [], "tags": ["m-aaaaaaaa"], "role": "watch",
+            "added": "", "source": "cache", "evidence": [], "status": "active",
+            "social": {"accounts": []},
+        }]}
+        liquidity = {"moves": [{
+            "actor_tag": "m-aaaaaaaa", "ticker": "AAA", "direction": "sell", "kind": "swap",
+            "ada": 1200, "tx_short": "liq1", "time": "2026-10-29T15:00:00Z",
+        }, {
+            "actor_tag": "m-aaaaaaaa", "ticker": "AAA", "direction": "sell", "kind": "swap",
+            "ada": 1200, "tx_short": "liq1", "time": "2026-10-29T15:00:00Z",
+        }]}
+        _roster, events, public = WR.build(
+            {}, {"rows": []}, liquidity, {"units": {}}, {}, cache, [], 1_700_000_000, None, None, [],
+        )
+        whale = [w for w in public["whales"] if w["codename"] == "Sleepy Otter"][0]
+        self.assertEqual(whale["status"], "active")
+        self.assertEqual(whale["scores"]["events"], 1)
+        self.assertEqual(whale["scores"]["trim"], 1)
+        self.assertEqual(len(events), 1)
+
+    def test_log_big_moves_count_once_across_history_snapshots(self):
+        row = {"tag": "m-aaaaaaaa", "ticker": "AAA", "direction": "in", "ada": 1500, "tx_short": "tx1", "time": "2026-10-29T15:00:00Z"}
+        other = {"tag": "m-aaaaaaaa", "ticker": "BBB", "direction": "in", "ada": 800, "tx_short": "tx2", "time": "2026-10-29T15:05:00Z"}
+        log = {
+            "cardano_top10": [{"ticker": "AAA"}, {"ticker": "BBB"}],
+            "liquidity_flows": {"big_moves": [row, other]},
+            "history": [{"liquidity_flows": {"big_moves": [row, other]}}],
+        }
+        found = WR.discover(log, {"moves": []}, [], {"AAA", "BBB"})
+        self.assertEqual(found, [])
+        moves = WR.moves_from_tagged(WR.dedupe_rows([row, other, row]))
+        self.assertEqual(len(moves), 2)
+
+    def test_unobserved_is_not_a_miss_and_desk_prints_score(self):
+        at = WR.parse_time("2026-10-29T12:00:00Z")
+        event = WR.new_event({"at": at, "ticker": "AAA", "action": "accumulate", "tx": "own"}, "Grumpy Walrus", None)
+        later = WR.new_event({"at": at, "ticker": "BBB", "action": "trim", "tx": "own2"}, "Grumpy Walrus", None)
+        prices = {
+            "AAA": [
+                {"t": at, "price": 1.0, "tx": "own"},
+                {"t": at + WR.H1_S + 600, "price": 1.2, "tx": "later"},
+            ],
+            "BBB": [
+                {"t": at, "price": 2.0, "tx": "own2"},
+                {"t": at + WR.H1_S, "price": 2.4, "tx": "up"},
+            ],
+        }
+        liquidity = {"AAA": [{"t": at, "liquidity": 100.0}, {"t": at + WR.H1_S + 600, "liquidity": 90.0}]}
+        WR.apply_desk_observations([event, later], prices, liquidity, at + WR.H24_S + WR.H24_SLACK_S)
+        self.assertEqual(event["followups"]["h1"]["outcome"], "miss")
+        self.assertEqual(later["followups"]["h1"]["outcome"], "miss")
+        self.assertEqual(event["followups"]["h6"]["outcome"], "unobserved")
+        self.assertNotEqual(event["followups"]["h6"]["status"], "missed")
+        scores = WR.summarize([event, later])["Grumpy Walrus"]
+        self.assertEqual(scores["backfill"]["h1"]["n_observed"], 2)
+        self.assertEqual(scores["backfill"]["h1"]["hits"], 0)
+        self.assertEqual(scores["backfill"]["approximate"], True)
+        self.assertEqual(scores["live"]["h1"]["n_observed"], 0)
+        self.assertEqual(scores["n_observed_h6"], 0)
+        self.assertIsNone(scores["hit_rate_h6"])
+        # Price up and liquidity up is a hit for an accumulate.
+        up = WR.new_event({"at": at, "ticker": "AAA", "action": "accumulate", "tx": "z"}, "Sleepy Otter", None)
+        prices["AAA"].append({"t": at + 30, "price": 1.0, "tx": "base"})
+        WR.apply_desk_observations([up], prices, {}, at + 2 * WR.H1_S)
+        self.assertEqual(up["followups"]["h1"]["outcome"], "hit")
+
+    def test_a_candidate_outside_the_cap_goes_dormant_and_stays_private(self):
+        rows = []
+        tags = []
+        for n in range(13):
+            tag = "m-%08x" % (n + 1)
+            tags.append(tag)
+            for i in range(10):
+                rows.append(self.row(tag, "AAA" if i % 2 == 0 else "BBB", "in", 1000 + n * 100, "%x%02d" % (n, i),
+                                     "2026-10-29T15:%02d:00Z" % i))
+        found = WR.discover({}, {"moves": []}, [], {"AAA", "BBB"}, self.big(rows), 1_793_500_000)
+        self.assertEqual(len(found), WR.MAX_CANDIDATES)
+        roster = WR.empty_roster()
+        WR.add_candidates(roster, found, ["big-move overlap"])
+        WR.add_candidates(roster, [tags[0]], ["older"])
+        # The smallest tag was not in the top 12, so the pre-existing row goes dormant.
+        WR.settle_candidates(roster, found)
+        smallest = [w for w in roster["whales"] if tags[0] in w["tags"]][0]
+        self.assertEqual(smallest["status"], "dormant")
+        public = WR.public_summary(roster, [], "2026-10-29T00:00:00Z")
+        self.assertEqual(public["dormant_count"], 1)
+        self.assertFalse(any(tags[0] in json.dumps(w) for w in public["whales"]))
+        self.assertEqual(len(public["whales"]), WR.MAX_CANDIDATES)
+
+    def test_live_and_backfill_stay_split_and_eligibility_uses_live(self):
+        at = 1_700_000_000
+        live = WR.new_event({"at": at, "ticker": "AAA", "action": "accumulate", "tx": "L"}, "Sleepy Otter", "u")
+        live["at_move"]["status"] = "filled"
+        live["at_move"]["price"] = 1
+        live["at_move"]["liquidity"] = 1
+        live["followups"]["h6"]["status"] = "filled"
+        live["followups"]["h6"]["price_change_pct"] = 4
+        live["followups"]["h6"]["liquidity_change_pct"] = 4
+        live["followups"]["h6"]["outcome"] = "hit"
+        live["followups"]["h6"]["source"] = "live"
+        live["followups"]["h24"]["status"] = "filled"
+        live["followups"]["h24"]["price_change_pct"] = -3
+        live["followups"]["h24"]["outcome"] = "miss"
+        live["followups"]["h24"]["source"] = "live"
+        back = WR.new_event({"at": at + 1, "ticker": "AAA", "action": "accumulate", "tx": "B"}, "Sleepy Otter", "u")
+        for name, outcome in (("h6", "hit"), ("h24", "hit")):
+            back["followups"][name]["status"] = "filled"
+            back["followups"][name]["price_change_pct"] = 5
+            back["followups"][name]["outcome"] = outcome
+            back["followups"][name]["source"] = "desk-data"
+        scores = WR.summarize([live, back])["Sleepy Otter"]
+        self.assertEqual(scores["live"]["h6"]["n_observed"], 1)
+        self.assertEqual(scores["live"]["h6"]["hits"], 1)
+        self.assertEqual(scores["live"]["h24"]["hits"], 0)
+        self.assertEqual(scores["backfill"]["h6"]["n_observed"], 1)
+        self.assertEqual(scores["backfill"]["h6"]["hits"], 1)
+        self.assertEqual(scores["backfill"]["h24"]["hits"], 1)
+        self.assertTrue(scores["backfill"]["approximate"])
+        self.assertEqual(scores["n_observed_h6"], 1)
+        self.assertEqual(scores["hits_h24"], 0)
+        # Backfill clears the bar. Live does not. Eligible stays false.
+        for name in ("h6", "h24"):
+            scores["backfill"][name]["n_observed"] = 25
+            scores["backfill"][name]["hits"] = 20
+            scores["backfill"][name]["hit_rate"] = 0.8
+        self.assertFalse(WR.promotion_eligibility(scores)[0])
+        self.assertTrue(WR.promising_backfill(scores))
+        for name in ("h6", "h24"):
+            scores["live"][name]["n_observed"] = 25
+            scores["live"][name]["hits"] = 20
+            scores["live"][name]["hit_rate"] = 0.8
+        self.assertTrue(WR.promotion_eligibility(scores)[0])
+
+    def test_published_lead_live_tally_is_not_replaced_by_backfill(self):
+        previous = {"whales": [{"codename": "Grumpy Walrus", "role": "lead", "status": "active", "scores": {
+            "priced_h1": 49, "hits_h1": 21, "hit_rate_h1": 0.429,
+            "priced_h6": 53, "hits_h6": 30, "hit_rate_h6": 0.566,
+            "priced_h24": 36, "hits_h24": 18, "hit_rate_h24": 0.5,
+        }}]}
+        at = WR.parse_time("2026-10-29T12:00:00Z")
+        event = WR.new_event({"at": at, "ticker": "AAA", "action": "accumulate", "tx": "own"}, "Grumpy Walrus", None)
+        prices = {"AAA": [
+            {"t": at, "price": 1.0, "tx": "own"},
+            {"t": at + WR.H6_S, "price": 1.2, "tx": "later6"},
+            {"t": at + WR.H24_S, "price": 1.3, "tx": "later24"},
+        ]}
+        WR.apply_desk_observations([event], prices, {}, at + WR.H24_S + WR.H24_SLACK_S)
+        self.assertEqual(event["followups"]["h6"]["source"], "desk-data")
+        roster = {"whales": [{"codename": "Grumpy Walrus", "role": "lead", "status": "active"}]}
+        public = WR.public_summary(roster, [event], "2026-11-01T00:00:00Z", None, previous)
+        whale = public["whales"][0]
+        self.assertEqual(whale["scores"]["live"]["h6"]["n_observed"], 53)
+        self.assertEqual(whale["scores"]["live"]["h6"]["hits"], 30)
+        self.assertEqual(whale["scores"]["live"]["h6"]["hit_rate"], 0.566)
+        self.assertEqual(whale["scores"]["live"]["h1"]["hits"], 21)
+        self.assertGreater(whale["scores"]["backfill"]["h6"]["n_observed"], 0)
+        self.assertFalse(whale["eligible_for_active"])
+        self.assertNotEqual(whale["scores"]["live"]["h6"]["hit_rate"], whale["scores"]["backfill"]["h6"]["hit_rate"])
 
 
 if __name__ == "__main__":

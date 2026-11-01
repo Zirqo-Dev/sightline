@@ -11,6 +11,7 @@
     "buy_signal": {"const": false},
     "measured_factor": {"const": true},
     "min_sample": {"const": 8},
+    "dormant_count": {"type": "integer", "minimum": 0},
     "asof": {"type": "string"},
     "note": {"type": "string"},
     "whales": {
@@ -23,6 +24,9 @@
           "codename": {"type": "string", "minLength": 3, "maxLength": 40},
           "role": {"enum": ["lead", "watch"]},
           "status": {"enum": ["candidate", "active", "dropped"]},
+          "eligible_for_active": {"type": "boolean"},
+          "eligible_reason": {"type": "string", "maxLength": 400},
+          "promising_backfill": {"type": "boolean"},
           "scores": {
             "type": "object",
             "additionalProperties": false,
@@ -35,6 +39,9 @@
               "priced_h1": {"type": "integer", "minimum": 0},
               "priced_h6": {"type": "integer", "minimum": 0},
               "priced_h24": {"type": "integer", "minimum": 0},
+              "n_observed_h1": {"type": "integer", "minimum": 0},
+              "n_observed_h6": {"type": "integer", "minimum": 0},
+              "n_observed_h24": {"type": "integer", "minimum": 0},
               "hits_h1": {"type": "integer", "minimum": 0},
               "hits_h6": {"type": "integer", "minimum": 0},
               "hits_h24": {"type": "integer", "minimum": 0},
@@ -42,10 +49,35 @@
               "hit_rate_h6": {"type": ["number", "null"]},
               "hit_rate_h24": {"type": ["number", "null"]},
               "small_sample": {"type": "boolean"},
-              "social_moves_matched": {"type": ["integer", "null"], "minimum": 0}
+              "social_moves_matched": {"type": ["integer", "null"], "minimum": 0},
+              "live": {"$ref": "#/$defs/tally"},
+              "backfill": {"$ref": "#/$defs/tally"}
             }
           }
         }
+      }
+    }
+  },
+  "$defs": {
+    "horizon": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["n_observed", "hits", "hit_rate"],
+      "properties": {
+        "n_observed": {"type": "integer", "minimum": 0},
+        "hits": {"type": "integer", "minimum": 0},
+        "hit_rate": {"type": ["number", "null"]}
+      }
+    },
+    "tally": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "approximate": {"type": "boolean"},
+        "note": {"type": "string", "maxLength": 240},
+        "h1": {"$ref": "#/$defs/horizon"},
+        "h6": {"$ref": "#/$defs/horizon"},
+        "h24": {"$ref": "#/$defs/horizon"}
       }
     }
   }
