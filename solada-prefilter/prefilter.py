@@ -20,6 +20,7 @@ import whale_ledger as WL  # noqa: E402  SPD-44 lead whale ledger (research rows
 import dev_checks as DC  # noqa: E402  phase-1 dev sells / serial / drawdown (own budget; may add a dev_sell trigger)
 import liquidity_moves as LM  # noqa: E402  SPD-55 pool reserves (research rows, never triggers)
 import vetoes as vetoes_mod  # noqa: E402  SPD-65 research vetoes from those files (never a buy signal)
+import sw01  # noqa: E402  SW-01 candidate / exit posts (fail-soft, not a desk rule)
 from datetime import datetime, timezone
 
 UA = "sightline-solada-prefilter/1.0"
@@ -582,17 +583,43 @@ def _gt_pool(http, unit):
         mcap_usd = float(a.get("market_cap_usd") or a.get("fdv_usd") or 0)
         if qusd > 0:
             vol = float((a.get("volume_usd") or {}).get("h24") or 0)
+            buys_h6, sells_h6 = _h6_counts(a.get("transactions"))
             return {"ada_side": round(res / 2 / qusd), "mcap_ada": round(mcap_usd / qusd) if mcap_usd else None,
                     "vol_h24_ada": round(vol / qusd) if vol else None,
                     "price_ada": price_ada, "dex": best["relationships"]["dex"]["data"]["id"] if best.get("relationships") else None,
-                    "basis": "geckoterminal"}
+                    "basis": "geckoterminal", "buys_h6": buys_h6, "sells_h6": sells_h6}
     r = http.req("dexscreener", f"{DS}/tokens/v1/cardano/{unit}")
     if r:
         best = max(r, key=lambda p: float((p.get("liquidity") or {}).get("quote") or 0))
         q = float((best.get("liquidity") or {}).get("quote") or 0)
         pn = float(best.get("priceNative") or 0)
-        return {"ada_side": round(q), "mcap_ada": None, "price_ada": pn, "dex": best.get("dexId"), "basis": "dexscreener"}
+        buys_h6, sells_h6 = _h6_counts(best.get("txns"))
+        return {"ada_side": round(q), "mcap_ada": None, "price_ada": pn, "dex": best.get("dexId"), "basis": "dexscreener",
+                "buys_h6": buys_h6, "sells_h6": sells_h6}
     return None
+
+
+def _h6_counts(block):
+    """(buys, sells) from a GeckoTerminal transactions or DexScreener txns object.
+
+    Missing or odd values stay None. These counts are reported on the SW-01
+    payload only. They are not a gate and they do not feed rules k, y, or aa.
+    """
+    if not isinstance(block, dict):
+        return None, None
+    h6 = block.get("h6") if isinstance(block.get("h6"), dict) else None
+    if not h6:
+        return None, None
+
+    def n(v):
+        if isinstance(v, bool) or v is None:
+            return None
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return None
+
+    return n(h6.get("buys")), n(h6.get("sells"))
 
 
 def _num(v):
@@ -1377,7 +1404,7 @@ def main():
 
     # ---- research sections (SPD-43/44/55): after the webhook and state writes, each with its own slice,
     # so a slow Koios or a research bug can never cost the webhook, state.json or kill_status.json (M1)
-    def build_summary(big_moves, whale_ledger, liquidity=None, veto_summary=None):
+    def build_summary(big_moves, whale_ledger, liquidity=None, veto_summary=None, sw01_summary=None):
         return {
             "at": now_iso(), "basis": chain.basis, "dry_run": args.dry_run, "baseline": baseline,
             "launches": len(launches), "new_launches": 0 if baseline else len(new_ids), "candidates": len(cands),
@@ -1386,7 +1413,7 @@ def main():
             "first_block_hits": fb_hits, "triggers": [{k: v for k, v in t.items() if k not in NOPUB} for t in fresh],
             "webhook_sent": sent_any, "flags_new": len(new_flags), "dev_checks": dev_summary,
             "big_moves": big_moves, "whale_ledger": whale_ledger, "liquidity_moves": liquidity,
-            "vetoes": veto_summary,
+            "vetoes": veto_summary, "sw01": sw01_summary,
             "data_failures": http.failures, "api_calls": http.calls, "results": results,
         }
 
@@ -1467,7 +1494,41 @@ def main():
     except (SystemExit, Exception) as e:
         http._fail("vetoes", type(e).__name__)
 
-    summary = build_summary(big_moves, whale_ledger, liquidity, veto_summary)
+    # ---- SW-01 candidate detector. Own webhook reason, after the research files exist.
+    # A baseline run sends nothing, same as the other triggers. Dry-run does not post and
+    # does not lock a policy. Any error is logged and skipped; k, y, aa, kill lines, and
+    # the threshold / dev_sell payloads are left as they were.
+    sw01_summary = None
+    if not baseline:
+        try:
+            accepted_flags = list((prev_doc.get("recent") or [])) + list(new_flags or [])
+            pools = {}
+            for unit, pool in (http.__dict__.get("_gt_cache") or {}).items():
+                if isinstance(pool, dict):
+                    pools[unit] = pool
+            ctx = sw01.context_from_run(
+                launches, results, chain.dist, accepted_flags, args.data_dir, state, cfg, pools)
+            decision = sw01.decide(state, ctx, time.time(), persist=not args.dry_run)
+            if args.dry_run:
+                sw01_summary = {
+                    "candidates": [a["ticker"] for a in decision["alerts"] if a["kind"] == "sw01_candidate"],
+                    "exits": [a["ticker"] for a in decision["alerts"] if a["kind"] == "sw01_exit"],
+                    "sent": False,
+                }
+            else:
+                sw01_summary = sw01.deliver(
+                    http, cfg, state, decision,
+                    os.environ.get("SOLADA_WEBHOOK_URL", ""),
+                    os.environ.get("SOLADA_WEBHOOK_KEY", ""),
+                )
+                sw01_summary["sent"] = True
+                write_json(state_path, state, indent=1, sort_keys=True)
+            print(f"sw01: {json.dumps({k: sw01_summary[k] for k in sw01_summary if k != 'pending'})}")
+        except (SystemExit, Exception) as e:
+            http._fail("sw01", type(e).__name__)
+            sw01_summary = {"candidates": [], "exits": [], "error": type(e).__name__}
+
+    summary = build_summary(big_moves, whale_ledger, liquidity, veto_summary, sw01_summary)
     write_json(summary_path, summary, indent=1)
     print(f"whale: {json.dumps(summary['whale'])[:300]}")
     print(json.dumps({k: summary[k] for k in ("launches", "new_launches", "candidates", "passed_k_y", "first_block_hits", "data_failures", "api_calls")}))
