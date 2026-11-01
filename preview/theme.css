@@ -23,7 +23,7 @@
   --sl-row-h:36px;
 }
 body[data-desk="home"]{--sl-wordmark:#36d6ff;--sl-accent:#36d6ff}
-body[data-desk="solada"]{--sl-wordmark:#B5E853;--sl-accent:#B5E853}
+body[data-desk="solada"]{--sl-wordmark:#3d8bff;--sl-accent:#B5E853}
 body[data-desk="solana"]{--sl-wordmark:#14F195;--sl-accent:#14F195}
 body[data-desk="nft"]{--sl-wordmark:#ff4fd8;--sl-accent:#ff4fd8}
 body[data-desk="briefs"]{--sl-wordmark:#F0B90B;--sl-accent:#F0B90B}
@@ -57,8 +57,9 @@ a.logo:hover{color:var(--sl-text)}
 .sl-rows .sl-row:first-child{border-top:0}
 .sl-row:hover,.sl-row:focus-visible{background:var(--sl-raised)}
 .sl-rank{color:var(--sl-dim);font:var(--sl-fs-2xs)/1 var(--mono)}
-.sl-logo{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:700 8px/1 var(--mono);color:#000;flex:none}
+.sl-logo{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:700 8px/1 var(--mono);color:#000;flex:none;overflow:hidden;background:#1E2329}
 .sl-logo.sm{width:18px;height:18px;font-size:7px}
+img.sl-logo{object-fit:cover;padding:0;border:0}
 .sl-id{min-width:0}
 .sl-id-top{display:flex;align-items:center;gap:4px;min-width:0}
 .sl-tk{font-weight:700;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

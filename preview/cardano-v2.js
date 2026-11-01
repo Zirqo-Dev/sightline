@@ -213,6 +213,7 @@
     return `<svg class="sl-spark" width="54" height="16" viewBox="0 0 54 16" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.2" opacity=".55"/></svg>`;
   }
   function logo(t, ticker, sm) {
+    if (typeof t.coinLogo === "function") return t.coinLogo(ticker, ticker, sm);
     const initials = String(ticker || "").slice(0, 2);
     const cls = sm ? "sl-logo sm" : "sl-logo";
     return `<span class="${cls}" style="background:${logoColor(ticker)}" aria-hidden="true">${t.esc(initials)}</span>`;

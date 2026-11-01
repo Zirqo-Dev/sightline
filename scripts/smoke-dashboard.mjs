@@ -9,6 +9,7 @@
  * no longer matches its own tickets still fails.
  */
 import fs from "fs";
+import os from "os";
 import vm from "vm";
 import path from "path";
 import { spawnSync } from "child_process";
@@ -669,6 +670,87 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   const desk = P.solanaHtml(model);
   assert(!desk.includes("Mint01") && desk.includes("T1"), "positions show tickers, not mints");
   assert(desk.includes("hard stop") && (desk.includes("take profit") || desk.includes("pass")), "trade reasons render");
+  const early = Math.floor(Date.parse("2026-10-28T12:00:00Z") / 1000);
+  const done = Math.floor(Date.parse("2026-10-28T14:00:00Z") / 1000);
+  const voidOpen = Math.floor(Date.parse("2026-10-31T01:30:00Z") / 1000);
+  const fCloses = [];
+  const fTrades = [];
+  for (let i = 0; i < 20; i++) {
+    const row = { id: "F-20261028T1200-" + String(i).padStart(4, "0"), mint: "mint" + i, opened: early + i, closed: done + i, pnl: -0.08, why: "time_stop" };
+    fCloses.push(row);
+    fTrades.push({ book: "F", action: "buy", mint: row.mint, time: String(row.opened), frac: "1", pnl: "" });
+    fTrades.push({ book: "F", action: "sell", mint: row.mint, time: String(row.closed), frac: "1", pnl: String(row.pnl), net_pnl: "999", why: "time_stop" });
+  }
+  const rKept = { id: "R-1", mint: "rmint", opened: early, closed: done, pnl: -0.05 };
+  const rVoid = { id: "R-2", mint: "rvoid", opened: voidOpen, closed: done, pnl: -0.5 };
+  const positions14 = {
+    last_run_ts: Math.floor(Date.parse("2026-11-01T23:00:00Z") / 1000),
+    books: {
+      F: { closed: fCloses, open: { still: { symbol: "OPEN", pnl: -9 } } },
+      R: { closed: [rKept, rVoid], open: {} },
+      S: { closed: [], open: {} }
+    }
+  };
+  const noise = fTrades.concat([
+    { book: "F", action: "sell", mint: "extra", time: String(done), frac: "1", pnl: "-0.01", net_pnl: "-0.059", why: "hard stop" }
+  ]);
+  const report = P.day14Report(positions14, noise);
+  assert(report.books[0].n === 20 && report.books[1].n === 1 && report.books[2].n === 0, "day-14 counts position closes, not sell rows, and drops the void window");
+  assert(Math.abs(report.books[0].exp - (-0.16)) < 1e-9 && report.rule === "STOP" && report.verdict === "NOT_FINAL", "F expectancy is pnl/(0.5*n) and the verdict stays NOT_FINAL before the cutoff");
+  assert(Math.abs(report.books[1].exp - (-0.1)) < 1e-9 && report.books[1].rule === "CONTINUE", "R uses the same filter and does not count a voided entry");
+  const shown = P.solanaHtml(P.solanaModel(null, noise, positions14));
+  assert(shown.includes("below the −15% line") && shown.includes("rule STOP") && shown.includes("VERDICT NOT_FINAL until 2026-11-11 15:00Z") && shown.includes("20 F closes") && shown.includes("−16%"), "the Solana line prints the script's ticket return");
+  assert(!shown.includes("21 F closes") && !shown.includes("−0.059"), "partial sells and net_pnl do not set the book");
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "day14-"));
+  fs.writeFileSync(path.join(tmp, "positions.json"), JSON.stringify(positions14));
+  const csvHead = "book,action,mint,time,frac,pnl,net_pnl\n";
+  const csvBody = fTrades.map(t => [t.book, t.action, t.mint, t.time, t.frac, t.pnl, t.net_pnl || ""].join(",")).join("\n");
+  fs.writeFileSync(path.join(tmp, "trades.csv"), csvHead + csvBody + "\n");
+  const py = spawnSync("python3", ["-c", `
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("day14_verdict", "solana-desk/specs/day14_verdict.py")
+d = importlib.util.module_from_spec(spec); spec.loader.exec_module(d)
+pos = json.load(open(sys.argv[1]))
+trades = d.load_trades(sys.argv[2])
+text = d.render(pos, trades, d.CUTOFF_DEFAULT, "unknown", "poshash", "trhash")
+got = {}
+for line in text.splitlines():
+    if ":" in line:
+        k, v = line.split(":", 1)
+        got[k.strip()] = v.strip()
+cutoff, vs, ve = d.parse_utc(d.CUTOFF_DEFAULT), d.parse_utc(d.VOID_START), d.parse_utc(d.VOID_END)
+books = {}
+for name in "FRS":
+    closed = ((pos.get("books") or {}).get(name) or {}).get("closed") or []
+    counted, voided, late = d.select_closes(closed, cutoff, vs, ve)
+    total = sum(float(r["pnl"]) for r in counted)
+    rule, exp = d.decide(len(counted), total, d.TICKET, d.MIN_CLOSES, d.STOP_EXP)
+    books[name] = {"n": len(counted), "exp": exp, "rule": rule}
+print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"), "n": int(got["n_closes"]), "exp": float(got["expectancy"]), "books": books}))
+`, path.join(tmp, "positions.json"), path.join(tmp, "trades.csv")], { cwd: root, encoding: "utf8" });
+  if (py.status !== 0) throw new Error("day14 python compare failed\n" + (py.stderr || py.stdout));
+  const official = JSON.parse(py.stdout);
+  assert(official.n === report.books[0].n && official.rule === report.rule && official.verdict === report.verdict, "JS day-14 F count matches day14_verdict.py");
+  assert(Math.abs(official.exp - report.books[0].exp) < 1e-8, "JS day-14 expectancy matches day14_verdict.py");
+  for (const name of ["F", "R", "S"]) {
+    const js = report.books["FRS".indexOf(name)];
+    const off = official.books[name];
+    assert(js.n === off.n && js.rule === off.rule && (js.exp == null ? off.exp == null : Math.abs(js.exp - off.exp) < 1e-8), "JS day-14 " + name + " matches the script");
+  }
+  fs.rmSync(tmp, { recursive: true, force: true });
+  P.applyIcons({
+    coins: {
+      VAL: { src: "dashboard/icons/coin-val.png", source: "dexscreener" },
+      RUN: { src: "dashboard/icons/coin-run.svg", source: "monogram" }
+    },
+    nfts: { "pudgy-penguins": { name: "Pudgy Penguins", src: "dashboard/icons/nft-pudgy-penguins.png", source: "opensea" } },
+    nft_names: { "pudgy penguins": "pudgy-penguins" }
+  });
+  const logoHtml = P.cardanoHtml({ log: { asof: "2026-11-01T20:00:00Z", verdicts: [{ ticker: "VAL", verdict: "watch", launchpad: "solada" }, { ticker: "RUN", verdict: "pass", launchpad: "new", reasons: ["Price +4% in 24h"] }] } });
+  assert(logoHtml.includes('src="dashboard/icons/coin-val.png"') && !logoHtml.includes("coin-run.svg") && logoHtml.includes(">RU<"), "a real icon renders and a monogram stays the initials circle");
+  const nftLogo = P.nftHtml({ latest: [{ ticker: "pudgy-penguins", chain: "ethereum", floor: 12, unit: "USD", role: "watch" }] }, { runs: [] }, "all", {});
+  assert(nftLogo.includes('src="dashboard/icons/nft-pudgy-penguins.png"'), "NFT rows use the local icon");
+  P.applyIcons({ coins: {}, nfts: {}, nft_names: {} });
   const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
   const preview = fs.readFileSync(path.join(root, "preview.html"), "utf8");
   const legacyPage = fs.readFileSync(path.join(root, "legacy.html"), "utf8");
@@ -686,7 +768,8 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   for (const piece of ["--sl-bg:#0B0E11", "--sl-surface:#161A1E", "--sl-wordmark", ".logo span,.logo i{color:var(--sl-wordmark)", ".sl-row", ".sl-pill", ".sl-pick", ".sl-sheet", ".sl-mascot", ".sl-mark"]) {
     assert(theme.includes(piece), "shared theme includes " + piece);
   }
-  assert(theme.includes('body[data-desk="solada"]') && theme.includes("#B5E853"), "Cardano wordmark token is lime");
+  assert(theme.includes('body[data-desk="solada"]{--sl-wordmark:#3d8bff;--sl-accent:#B5E853}'), "Cardano wordmark is desk blue and the accent stays lime");
+  assert(css.includes("box-shadow:inset 0 -2px 0 var(--sl-accent)"), "nav underline uses the accent");
   assert(theme.includes('body[data-desk="solana"]') && theme.includes("#14F195"), "Solana wordmark token is set");
   assert(theme.includes('body[data-desk="nft"]') && theme.includes("#ff4fd8"), "NFT wordmark token is set");
   assert(css.includes(".logo span{color:var(--sl-wordmark)") && css.includes(".logo i{font-style:normal;color:var(--sl-wordmark)") && css.includes("animation:blink 1.1s steps(1) infinite"), "logo line and cursor use the per-tab colour and blink");

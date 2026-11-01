@@ -356,6 +356,171 @@
     });
     return out;
   }
+  /* Local icons from dashboard/icons/icons.json (same file as dashboard/core.js).
+     A monogram, a missing entry, or a remote URL falls back to the initials circle.
+     The page never requests a third-party image. */
+  let ICONS = { coins: {}, nfts: {}, nft_names: {} };
+  function applyIcons(doc) {
+    if (doc && typeof doc === "object") ICONS = doc;
+  }
+  function logoHue(name) {
+    let h = 0;
+    const s = String(name || "");
+    for (let i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) >>> 0;
+    return "hsl(" + (h % 360) + " 24% 64%)";
+  }
+  function initialsLogo(label, sm) {
+    const words = String(label || "?").match(/[A-Za-z0-9]+/g) || ["?"];
+    const ini = (words.length > 1 ? words[0][0] + words[1][0] : words[0].slice(0, 2)).toUpperCase();
+    const cls = sm ? "sl-logo sm" : "sl-logo";
+    return `<span class="${cls}" style="background:${logoHue(label)}" aria-hidden="true">${esc(ini)}</span>`;
+  }
+  function iconRecord(kind, key) {
+    const k = String(key || "");
+    if (!k) return null;
+    if (kind === "nft") {
+      const names = ICONS.nft_names || {};
+      return (ICONS.nfts || {})[k] || (ICONS.nfts || {})[names[k.toLowerCase()]] || null;
+    }
+    return (ICONS.coins || {})[k.toUpperCase()] || null;
+  }
+  function localSrc(entry) {
+    if (!entry || entry.source === "monogram" || !entry.src) return "";
+    const src = String(entry.src);
+    if (/^https?:/i.test(src) || src.indexOf("//") === 0) return "";
+    return src;
+  }
+  function assetLogo(key, label, sm) {
+    const src = localSrc(iconRecord("coin", key)) || localSrc(iconRecord("nft", key)) || localSrc(iconRecord("nft", label));
+    if (!src) return initialsLogo(label || key, sm);
+    const cls = sm ? "sl-logo sm" : "sl-logo";
+    const px = sm ? 18 : 22;
+    return `<img class="${cls}" src="${esc(src)}" alt="" width="${px}" height="${px}">`;
+  }
+  /* Frozen day-14 rule from solana-desk/specs/day14_verdict.py.
+     A close is one positions.json row. Expectancy is pnl / (0.5 * n), using
+     the sell pnl, never net_pnl. Entries opened in the void window and closes
+     after the cutoff do not count. The verdict stays NOT_FINAL until the
+     cutoff run also reconciles with trades.csv. */
+  const DAY14_MIN = 20;
+  const DAY14_STOP = -0.15;
+  const DAY14_TICKET = 0.5;
+  const DAY14_CUTOFF = "2026-11-11T15:00:00Z";
+  const DAY14_VOID_START = "2026-10-31T01:30:00Z";
+  const DAY14_VOID_END = "2026-11-01T00:00:00Z";
+  function day14Unix(text) {
+    if (typeof text !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(text)) return null;
+    const ms = Date.parse(text);
+    return Number.isFinite(ms) ? Math.floor(ms / 1000) : null;
+  }
+  function day14Int(v) {
+    if (v == null || v === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.trunc(n) : null;
+  }
+  function day14Select(closed, cutoffTs, voidStart, voidEnd) {
+    const counted = [], voided = [], late = [];
+    (closed || []).forEach(row => {
+      const opened = day14Int(row && row.opened);
+      const done = day14Int(row && row.closed);
+      if (opened == null || done == null) return;
+      if (voidStart <= opened && opened < voidEnd) { voided.push(row); return; }
+      if (done > cutoffTs) { late.push(row); return; }
+      counted.push(row);
+    });
+    return { counted, voided, late };
+  }
+  function day14Decide(n, total) {
+    const exp = n <= 0 ? null : total / (DAY14_TICKET * n);
+    const stop = n >= DAY14_MIN && exp != null && exp < DAY14_STOP;
+    return { rule: stop ? "STOP" : "CONTINUE", exp };
+  }
+  function day14Book(positions, book, cutoffTs, voidStart, voidEnd) {
+    const closed = ((((positions || {}).books || {})[book] || {}).closed) || [];
+    const sel = day14Select(closed, cutoffTs, voidStart, voidEnd);
+    let total = 0;
+    sel.counted.forEach(row => { total += Number(row.pnl) || 0; });
+    const d = day14Decide(sel.counted.length, total);
+    return { id: book, n: sel.counted.length, pnl: sel.counted.length ? total : null, exp: d.exp, rule: d.rule };
+  }
+  function day14IdsUnique(closed) {
+    const ids = (closed || []).map(row => row && row.id);
+    return ids.length === new Set(ids).size && ids.every(Boolean);
+  }
+  function day14BuildCloses(trades) {
+    const lots = {};
+    const built = [];
+    let ok = true;
+    (trades || []).forEach(row => {
+      if (!row || row.book !== "F" || (row.action !== "buy" && row.action !== "sell")) return;
+      const mint = row.mint || "";
+      const ts = day14Int(row.time);
+      if (ts == null) { ok = false; return; }
+      if (row.action === "buy") {
+        (lots[mint] = lots[mint] || []).push({ mint, opened: ts, closed: null, pnl: 0, frac: 0 });
+        return;
+      }
+      if (row.pnl == null || row.pnl === "") { ok = false; return; }
+      const queue = lots[mint];
+      if (!queue || !queue.length) { ok = false; return; }
+      const lot = queue[0];
+      const pnl = Number(row.pnl);
+      const frac = Number(row.frac || 0);
+      if (!Number.isFinite(pnl) || !Number.isFinite(frac)) { ok = false; return; }
+      lot.pnl += pnl;
+      lot.frac += frac;
+      lot.closed = ts;
+      if (lot.frac >= 1 - 1e-4) built.push(queue.shift());
+    });
+    return { built, ok };
+  }
+  function day14Reconciles(closed, trades) {
+    const built = day14BuildCloses(trades);
+    if (!built.ok || !day14IdsUnique(closed)) return false;
+    if (built.built.length !== closed.length) return false;
+    const used = {};
+    for (let r = 0; r < closed.length; r++) {
+      const row = closed[r];
+      let hit = null;
+      for (let i = 0; i < built.built.length; i++) {
+        if (used[i]) continue;
+        const lot = built.built[i];
+        if (lot.mint !== (row.mint || "")) continue;
+        if (lot.opened !== day14Int(row.opened) || lot.closed !== day14Int(row.closed)) continue;
+        if (Math.abs(lot.pnl - Number(row.pnl)) > 1e-8) continue;
+        hit = i;
+        break;
+      }
+      if (hit == null) return false;
+      used[hit] = 1;
+    }
+    return true;
+  }
+  function day14Report(positions, trades) {
+    const cutoffTs = day14Unix(DAY14_CUTOFF);
+    const voidStart = day14Unix(DAY14_VOID_START);
+    const voidEnd = day14Unix(DAY14_VOID_END);
+    const books = ["F", "R", "S"].map(id => day14Book(positions, id, cutoffTs, voidStart, voidEnd));
+    const fClosed = ((((positions || {}).books || {}).F || {}).closed) || [];
+    const reasons = [];
+    const last = positions && positions.last_run_ts;
+    const lastTs = last != null && last !== "" ? day14Int(last) : null;
+    if (lastTs == null) reasons.push("last_run_missing");
+    else if (cutoffTs != null && lastTs < cutoffTs) reasons.push("last_run_before_cutoff");
+    if (!day14IdsUnique(fClosed)) reasons.push("close_ids_not_unique");
+    if (!day14Reconciles(fClosed, trades || [])) reasons.push("closes_do_not_reconcile");
+    const final = reasons.length === 0;
+    const f = books[0];
+    const verdict = final ? f.rule : "NOT_FINAL";
+    const gap = f.exp != null && books[1].exp != null ? (f.exp - books[1].exp) * 100 : null;
+    let line = "Too early";
+    if (f.n >= DAY14_MIN && f.exp != null) {
+      const side = f.exp < DAY14_STOP ? "below the −15% line" : "clear of the −15% line";
+      const verdictBit = verdict === "NOT_FINAL" ? "VERDICT NOT_FINAL until 2026-11-11 15:00Z" : "VERDICT " + verdict;
+      line = side + " · rule " + f.rule + " · " + verdictBit;
+    }
+    return { books, gap, line, verdict, rule: f.rule, final, reasons };
+  }
   function solanaModel(paper, trades, positions, nowMs) {
     const rows = Array.isArray(trades) ? trades : [];
     const sells = rows.filter(t => /sell|exit|close/i.test(t.action) && tradeNet(t) != null).slice().sort((a, b) => (num(a.time) || 0) - (num(b.time) || 0));
@@ -425,21 +590,21 @@
     }));
     ((paper && paper.summaries) || []).forEach(s => activity.push({ time: s.at, book: "", symbol: "", action: s.type || "skip", reason: s.note || "", pnl: null, model: "" }));
     activity.sort((a, b) => String(b.time || "").localeCompare(String(a.time || "")));
-    const bookRows = ["F", "R", "S"].map(id => {
-      const xs = sells.filter(t => t.book === id).map(tradeNet).filter(n => n != null);
-      const pnl = xs.reduce((s, n) => s + n, 0);
-      return { id, n: xs.length, pnl: xs.length ? pnl : null, exp: xs.length ? pnl / xs.length : null };
-    });
-    const fExp = bookRows[0].exp, rExp = bookRows[1].exp;
-    const gap = fExp != null && rExp != null ? fExp - rExp : null;
-    let day14 = "Too early";
-    if (bookRows[0].n >= 20 && fExp != null) day14 = fExp < -0.15 ? "F below −0.15" : "F clear";
-    return { net, gross, openCount: opens.length, winRate, netSeries, grossSeries, books, opens, activity: activity.slice(0, 24), closed: sells.length, windows: solanaWindows(rows, nowMs), bookRows, gap, day14 };
+    const verdict = day14Report(positions, rows);
+    const bookRows = verdict.books;
+    return { net, gross, openCount: opens.length, winRate, netSeries, grossSeries, books, opens, activity: activity.slice(0, 24), closed: sells.length, windows: solanaWindows(rows, nowMs), bookRows, gap: verdict.gap, day14: verdict.line, day14Verdict: verdict.verdict, day14Rule: verdict.rule };
   }
   function solSigned(n, d) {
     if (n == null || !isFinite(n)) return `<span class="sl-flat">–</span>`;
     const cls = n > 0 ? "sl-up" : n < 0 ? "sl-down" : "sl-flat";
     const body = (n > 0 ? "+" : n < 0 ? "−" : "") + fmt(Math.abs(n), d == null ? 3 : d);
+    return `<span class="${cls}">${esc(body)}</span>`;
+  }
+  function solPct(frac) {
+    if (frac == null || !isFinite(frac)) return `<span class="sl-flat">–</span>`;
+    const n = frac * 100;
+    const cls = n > 0 ? "sl-up" : n < 0 ? "sl-down" : "sl-flat";
+    const body = (n > 0 ? "+" : n < 0 ? "−" : "") + fmt(Math.abs(n), 1) + "%";
     return `<span class="${cls}">${esc(body)}</span>`;
   }
   function solanaHtml(model, health) {
@@ -448,14 +613,14 @@
     const rows = (m.bookRows || []).map(b => `<tr>
       <td><b>${esc(b.id)}</b> <span class="sl-meta">${esc(names[b.id] || "")}</span></td>
       <td class="num">${solSigned(b.pnl, 3)}</td>
-      <td class="num">${solSigned(b.exp, 3)}</td>
+      <td class="num">${solPct(b.exp)}</td>
       <td class="num">${esc(String(b.n))}</td>
     </tr>`).join("");
-    const gap = m.gap == null ? "–" : ((m.gap > 0 ? "+" : m.gap < 0 ? "−" : "") + fmt(Math.abs(m.gap), 3));
+    const gap = m.gap == null ? "–" : ((m.gap > 0 ? "+" : m.gap < 0 ? "−" : "") + fmt(Math.abs(m.gap), 1) + " pp");
     const gapCls = m.gap > 0 ? "sl-up" : m.gap < 0 ? "sl-down" : "sl-flat";
     const books = `<section class="sl-box"><header class="sl-box-h"><span class="sl-box-title">Books <em>F / R / S</em></span></header>
       <table class="sl-table"><thead><tr><th>Book</th><th class="num">P&amp;L</th><th class="num">Exp/tr</th><th class="num">N</th></tr></thead><tbody>${rows}</tbody></table>
-      <p class="sl-note sl-left">F vs R <b class="${gapCls}">${esc(gap)}</b> · F exp ${solSigned((m.bookRows && m.bookRows[0] && m.bookRows[0].exp), 3)} · −0.15 line · ${esc(m.day14 || "Too early")} · ${esc(String((m.bookRows && m.bookRows[0] && m.bookRows[0].n) || 0))} F closes</p>
+      <p class="sl-note sl-left">F vs R <b class="${gapCls}">${esc(gap)}</b> · F exp ${solPct(m.bookRows && m.bookRows[0] && m.bookRows[0].exp)} · ${esc(m.day14 || "Too early")} · ${esc(String((m.bookRows && m.bookRows[0] && m.bookRows[0].n) || 0))} F closes</p>
     </section>`;
     const h = health || {};
     const gateBits = [
@@ -470,7 +635,7 @@
       if (p.entry && p.mark && p.entry > 0) pct = (p.mark / p.entry - 1) * 100;
       const cls = pct == null ? "sl-flat" : pct > 0 ? "sl-up" : pct < 0 ? "sl-down" : "sl-flat";
       const pctText = pct == null ? "–" : (pct > 0 ? "+" : pct < 0 ? "−" : "") + fmt(Math.abs(pct), 1) + "%";
-      return `<div class="sl-row"><span class="sl-rank">${esc(p.book || "")}</span><span class="sl-logo">${esc(String(p.ticker || "").slice(0, 2))}</span><span class="sl-id"><span class="sl-id-top"><span class="sl-tk">${tx(p.ticker) || "–"}</span></span><span class="sl-sub">${tx(p.reason) || ""}</span></span><span class="sl-end"><span class="${cls}">${esc(pctText)}</span></span></div>`;
+      return `<div class="sl-row"><span class="sl-rank">${esc(p.book || "")}</span>${assetLogo(p.ticker, p.ticker, false)}<span class="sl-id"><span class="sl-id-top"><span class="sl-tk">${tx(p.ticker) || "–"}</span></span><span class="sl-sub">${tx(p.reason) || ""}</span></span><span class="sl-end"><span class="${cls}">${esc(pctText)}</span></span></div>`;
     }).join("");
     const openBlock = `<section class="sl-box"><header class="sl-box-h"><span class="sl-box-title">Open positions <em>${m.openCount}</em></span></header>${opens || `<p class="sl-empty">No open paper positions.</p>`}</section>`;
     const closes = (m.activity || []).filter(a => /sell|exit|close/i.test(a.action)).slice(0, 8).map(a => `<div class="sl-line"><span class="sl-tk">${tx(a.symbol) || "–"}</span><span class="sl-side">${esc(a.book || "")} · ${tx(a.reason) || "–"}</span>${a.pnl == null ? "<span class=\"sl-flat\">–</span>" : solSigned(a.pnl, 3)}</div>`).join("");
@@ -1011,7 +1176,8 @@
     return root.CardanoBoard.render({
       esc, tx, num, fmt, sanitize, tickerName, safeTag, labelTag, animalName,
       displayKind, flaggedThisRun, riskBadge, riskTone, chip, tagChip, freshFunded,
-      paperBoard, donut, when, timeOf, briefBits, flagTags, flagAda
+      paperBoard, donut, when, timeOf, briefBits, flagTags, flagAda,
+      coinLogo: assetLogo
     }, data || {}, v);
   }
 
@@ -1041,6 +1207,7 @@
         const metrics = pt.metrics || {};
         rows.push({
           name: w.name || w.slug || live.ticker || "–",
+          slug: w.slug || "",
           chain: (w.chain || live.chain || "multi").toLowerCase(),
           status: w.status || live.role || "",
           floor: live.floor != null ? live.floor : metrics.floor,
@@ -1057,7 +1224,7 @@
         const pt = vol[String(r.ticker || "").toLowerCase()] || {};
         const metrics = pt.metrics || {};
         rows.push({
-          name: r.ticker, chain: (r.chain || "multi").toLowerCase(), status: r.role || "",
+          name: r.ticker, slug: r.ticker, chain: (r.chain || "multi").toLowerCase(), status: r.role || "",
           floor: r.floor, unit: r.unit || "", volume: metrics.volume_1h, volUnit: metrics.floor_symbol || r.unit || "",
           sales: r.sales_1h, checked: pulse.updated_at || "", example: false
         });
@@ -1101,7 +1268,7 @@
       const watch = /watch/i.test(r.status || "");
       const pill = r.status ? `<span class="sl-pill ${watch ? "sl-pill-watch" : "sl-pill-pass"}">${esc(sanitize(r.status))}</span>` : "";
       const sub = [sanitize(r.chain), floor == null ? "floor not in USD" : "floor " + usdText(floor), vol == null ? "" : "24h " + usdText(vol)].filter(Boolean).join(" · ");
-      return `<div class="sl-row"><span class="sl-rank">${i + 1}</span><span class="sl-logo">${esc(String(r.name || "").replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase())}</span><span class="sl-id"><span class="sl-id-top"><span class="sl-tk">${tx(r.name) || "–"}</span>${pill}</span><span class="sl-sub">${esc(sub)}</span></span><span class="sl-end"><span class="sl-flat">${esc(floor == null ? "–" : usdText(floor))}</span></span></div>`;
+      return `<div class="sl-row"><span class="sl-rank">${i + 1}</span>${assetLogo(r.slug || r.name, r.name, false)}<span class="sl-id"><span class="sl-id-top"><span class="sl-tk">${tx(r.name) || "–"}</span>${pill}</span><span class="sl-sub">${esc(sub)}</span></span><span class="sl-end"><span class="sl-flat">${esc(floor == null ? "–" : usdText(floor))}</span></span></div>`;
     }).join("");
     const whenAt = when((log && log.asof) || (pulse && pulse.updated_at));
     const status = live.length ? live.length + " names. Values in USD when the file is already in dollars." : "No KING tape yet.";
@@ -1153,7 +1320,7 @@
   }
   async function loadPack() {
     const wantBuzz = !!(root.SightlineBuzz && previewPage());
-    const [health, paper, positions, tradesText, log, pulse, sPaper, flags, vetoes, devs, whale, liq, big, kills, pump, sIdx, nPulse, nLog, nPaper, nIdx, xbuzz, buzzHistory] = await Promise.all([
+    const [health, paper, positions, tradesText, log, pulse, sPaper, flags, vetoes, devs, whale, liq, big, kills, pump, sIdx, nPulse, nLog, nPaper, nIdx, xbuzz, buzzHistory, icons] = await Promise.all([
       get("solana-desk/health.json"),
       get("solana-desk/paper.json"),
       get("solana-desk/positions.json"),
@@ -1175,8 +1342,10 @@
       get("nft/paper.json"),
       get("nft/briefs/index.json"),
       get("x_buzz.json"),
-      wantBuzz ? getDeskRootText("x_buzz_history.jsonl") : Promise.resolve(null)
+      wantBuzz ? getDeskRootText("x_buzz_history.jsonl") : Promise.resolve(null),
+      get("dashboard/icons/icons.json")
     ]);
+    if (icons && icons.coins) ICONS = icons;
     async function briefsIn(idx, dir, desk) {
       if (!Array.isArray(idx) || !idx.length) return [];
       const names = idx.map(n => String(n).endsWith(".json") ? String(n) : String(n) + ".json").sort();
@@ -1402,7 +1571,7 @@
   }
 
   root.Preview = {
-    sanitize, safeTag, parseCsv, solanaModel, solanaHtml, cardanoView, cardanoHtml, nftRows, nftHtml, freshFunded, isDeskData, whaleHtml: function (doc) { return cardanoHtml({ whale: doc }); },
+    sanitize, safeTag, parseCsv, solanaModel, solanaHtml, day14Report, cardanoView, cardanoHtml, nftRows, nftHtml, freshFunded, isDeskData, applyIcons, assetLogo, whaleHtml: function (doc) { return cardanoHtml({ whale: doc }); },
     devHtml: function (doc) { return cardanoHtml({ devs: doc }); }
   };
   if (typeof document !== "undefined" && document.getElementById && document.addEventListener) {
