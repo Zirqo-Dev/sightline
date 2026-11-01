@@ -603,61 +603,63 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(!cardano.toLowerCase().includes(ident) && !/Lead whale|COCK LP|Snek depth/i.test(cardano), "identifying whale wording and old panel names stay off the page");
   assert(!cardano.toLowerCase().includes(retired) && !cardano.includes("on the name"), "retired scanner name and old panel subtitle stay off the page");
   assert(cardano.includes("Grumpy Walrus") && cardano.includes("Pool ADA") && !cardano.includes(stake), "codename and pool label render, and the stake key stays hidden");
-  assert(cardano.indexOf("BOLT") < cardano.indexOf("SNEK") && cardano.includes("% under") && !cardano.includes(">Core<"), "closest kill line leads the board");
-  assert(cardano.includes("ASCEND") && cardano.includes("NIGHT") && cardano.includes("GOOD TOKENS BOARD"), "names and the kill-line board still render");
-  assert(cardano.includes("Flagged this run") && cardano.includes("COOKED") && cardano.includes("Risk score") && cardano.includes("risk scanner") && cardano.includes("dev_checks"), "flag row, risk score legend, and both sources render");
+  const runnersOf = html => html.split('data-board="runners"')[1].split('data-board="established"')[0];
+  const estOf = html => html.split('data-board="established"')[1].split('id="ada-detail"')[0];
+  assert(estOf(cardano).includes("SNEK") && estOf(cardano).includes("NIGHT"), "high-cap names stay on the established board");
+  assert(cardano.includes("Top 10 Runners") && cardano.includes("Top 10 Established") && cardano.includes("No Sentinel pick right now") && !cardano.includes("Sentinel's pick"), "empty books do not invent a Sentinel pick");
+  assert(cardano.includes("outside wallet is not a buy") && !cardano.toLowerCase().includes(ident), "the learned line is the status when the desk wrote one");
   const legacyLog = {
     cardano_top10: [{ rank: 1, ticker: "SNEK", ada_side_depth: 1000 }]
   };
   legacyLog[retired] = { SNEK: { risk: "Low risk", tags: ["Dev locked"], source: retired } };
   const legacy = P.cardanoHtml({ log: legacyLog });
-  assert(legacy.includes("Risk score") && legacy.includes("risk scanner") && legacy.includes("SNEK") && !legacy.toLowerCase().includes(retired), "old snapshots still render a risk score");
+  assert(legacy.includes("SNEK") && legacy.includes("Pool ADA") && !legacy.toLowerCase().includes(retired), "old snapshots still render the name and drop the retired source");
   const both = { cardano_top10: [{ ticker: "SNEK", ada_side_depth: 1 }] };
   both.risk_check = { SNEK: { risk: "High risk", tags: [], source: "scanner" } };
   both[retired] = { SNEK: { risk: "Low risk", tags: [], source: retired } };
   const prefer = P.cardanoHtml({ log: both });
-  assert(prefer.includes("Risk score: High risk") && !prefer.includes("Risk score: Low risk"), "risk_check wins when an old snapshot key is also present");
-  assert(cardano.includes("Grumpy Walrus move") && !cardano.toLowerCase().includes(ident), "whale-move flag uses the codename, not the data key");
-  assert(cardano.includes("What changed this run") && cardano.includes("outside wallet is not a buy"), "learned lines render as their own block");
-  assert(cardano.includes("net +12 ADA") && cardano.includes("cv2-spark"), "net flow and its history render on the whale card");
-  assert(cardano.includes("FLAG OUTCOMES") && cardano.includes("2 pump") && cardano.includes("1 rug") && cardano.includes("coordinated buys"), "each flag outcome shows its counts");
+  assert(prefer.includes("SNEK") && !prefer.toLowerCase().includes(retired) && !prefer.includes("Low risk"), "a retired snapshot key is not rendered");
   const preferred = P.cardanoHtml({ log: {
     whales: [{ codename: "Sleepy Otter", role: "watch", status: "candidate", net_flow_ada: -5 }],
     founder_whale: { handle: "Grumpy Walrus", net_flow_ada: 99 }
   }});
-  assert(preferred.includes("Sleepy Otter") && preferred.includes("net -5 ADA") && !preferred.includes("net +99") && !preferred.toLowerCase().includes(ident), "whales[] wins and the old object is not required");
+  assert(!preferred.includes("99") && !preferred.includes("net -5") && !preferred.toLowerCase().includes(ident), "a whale net and the old object stay off the page");
   assert(!cardano.includes("B".repeat(32)) && !cardano.includes("C".repeat(32)), "forensics and pumpfun address-like values stay hidden");
   const v2 = load("scripts/fixtures/cardano-v2.json");
   const full = P.cardanoHtml(v2);
-  const cock = full.split('data-tk="COCK"')[1].split("</article>")[0];
-  assert(cock.includes('data-fill="54"') && cock.includes('data-tick="50"') && cock.includes("only 9% above") && cock.includes("🔴 Pass"), "COCK kill bar matches the approved mockup");
-  assert(full.indexOf('data-tk="COCK"') < full.indexOf('data-tk="STRIKE"') && full.indexOf('data-tk="STRIKE"') < full.indexOf('data-tk="ASCEND"') && full.indexOf('data-tk="ASCEND"') < full.indexOf('data-tk="CLOVE"'), "board sorts by closeness to the kill line");
-  assert(full.includes("Lottery-size candidate") && full.includes('data-cv2-filter="g"'), "verdict chips render");
-  const badgeOf = tk => {
-    const card = full.split('data-tk="' + tk + '"')[1].split("</article>")[0];
-    const hit = card.match(/class="cv2-badge">([^<]*)</);
-    return hit ? hit[1] : "";
-  };
-  assert(badgeOf("CLOVE") === "Solada" && badgeOf("GHOST") === "Snek.fun" && badgeOf("COCK") === "New launch", "solada, snek, and new keep a launchpad badge");
-  assert(badgeOf("ASCEND") === "" && badgeOf("STRIKE") === "" && !full.includes("New launch other"), "established and minswap tokens have no badge");
-  const radar = full.split('data-cv2="radar"')[1].split('data-cv2="clusters"')[0];
-  const nova = radar.split(">NOVA<")[1].split("</article>")[0];
-  assert(nova.includes("New launch") && !nova.includes("New launch other"), "an unknown pad on the radar still says New launch");
-  assert(full.includes("WHERE THE MONEY IS HEADING") && full.includes("MONEY OUT") && full.includes("MONEY IN") && full.includes("Selling SNEK") && full.includes("ASCEND accumulating") && full.includes("SNEK exiting"), "rotation card renders out, in, and trends");
-  assert(full.includes("Swarm group A") && full.includes("repeat early buyers") && full.includes("FOSHIZLE"), "swarm group card renders");
-  assert(full.includes("Sniper exits") && full.includes("CHEESE, INTEL"), "sniper card renders");
-  assert(full.includes("Hot right now") && full.includes("MEPE"), "hot overlap renders");
-  assert(full.includes("NEW LAUNCH RADAR") && full.includes("74 / 5") && full.includes("Getting traction") && full.includes("Swarm launch → Pass") && full.includes("65% of the way"), "launch radar stats, traction, and watching states render");
-  assert(full.includes("EARLY-BUYER CLUSTERS") && full.includes("show wallets (4)") && full.includes("w-8315deec") && full.includes("Coordinated buys"), "cluster cards group wallets behind a tap");
-  assert(full.includes("HEAT GRID") && full.includes("Show all wallets (10)") && full.includes("cv2-more") && full.includes("c66a") && full.includes("ring"), "heat grid pins labels and hides rows past the top 8");
-  assert(!/founder|suri|suriradar/i.test(full) && !full.includes("stake1") && !full.includes("addr1"), "fixture stays free of wallet ids and retired names");
+  const runBoard = runnersOf(full);
+  const estBoard = estOf(full);
+  assert(runBoard.includes(">GHOST<") && runBoard.includes("Lottery") && estBoard.includes(">ASCEND<") && estBoard.includes("Watch"), "fresh names and high-cap names split, with the desk verdict as the pill");
+  assert(estBoard.includes(">STRIKE<") && runBoard.includes(">COCK<") && runBoard.includes("Pass"), "minswap stays with established names and a new launch stays with runners");
+  assert(full.includes("Grumpy Walrus") && full.includes("No Sentinel pick right now") && !full.includes("Sentinel's pick"), "a codename renders and a fixture with no open ticket is not a pick");
+  assert(!full.includes("w-8315deec") && !full.includes("c66a") && !full.includes("142"), "wallet tags and example launch numbers stay off the board");
+  assert(full.includes("Swarm flag") && !/founder|suri|suriradar/i.test(full) && !full.includes("stake1") && !full.includes("addr1"), "fixture stays free of wallet ids and retired names");
   const quiet = P.cardanoHtml({});
-  assert(quiet.includes("GOOD TOKENS BOARD") && quiet.includes("No data yet") && quiet.includes("NEW LAUNCH RADAR") && quiet.includes("HEAT GRID"), "missing fields render an empty state");
+  assert(quiet.includes("Top 10 Runners") && quiet.includes("No runners on this run.") && quiet.includes("No established names on this run.") && quiet.includes("No Sentinel pick right now"), "missing fields render an empty state");
   const partial = P.cardanoHtml({ log: { verdicts: [{ ticker: "COCK", verdict: "pass", launchpad: "minswap", pool_ada: 163300, kill_metric: "pool_ada", kill_value: 163300, kill_limit: 150000, reasons: ["swarm key uylu74g0 sold"], whale_activity: "none tracked" }, { ticker: "FLOW", verdict: "watch", pool_ada: 4000, kill_metric: "pool_ada", kill_value: 4000, kill_limit: 1000 }], cardano_v2: { launches: [{ ticker: "BARE", age: "2h", holders: 10, pool_ada: 1000 }] } } });
-  const minswapCard = partial.split('data-tk="COCK"')[1].split("</article>")[0];
-  const flowCard = partial.split('data-tk="FLOW"')[1].split("</article>")[0];
-  const bareRadar = partial.split(">BARE<")[1].split("</article>")[0];
-  assert(partial.includes("only 9% above") && !minswapCard.includes("cv2-badge") && !flowCard.includes("cv2-badge") && bareRadar.includes("New launch") && !partial.includes("uylu74g0") && partial.includes("No data yet"), "minswap and a missing pad draw no board badge, a blank radar pad says New launch, and a stake-like token in a reason is dropped");
+  assert(estOf(partial).includes(">COCK<") && runnersOf(partial).includes(">FLOW<") && runnersOf(partial).includes(">BARE<") && partial.includes("Watch") && !partial.includes("uylu74g0"), "minswap is established, a fresh name is a runner, and a stake-like token in a reason is dropped");
+  const picked = P.cardanoHtml({
+    paper: { tests: [{ id: "SW-01", action: "one 100 ADA paper ticket; exit at exactly 48h", tickets: [{ ticker: "VAL", status: "open", thesis: ["k met"] }] }, { id: "EST-01", action: "one 100 ADA paper ticket", exit: "7 days", tickets: [{ ticker: "GONE", status: "closed", closed_at: "2026-11-02T00:00:00Z" }] }] },
+    log: { asof: "2026-11-01T20:00:00Z", verdicts: [{ ticker: "VAL", verdict: "watch", launchpad: "solada", pool_ada: 41000, holders: 214, buys_6h: 58, sells_6h: 31 }] }
+  });
+  assert(runnersOf(picked).includes("Sentinel's pick") && runnersOf(picked).includes("VAL") && runnersOf(picked).includes("100") && runnersOf(picked).includes("48h") && runnersOf(picked).includes("SW-01"), "an open SW-01 ticket is the runners pick");
+  assert(!estOf(picked).includes("Sentinel's pick") && picked.includes("Why Sentinel would bet") && !picked.includes("GONE"), "a closed ticket is not a pick");
+  const noSteam = P.cardanoHtml({
+    log: { asof: "2026-11-01T20:00:00Z", verdicts: [{ ticker: "RUN", verdict: "pass", launchpad: "new", reasons: ["Price +20% in 24h"] }] },
+    pulse: { points: [
+      { t: "2026-11-01T14:00:00Z", ticker: "RUN", chain: "cardano", metrics: { holders: 10, volume: 100, mcap_ada: 1000 } },
+      { t: "2026-11-01T20:00:00Z", ticker: "RUN", chain: "cardano", metrics: { holders: 20, volume: 100, mcap_ada: 1200 } }
+    ] }
+  });
+  assert(!noSteam.includes('data-steam="1"') && runnersOf(noSteam).includes("Passed"), "holders up with flat volume is not steam, and a pass that is still up is passed-moving");
+  const steam = P.cardanoHtml({
+    log: { asof: "2026-11-01T20:00:00Z", verdicts: [{ ticker: "RUN", verdict: "pass", launchpad: "new", reasons: ["Price +20% in 24h"] }] },
+    pulse: { points: [
+      { t: "2026-11-01T14:00:00Z", ticker: "RUN", chain: "cardano", metrics: { holders: 10, volume: 100, mcap_ada: 1000 } },
+      { t: "2026-11-01T20:00:00Z", ticker: "RUN", chain: "cardano", metrics: { holders: 20, volume: 250, mcap_ada: 1400 } }
+    ] }
+  });
+  assert(steam.includes('data-steam="1"') && steam.includes("sl-spark") && steam.includes("sl-up"), "steam and a sparkline render when holders, volume, and price history all moved");
   const paper = load("scripts/fixtures/solana-desk/paper-fills.json");
   const trades = P.parseCsv(fs.readFileSync(path.join(root, "scripts/fixtures/solana-desk/trades-fills.csv"), "utf8"));
   const model = P.solanaModel(paper, trades, null);
@@ -670,8 +672,11 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
   const preview = fs.readFileSync(path.join(root, "preview.html"), "utf8");
   const legacyPage = fs.readFileSync(path.join(root, "legacy.html"), "utf8");
-  const logo = '<a class="logo" href="#/">&gt;sight<span>line</span><i>_</i></a>';
-  assert(index.includes(logo) && preview.includes(logo) && legacyPage.includes(logo), "logo markup stays on the live site, the preview, and the legacy dashboard");
+  const legacyLogo = '<a class="logo" href="#/">&gt;sight<span>line</span><i>_</i></a>';
+  const wordmark = '<a class="sl-wordmark" href="#/">SIGHTLINE<i aria-hidden="true"></i></a>';
+  assert(legacyPage.includes(legacyLogo), "legacy dashboard keeps the previous wordmark");
+  assert(index.includes(wordmark) && preview.includes(wordmark) && !index.includes(legacyLogo), "live shell uses the shared wordmark");
+  assert(index.includes('href="preview/theme.css"') && preview.includes('href="preview/theme.css"'), "live shell loads the shared theme");
   assert(index.includes('href="preview/app.css"') && index.includes('src="preview/app.js"') && index.includes('src="preview/cardano-v2.js"'), "live page serves the redesigned shell");
   assert(!index.includes("preview.html") && !index.includes("preview-tag"), "live page is not the design sandbox");
   assert(index.includes("legacy.html"), "live page points at the legacy fallback");
@@ -679,6 +684,13 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(legacyPage.includes("dashboard/core.js") && legacyPage.includes("<!-- panels:begin -->") && legacyPage.includes("dashboard/pages.js"), "legacy dashboard keeps the old shell");
   assert(!legacyPage.includes("preview/app.js"), "legacy page does not load the redesigned shell");
   const css = fs.readFileSync(path.join(root, "preview/app.css"), "utf8");
+  const theme = fs.readFileSync(path.join(root, "preview/theme.css"), "utf8");
+  for (const piece of ["--sl-bg:#0B0E11", "--sl-surface:#161A1E", "--sl-wordmark", ".sl-wordmark", ".sl-row", ".sl-pill", ".sl-pick", ".sl-sheet", ".sl-mascot", ".sl-mark"]) {
+    assert(theme.includes(piece), "shared theme includes " + piece);
+  }
+  assert(theme.includes('body[data-desk="solada"]') && theme.includes("#B5E853"), "Cardano wordmark token is lime");
+  assert(theme.includes('body[data-desk="solana"]') && theme.includes("#14F195"), "Solana wordmark token is set");
+  assert(theme.includes('body[data-desk="nft"]') && theme.includes("#ff4fd8"), "NFT wordmark token is set");
   assert(css.includes(".logo span{color:var(--accent)") && css.includes(".logo i{font-style:normal;color:var(--accent)"), "logo color still follows --accent");
   assert(css.includes('body[data-desk="nft"]') && css.includes("#ff4fd8"), "NFT accent reaches the logo token");
   assert(css.includes("#14F195") && css.includes("#9945FF") && css.includes("#3d8bff"), "Solana and Cardano palettes stay");

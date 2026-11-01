@@ -1140,7 +1140,7 @@
       tile("NFT names", String(nftCount), { count: nftCount, digits: 0, hint: nftCount ? "KING watch" : "no file yet" })
     ]);
     const cards = `<div class="cards">
-      <a class="card" data-desk="solada" href="#/cardano"><h3>Cardano</h3><p>${tx((pack.cardanoBrief && pack.cardanoBrief.headline) || "Charts first. Pool ADA and the heat grid.")}</p>${(ada.risk || []).length ? `<div class="risk-legend"><b>Risk score</b>${(ada.risk || []).slice(0, 6).map(riskBadge).join("")}</div>` : ""}<span class="go">Open tab</span></a>
+      <a class="card" data-desk="solada" href="#/cardano"><h3>Cardano</h3><p>${tx((pack.cardanoBrief && pack.cardanoBrief.headline) || "Runners and established names. Research picks only.")}</p>${(ada.risk || []).length ? `<div class="risk-legend"><b>Risk score</b>${(ada.risk || []).slice(0, 6).map(riskBadge).join("")}</div>` : ""}<span class="go">Open tab</span></a>
       <a class="card" data-desk="solana" href="#/solana"><h3>Solana</h3><p>Calm terminal · F / R / S paper books${sol ? ` · ${sol.openCount} open` : ""}.</p><span class="go">Open tab</span></a>
       <a class="card" data-desk="nft" href="#/nft"><h3>NFT</h3><p>KING · multichain · coming soon. ${nftCount ? nftCount + " names on the watchlist." : "Placeholder until a pulse file lands."}</p><span class="go">Open tab</span></a>
     </div>`;
@@ -1169,7 +1169,7 @@
   }
   async function loadPack() {
     const wantBuzz = !!(root.SightlineBuzz && previewPage());
-    const [health, paper, positions, tradesText, log, pulse, sPaper, flags, vetoes, devs, whale, liq, big, kills, pump, sIdx, nPulse, nLog, nIdx, buzz, buzzHistory] = await Promise.all([
+    const [health, paper, positions, tradesText, log, pulse, sPaper, flags, vetoes, devs, whale, liq, big, kills, pump, sIdx, nPulse, nLog, nIdx, xbuzz, buzzHistory] = await Promise.all([
       get("solana-desk/health.json"),
       get("solana-desk/paper.json"),
       get("solana-desk/positions.json"),
@@ -1189,7 +1189,7 @@
       get("nft/pulse.json"),
       get("nft/log.json"),
       get("nft/briefs/index.json"),
-      wantBuzz ? get("x_buzz.json") : Promise.resolve(null),
+      get("x_buzz.json"),
       wantBuzz ? getDeskRootText("x_buzz_history.jsonl") : Promise.resolve(null)
     ]);
     async function briefsIn(idx, dir, desk) {
@@ -1205,12 +1205,12 @@
     const cBrief = cBriefs.length ? cBriefs[cBriefs.length - 1] : null;
     const nBrief = nBriefs.length ? nBriefs[nBriefs.length - 1] : null;
     const briefs = cBriefs.concat(nBriefs).sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
-    const cardano = { log, pulse, paper: sPaper, pump, flags, vetoes, devs, whale, liq, big, kills, brief: cBrief && { date: cBrief.date, headline: cBrief.headline, learned: cBrief.learned, scoreboard: cBrief.score } };
+    const cardano = { log, pulse, paper: sPaper, pump, flags, vetoes, devs, whale, liq, big, kills, buzz: xbuzz, brief: cBrief && { date: cBrief.date, headline: cBrief.headline, learned: cBrief.learned, scoreboard: cBrief.score } };
     return {
       health, paper, positions, trades: parseCsv(tradesText),
       cardano, cardanoView: cardanoView(cardano), cardanoBrief: cBrief,
       solanaModel: solanaModel(paper, parseCsv(tradesText), positions),
-      nftPulse: nPulse, nftLog: nLog, briefs, buzz, buzzHistory
+      nftPulse: nPulse, nftLog: nLog, briefs, buzz: wantBuzz ? xbuzz : null, buzzHistory
     };
   }
   function freshest(pack, route) {
@@ -1319,6 +1319,13 @@
   function boot() {
     const draw = () => render(routeOf(location.hash));
     window.addEventListener("hashchange", draw);
+    document.addEventListener("keydown", e => {
+      if (e.key !== "Escape") return;
+      const board = document.getElementById("ada-board");
+      if (!board || !board.classList.contains("sl-open")) return;
+      const shut = board.querySelector("[data-ada-close]");
+      if (shut) shut.click();
+    });
     document.addEventListener("click", e => {
       const th = e.target.closest && e.target.closest("th[data-sort]");
       if (th && th.closest("table")) {
@@ -1365,6 +1372,35 @@
         const on = wrap.classList.toggle("all");
         const n = heatBtn.getAttribute("data-n") || "";
         heatBtn.textContent = on ? "Show top 8 only" : ("Show all wallets (" + n + ")");
+        return;
+      }
+      const adaOpen = e.target.closest && e.target.closest("[data-ada-open]");
+      if (adaOpen) {
+        const board = document.getElementById("ada-board");
+        const tk = adaOpen.getAttribute("data-ada-open");
+        if (!board || !tk) return;
+        e.preventDefault();
+        board.querySelectorAll("[data-ada-sheet]").forEach(el => {
+          el.hidden = el.getAttribute("data-ada-sheet") !== tk;
+        });
+        const hint = document.getElementById("ada-hint");
+        if (hint) hint.hidden = true;
+        board.classList.add("sl-open");
+        const scrim = board.querySelector(".ada-scrim");
+        if (scrim) scrim.hidden = false;
+        return;
+      }
+      const adaShut = e.target.closest && e.target.closest("[data-ada-close]");
+      if (adaShut) {
+        const board = document.getElementById("ada-board");
+        if (!board) return;
+        e.preventDefault();
+        board.classList.remove("sl-open");
+        const hint = document.getElementById("ada-hint");
+        if (hint) hint.hidden = false;
+        board.querySelectorAll("[data-ada-sheet]").forEach(el => { el.hidden = true; });
+        const scrim = board.querySelector(".ada-scrim");
+        if (scrim) scrim.hidden = true;
         return;
       }
       const btn = e.target.closest && e.target.closest("[data-chain-filter]");

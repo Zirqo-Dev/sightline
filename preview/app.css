@@ -25,8 +25,12 @@ body[data-desk="solana"],[data-desk="solana"]{
 body[data-desk="solada"],[data-desk="solada"]{
   --accent:#3d8bff;--accent-rgb:61,139,255;--accent2:#0033AD;--accent2-rgb:0,51,173;
   --grad:linear-gradient(90deg,#0033AD,#3468D1 55%,#1E90FF);
-  --bg:#050913;--bg2:#08101c;--panel:#0c1526;--panel2:#122036;--line:#1c2e4e;--line2:#2a426c;
+  --bg:#0B0E11;--bg2:#0B0E11;--panel:#161A1E;--panel2:#1E2329;--line:#2B3139;--line2:#2B3139;
+  --text:#EAECEF;--dim:#848E9C;--mute:#848E9C;
+  --up:#0ECB81;--down:#F6465D;--warn:#F0B90B;
 }
+body[data-desk="solada"]{background:#0B0E11}
+body[data-desk="solada"] main{max-width:1480px;padding:8px 10px 28px}
 body[data-desk="nft"],[data-desk="nft"]{
   --accent:#ff4fd8;--accent-rgb:255,79,216;--accent2:#ff4fd8;--accent2-rgb:255,79,216;
   --grad:linear-gradient(90deg,#c026d3,#ff4fd8);
@@ -460,4 +464,14 @@ body[data-desk="solada"] #view{overflow-x:clip}
 @media (min-width:800px){
   .cv2-nets{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
   .cv2-outs{grid-template-columns:repeat(5,minmax(0,1fr))}
+}
+
+/* Cardano layout only. Visual pieces live in preview/theme.css. */
+.ada{display:flex;flex-direction:column;gap:8px;min-width:0;font-size:var(--sl-fs-sm);color:var(--sl-text)}
+.ada-grid{display:flex;flex-direction:column;gap:8px;min-width:0}
+@media (min-width:1100px){
+  .ada-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(280px,420px);gap:10px;align-items:start}
+  .ada-grid .sl-sheet-host{display:block;position:sticky;top:8px}
+  .ada-grid .sl-grab{display:none}
+  .ada.sl-open .sl-close{display:inline-flex;margin:8px 8px 0}
 }
