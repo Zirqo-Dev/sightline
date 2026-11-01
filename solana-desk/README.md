@@ -99,3 +99,13 @@ A scan that already fetched a mint makes no extra call for it. Pools that have l
 
 ## Tests
     cd solana-desk && python3 -m unittest discover -s tests -t .
+
+## Frozen checks (no decision change)
+These read a desk-data `solana-desk` directory (`positions.json`, `tasks.csv`, `trades.csv`). They do not write a book and they do not change a v6.5 entry, exit, or sample.
+
+    python3 specs/day14_verdict.py --data-dir DESK_DATA_DIR --data-commit SHA
+    python3 specs/r_overlap_check.py --data-dir DESK_DATA_DIR --data-commit SHA
+
+`--cutoff` must end with `Z`. The day-14 script prints `VERDICT: NOT_FINAL` until the data's last run is at or after the default cutoff (11 Nov 2026 15:00 UTC), F's closes reconcile with `trades.csv` (that file is append-only; `positions.json` keeps only the last 200 closes per book), and close ids are unique. `rule_result` still shows STOP or CONTINUE. A non-default cutoff is non-binding.
+
+Pre-v3 closes are counted. The dashboard's v3-only stats do not govern the verdict. `trades.csv` `net_pnl` is incomplete and must not be used; the sell row's `pnl` cell is the logged net. The void is the committed 31 Oct 01:30 UTC window, not the whole UTC day. The last slot whose closes can fall at or before the cutoff is `20261111T1430`. The output includes the sha256 of `positions.json` and `trades.csv`.
