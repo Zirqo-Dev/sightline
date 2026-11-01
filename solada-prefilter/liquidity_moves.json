@@ -1,5 +1,5 @@
 {
- "at": "2026-11-01T19:15:24Z",
+ "at": "2026-11-01T21:14:48Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -126,7 +126,8 @@
    "pool_key": "minswap_v2~8d92b947",
    "reserve_ada": 3517253.92,
    "reserve_qty": 18231321954798,
-   "asof": "2026-10-29T20:44:19Z"
+   "asof": "2026-10-29T20:44:19Z",
+   "stale": true
   },
   {
    "ticker": "NIGHT",
@@ -136,7 +137,8 @@
    "pool_key": "sundaeswap_v3~72c38cd2",
    "reserve_ada": 440319.9,
    "reserve_qty": 2220489836730,
-   "asof": "2026-10-29T22:28:26Z"
+   "asof": "2026-10-29T22:28:26Z",
+   "stale": true
   },
   {
    "ticker": "SNEK",
@@ -203,7 +205,7 @@
    "policy_short": "f13ac4d6",
    "rank": 3,
    "unit_source": "cache",
-   "last_checked": "2026-11-01T09:14:28Z"
+   "last_checked": "2026-11-01T21:14:48Z"
   },
   {
    "ticker": "MIN",
@@ -255,20 +257,10 @@
   }
  ],
  "coverage": {
-  "NIGHT": {
-   "read": 30,
-   "complete": false,
-   "pools": 2
-  },
-  "IAG": {
-   "read": 0,
+  "STRIKE": {
+   "read": 1,
    "complete": false,
    "pools": 0
-  },
-  "STRIKE": {
-   "read": 0,
-   "complete": false,
-   "skipped": "budget"
   },
   "MIN": {
    "read": 0,
@@ -299,20 +291,30 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "NIGHT": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
+  },
+  "IAG": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "NIGHT",
-  "IAG",
   "STRIKE",
   "MIN",
   "ASCEND",
   "COCK",
   "SOLADA",
   "CLOVE",
-  "SNEK"
+  "SNEK",
+  "NIGHT",
+  "IAG"
  ],
- "koios_calls": 8,
+ "koios_calls": 4,
  "blockfrost_calls": 0,
  "blockfrost_fallbacks": 0,
  "blockfrost_available": true,
