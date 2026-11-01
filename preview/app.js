@@ -356,6 +356,171 @@
     });
     return out;
   }
+  /* Local icons from dashboard/icons/icons.json (same file as dashboard/core.js).
+     A monogram, a missing entry, or a remote URL falls back to the initials circle.
+     The page never requests a third-party image. */
+  let ICONS = { coins: {}, nfts: {}, nft_names: {} };
+  function applyIcons(doc) {
+    if (doc && typeof doc === "object") ICONS = doc;
+  }
+  function logoHue(name) {
+    let h = 0;
+    const s = String(name || "");
+    for (let i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) >>> 0;
+    return "hsl(" + (h % 360) + " 24% 64%)";
+  }
+  function initialsLogo(label, sm) {
+    const words = String(label || "?").match(/[A-Za-z0-9]+/g) || ["?"];
+    const ini = (words.length > 1 ? words[0][0] + words[1][0] : words[0].slice(0, 2)).toUpperCase();
+    const cls = sm ? "sl-logo sm" : "sl-logo";
+    return `<span class="${cls}" style="background:${logoHue(label)}" aria-hidden="true">${esc(ini)}</span>`;
+  }
+  function iconRecord(kind, key) {
+    const k = String(key || "");
+    if (!k) return null;
+    if (kind === "nft") {
+      const names = ICONS.nft_names || {};
+      return (ICONS.nfts || {})[k] || (ICONS.nfts || {})[names[k.toLowerCase()]] || null;
+    }
+    return (ICONS.coins || {})[k.toUpperCase()] || null;
+  }
+  function localSrc(entry) {
+    if (!entry || entry.source === "monogram" || !entry.src) return "";
+    const src = String(entry.src);
+    if (/^https?:/i.test(src) || src.indexOf("//") === 0) return "";
+    return src;
+  }
+  function assetLogo(key, label, sm) {
+    const src = localSrc(iconRecord("coin", key)) || localSrc(iconRecord("nft", key)) || localSrc(iconRecord("nft", label));
+    if (!src) return initialsLogo(label || key, sm);
+    const cls = sm ? "sl-logo sm" : "sl-logo";
+    const px = sm ? 18 : 22;
+    return `<img class="${cls}" src="${esc(src)}" alt="" width="${px}" height="${px}">`;
+  }
+  /* Frozen day-14 rule from solana-desk/specs/day14_verdict.py.
+     A close is one positions.json row. Expectancy is pnl / (0.5 * n), using
+     the sell pnl, never net_pnl. Entries opened in the void window and closes
+     after the cutoff do not count. The verdict stays NOT_FINAL until the
+     cutoff run also reconciles with trades.csv. */
+  const DAY14_MIN = 20;
+  const DAY14_STOP = -0.15;
+  const DAY14_TICKET = 0.5;
+  const DAY14_CUTOFF = "2026-11-11T15:00:00Z";
+  const DAY14_VOID_START = "2026-10-31T01:30:00Z";
+  const DAY14_VOID_END = "2026-11-01T00:00:00Z";
+  function day14Unix(text) {
+    if (typeof text !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(text)) return null;
+    const ms = Date.parse(text);
+    return Number.isFinite(ms) ? Math.floor(ms / 1000) : null;
+  }
+  function day14Int(v) {
+    if (v == null || v === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.trunc(n) : null;
+  }
+  function day14Select(closed, cutoffTs, voidStart, voidEnd) {
+    const counted = [], voided = [], late = [];
+    (closed || []).forEach(row => {
+      const opened = day14Int(row && row.opened);
+      const done = day14Int(row && row.closed);
+      if (opened == null || done == null) return;
+      if (voidStart <= opened && opened < voidEnd) { voided.push(row); return; }
+      if (done > cutoffTs) { late.push(row); return; }
+      counted.push(row);
+    });
+    return { counted, voided, late };
+  }
+  function day14Decide(n, total) {
+    const exp = n <= 0 ? null : total / (DAY14_TICKET * n);
+    const stop = n >= DAY14_MIN && exp != null && exp < DAY14_STOP;
+    return { rule: stop ? "STOP" : "CONTINUE", exp };
+  }
+  function day14Book(positions, book, cutoffTs, voidStart, voidEnd) {
+    const closed = ((((positions || {}).books || {})[book] || {}).closed) || [];
+    const sel = day14Select(closed, cutoffTs, voidStart, voidEnd);
+    let total = 0;
+    sel.counted.forEach(row => { total += Number(row.pnl) || 0; });
+    const d = day14Decide(sel.counted.length, total);
+    return { id: book, n: sel.counted.length, pnl: sel.counted.length ? total : null, exp: d.exp, rule: d.rule };
+  }
+  function day14IdsUnique(closed) {
+    const ids = (closed || []).map(row => row && row.id);
+    return ids.length === new Set(ids).size && ids.every(Boolean);
+  }
+  function day14BuildCloses(trades) {
+    const lots = {};
+    const built = [];
+    let ok = true;
+    (trades || []).forEach(row => {
+      if (!row || row.book !== "F" || (row.action !== "buy" && row.action !== "sell")) return;
+      const mint = row.mint || "";
+      const ts = day14Int(row.time);
+      if (ts == null) { ok = false; return; }
+      if (row.action === "buy") {
+        (lots[mint] = lots[mint] || []).push({ mint, opened: ts, closed: null, pnl: 0, frac: 0 });
+        return;
+      }
+      if (row.pnl == null || row.pnl === "") { ok = false; return; }
+      const queue = lots[mint];
+      if (!queue || !queue.length) { ok = false; return; }
+      const lot = queue[0];
+      const pnl = Number(row.pnl);
+      const frac = Number(row.frac || 0);
+      if (!Number.isFinite(pnl) || !Number.isFinite(frac)) { ok = false; return; }
+      lot.pnl += pnl;
+      lot.frac += frac;
+      lot.closed = ts;
+      if (lot.frac >= 1 - 1e-4) built.push(queue.shift());
+    });
+    return { built, ok };
+  }
+  function day14Reconciles(closed, trades) {
+    const built = day14BuildCloses(trades);
+    if (!built.ok || !day14IdsUnique(closed)) return false;
+    if (built.built.length !== closed.length) return false;
+    const used = {};
+    for (let r = 0; r < closed.length; r++) {
+      const row = closed[r];
+      let hit = null;
+      for (let i = 0; i < built.built.length; i++) {
+        if (used[i]) continue;
+        const lot = built.built[i];
+        if (lot.mint !== (row.mint || "")) continue;
+        if (lot.opened !== day14Int(row.opened) || lot.closed !== day14Int(row.closed)) continue;
+        if (Math.abs(lot.pnl - Number(row.pnl)) > 1e-8) continue;
+        hit = i;
+        break;
+      }
+      if (hit == null) return false;
+      used[hit] = 1;
+    }
+    return true;
+  }
+  function day14Report(positions, trades) {
+    const cutoffTs = day14Unix(DAY14_CUTOFF);
+    const voidStart = day14Unix(DAY14_VOID_START);
+    const voidEnd = day14Unix(DAY14_VOID_END);
+    const books = ["F", "R", "S"].map(id => day14Book(positions, id, cutoffTs, voidStart, voidEnd));
+    const fClosed = ((((positions || {}).books || {}).F || {}).closed) || [];
+    const reasons = [];
+    const last = positions && positions.last_run_ts;
+    const lastTs = last != null && last !== "" ? day14Int(last) : null;
+    if (lastTs == null) reasons.push("last_run_missing");
+    else if (cutoffTs != null && lastTs < cutoffTs) reasons.push("last_run_before_cutoff");
+    if (!day14IdsUnique(fClosed)) reasons.push("close_ids_not_unique");
+    if (!day14Reconciles(fClosed, trades || [])) reasons.push("closes_do_not_reconcile");
+    const final = reasons.length === 0;
+    const f = books[0];
+    const verdict = final ? f.rule : "NOT_FINAL";
+    const gap = f.exp != null && books[1].exp != null ? (f.exp - books[1].exp) * 100 : null;
+    let line = "Too early";
+    if (f.n >= DAY14_MIN && f.exp != null) {
+      const side = f.exp < DAY14_STOP ? "below the −15% line" : "clear of the −15% line";
+      const verdictBit = verdict === "NOT_FINAL" ? "VERDICT NOT_FINAL until 2026-11-11 15:00Z" : "VERDICT " + verdict;
+      line = side + " · rule " + f.rule + " · " + verdictBit;
+    }
+    return { books, gap, line, verdict, rule: f.rule, final, reasons };
+  }
   function solanaModel(paper, trades, positions, nowMs) {
     const rows = Array.isArray(trades) ? trades : [];
     const sells = rows.filter(t => /sell|exit|close/i.test(t.action) && tradeNet(t) != null).slice().sort((a, b) => (num(a.time) || 0) - (num(b.time) || 0));
@@ -425,53 +590,65 @@
     }));
     ((paper && paper.summaries) || []).forEach(s => activity.push({ time: s.at, book: "", symbol: "", action: s.type || "skip", reason: s.note || "", pnl: null, model: "" }));
     activity.sort((a, b) => String(b.time || "").localeCompare(String(a.time || "")));
-    return { net, gross, openCount: opens.length, winRate, netSeries, grossSeries, books, opens, activity: activity.slice(0, 24), closed: sells.length, windows: solanaWindows(rows, nowMs) };
+    const verdict = day14Report(positions, rows);
+    const bookRows = verdict.books;
+    return { net, gross, openCount: opens.length, winRate, netSeries, grossSeries, books, opens, activity: activity.slice(0, 24), closed: sells.length, windows: solanaWindows(rows, nowMs), bookRows, gap: verdict.gap, day14: verdict.line, day14Verdict: verdict.verdict, day14Rule: verdict.rule };
   }
-  function solanaHtml(model) {
+  function solSigned(n, d) {
+    if (n == null || !isFinite(n)) return `<span class="sl-flat">–</span>`;
+    const cls = n > 0 ? "sl-up" : n < 0 ? "sl-down" : "sl-flat";
+    const body = (n > 0 ? "+" : n < 0 ? "−" : "") + fmt(Math.abs(n), d == null ? 3 : d);
+    return `<span class="${cls}">${esc(body)}</span>`;
+  }
+  function solPct(frac) {
+    if (frac == null || !isFinite(frac)) return `<span class="sl-flat">–</span>`;
+    const n = frac * 100;
+    const cls = n > 0 ? "sl-up" : n < 0 ? "sl-down" : "sl-flat";
+    const body = (n > 0 ? "+" : n < 0 ? "−" : "") + fmt(Math.abs(n), 1) + "%";
+    return `<span class="${cls}">${esc(body)}</span>`;
+  }
+  function solanaHtml(model, health) {
     const m = model || solanaModel(null, [], null);
-    const signCls = n => n == null ? "" : n < 0 ? "down" : "up";
-    const money = (n, d) => (n == null ? "–" : (n > 0 ? "+" : "") + fmt(n, d == null ? 4 : d));
-    const head = tiles([
-      tile("Net PnL", money(m.net, 4) + (m.net == null ? "" : " SOL"), { cls: signCls(m.net), count: m.net, digits: 4, sign: true, suffix: " SOL", series: m.netSeries, hint: "after haircut and fees" }),
-      tile("Gross PnL", money(m.gross, 4) + (m.gross == null ? "" : " SOL"), { cls: signCls(m.gross), count: m.gross, digits: 4, sign: true, suffix: " SOL", series: m.grossSeries, hint: "price move, costs excluded" }),
-      tile("Open positions", String(m.openCount), { count: m.openCount, digits: 0, hint: "paper tickets" }),
-      tile("Win rate", m.winRate == null ? "–" : Math.round(m.winRate * 100) + "%", { count: m.winRate == null ? null : m.winRate * 100, digits: 0, suffix: "%", hint: m.closed ? m.closed + " closed fills" : "no closed fills" })
-    ]);
-    const books = `<div class="cards">${m.books.map(b => `<article class="card" data-desk="solana"><h3>${esc(b.id)} · ${esc(b.name)}</h3><p>Paper equity <b class="mono">${b.equity == null ? "–" : fmt(b.equity, 3) + " SOL"}</b></p><p>Realized <b class="${signCls(b.realized)}">${money(b.realized, 3)}</b> · open ${b.open == null ? "–" : b.open} · closed ${b.closed == null ? "–" : b.closed}</p>${spark(b.series)}</article>`).join("")}</div>`;
-    const posRows = m.opens.map(p => ({
-      token: `<b>${tx(p.ticker) || "–"}</b>`,
-      book: esc(p.book || "–"),
-      size: esc(p.size == null ? "–" : fmt(p.size, 2) + " SOL"),
-      entry: esc(p.entry == null ? "–" : fmt(p.entry, 6)),
-      mark: esc(p.mark == null ? "–" : fmt(p.mark, 6)),
-      net: `<span class="${signCls(p.pnl)}">${esc(money(p.pnl, 4))}</span>`,
-      reason: tx(p.reason) || "–"
-    }));
-    const actRows = m.activity.map(a => ({
-      when: esc(when(a.time) || "–"),
-      book: esc(a.book || "–"),
-      token: tx(a.symbol) || "–",
-      action: chip(a.action || "skip", /skip|void|halt/i.test(a.action) ? "caution" : ""),
-      reason: tx(a.reason) || "–",
-      model: a.model ? esc(a.model) : "–",
-      net: a.pnl == null ? "–" : `<span class="${signCls(a.pnl)}">${esc(money(a.pnl, 4))}</span>`
-    }));
-    const pos = posRows.length ? table(
-      [{ key: "token", label: "Token" }, { key: "book", label: "Book" }, { key: "size", label: "Paper size", num: true }, { key: "entry", label: "Entry", num: true }, { key: "mark", label: "Mark", num: true }, { key: "net", label: "Net", num: true }, { key: "reason", label: "Reason" }],
-      posRows
-    ) : empty("No open paper positions", "positions.json and paper.json have no open tickets.");
-    const act = actRows.length ? table(
-      [{ key: "when", label: "When" }, { key: "book", label: "Book" }, { key: "token", label: "Token" }, { key: "action", label: "Action" }, { key: "reason", label: "Reason" }, { key: "model", label: "Model" }, { key: "net", label: "Net", num: true }],
-      actRows
-    ) : empty("No trades or skips yet", "trades.csv is empty. Reasons show up as one line per fill or skip.");
-    const wins = m.windows || { 7: { net: 0, closes: 0, older: 0, labels: {} }, 28: { net: 0, closes: 0, older: 0, labels: {} } };
-    const winNote = days => {
-      const w = wins[days] || { net: 0, closes: 0, older: 0, labels: {} };
-      const older = Object.entries(w.labels || {}).map(([k, n]) => k + " " + n).join(", ") || "none";
-      return `<p>${days}-day net <b class="${signCls(w.net)}">${esc(money(w.net, 4))}</b> SOL on ${w.closes} v3-exit-aware closes. Older closes in the window: ${w.older} (${esc(older)}).</p>`;
-    };
-    const windows = `<div class="stack">${winNote(7)}${winNote(28)}<p class="dim">7-day and 28-day stats count only the v3-exit-aware model. Older fills stay in the table, labelled.</p></div>`;
-    return `<div class="stack">${head}${panel("7-day and 28-day", "v3-exit-aware only", windows, "chart")}${panel("Net vs gross", "paper equity", lineChart(m.netSeries, m.grossSeries), "chart")}${panel("Books F / R / S", "0.5 SOL tickets", books, "layers")}${panel("Open positions", String(m.openCount), pos, "table")}${panel("Recent trades", "reason per fill", act, "feed")}</div>`;
+    const names = { F: "Desk", R: "Random", S: "Shadow" };
+    const rows = (m.bookRows || []).map(b => `<tr>
+      <td><b>${esc(b.id)}</b> <span class="sl-meta">${esc(names[b.id] || "")}</span></td>
+      <td class="num">${solSigned(b.pnl, 3)}</td>
+      <td class="num">${solPct(b.exp)}</td>
+      <td class="num">${esc(String(b.n))}</td>
+    </tr>`).join("");
+    const gap = m.gap == null ? "–" : ((m.gap > 0 ? "+" : m.gap < 0 ? "−" : "") + fmt(Math.abs(m.gap), 1) + " pp");
+    const gapCls = m.gap > 0 ? "sl-up" : m.gap < 0 ? "sl-down" : "sl-flat";
+    const books = `<section class="sl-box"><header class="sl-box-h"><span class="sl-box-title">Books <em>F / R / S</em></span></header>
+      <table class="sl-table"><thead><tr><th>Book</th><th class="num">P&amp;L</th><th class="num">Exp/tr</th><th class="num">N</th></tr></thead><tbody>${rows}</tbody></table>
+      <p class="sl-note sl-left">F vs R <b class="${gapCls}">${esc(gap)}</b> · F exp ${solPct(m.bookRows && m.bookRows[0] && m.bookRows[0].exp)} · ${esc(m.day14 || "Too early")} · ${esc(String((m.bookRows && m.bookRows[0] && m.bookRows[0].n) || 0))} F closes</p>
+    </section>`;
+    const h = health || {};
+    const gateBits = [
+      ["Checks", num(h.checks)],
+      ["Leads", num(h.leads_this_run)],
+      ["Skips", num(h.eligibility_skips)],
+      ["Runs", num(h.runs) != null && num(h.expected_runs) != null ? h.runs + "/" + h.expected_runs : num(h.runs)]
+    ].filter(pair => pair[1] != null && pair[1] !== "");
+    const gate = gateBits.length ? `<section class="sl-box"><header class="sl-box-h"><span class="sl-box-title">Gate <em>this desk file</em></span></header><div class="sl-kvs">${gateBits.map(pair => `<div class="sl-kv"><span class="sl-k">${esc(pair[0])}</span><b>${esc(String(pair[1]))}</b></div>`).join("")}</div></section>` : `<section class="sl-box"><p class="sl-empty">No gate counts in the health file.</p></section>`;
+    const opens = (m.opens || []).map(p => {
+      let pct = null;
+      if (p.entry && p.mark && p.entry > 0) pct = (p.mark / p.entry - 1) * 100;
+      const cls = pct == null ? "sl-flat" : pct > 0 ? "sl-up" : pct < 0 ? "sl-down" : "sl-flat";
+      const pctText = pct == null ? "–" : (pct > 0 ? "+" : pct < 0 ? "−" : "") + fmt(Math.abs(pct), 1) + "%";
+      return `<div class="sl-row"><span class="sl-rank">${esc(p.book || "")}</span>${assetLogo(p.ticker, p.ticker, false)}<span class="sl-id"><span class="sl-id-top"><span class="sl-tk">${tx(p.ticker) || "–"}</span></span><span class="sl-sub">${tx(p.reason) || ""}</span></span><span class="sl-end"><span class="${cls}">${esc(pctText)}</span></span></div>`;
+    }).join("");
+    const openBlock = `<section class="sl-box"><header class="sl-box-h"><span class="sl-box-title">Open positions <em>${m.openCount}</em></span></header>${opens || `<p class="sl-empty">No open paper positions.</p>`}</section>`;
+    const closes = (m.activity || []).filter(a => /sell|exit|close/i.test(a.action)).slice(0, 8).map(a => `<div class="sl-line"><span class="sl-tk">${tx(a.symbol) || "–"}</span><span class="sl-side">${esc(a.book || "")} · ${tx(a.reason) || "–"}</span>${a.pnl == null ? "<span class=\"sl-flat\">–</span>" : solSigned(a.pnl, 3)}</div>`).join("");
+    const closeBlock = `<section class="sl-box"><header class="sl-box-h"><span class="sl-box-title">Recent closes <em>exit reason</em></span></header>${closes || `<p class="sl-empty">No closed fills yet.</p>`}</section>`;
+    const fail = num(h.data_failure_rate);
+    const healthBlock = `<section class="sl-box"><header class="sl-box-h"><span class="sl-box-title">Data health</span></header><div class="sl-kvs">
+      <div class="sl-kv"><span class="sl-k">Data ok</span><b>${fail == null ? "–" : esc(fmt((1 - fail) * 100, 0) + "%")}</b></div>
+      <div class="sl-kv"><span class="sl-k">Runs</span><b>${num(h.runs) == null ? "–" : esc(String(h.runs))}${num(h.expected_runs) == null ? "" : esc("/" + h.expected_runs)}</b></div>
+      <div class="sl-kv"><span class="sl-k">Void day</span><b>${h.void_day ? "yes" : h.void_day === false ? "no" : "–"}</b></div>
+    </div></section>`;
+    const first = (m.opens || [])[0];
+    const status = first ? `${m.openCount} open · ${sanitize(first.ticker)} · ${sanitize(first.reason || "paper")}` : (m.openCount ? m.openCount + " open paper tickets" : "No open paper tickets");
+    return `<div class="stack sl-tab"><div class="sl-mascot"><p class="sl-status">${esc(status)}</p></div>${books}${gate}${openBlock}${closeBlock}${healthBlock}<p class="sl-note">Research only · you trade elsewhere</p></div>`;
   }
 
   function flagsFor(flags) {
@@ -999,7 +1176,8 @@
     return root.CardanoBoard.render({
       esc, tx, num, fmt, sanitize, tickerName, safeTag, labelTag, animalName,
       displayKind, flaggedThisRun, riskBadge, riskTone, chip, tagChip, freshFunded,
-      paperBoard, donut, when, timeOf, briefBits, flagTags, flagAda
+      paperBoard, donut, when, timeOf, briefBits, flagTags, flagAda,
+      coinLogo: assetLogo
     }, data || {}, v);
   }
 
@@ -1029,6 +1207,7 @@
         const metrics = pt.metrics || {};
         rows.push({
           name: w.name || w.slug || live.ticker || "–",
+          slug: w.slug || "",
           chain: (w.chain || live.chain || "multi").toLowerCase(),
           status: w.status || live.role || "",
           floor: live.floor != null ? live.floor : metrics.floor,
@@ -1045,7 +1224,7 @@
         const pt = vol[String(r.ticker || "").toLowerCase()] || {};
         const metrics = pt.metrics || {};
         rows.push({
-          name: r.ticker, chain: (r.chain || "multi").toLowerCase(), status: r.role || "",
+          name: r.ticker, slug: r.ticker, chain: (r.chain || "multi").toLowerCase(), status: r.role || "",
           floor: r.floor, unit: r.unit || "", volume: metrics.volume_1h, volUnit: metrics.floor_symbol || r.unit || "",
           sales: r.sales_1h, checked: pulse.updated_at || "", example: false
         });
@@ -1060,93 +1239,65 @@
       { name: "Example Tide", chain: "cardano", status: "watch", floor: 40, unit: "ADA", volume: 900, volUnit: "ADA", sales: 6, checked: "", example: true }
     ];
   }
-  function nftHtml(pulse, log, chain) {
-    const live = nftRows(pulse, log);
-    const missing = !live.length;
-    const rows = missing ? nftExample() : live;
+  function asUsd(value, unit) {
+    const n = num(value);
+    if (n == null) return null;
+    const u = String(unit || "").toUpperCase();
+    if (u === "USD" || u === "USDC" || u === "USDT") return n;
+    return null;
+  }
+  function usdText(n) {
+    if (n == null || !isFinite(n)) return "–";
+    const sign = n < 0 ? "−" : "";
+    const a = Math.abs(n);
+    const body = a >= 1000 ? (a / 1000).toFixed(a >= 10000 ? 0 : 1).replace(/\.0$/, "") + "K" : (a >= 100 ? String(Math.round(a)) : a.toFixed(2).replace(/\.00$/, ""));
+    return sign + "$" + body;
+  }
+  function nftHtml(pulse, log, chain, paper) {
+    const live = nftRows(pulse, log).filter(r => !r.example);
     const selected = chain && chain !== "all" ? chain : "all";
-    const shown = selected === "all" ? rows : rows.filter(r => r.chain === selected);
-    const chains = Array.from(new Set(rows.map(r => r.chain))).filter(Boolean);
-    const sales = shown.reduce((s, r) => s + (num(r.sales) || 0), 0);
-    const floors = shown.filter(r => num(r.floor) != null).length;
-    const units = Array.from(new Set(shown.map(r => r.volUnit).filter(Boolean)));
-    const volSum = units.length === 1 ? shown.reduce((s, r) => s + (num(r.volume) || 0), 0) : null;
-    const salesSeries = [];
-    if (pulse && Array.isArray(pulse.points)) {
-      const bucket = {};
-      pulse.points.forEach(p => {
-        if (!p || !p.t) return;
-        if (selected !== "all" && p.chain !== selected) return;
-        const hour = String(p.t).slice(0, 13);
-        bucket[hour] = (bucket[hour] || 0) + (num(p.metrics && p.metrics.sales_1h) || 0);
-      });
-      Object.keys(bucket).sort().forEach(k => salesSeries.push(bucket[k]));
-    }
-    const filters = `<div class="filters"><button type="button" class="chip ${selected === "all" ? "on" : ""}" data-chain-filter="all">all</button>${chains.map(c => `<button type="button" class="chip ${selected === c ? "on" : ""}" data-chain="${esc(c)}" data-chain-filter="${esc(c)}">${esc(c)}</button>`).join("")}</div>`;
-    const head = tiles([
-      tile("Collections", String(shown.length), { count: shown.length, digits: 0, series: salesSeries, hint: missing ? "example layout" : "KING watch" }),
-      tile("Chains", String(selected === "all" ? chains.length : 1), { count: selected === "all" ? chains.length : 1, digits: 0, hint: selected === "all" ? "filter below" : selected }),
-      tile("Floors quoted", String(floors), { count: floors, digits: 0, hint: "names with a floor" }),
-      tile("1h volume", volSum == null ? "mixed" : fmt(volSum, 1) + " " + (units[0] || ""), { count: volSum, digits: 1, suffix: volSum == null ? "" : " " + (units[0] || ""), hint: volSum == null ? "units differ by chain" : "one unit" })
-    ]);
-    const bodyRows = shown.map(r => ({
-      name: `<b>${tx(r.name) || "–"}</b>`,
-      chain: `<span class="chip" data-chain="${esc(sanitize(r.chain))}">${tx(r.chain)}</span>`,
-      status: r.status ? chip(r.status, r.status === "watch" ? "caution" : r.status === "pass" ? "" : "ok") : "–",
-      floor: esc(num(r.floor) == null ? "–" : fmt(r.floor, 3) + (r.unit ? " " + sanitize(r.unit) : "")),
-      volume: esc(num(r.volume) == null ? "–" : fmt(r.volume, 2) + (r.volUnit ? " " + sanitize(r.volUnit) : "")),
-      sales: esc(num(r.sales) == null ? "–" : fmt(r.sales, 0)),
-      checked: esc(when(r.checked) || "–")
-    }));
-    const tableHtml = bodyRows.length ? table(
-      [{ key: "name", label: "Collection" }, { key: "chain", label: "Chain" }, { key: "status", label: "Status" }, { key: "floor", label: "Floor", num: true }, { key: "volume", label: "1h volume", num: true }, { key: "sales", label: "1h sales", num: true }, { key: "checked", label: "Last checked" }],
-      bodyRows
-    ) : empty("No names on this chain", "Pick another chain, or wait for the next KING pulse.");
-    const note = missing
-      ? `<p class="example-note">Example data · not a live reading. nft/pulse.json and the watchlist were missing.</p>`
-      : "";
-    const intro = feedItem(
-      `${chip("KING", "ok")}${chip("coming soon", "caution")}`,
-      missing ? "Multichain NFT desk" : sanitize((log && log.headline) || "KING tape"),
-      missing ? ["Placeholder layout for collections, floors, and per-chain filters.", "The desk is run by KING. Real files replace this example when they exist."] : ["Paper and public market stats only.", "Chain chips filter the watchlist. Volume is summed only when the unit matches."]
-    );
-    const emptyLive = missing ? empty("No NFT data file", "Run data from the NFT desk will fill this table. The example below is labeled.") : "";
-    return `<div class="stack">${panel("NFT desk", "KING", intro + emptyLive, "image")}${head}${panel("Collections", missing ? "example" : "watchlist", note + filters + tableHtml, "table")}</div>`;
+    const shown = (selected === "all" ? live : live.filter(r => r.chain === selected)).slice(0, 10);
+    const picks = ((paper && paper.open) || []).filter(t => t && !t.closed_at && String(t.status || "open").toLowerCase() !== "closed");
+    const pick = picks[0];
+    const pickHtml = pick
+      ? `<article class="sl-pick"><div class="sl-pick-top"><span class="sl-kicker">KING's pick</span><span class="sl-tk">${tx(pick.ticker || pick.name) || "–"}</span><span class="sl-grow"></span><span class="sl-flat">${esc(usdText(asUsd(pick.size, "USD")))}</span></div><p class="sl-pick-line">${tx(Array.isArray(pick.thesis) ? pick.thesis[0] : pick.thesis) || "Open paper ticket."}</p><div class="sl-pick-foot"><span>Research pick, not advice</span></div></article>`
+      : `<p class="sl-empty">No KING pick right now</p>`;
+    const rows = shown.map((r, i) => {
+      const floor = asUsd(r.floorUsd != null ? r.floorUsd : r.floor, r.unit);
+      const vol = asUsd(r.volumeUsd != null ? r.volumeUsd : r.volume, r.volUnit || r.unit);
+      const watch = /watch/i.test(r.status || "");
+      const pill = r.status ? `<span class="sl-pill ${watch ? "sl-pill-watch" : "sl-pill-pass"}">${esc(sanitize(r.status))}</span>` : "";
+      const sub = [sanitize(r.chain), floor == null ? "floor not in USD" : "floor " + usdText(floor), vol == null ? "" : "24h " + usdText(vol)].filter(Boolean).join(" · ");
+      return `<div class="sl-row"><span class="sl-rank">${i + 1}</span>${assetLogo(r.slug || r.name, r.name, false)}<span class="sl-id"><span class="sl-id-top"><span class="sl-tk">${tx(r.name) || "–"}</span>${pill}</span><span class="sl-sub">${esc(sub)}</span></span><span class="sl-end"><span class="sl-flat">${esc(floor == null ? "–" : usdText(floor))}</span></span></div>`;
+    }).join("");
+    const whenAt = when((log && log.asof) || (pulse && pulse.updated_at));
+    const status = live.length ? live.length + " names. Values in USD when the file is already in dollars." : "No KING tape yet.";
+    return `<div class="stack sl-tab"><div class="sl-mascot"><p class="sl-status">${esc(status)}</p><time class="sl-meta">${esc(whenAt || "")}</time></div>
+      <section class="sl-box"><header class="sl-box-h"><span class="sl-box-title">Watchlist <em>USD only</em></span></header>${pickHtml}<div class="sl-rows">${rows || `<p class="sl-empty">No names with a published reading.</p>`}</div></section>
+      <p class="sl-note">USD only · native coin prices are left blank · research only</p></div>`;
   }
 
   function briefsHtml(items) {
     const list = (items || []).slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
-    const head = tiles([
-      tile("Briefs", String(list.length), { count: list.length, digits: 0 }),
-      tile("Desks", String(new Set(list.map(b => b.desk)).size), { digits: 0 }),
-      tile("Latest", list[0] ? when(list[0].date) : "–", { hint: "newest file" }),
-      tile("Paper books", "research", { hint: "not orders" })
-    ]);
     const body = list.length
-      ? list.map(b => feedItem(`${chip(b.desk || "desk", "")}<span>${esc(when(b.date) || "")}</span>`, b.headline, b.learned)).join("")
-      : empty("No briefs yet", "solada/briefs and nft/briefs are empty.");
-    return `<div class="stack">${head}${panel("Archive", "newest first", body, "book")}</div>`;
+      ? list.map(b => `<article class="sl-box"><header class="sl-box-h"><span class="sl-box-title">${esc(b.desk || "Desk")}</span><span class="sl-meta">${esc(when(b.date) || "")}</span></header><p class="sl-pick-line">${tx(b.headline) || "Untitled brief"}</p>${(b.learned || []).slice(0, 3).map(line => `<p class="sl-sub">${tx(line)}</p>`).join("")}</article>`).join("")
+      : `<p class="sl-empty">No briefs yet.</p>`;
+    return `<div class="stack sl-tab"><div class="sl-mascot"><p class="sl-status">${list.length ? list.length + " briefs" : "No briefs published yet."}</p></div>${body}<p class="sl-note">Research only · you trade elsewhere</p></div>`;
   }
 
   function homeHtml(pack) {
     const sol = pack.solanaModel;
-    const ada = pack.cardanoView || { vetoTokens: [] };
     const nftCount = nftRows(pack.nftPulse, pack.nftLog).length;
     const briefs = pack.briefs || [];
-    const head = tiles([
-      tile("Desks", "3", { count: 3, digits: 0, hint: "Cardano · Solana · NFT" }),
-      tile("Solana net", sol && sol.net != null ? (sol.net > 0 ? "+" : "") + fmt(sol.net, 3) + " SOL" : "–", { cls: sol && sol.net < 0 ? "down" : "up", count: sol && sol.net, digits: 3, sign: true, suffix: " SOL", series: sol && sol.netSeries, hint: "paper, after costs" }),
-      tile("Cardano vetoes", String(ada ? ada.vetoTokens.length : 0), { count: ada ? ada.vetoTokens.length : 0, digits: 0, hint: "research only" }),
-      tile("NFT names", String(nftCount), { count: nftCount, digits: 0, hint: nftCount ? "KING watch" : "no file yet" })
-    ]);
-    const cards = `<div class="cards">
-      <a class="card" data-desk="solada" href="#/cardano"><h3>Cardano</h3><p>${tx((pack.cardanoBrief && pack.cardanoBrief.headline) || "Charts first. Pool ADA and the heat grid.")}</p>${(ada.risk || []).length ? `<div class="risk-legend"><b>Risk score</b>${(ada.risk || []).slice(0, 6).map(riskBadge).join("")}</div>` : ""}<span class="go">Open tab</span></a>
-      <a class="card" data-desk="solana" href="#/solana"><h3>Solana</h3><p>Calm terminal · F / R / S paper books${sol ? ` · ${sol.openCount} open` : ""}.</p><span class="go">Open tab</span></a>
-      <a class="card" data-desk="nft" href="#/nft"><h3>NFT</h3><p>KING · multichain · coming soon. ${nftCount ? nftCount + " names on the watchlist." : "Placeholder until a pulse file lands."}</p><span class="go">Open tab</span></a>
+    const card = (href, desk, title, text) => `<a class="sl-box sl-home-card" data-desk="${desk}" href="${href}"><header class="sl-box-h"><span class="sl-box-title">${esc(title)}</span></header><p class="sl-pick-line">${text}</p></a>`;
+    const cards = `<div class="sl-home-grid">
+      ${card("#/cardano", "solada", "Cardano", tx((pack.cardanoBrief && pack.cardanoBrief.headline) || "Runners and established names. Sentinel picks only."))}
+      ${card("#/solana", "solana", "Solana", `Paper books F / R / S${sol ? " · " + sol.openCount + " open" : ""}.`)}
+      ${card("#/nft", "nft", "NFT", nftCount ? nftCount + " names. USD only." : "No watchlist file yet.")}
     </div>`;
-    const feed = briefs.slice(0, 3).map(b => feedItem(`${chip(b.desk || "", "")}<span>${esc(when(b.date) || "")}</span>`, b.headline, (b.learned || []).slice(0, 2))).join("")
-      || empty("No briefs yet", "Daily notes from Cardano and NFT show up here.");
-    return `<div class="stack"><div class="pagehead"><div><h1>All desks</h1><div class="sub">Paper books · one accent per desk</div></div></div>${head}${cards}${panel("Latest briefs", "feed", feed, "book")}</div>`;
+    const feed = briefs.slice(0, 3).map(b => `<article class="sl-box"><header class="sl-box-h"><span class="sl-box-title">${esc(b.desk || "Desk")}</span><span class="sl-meta">${esc(when(b.date) || "")}</span></header><p class="sl-pick-line">${tx(b.headline) || ""}</p></article>`).join("")
+      || `<p class="sl-empty">No briefs yet.</p>`;
+    return `<div class="stack sl-tab"><div class="sl-mascot"><p class="sl-status">Paper research across Cardano, Solana, and NFT.</p></div>${cards}<section class="sl-box"><header class="sl-box-h"><span class="sl-box-title">Latest briefs</span></header>${feed}</section><p class="sl-note">Research only · you trade elsewhere</p></div>`;
   }
 
   function routeOf(hash) {
@@ -1169,7 +1320,7 @@
   }
   async function loadPack() {
     const wantBuzz = !!(root.SightlineBuzz && previewPage());
-    const [health, paper, positions, tradesText, log, pulse, sPaper, flags, vetoes, devs, whale, liq, big, kills, pump, sIdx, nPulse, nLog, nIdx, buzz, buzzHistory] = await Promise.all([
+    const [health, paper, positions, tradesText, log, pulse, sPaper, flags, vetoes, devs, whale, liq, big, kills, pump, sIdx, nPulse, nLog, nPaper, nIdx, xbuzz, buzzHistory, icons] = await Promise.all([
       get("solana-desk/health.json"),
       get("solana-desk/paper.json"),
       get("solana-desk/positions.json"),
@@ -1188,10 +1339,13 @@
       get("solada/briefs/index.json"),
       get("nft/pulse.json"),
       get("nft/log.json"),
+      get("nft/paper.json"),
       get("nft/briefs/index.json"),
-      wantBuzz ? get("x_buzz.json") : Promise.resolve(null),
-      wantBuzz ? getDeskRootText("x_buzz_history.jsonl") : Promise.resolve(null)
+      get("x_buzz.json"),
+      wantBuzz ? getDeskRootText("x_buzz_history.jsonl") : Promise.resolve(null),
+      get("dashboard/icons/icons.json")
     ]);
+    if (icons && icons.coins) ICONS = icons;
     async function briefsIn(idx, dir, desk) {
       if (!Array.isArray(idx) || !idx.length) return [];
       const names = idx.map(n => String(n).endsWith(".json") ? String(n) : String(n) + ".json").sort();
@@ -1205,12 +1359,12 @@
     const cBrief = cBriefs.length ? cBriefs[cBriefs.length - 1] : null;
     const nBrief = nBriefs.length ? nBriefs[nBriefs.length - 1] : null;
     const briefs = cBriefs.concat(nBriefs).sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
-    const cardano = { log, pulse, paper: sPaper, pump, flags, vetoes, devs, whale, liq, big, kills, brief: cBrief && { date: cBrief.date, headline: cBrief.headline, learned: cBrief.learned, scoreboard: cBrief.score } };
+    const cardano = { log, pulse, paper: sPaper, pump, flags, vetoes, devs, whale, liq, big, kills, buzz: xbuzz, brief: cBrief && { date: cBrief.date, headline: cBrief.headline, learned: cBrief.learned, scoreboard: cBrief.score } };
     return {
       health, paper, positions, trades: parseCsv(tradesText),
       cardano, cardanoView: cardanoView(cardano), cardanoBrief: cBrief,
       solanaModel: solanaModel(paper, parseCsv(tradesText), positions),
-      nftPulse: nPulse, nftLog: nLog, briefs, buzz, buzzHistory
+      nftPulse: nPulse, nftLog: nLog, nftPaper: nPaper, briefs, buzz: wantBuzz ? xbuzz : null, buzzHistory
     };
   }
   function freshest(pack, route) {
@@ -1294,9 +1448,9 @@
     try {
       if (route.id === "home") html = homeHtml(p);
       else if (route.id === "cardano") html = cardanoHtml(p.cardano);
-      else if (route.id === "solana") html = `<div class="pagehead"><div><h1>Solana</h1><div class="sub">Calm terminal · paper fills only · F / R / S</div></div></div>` + solanaHtml(p.solanaModel);
-      else if (route.id === "nft") html = `<div class="pagehead"><div><h1>NFT</h1><div class="sub">KING · multichain · coming soon</div></div></div>` + nftHtml(p.nftPulse, p.nftLog, store.nftChain);
-      else html = `<div class="pagehead"><div><h1>Briefs</h1><div class="sub">Cardano and NFT daily notes</div></div></div>` + briefsHtml(p.briefs);
+      else if (route.id === "solana") html = solanaHtml(p.solanaModel, p.health);
+      else if (route.id === "nft") html = nftHtml(p.nftPulse, p.nftLog, store.nftChain, p.nftPaper);
+      else html = briefsHtml(p.briefs);
     } catch (err) {
       html = empty("This tab couldn't render", "This view hit a display error and kept the raw feed off the page.");
     }
@@ -1319,6 +1473,13 @@
   function boot() {
     const draw = () => render(routeOf(location.hash));
     window.addEventListener("hashchange", draw);
+    document.addEventListener("keydown", e => {
+      if (e.key !== "Escape") return;
+      const board = document.getElementById("ada-board");
+      if (!board || !board.classList.contains("sl-open")) return;
+      const shut = board.querySelector("[data-ada-close]");
+      if (shut) shut.click();
+    });
     document.addEventListener("click", e => {
       const th = e.target.closest && e.target.closest("th[data-sort]");
       if (th && th.closest("table")) {
@@ -1367,6 +1528,35 @@
         heatBtn.textContent = on ? "Show top 8 only" : ("Show all wallets (" + n + ")");
         return;
       }
+      const adaOpen = e.target.closest && e.target.closest("[data-ada-open]");
+      if (adaOpen) {
+        const board = document.getElementById("ada-board");
+        const tk = adaOpen.getAttribute("data-ada-open");
+        if (!board || !tk) return;
+        e.preventDefault();
+        board.querySelectorAll("[data-ada-sheet]").forEach(el => {
+          el.hidden = el.getAttribute("data-ada-sheet") !== tk;
+        });
+        const hint = document.getElementById("ada-hint");
+        if (hint) hint.hidden = true;
+        board.classList.add("sl-open");
+        const scrim = board.querySelector(".ada-scrim");
+        if (scrim) scrim.hidden = false;
+        return;
+      }
+      const adaShut = e.target.closest && e.target.closest("[data-ada-close]");
+      if (adaShut) {
+        const board = document.getElementById("ada-board");
+        if (!board) return;
+        e.preventDefault();
+        board.classList.remove("sl-open");
+        const hint = document.getElementById("ada-hint");
+        if (hint) hint.hidden = false;
+        board.querySelectorAll("[data-ada-sheet]").forEach(el => { el.hidden = true; });
+        const scrim = board.querySelector(".ada-scrim");
+        if (scrim) scrim.hidden = true;
+        return;
+      }
       const btn = e.target.closest && e.target.closest("[data-chain-filter]");
       if (!btn) return;
       store.nftChain = btn.getAttribute("data-chain-filter") || "all";
@@ -1381,7 +1571,7 @@
   }
 
   root.Preview = {
-    sanitize, safeTag, parseCsv, solanaModel, solanaHtml, cardanoView, cardanoHtml, nftRows, nftHtml, freshFunded, isDeskData, whaleHtml: function (doc) { return cardanoHtml({ whale: doc }); },
+    sanitize, safeTag, parseCsv, solanaModel, solanaHtml, day14Report, cardanoView, cardanoHtml, nftRows, nftHtml, freshFunded, isDeskData, applyIcons, assetLogo, whaleHtml: function (doc) { return cardanoHtml({ whale: doc }); },
     devHtml: function (doc) { return cardanoHtml({ devs: doc }); }
   };
   if (typeof document !== "undefined" && document.getElementById && document.addEventListener) {

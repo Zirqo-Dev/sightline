@@ -52,24 +52,30 @@ One file each in `dashboard/panels/`. Each calls `S.register`.
 
 ## Cardano tab (v2)
 
-The live Cardano tab (`preview/cardano-v2.js`, route `#/cardano`) draws five sections. It reads the desk-data copies of `solada/log.json`, `solada/pulse.json`, `solada-prefilter/flags.json`, `solada-prefilter/kill_status.json`, and `solada-prefilter/whale_ledger.json`. A missing block is a "No data yet" line. The tab does not invent numbers.
+The live Cardano tab (`preview/cardano-v2.js`, route `#/cardano`) is two boards: Top 10 Runners, then Top 10 Established. It reads the desk-data copies of `solada/log.json`, `solada/pulse.json`, `solada/paper.json`, `solada-prefilter/flags.json`, `solada-prefilter/dev_checks.json`, `solada-prefilter/vetoes.json`, `solada-prefilter/whale_ledger.json`, `solada-prefilter/big_moves.json`, and `x_buzz.json`, falling back to main. A missing figure is omitted or shown as "?". The tab does not invent a Sentinel pick or a percent.
 
-### Already published (reused)
+Runners are fresh launches (`cardano_v2.launches` and verdicts whose `launchpad` is not `established` or `minswap`), ranked by the newest percent move. Established is `cardano_top10` plus verdicts tagged `established` or `minswap`, in the desk's high-cap order. The row pill is SW-01 only for an open SW-01 ticket, otherwise Lottery, Watch, Passed·moving (a pass whose price is up), or Pass. ▲ renders only when both holders and volume rose over the last 6h. A sparkline renders only when price or market-cap history is fresh enough to draw.
+
+Sentinel's pick cards read open tickets on `paper.tests` SW-01 and EST-01 (and `paper.open` or `log.picks` only when the id says SW-01 or EST-01). SW-01 sits on the runners board (100 ADA, 48h, from the registered test). EST-01 sits on the established board (100 ADA, 7d). A closed ticket is not a pick. The why-sheet checklist uses bonded, rule k, swarm flags, a whale buy after 24h, dev sold, rugger vetoes, and X buzz. Unknown checks stay "?".
+
+### Fields the board reads
 
 | Source | What the tab uses |
 |---|---|
-| `log.verdicts[]` | One board card per row. `ticker`, `verdict` (`watch` → 🟡 Watch, `pass` → 🔴 Pass, `lottery` / `call` → 🟢 Lottery-size candidate), `launchpad` (see badge rules below), `reasons` (up to 3 bullets), `whale_activity` (hidden when it is "none tracked"), `pool_ada`, `holders`, `mcap_ada`. |
-| `log.verdicts[].kill_line` | Prose. Comparisons such as `ADA side under 750k` or `holders under 125` are parsed when the numeric fields below are absent. |
-| `solada-prefilter/kill_status.json` | Per ticker `{metric, value, line, hit, text}`. `metric` is `ada_side`, `holders`, or `mcap`. Used as the bar when the verdict has no explicit numbers. |
-| `log.cardano_top10[]` | Fallback pool / holder / mcap readings, and the whole board when `verdicts` is missing. |
-| `flags.json` `new` + `recent` | Cluster cards, the heat grid, sniper exits, and swarm groups. Tags render only as `w-` + 8 hex. The heat label is the first 4 hex of that tag. |
-| `whale_ledger.json` `rows[]` | Best-effort money out / money in for the newest 24h of rows: a fill paired with an open of the same token is money out; a fill paired with an open of ADA is money in. `ada_leg` is the bar size. Balances and positions are not shown. |
+| `log.verdicts[]` | `ticker`, `verdict`, `launchpad`, `pool_ada`, `holders`, `mcap_ada`, `why` / `reasons` (for a real percent phrase and a whale sentence), `whale_line` / `whale_activity`, `kill_value`, `kill_limit`, `pct_from_line`. |
+| `log.cardano_top10[]` | High-cap order, pool, holders, mcap. History of the same rows is the sparkline when it is fresh. |
+| `paper.tests` SW-01 / EST-01 | Open `tickets[]` only. Closed tickets are skipped. |
+| `flags.json` | `coordinated_buys` and `fresh_wallet_swarm` set the swarm check. Tags are not printed. |
+| `dev_checks.json` | Dev sold and fresh funded. A `w-` tag is not printed. |
+| `vetoes.json` | `known_rugger` codes. No row for that token stays "?". |
+| `whale_ledger.json` `rows[]` | Buy or sell direction after launch+24h, and a trend. Balances, positions, and quantities are not shown. |
+| `x_buzz.json` | Cardano `velocity.ratio_1h_vs_prev_hr`. Missing ratio stays "?". |
 
-The board sorts by percent from the kill line, smallest room first. The bar scale is `max(value, 2 × line)`, so the tick sits at 50% until the reading is more than twice the line. Percent under 15 is drawn in red ("only N% above"). Under the line is "N% under".
+Kill distance is `pct_from_line` when the desk wrote it. The old heat grid, radar cards, and money-flow chart are not drawn.
 
 ### Optional `log.cardano_v2`
 
-Write this object on `solada/log.json` (desk-data). Do not put it in `panels.json`: that file is site config and is read from `main`, not from desk-data. Every key is optional. When a key is present it replaces the derived view for that section.
+Write this object on `solada/log.json` (desk-data). Do not put it in `panels.json`: that file is site config and is read from `main`, not from desk-data. Every key is optional. The board uses `launches`, `rotation.trends`, and `swarms`. `clusters` and `heat` are not drawn. A launch with `example: true` is skipped. `holders_example` or `pool_example` drops that number.
 
 ```json
 {
