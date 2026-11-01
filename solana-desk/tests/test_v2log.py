@@ -232,7 +232,14 @@ class Files(unittest.TestCase):
         self.assertIsNone(cands[MINT_A]["k_max_drop"])
         self.assertTrue(cands[MINT_A]["first_pick"])
         self.assertFalse(cands[MINT_B]["first_pick"])
-        self.assertEqual(cands[MINT_A]["reserve"]["t_s"], T0)
+        self.assertEqual(cands[MINT_A]["pair_at_s"], T0)
+        self.assertEqual(cands[MINT_A]["inputs"]["sol"], 80)
+        self.assertEqual(cands[MINT_A]["inputs"]["pairAddress"], POOL)
+        self.assertNotIn("liquidity_quote", cands[MINT_A]["inputs"])
+        self.assertNotIn("boost_window", cands[MINT_A]["inputs"])
+        self.assertNotIn("top10_ex_pool", cands[MINT_A]["inputs"])
+        self.assertNotIn("k", cands[MINT_A]["inputs"])
+        self.assertIsInstance(cands[MINT_A]["inputs"]["holders"][0], list)
         first_snaps = []
         for name in sorted(os.listdir(os.path.join(d, "v2"))):
             if name.startswith("pool-snaps-"):
@@ -244,8 +251,6 @@ class Files(unittest.TestCase):
         again = v2log.rules_from_logged(cands[MINT_A]["inputs"], series, True)
         self.assertEqual(again, cands[MINT_A]["rules"])
         self.assertTrue(cands[MINT_A]["snap_stems"])
-        self.assertEqual(cands[MINT_A]["reserve"]["sol"], 80)
-        self.assertEqual(cands[MINT_A]["reserve"]["pool"], POOL)
         self.assertEqual(cands[MINT_A]["inputs"]["txns_h1"], {"buys": 3, "sells": 2})
         # Second scan: k falls by half, and a mint that left the page is followed once.
         def follow(mint):
@@ -257,18 +262,18 @@ class Files(unittest.TestCase):
             [fetched(MINT_D, pair(MINT_D, sol=10, age_s=1000), rc_for())],
             T0 + 1800, "20261101T0030",
             sources=run.LEAD_PATHS, pre_filters=run.LEAD_PRE_FILTERS,
-            fetch_pair=follow, sleep=lambda _s: None, leads_per_run=12, cap=1,
+            fetch_pair=follow, sleep=lambda _s: None, leads_per_run=12, cap=5,
             now_fn=lambda: T0 + 1800,
         )
-        self.assertEqual(summary["extra_calls"], 1)
-        self.assertEqual(calls, [MINT_A])
+        self.assertEqual(summary["extra_calls"], 2)
+        self.assertEqual(sorted(calls), sorted([MINT_A, MINT_B]))
         body = manifest(d)
         second = [row for row in body if row.get("scan_id") == "20261101T0030" and row["type"] == "scan"][0]
-        self.assertEqual(second["extra_calls"], 1)
-        self.assertEqual(second["follow_stop"], "cap")
-        self.assertGreaterEqual(second["follow_skipped_budget"], 1)
+        self.assertEqual(second["extra_calls"], 2)
+        self.assertIsNone(second["follow_stop"])
+        self.assertEqual(second["follow_skipped_budget"], 0)
         self.assertEqual(second["g5_rate"], 0.0)
-        self.assertEqual(second["pool_lookups"]["extra_attempted"], 1)
+        self.assertEqual(second["pool_lookups"]["extra_attempted"], 2)
         # A's k series is on the follow path, not this scan's candidate. Death file has the drop.
         death = []
         for name in sorted(os.listdir(os.path.join(d, "v2"))):
@@ -337,7 +342,7 @@ class Files(unittest.TestCase):
         body = manifest(d)
         cand = next(item for item in body if item["type"] == "candidate")
         self.assertEqual(body[0]["t_s"], T0)
-        self.assertEqual(cand["reserve"]["t_s"], T0 + 25)
+        self.assertEqual(cand["pair_at_s"], T0 + 25)
         self.assertEqual(cand["inputs"]["age_s"], 7 * 3600 + 25)
         obs = []
         for name in os.listdir(os.path.join(d, "v2")):
@@ -457,7 +462,8 @@ class ScanIntegration(unittest.TestCase):
         tail = [row for row in body if row["type"] == "candidate" and not row["selected"]]
         self.assertEqual(len(tail), 3)
         self.assertTrue(all(row["pool_lookup"] == "not_attempted" for row in tail))
-        self.assertTrue(all(row["rules"]["activity_h1"] == "unknown" for row in tail))
+        self.assertTrue(all("inputs" not in row for row in tail))
+        self.assertTrue(all("rules" not in row for row in tail))
         self.assertEqual(header["extra_calls"], 0)
         self.assertEqual(header["log_errors"], 0)
         self.assertEqual(len(header["source_pages"]), 2)
@@ -479,6 +485,9 @@ class ScanIntegration(unittest.TestCase):
                     return [{"chainId": "solana", "tokenAddress": m} for m in src]
                 if url.endswith("/token-boosts/latest/v1"):
                     return []
+                if "/tokens/v1/solana/" in url:
+                    addrs = url.split("/tokens/v1/solana/")[-1].split(",")
+                    return [pairs[m] for m in addrs if m in pairs]
                 if "/latest/dex/tokens/" in url:
                     mint = url.rstrip("/").split("/")[-1]
                     return {"pairs": [pairs[mint]]}
@@ -497,20 +506,27 @@ class ScanIntegration(unittest.TestCase):
                     return out
                 return get(url, headers)
             d = tempfile.mkdtemp()
+            # pair_at is time.time(). Freeze it on the scan clock so the 2h window
+            # stays open for the follow, and decisions still see T0.
             os.environ["SOLANA_DESK_V2_EXTRA_CALLS"] = "1"
+            real_time = time.time
             try:
+                time.time = lambda: T0
                 run.scan(d, wrapped, now=T0, mode="scan", sleep=lambda s: None, v2_log=flag)
+                time.time = lambda: T0 + 1800
                 run.scan(d, wrapped, now=T0 + 1800, mode="scan", sleep=lambda s: None, v2_log=flag)
             finally:
+                time.time = real_time
                 os.environ.pop("SOLANA_DESK_V2_EXTRA_CALLS", None)
             return d, calls
 
         on_dir, on_calls = run_once(True)
         off_dir, off_calls = run_once(False)
         self.assertEqual(on_calls[:len(off_calls)], off_calls)
-        extra = [u for u in on_calls[len(off_calls):] if "/latest/dex/tokens/" in u]
-        self.assertEqual(extra, [u for u in on_calls if u.rstrip("/").endswith(_mint(1)) and "/latest/dex/tokens/" in u][-1:])
+        extra = [u for u in on_calls[len(off_calls):] if "/tokens/v1/solana/" in u]
         self.assertEqual(len(extra), 1)
+        for mint in first:
+            self.assertIn(mint, extra[0])
         self.assertEqual(len(on_calls), len(off_calls) + 1)
         for name in ("tasks.csv", "state.json", "health.json"):
             with open(os.path.join(on_dir, name), "rb") as fh:
@@ -563,6 +579,9 @@ class ScanIntegration(unittest.TestCase):
                     return [{"chainId": "solana", "tokenAddress": m} for m in src]
                 if url.endswith("/token-boosts/latest/v1"):
                     return []
+                if "/tokens/v1/solana/" in url:
+                    addrs = url.split("/tokens/v1/solana/")[-1].split(",")
+                    return [pairs[m] for m in addrs if m in pairs]
                 if "/latest/dex/tokens/" in url:
                     mint = url.rstrip("/").split("/")[-1]
                     return {"pairs": [pairs[mint]]}
@@ -580,8 +599,15 @@ class ScanIntegration(unittest.TestCase):
                 return get(url, headers, timeout)
 
             d = tempfile.mkdtemp()
-            run.scan(d, wrapped, now=T0, mode="fill", sleep=lambda s: None, v2_log=flag)
-            run.scan(d, wrapped, now=T0 + 1800, mode="fill", sleep=lambda s: None, v2_log=flag)
+            # pair_at is time.time(). Freeze it on the scan clock. See the capped-follow test.
+            real_time = time.time
+            try:
+                time.time = lambda: T0
+                run.scan(d, wrapped, now=T0, mode="fill", sleep=lambda s: None, v2_log=flag)
+                time.time = lambda: T0 + 1800
+                run.scan(d, wrapped, now=T0 + 1800, mode="fill", sleep=lambda s: None, v2_log=flag)
+            finally:
+                time.time = real_time
             return d, calls, timeouts
 
         on_dir, on_calls, on_timeouts = run_once(True)
@@ -602,7 +628,7 @@ class ScanIntegration(unittest.TestCase):
             self.assertEqual(left, right, name)
         self.assertEqual(on_calls[:len(off_calls)], off_calls)
         self.assertGreater(len(on_calls), len(off_calls))
-        self.assertTrue(any("/latest/dex/tokens/" in url for url in on_calls[len(off_calls):]))
+        self.assertTrue(any("/tokens/v1/solana/" in url for url in on_calls[len(off_calls):]))
         self.assertEqual(off_timeouts, [])
         self.assertIn(v2log.FOLLOW_CALL_TIMEOUT_S, on_timeouts)
         body = manifest(on_dir)
@@ -641,6 +667,237 @@ class ScanIntegration(unittest.TestCase):
         path = os.path.join(os.path.dirname(__file__), "..", "specs", "tests-log.csv")
         text = open(path, encoding="utf-8").read()
         self.assertEqual(text, "date,id,family,metric,result,planned\n")
+
+
+class FollowPolicy(unittest.TestCase):
+    def _pool(self, t0, obs_times, sol=10.0):
+        obs, series = [], []
+        for t in obs_times:
+            obs.append({
+                "t_s": t, "sol": sol, "token": 100.0, "k": sol * 100.0, "pool": POOL,
+                "txns_h1": {"buys": 1, "sells": 1}, "error": None,
+            })
+            series.append({"t_s": t, "k": sol * 100.0, "pool": POOL})
+        return {"t0_s": t0, "pool": POOL, "k_series": series, "obs": obs, "snap_stems": []}
+
+    def _run(self, d, pools, now, *, fetch_pairs=None, fetch_pair=None, cap=24, batch=30, budget_s=45):
+        v2log.save_seen(d, {"v": 1, "pools": pools})
+        return v2log.record(
+            d, [], [], now, "20261101T1200",
+            sources=run.LEAD_PATHS, pre_filters=run.LEAD_PRE_FILTERS,
+            fetch_pair=fetch_pair, fetch_pairs=fetch_pairs, sleep=lambda _s: None,
+            cap=cap, batch=batch, budget_s=budget_s, now_fn=lambda: now,
+        )
+
+    def _death(self, d):
+        rows = []
+        for name in os.listdir(os.path.join(d, "v2")):
+            if name.startswith("death-"):
+                rows.extend(lines(os.path.join(d, "v2", name)))
+        return rows
+
+    def test_one_call_covers_a_batch_of_mints(self):
+        d = tempfile.mkdtemp()
+        mints = [_mint(i) for i in range(40)]
+        pools = {m: self._pool(T0, [T0]) for m in mints}
+        batches = []
+
+        def fetch(group):
+            batches.append(list(group))
+            return {m: pair(m) for m in group}
+
+        summary = self._run(d, pools, T0 + 60, fetch_pairs=fetch, cap=2, batch=30)
+        self.assertEqual(summary["extra_calls"], 2)
+        self.assertEqual([len(b) for b in batches], [30, 10])
+        self.assertEqual(sorted(m for b in batches for m in b), sorted(mints))
+        header = [row for row in manifest(d) if row["type"] == "scan"][-1]
+        self.assertEqual(header["pool_lookups"]["extra_attempted"], 40)
+        self.assertEqual(header["pool_lookups"]["extra_failed"], 0)
+        self.assertEqual(header["follow_skipped_budget"], 0)
+        self.assertEqual(header["batch_size"], 30)
+        self.assertIsNone(header["follow_stop"])
+
+    def test_over_cap_keeps_the_lowest_mint_hash(self):
+        d = tempfile.mkdtemp()
+        mints = [_mint(i) for i in range(8)]
+        ranked = sorted(mints, key=v2log.mint_rank)
+        kept, skipped = ranked[:3], ranked[3:]
+        pools = {m: self._pool(T0, [T0]) for m in reversed(ranked)}
+        batches = []
+
+        def fetch(group):
+            batches.append(list(group))
+            return {m: pair(m) for m in group}
+
+        summary = self._run(d, pools, T0 + 60, fetch_pairs=fetch, cap=1, batch=3)
+        self.assertEqual(batches, [kept])
+        self.assertEqual(summary["follow_stop"], "cap")
+        self.assertEqual(summary["follow_skipped_budget"], 5)
+        skips = [row for row in self._death(d) if row["type"] == "skip"]
+        self.assertEqual(sorted(row["mint"] for row in skips), sorted(skipped))
+        self.assertTrue(all(row["reason"] == "cap" and row["tier"] == 0 for row in skips))
+        header = [row for row in manifest(d) if row["type"] == "scan"][-1]
+        self.assertEqual(header["follow_skip_reasons"], {"cap": 5, "budget": 0, "429": 0})
+        again = tempfile.mkdtemp()
+        pools_forward = {m: self._pool(T0, [T0]) for m in ranked}
+        batches.clear()
+        self._run(again, pools_forward, T0 + 60, fetch_pairs=fetch, cap=1, batch=3)
+        self.assertEqual(batches, [kept])
+
+    def test_open_window_beats_a_lower_hash_closer(self):
+        d = tempfile.mkdtemp()
+        left, right = _mint(1), _mint(2)
+        low, high = (left, right) if v2log.mint_rank(left) < v2log.mint_rank(right) else (right, left)
+        now = T0 + v2log.DEATH_WINDOW_S + 10
+        end = now - 10
+        t0 = end - v2log.DEATH_WINDOW_S
+        times = [t0 + i * 1800 for i in range(4)] + [end - 30]
+        self.assertLess(times[-1], end)
+        self.assertLessEqual(now - times[-1], v2log.H1_S)
+        pools = {
+            high: self._pool(now - 1000, [now - 1000]),
+            low: self._pool(t0, times),
+        }
+        calls = []
+
+        def fetch(group):
+            calls.append(list(group))
+            return {m: pair(m) for m in group}
+
+        self._run(d, pools, now, fetch_pairs=fetch, cap=1, batch=1)
+        self.assertEqual(calls, [[high]])
+        skips = [row for row in self._death(d) if row["type"] == "skip"]
+        self.assertEqual([row["mint"] for row in skips], [low])
+        self.assertEqual(skips[0]["tier"], 1)
+        self.assertEqual(skips[0]["reason"], "cap")
+
+    def test_a_final_label_is_not_fetched_again(self):
+        d = tempfile.mkdtemp()
+        mint = _mint(4)
+        pools = {mint: self._pool(T0, [T0, T0 + 100], sol=10)}
+        pools[mint]["obs"][1]["sol"] = 1
+        pools[mint]["obs"][1]["k"] = 100
+
+        def fetch(_group):
+            raise AssertionError("final pool was fetched")
+
+        summary = self._run(d, pools, T0 + 200, fetch_pairs=fetch, cap=4, batch=30)
+        self.assertEqual(summary["extra_calls"], 0)
+        self.assertIsNone(summary["follow_stop"])
+        _doc, bad = v2log.load_seen(d)
+        self.assertFalse(bad)
+        info = _doc["pools"][mint]
+        self.assertTrue(info["final"])
+        self.assertNotIn("obs", info)
+        self.assertTrue(info["k_series"])
+        self.assertEqual(info["death"]["dead"], True)
+        self.assertEqual(info["death"]["reason"], "price")
+        self._run(d, _doc["pools"], T0 + 400, fetch_pairs=fetch, cap=4, batch=30)
+
+    def test_a_closed_gap_is_marked_missed_without_a_fetch(self):
+        d = tempfile.mkdtemp()
+        mint = _mint(5)
+        now = T0 + 5 * 3600
+        pools = {mint: self._pool(T0, [T0])}
+
+        def fetch(_group):
+            raise AssertionError("missed pool was fetched")
+
+        self._run(d, pools, now, fetch_pairs=fetch)
+        labels = [row for row in self._death(d) if row["type"] == "label"]
+        self.assertEqual(len(labels), 1)
+        self.assertEqual(labels[0]["reason"], "missed")
+        self.assertIsNone(labels[0]["dead"])
+        self.assertFalse(labels[0]["pending"])
+        self.assertEqual(v2log.death_label(pools[mint]["obs"], now=now)["reason"], "missed")
+        stored = v2log.load_seen(d)[0]["pools"]
+        self._run(d, stored, now + 1800, fetch_pairs=fetch)
+        labels = [row for row in self._death(d) if row["type"] == "label" and row["reason"] == "missed"]
+        self.assertEqual(len(labels), 1)
+
+    def test_a_429_stops_later_batches(self):
+        d = tempfile.mkdtemp()
+        mints = [_mint(i) for i in range(40)]
+        pools = {m: self._pool(T0, [T0]) for m in mints}
+
+        def fetch(group):
+            raise urllib.error.HTTPError("u", 429, "rate", {}, io.BytesIO(b""))
+
+        summary = self._run(d, pools, T0 + 60, fetch_pairs=fetch, cap=2, batch=30)
+        self.assertEqual(summary["extra_calls"], 1)
+        self.assertEqual(summary["follow_stop"], "429")
+        header = [row for row in manifest(d) if row["type"] == "scan"][-1]
+        self.assertEqual(header["pool_lookups"]["extra_failed"], 30)
+        self.assertEqual(header["follow_skip_reasons"]["429"], 10)
+        self.assertEqual(header["follow_skipped_budget"], 10)
+
+    def test_best_pairs_picks_the_sol_pair_with_the_most_quote(self):
+        seen = []
+
+        def get(url, headers=None, timeout=None):
+            seen.append((url, timeout))
+            return [
+                pair(MINT_A, sol=5),
+                pair(MINT_A, sol=50, pool="2" * 32),
+                {
+                    "chainId": "solana", "dexId": "pumpswap", "pairAddress": "3" * 32,
+                    "quoteToken": {"address": "not-sol"}, "baseToken": {"address": MINT_B},
+                    "liquidity": {"quote": 999, "base": 1},
+                    "txns": {"h1": {"buys": 1, "sells": 1}},
+                },
+                pair(MINT_B, sol=3),
+            ]
+
+        got = run.best_pairs(get, [MINT_A, MINT_B, MINT_C])
+        self.assertEqual(got[MINT_A]["liquidity"]["quote"], 50)
+        self.assertEqual(got[MINT_B]["liquidity"]["quote"], 3)
+        self.assertIsNone(got[MINT_C])
+        self.assertEqual(len(seen), 1)
+        self.assertIn(MINT_A + "," + MINT_B + "," + MINT_C, seen[0][0])
+        self.assertIn("/tokens/v1/solana/", seen[0][0])
+
+    def test_manifest_rows_drop_derivable_fields(self):
+        d = tempfile.mkdtemp()
+        mints = [_mint(i) for i in range(45)]
+        rc = rc_for()
+        rc["topHolders"] = [
+            {"pct": (i + 1) / 10.0, "owner": "H" * 32, "address": "A" * 32} for i in range(20)
+        ]
+        seen = [(m, "token-profiles") for m in mints]
+        rows = [fetched(m, pair(m), rc) for m in mints[:12]]
+        v2log.record(
+            d, seen, rows, T0, "20261101T0000",
+            sources=run.LEAD_PATHS, pre_filters=run.LEAD_PRE_FILTERS,
+            fetch_pair=None, sleep=lambda _s: None, leads_per_run=12,
+        )
+        names = [n for n in os.listdir(os.path.join(d, "v2")) if n.startswith("manifest-")]
+        raw = open(os.path.join(d, "v2", names[0]), "rb").read()
+        self.assertLess(len(raw), 28000)
+        text = raw.decode()
+        self.assertNotIn("H" * 32, text)
+        self.assertNotIn("liquidity_quote", text)
+        self.assertNotIn("boost_window", text)
+        self.assertNotIn("top10_ex_pool", text)
+        body = manifest(d)
+        tail = [row for row in body if row["type"] == "candidate" and row["pool_lookup"] == "not_attempted"]
+        self.assertEqual(len(tail), 33)
+        for row in tail:
+            self.assertNotIn("inputs", row)
+            self.assertLess(len(json.dumps(row, separators=(",", ":"))), 420)
+        ok = next(row for row in body if row["type"] == "candidate" and row["pool_lookup"] == "ok")
+        self.assertLess(len(json.dumps(ok["inputs"], separators=(",", ":"))), 1200)
+        snaps = []
+        for name in os.listdir(os.path.join(d, "v2")):
+            if name.startswith("pool-snaps-"):
+                snaps.extend(lines(os.path.join(d, "v2", name)))
+        series = [
+            {"t_s": row["t_s"], "k": row["k"], "pool": row["pool"]}
+            for row in snaps if row["mint"] == ok["mint"]
+        ]
+        self.assertEqual(v2log.rules_from_logged(ok["inputs"], series, True), ok["rules"])
+        hydrated = v2log.hydrate_inputs(ok["inputs"])
+        self.assertEqual(hydrated["top10_ex_pool"], v2log.top10_from_rows(v2log._expand_holders(ok["inputs"]["holders"])))
+        self.assertEqual(hydrated["k"], hydrated["sol"] * hydrated["token"])
 
 
 if __name__ == "__main__":
