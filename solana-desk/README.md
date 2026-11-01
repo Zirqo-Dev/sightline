@@ -85,5 +85,17 @@ On the position, and kept on the closed row:
 
 `scan_timing.jsonl` in the desk data directory (desk-data `solana-desk/scan_timing.jsonl`) gets one line per completed scan: `scheduled_utc` (the 30-minute cron slot), `started_utc`, `delay_s`, `run_id`, `mode`, and `trigger` (the workflow event name, or `local`). A duplicate slot does not append. Position rows are stamped `obs_v` 1.
 
+## v2 prerequisites (logging only)
+`specs/v2-preregistration.md` section 2 is the list. This layer records the blocking gaps G10, G1, G2, G6, and the G5 pool-lookup counts. It does not enter S2, draw the twin, or change books F, R, or S. `specs/tests-log.csv` is the empty G7 log (`date,id,family,metric,result,planned`). `scripts/g8_authorities.py` is the G8 report and does not change the mint/freeze rule. Set `SOLANA_DESK_V2_LOG=0` to skip the writes. A failure in this layer is counted and the scan continues.
+
+Files land in the desk data directory under `v2/` (desk-data `solana-desk/v2/`) and roll on the UTC day and at 5 MB:
+
+- `manifest-YYYYMMDD.jsonl` — one scan header (sources, pre-filters, `LEADS_PER_RUN`, page limit) and one line per candidate mint. Each looked-up line stores the S2 inputs as fetched, with fetch time, and pass/fail for `graduated_age`, `sol_reserve`, `activity_h1`, `holders`, `k_stable`, and `authorities`. Holder rows are percent, excluded, and creator-flag only. The header lists S2 picks and the twin candidate mints. `twin_draws` is null. `pool_lookups_failed / pool_lookups_attempted` is the G5 rate (a no-SOL-pair response is attempted and not failed).
+- `pool-snaps-YYYYMMDD.jsonl` — SOL reserve, token reserve, k, pool, and time for every resolved pool on the scan, plus follow-up reads. Uncapped. The position field `reserve_snaps` still keeps 48.
+- `death-YYYYMMDD.jsonl` — raw reserve and `txns.h1` observations from first seen, plus a label recomputed from those rows. Dead means reserve price at least 80% below t0 inside two hours, or zero h1 swaps across a covered two-hour window.
+- `seen.json` — mint index for the next scan (first-seen time and k series). Not a decision input.
+
+A scan that already fetched a mint makes no extra call for it. Pools that have left the lead page are re-read with DexScreener only, death-window first, at most 24 calls (`SOLANA_DESK_V2_EXTRA_CALLS`, hard max 100) paced at 0.3s (`SOLANA_DESK_V2_EXTRA_GAP_S`). No new RugCheck, Jupiter, or RPC call is added to the scan. Typical size is about 1–2 MB/day across the three logs. If the same pools are snapshotted every 30 minutes for two weeks, the manifest can reach about 5–12 MB/day because each row copies its k series; the 5 MB roll splits the file.
+
 ## Tests
     cd solana-desk && python3 -m unittest discover -s tests -t .

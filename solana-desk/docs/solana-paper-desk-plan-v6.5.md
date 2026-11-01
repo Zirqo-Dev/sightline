@@ -401,3 +401,7 @@ Removed earlier because they pass on a broken desk: skip rate of 90% or more, av
 2. **the owner does three one-time steps himself on his phone or laptop:** The free Jupiter API key; a fine-grained token for Zirqo-Dev/sightline only (Contents read/write, 30-60 day expiry); a branch protection rule on `main`. Keys go in as secrets, never into chat.
 3. **One KING setup run:** Builds `solana/desk/` with shadow.py (F, R, S), the fixed 0.5 SOL ticket, would-halt logging, the Option A loop with a lock file, the `desk-data` branch and Pages-via-Actions, delivered as a PR that the owner merges from his phone (no direct push to `main`), then runs the day-1 threshold and box-uptime checks.
 4. **Days 2-3 scan + verify only; freeze at end of day 3; fills from day 4:** Optional: log your KILL/STOP/PASS prediction with a confidence before day 4. Day 14 (early stop only) and day 28 (the real test) follow the decision table and the Checkpoints.
+
+## v2 logging prerequisites (not a rule change)
+
+The v2 spec is `specs/v2-preregistration.md`. Books F, R, and S stay on the frozen v6.5 rules through the day-14 and day-28 judgments. The logging added for the blocking data gaps writes under desk-data `solana-desk/v2/` and does not change an entry, exit, filter, size, cost, or scan-timing decision. `specs/tests-log.csv` is the empty test log. The G8 authority script is a report.

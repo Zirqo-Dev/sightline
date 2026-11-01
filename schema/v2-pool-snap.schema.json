@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zirqo-dev.github.io/sightline/schema/v2-pool-snap.schema.json",
+  "title": "Solana desk v2 pool snapshot line",
+  "description": "One solana-desk/v2/pool-snaps-YYYYMMDD.jsonl line. Uncapped reserve history for v2. The v6.5 reserve_snaps cap of 48 is a different field. Logging only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "scan_id", "mint", "pool", "t", "t_s", "sol", "token", "k", "txns_h1", "origin", "error"],
+  "properties": {
+    "v": {"const": 1},
+    "scan_id": {"type": "string", "pattern": "^[0-9]{8}T[0-9]{4}$"},
+    "mint": {"type": "string", "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$"},
+    "pool": {"type": ["string", "null"], "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$"},
+    "t": {"type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "t_s": {"type": ["integer", "null"]},
+    "sol": {"type": ["number", "null"]},
+    "token": {"type": ["number", "null"]},
+    "k": {"type": ["number", "null"]},
+    "txns_h1": {"type": ["object", "null"], "additionalProperties": {"type": ["number", "null"]}},
+    "origin": {"enum": ["scan", "follow"]},
+    "error": {"type": ["string", "null"], "maxLength": 32}
+  }
+}

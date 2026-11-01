@@ -31,7 +31,7 @@ def risk_maps(doc):
     return found
 
 os.chdir(sys.argv[1] if len(sys.argv)>1 else ROOT)
-S={k:Draft202012Validator(json.load(open(f"{SCHEMA}/{k}.schema.json"))) for k in("paper-book","run-log","brief","pulse","solada-vetoes","solana-rugger-log","x-buzz","x-buzz-history","buzz-outcomes","buzz-outcomes-summary","whale-roster","scan-timing")}
+S={k:Draft202012Validator(json.load(open(f"{SCHEMA}/{k}.schema.json"))) for k in("paper-book","run-log","brief","pulse","solada-vetoes","solana-rugger-log","x-buzz","x-buzz-history","buzz-outcomes","buzz-outcomes-summary","whale-roster","scan-timing","v2-manifest","v2-pool-snap","v2-death")}
 for v in S.values(): v.check_schema(v.schema)
 jobs=[]
 for d in json.load(open("desks.json"))["desks"]:
@@ -87,6 +87,19 @@ timing=[]
 for cand in ("solana-desk/scan_timing.jsonl", "scripts/fixtures/solana-desk/scan_timing.jsonl"):
     if os.path.exists(cand): timing.append(cand)
     else: print(f"skip {cand} (not written yet)")
+# v2 prerequisite logs. One JSON object per line. Absent until a scan writes them.
+V2_LOGS = (
+    ("manifest", "v2-manifest"),
+    ("pool-snaps", "v2-pool-snap"),
+    ("death", "v2-death"),
+)
+v2_files = []
+for stem, kind in V2_LOGS:
+    found = sorted(glob.glob(f"solana-desk/v2/{stem}-*.jsonl"))
+    fix = f"scripts/fixtures/solana-desk/v2-{stem}.jsonl"
+    if os.path.exists(fix): found.append(fix)
+    elif not found: print(f"skip {fix} (not written yet)")
+    v2_files.append((kind, found))
 bad=0
 risk_schema=S["run-log"].schema["properties"]["risk_check"]
 risk_check=Draft202012Validator(risk_schema)
@@ -137,6 +150,19 @@ def timing_errors(path):
                 found.append(f"line {n} at /{'/'.join(map(str,e.path))}: {e.message[:200]}")
     return found
 
+def v2_line_errors(path, kind):
+    """One v2 manifest, snapshot, or death record per non-empty line."""
+    found=[]
+    with open(path,encoding="utf-8") as fh:
+        for n,line in enumerate(fh,1):
+            if not line.strip(): continue
+            try: row=json.loads(line)
+            except json.JSONDecodeError as e:
+                found.append(f"line {n}: {e.msg}"); continue
+            for e in S[kind].iter_errors(row):
+                found.append(f"line {n} at /{'/'.join(map(str,e.path))}: {e.message[:200]}")
+    return found
+
 def outcome_errors(path):
     """Schema plus privacy. A match reports the field, not the value."""
     found=[]
@@ -164,6 +190,13 @@ for f in timing:
     for msg in errs[:20]: print(f"INVALID {f} (scan-timing) {msg}")
     bad+=bool(errs)
     if not errs: print(f"ok {f} (scan-timing)")
+for kind, paths in v2_files:
+    for f in paths:
+        if not os.path.exists(f): print(f"MISSING {f}"); bad+=1; continue
+        errs=v2_line_errors(f, kind)
+        for msg in errs[:20]: print(f"INVALID {f} ({kind}) {msg}")
+        bad+=bool(errs)
+        if not errs: print(f"ok {f} ({kind})")
 for f in outcome_files:
     if not os.path.exists(f): print(f"MISSING {f}"); bad+=1; continue
     errs=outcome_errors(f)
