@@ -673,9 +673,7 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   const preview = fs.readFileSync(path.join(root, "preview.html"), "utf8");
   const legacyPage = fs.readFileSync(path.join(root, "legacy.html"), "utf8");
   const legacyLogo = '<a class="logo" href="#/">&gt;sight<span>line</span><i>_</i></a>';
-  const wordmark = '<a class="sl-wordmark" href="#/">SIGHTLINE<i aria-hidden="true"></i></a>';
-  assert(legacyPage.includes(legacyLogo), "legacy dashboard keeps the previous wordmark");
-  assert(index.includes(wordmark) && preview.includes(wordmark) && !index.includes(legacyLogo), "live shell uses the shared wordmark");
+  assert(legacyPage.includes(legacyLogo) && index.includes(legacyLogo) && preview.includes(legacyLogo), "every shell keeps the >sightline_ logo");
   assert(index.includes('href="preview/theme.css"') && preview.includes('href="preview/theme.css"'), "live shell loads the shared theme");
   assert(index.includes('href="preview/app.css"') && index.includes('src="preview/app.js"') && index.includes('src="preview/cardano-v2.js"'), "live page serves the redesigned shell");
   assert(!index.includes("preview.html") && !index.includes("preview-tag"), "live page is not the design sandbox");
@@ -685,13 +683,14 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(!legacyPage.includes("preview/app.js"), "legacy page does not load the redesigned shell");
   const css = fs.readFileSync(path.join(root, "preview/app.css"), "utf8");
   const theme = fs.readFileSync(path.join(root, "preview/theme.css"), "utf8");
-  for (const piece of ["--sl-bg:#0B0E11", "--sl-surface:#161A1E", "--sl-wordmark", ".sl-wordmark", ".sl-row", ".sl-pill", ".sl-pick", ".sl-sheet", ".sl-mascot", ".sl-mark"]) {
+  for (const piece of ["--sl-bg:#0B0E11", "--sl-surface:#161A1E", "--sl-wordmark", ".logo span,.logo i{color:var(--sl-wordmark)", ".sl-row", ".sl-pill", ".sl-pick", ".sl-sheet", ".sl-mascot", ".sl-mark"]) {
     assert(theme.includes(piece), "shared theme includes " + piece);
   }
   assert(theme.includes('body[data-desk="solada"]') && theme.includes("#B5E853"), "Cardano wordmark token is lime");
   assert(theme.includes('body[data-desk="solana"]') && theme.includes("#14F195"), "Solana wordmark token is set");
   assert(theme.includes('body[data-desk="nft"]') && theme.includes("#ff4fd8"), "NFT wordmark token is set");
-  assert(css.includes(".logo span{color:var(--accent)") && css.includes(".logo i{font-style:normal;color:var(--accent)"), "logo color still follows --accent");
+  assert(css.includes(".logo span{color:var(--sl-wordmark)") && css.includes(".logo i{font-style:normal;color:var(--sl-wordmark)") && css.includes("animation:blink 1.1s steps(1) infinite"), "logo line and cursor use the per-tab colour and blink");
+  assert(css.includes(".logo i{animation:none !important}"), "reduced motion stops the logo blink");
   assert(css.includes('body[data-desk="nft"]') && css.includes("#ff4fd8"), "NFT accent reaches the logo token");
   assert(css.includes("#14F195") && css.includes("#9945FF") && css.includes("#3d8bff"), "Solana and Cardano palettes stay");
   assert(css.includes("prefers-reduced-motion"), "reduced motion is respected");

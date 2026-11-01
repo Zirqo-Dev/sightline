@@ -511,26 +511,15 @@
     const cur = doc.querySelector(".logo i");
     if (!span || !cur) return;
     const gen = ++state.logoGen;
-    const color = logoColor(routeId, model);
     const run = () => {
       if (gen !== state.logoGen) return;
-      if (!color) {
-        span.style.color = "";
-        cur.style.color = "";
-        span.style.textShadow = "";
-        span.removeAttribute("title");
-        return;
-      }
-      span.style.color = color;
-      cur.style.color = color;
-      span.style.textShadow = "0 0 12px " + color;
-      span.title = "hottest: " + model.hottest.ticker;
+      span.style.color = "";
+      cur.style.color = "";
+      span.style.textShadow = "";
+      cur.style.textShadow = "";
+      span.removeAttribute("title");
     };
-    if (!color || !motionOK()) run();
-    else {
-      const timer = (root && root.setTimeout) || setTimeout;
-      timer(run, 700);
-    }
+    run();
   }
   function mount(view, routeId, doc, historyText) {
     state.model = buzzModel(doc);
