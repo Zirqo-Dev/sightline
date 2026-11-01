@@ -1316,7 +1316,17 @@
    "locked": "No term changes after peeking; any change may only make passing harder, owner approval required",
    "tickets": [],
    "comparison_group": [],
-   "unverifiable": []
+   "unverifiable": [],
+   "measurement_locked_at": "2026-11-01T14:41:00-05:00",
+   "measurement": {
+    "cost_haircut": "2% round-trip, applied to every SW-01 ticket and every comparison entry",
+    "buys_sells_6h": "GeckoTerminal pool 6h transaction counts at the qualifying run; if unavailable or the token is still on curve, log as unverifiable and do not count",
+    "holders": "on-chain unique holders (Blockfrost) excluding pool and curve addresses; use the lower of that and Solada's count",
+    "whale_accumulating": "tracked whale = any codenamed wallet on the desk whale watch; net ADA into the token > 0 over launch+24h to the qualifying run, by on-chain trace; reward claims, airdrops and transfers in are not buys",
+    "exit_48h": "pool price from the GeckoTerminal candle closest to entry+48h; if missing, the first desk-run price after 48h",
+    "comparison_unbonded": "entry = curve price at the run where the swarm flag was first logged; 48h = curve price (Solada API or on-chain) at the first run after 48h; -100% if ADA side < 500 ADA or no price; 'no price' if neither readable, excluded from the mean",
+    "swarm_flagged": "existing prefilter flags.json coordinated-buyer or fresh-wallet-swarm flags at launch; first seen = first desk log entry for that policy after 2026-11-01T14:40:00-05:00; swarm-flag timestamps logged in comparison_group"
+   }
   }
  ],
  "book_status": {
