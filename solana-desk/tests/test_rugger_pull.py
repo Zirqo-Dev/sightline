@@ -1,19 +1,26 @@
-"""SH-04: a Solana liquidity-pull exit does not write the rugger blacklist.
+"""SH-04: validated, unwired by design, not a writer defect.
+
+A Solana liquidity-pull exit does not write the rugger blacklist. The README
+says there is no LP-pull or dump event feed. observe_rugger is the only
+Solana writer, and it records RugCheck rugged is True on a lead. It does not
+see the exit, and the exit does not carry a deployer.
+
+The Solana blacklist is log-only. The hook runs after skip classification.
+Skip, fill, exit, and book code never read it, so a writer would not change
+v6.5 paper entries and would not bias F against R. Leaving the write for
+v6.6 is operational risk in the frozen run: new code can crash or time out
+a scan, an outage over 2h voids new entries, and work in the lead loop or
+manage() moves quote timing.
 
 Production path: desk.run.scan(mode="fill") calls fills.step, which calls
-exits.check. A SOL-side drop of at least liq_drop closes the position as
-liquidity_pulled. The rugger book is saved earlier, from the lead loop.
-observe_rugger is the only Solana writer. It records RugCheck rugged is True.
-It does not see the exit, and the exit does not carry a deployer.
+exits.check. A SOL-side drop of at least liq_drop closes as liquidity_pulled.
+The rugger book is saved earlier, from the lead loop.
 
-This asserts that shipped behavior. It is not an xfail: the v6.5 contract
-(README and the would-veto note) says this desk has no LP-pull feed.
-TODO(v6.6): on a true pull, note the deployer in the private cache only.
-Do not flip the "no entry" assertions until that version. A blacklist that
-starts storing pull deployers changes who is listed, and v6.5 stays frozen.
-
-Dated observation this test explains, not a live read: on 2026-11-01 the
-public desk had 69 liquidity_pulled sells and rugger_status entries 0.
+Desk-data through 2026-11-01: 69 liquidity_pulled sells on 51 mints, and
+rugger_status entries 0. 35 of those sells are before the blacklist merged
+(2026-10-29 17:11Z). After that merge: 34 sells on 27 mints. 13 of the 51
+mints came back as leads after the pull; RugCheck flagged none rugged, and
+2 passed the safety filters again.
 """
 import csv
 import inspect
@@ -75,7 +82,12 @@ def _rc(rugged):
     }
 
 
-def _get(mint, liq, rugged):
+def _get(mint, liq, rugged, unexpected):
+    """Serve the scripted lead. Unknown URLs are recorded, then raised.
+
+    scan catches Exception around each fetch, so a bare raise is swallowed
+    and the test would still pass. The list is the guard.
+    """
     def get(url, headers=None):
         if url.endswith("/token-profiles/latest/v1"):
             return [{"chainId": "solana", "tokenAddress": mint}]
@@ -94,6 +106,7 @@ def _get(mint, liq, rugged):
             return body
         if "jup.ag" in url and "quote" in url:
             return {"outAmount": str(TOK), "priceImpactPct": "0.01", "routePlan": [1]}
+        unexpected.append(url)
         raise AssertionError("unexpected url")
 
     return get
@@ -106,6 +119,7 @@ class SolanaPullDoesNotBlacklist(unittest.TestCase):
             self._saved[key] = os.environ.pop(key, None)
         self.notes = []
         self.syncs = []
+        self.unexpected = []
         self.phase = "setup"
         self._real_note = RB.Book.note_evidence
         self._real_sync = RB.sync_cache
@@ -116,13 +130,13 @@ class SolanaPullDoesNotBlacklist(unittest.TestCase):
             self.notes.append((self.phase, chain, tag, token))
             return self._real_note(book, wallet, chain, tag, token, at)
 
-        def sync_cache(*args, **kwargs):
+        def sync_cache(*_args, **_kwargs):
             self.syncs.append("sync_cache")
-            return self._real_sync(*args, **kwargs)
+            return False
 
-        def push_private(*args, **kwargs):
+        def push_private(*_args, **_kwargs):
             self.syncs.append("push_private")
-            return self._real_push(*args, **kwargs)
+            return False
 
         RB.Book.note_evidence = note
         RB.sync_cache = sync_cache
@@ -140,7 +154,8 @@ class SolanaPullDoesNotBlacklist(unittest.TestCase):
 
     def test_pull_exit_writes_no_blacklist_entry(self):
         # The hook the scan uses for a pull is fills.step. It has no blacklist call.
-        # TODO(v6.6): drop these source assertions once the private-cache write exists.
+        # TODO(v6.6): drop these source assertions once a private-cache write exists.
+        # That write would stay log-only. The wait is operational risk, not F-vs-R bias.
         self.assertIn("fills.step", inspect.getsource(run.scan))
         self.assertNotIn("note_evidence", inspect.getsource(run.fills.step))
         self.assertNotIn("note_evidence", inspect.getsource(run.fills.manage))
@@ -154,7 +169,7 @@ class SolanaPullDoesNotBlacklist(unittest.TestCase):
 
             def scan_at(when, mint, liq, rugged, mode):
                 return run.scan(
-                    data, _get(mint, liq, rugged), key=None, now=when, mode=mode,
+                    data, _get(mint, liq, rugged, self.unexpected), key=None, now=when, mode=mode,
                     sleep=lambda _s: None, cache_dir=cache, v2_log=False,
                 )
 
@@ -216,10 +231,11 @@ class SolanaPullDoesNotBlacklist(unittest.TestCase):
             # With nothing stored, that step would push an empty list.
             self.assertEqual(self.syncs, [])
 
-            # Control: the wired writer still stores RugCheck rugged. The pull mint stays off.
-            # TODO(v6.6): a pull should show up here as lp_pulled on the same deployer.
+            # Control, still fill mode: the wired writer stores RugCheck rugged.
+            # The pull mint stays off that entry. A future lp_pulled tag would be
+            # log-only; it would not change skips, fills, exits, or books.
             self.phase = "control"
-            scan_at(T0 + 3600, OTHER, 100.0, True, "scan")
+            scan_at(T0 + 3600, OTHER, 100.0, True, "fill")
             kind, doc = RB._cache_parts(cache)
             self.assertEqual(kind, "hit")
             self.assertEqual(len(doc.get("entries") or {}), 1)
@@ -247,6 +263,7 @@ class SolanaPullDoesNotBlacklist(unittest.TestCase):
             self.assertTrue(all(row["mint"] != MINT for row in would["rows"]))
             self.assertNotIn("lp_pulled", json.dumps(would))
             self.assertEqual(self.syncs, [])
+            self.assertEqual(self.unexpected, [])
 
 
 if __name__ == "__main__":
