@@ -1,5 +1,5 @@
 {
- "at": "2026-11-01T09:14:28Z",
+ "at": "2026-11-01T11:15:08Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -256,7 +256,7 @@
    "policy_short": "29d222ce",
    "rank": 4,
    "unit_source": "cache",
-   "last_checked": "2026-10-31T20:15:29Z"
+   "last_checked": "2026-11-01T11:15:08Z"
   },
   {
    "ticker": "SNEK",
@@ -301,15 +301,10 @@
   }
  ],
  "coverage": {
-  "STRIKE": {
-   "read": 1,
-   "complete": false,
-   "pools": 0
-  },
   "MIN": {
    "read": 0,
    "complete": false,
-   "skipped": "budget"
+   "pools": 0
   },
   "COCK": {
    "read": 0,
@@ -345,10 +340,14 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "STRIKE": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "STRIKE",
   "MIN",
   "COCK",
   "ASCEND",
@@ -356,7 +355,8 @@
   "CLOVE",
   "SNEK",
   "NIGHT",
-  "IAG"
+  "IAG",
+  "STRIKE"
  ],
  "koios_calls": 4,
  "blockfrost_calls": 0,
