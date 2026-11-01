@@ -147,6 +147,8 @@ def parse(url):
         return "profiles", None, None
     if url.endswith("/token-boosts/latest/v1"):
         return "boosts", None, None
+    if "/tokens/v1/solana/" in url:
+        return "dexbatch", url.rstrip("/").split("/")[-1].split(","), None
     if "/latest/dex/tokens/" in url:
         return "dex", url.rstrip("/").split("/")[-1], None
     if "rugcheck.xyz/v1/tokens/" in url and url.endswith("/report"):
@@ -168,6 +170,12 @@ class Market:
     def get(self, url, headers=None):
         self.calls.append(url)
         kind, mint, amount = parse(url)
+        if kind == "dexbatch":
+            rows = []
+            for one in mint:
+                doc = respond("dex", one, self.scan, amount)
+                rows.extend(doc.get("pairs") or [])
+            return rows
         return respond(kind, mint, self.scan, amount)
 
 

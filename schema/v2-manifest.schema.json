@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://zirqo-dev.github.io/sightline/schema/v2-manifest.schema.json",
   "title": "Solana desk v2 universe manifest line",
-  "description": "One solana-desk/v2/manifest-YYYYMMDD.jsonl line. Logging only. A scan header or one candidate mint. Not an entry, exit, or skip.",
+  "description": "One solana-desk/v2/manifest-YYYYMMDD.jsonl line. Logging only. A scan header or one candidate mint. A later row may omit derivable inputs and the blank input object. Not an entry, exit, or skip.",
   "oneOf": [
     {"$ref": "#/$defs/scan"},
     {"$ref": "#/$defs/candidate"}
@@ -77,8 +77,20 @@
         "rug_fail_rate": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
         "extra_calls": {"type": "integer", "minimum": 0},
         "extra_call_cap": {"type": "integer", "minimum": 0},
+        "batch_size": {"type": "integer", "minimum": 0, "maximum": 30},
         "follow_budget_s": {"type": "number", "minimum": 0},
         "follow_skipped_budget": {"type": "integer", "minimum": 0},
+        "follow_skip_reasons": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cap", "budget", "429"],
+          "properties": {
+            "cap": {"type": "integer", "minimum": 0},
+            "budget": {"type": "integer", "minimum": 0},
+            "429": {"type": "integer", "minimum": 0}
+          }
+        },
+        "follow_missed": {"type": "integer", "minimum": 0},
         "follow_stop": {"enum": ["cap", "budget", "429", null]},
         "snap_files": {"type": "array", "items": {"type": "string", "maxLength": 80}},
         "s2_picks": {"type": "array", "items": {"$ref": "#/$defs/mint"}},
@@ -106,21 +118,21 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "type", "v", "scan_id", "t", "t_s", "mint", "source", "seen_index", "selected",
-        "pool_lookup", "pair_fetched_at", "rug_fetched_at", "inputs", "reserve", "rules",
-        "k_series_n", "k_last", "k_max_drop", "snap_stems", "first_pick"
+        "type", "v", "scan_id", "t_s", "mint", "source", "seen_index", "selected", "pool_lookup"
       ],
       "properties": {
         "type": {"const": "candidate"},
         "v": {"const": 1},
         "scan_id": {"$ref": "#/$defs/scanId"},
-        "t": {"$ref": "#/$defs/iso"},
+        "t": {"anyOf": [{"$ref": "#/$defs/iso"}, {"type": "null"}]},
         "t_s": {"type": "integer"},
         "mint": {"$ref": "#/$defs/mint"},
         "source": {"enum": ["token-profiles", "token-boosts"]},
         "seen_index": {"type": "integer", "minimum": 0},
         "selected": {"type": "boolean"},
         "pool_lookup": {"enum": ["ok", "failed", "no_pair", "not_attempted"]},
+        "pair_at_s": {"type": ["integer", "null"]},
+        "rug_at_s": {"type": ["integer", "null"]},
         "pair_fetched_at": {"type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
         "rug_fetched_at": {"type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
         "inputs": {"$ref": "#/$defs/inputs"},
@@ -166,10 +178,9 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "dexId", "pairAddress", "pairCreatedAt", "pair_created_at_s", "age_s", "graduated_pump",
-        "liquidity_quote", "liquidity_base", "sol", "token", "k", "reserve_error", "txns_h1",
-        "holders", "holders_truncated", "top10_ex_pool", "dev_pct", "mint_authority", "freeze_authority",
-        "score_normalised", "boost_window"
+        "dexId", "pairAddress", "pairCreatedAt", "age_s", "graduated_pump",
+        "sol", "token", "txns_h1", "holders", "mint_authority", "freeze_authority",
+        "score_normalised"
       ],
       "properties": {
         "dexId": {"type": ["string", "null"], "maxLength": 32},
@@ -188,14 +199,29 @@
         "holders": {
           "type": ["array", "null"],
           "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["pct", "excluded", "is_creator"],
-            "properties": {
-              "pct": {"type": "number"},
-              "excluded": {"type": "boolean"},
-              "is_creator": {"type": "boolean"}
-            }
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["pct", "excluded", "is_creator"],
+                "properties": {
+                  "pct": {"type": "number"},
+                  "excluded": {"type": "boolean"},
+                  "is_creator": {"type": "boolean"}
+                }
+              },
+              {
+                "type": "array",
+                "prefixItems": [
+                  {"type": "number"},
+                  {"enum": [0, 1]},
+                  {"enum": [0, 1]}
+                ],
+                "minItems": 3,
+                "maxItems": 3,
+                "items": false
+              }
+            ]
           }
         },
         "holders_truncated": {"type": "boolean"},

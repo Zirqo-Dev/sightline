@@ -83,6 +83,41 @@ def best_pair(get, mint):
     ps = [p for p in d.get("pairs") or [] if p.get("chainId") == "solana" and (p.get("quoteToken") or {}).get("address") == SOL]
     return max(ps, key=lambda p: (p.get("liquidity") or {}).get("quote", 0), default=None)
 
+def best_pairs(get, mints):
+    """Best SOL pair per mint from one DexScreener tokens/v1 call.
+
+    Same choice as best_pair: Solana, quote is SOL, highest liquidity.quote.
+    A mint missing from the response is None. The caller batches at most 30.
+    """
+    wanted = []
+    for mint in mints or []:
+        if mint and mint not in wanted:
+            wanted.append(mint)
+    if not wanted:
+        return {}
+    doc = get(f"{DEX}/tokens/v1/solana/{','.join(wanted)}")
+    if isinstance(doc, dict):
+        pairs = doc.get("pairs") or []
+    elif isinstance(doc, list):
+        pairs = doc
+    else:
+        pairs = []
+    grouped = {mint: [] for mint in wanted}
+    for pair in pairs:
+        if not isinstance(pair, dict) or pair.get("chainId") != "solana":
+            continue
+        quote = pair.get("quoteToken") or {}
+        if not isinstance(quote, dict) or quote.get("address") != SOL:
+            continue
+        base = pair.get("baseToken") or {}
+        addr = base.get("address") if isinstance(base, dict) else None
+        if addr in grouped:
+            grouped[addr].append(pair)
+    return {
+        mint: max(ps, key=lambda p: (p.get("liquidity") or {}).get("quote", 0), default=None)
+        for mint, ps in grouped.items()
+    }
+
 QUOTE_GAP_S = 1.2   # keyed free tier 429s after ~11 back-to-back calls (measured 2026-10-25)
 RETRY_WAIT_S = 2.0
 
@@ -489,7 +524,7 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
             v2log.record(
                 data_dir, seen_mints, v2_fetched, now, run_id,
                 sources=LEAD_PATHS, pre_filters=LEAD_PRE_FILTERS,
-                fetch_pair=lambda m, _get=get: best_pair(_follow_get(_get, v2log.FOLLOW_CALL_TIMEOUT_S), m),
+                fetch_pairs=lambda ms, _get=get: best_pairs(_follow_get(_get, v2log.FOLLOW_CALL_TIMEOUT_S), ms),
                 sleep=sleep, leads_per_run=C.LEADS_PER_RUN, log_errors=v2_errors,
                 source_pages=source_pages,
             )

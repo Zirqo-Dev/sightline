@@ -11,14 +11,16 @@ Files (under data_dir/v2/, the desk-data solana-desk folder):
   death-YYYYMMDD.jsonl        raw observations and a recomputable death label
   seen.json                   mint index (first-seen, k series). Not a decision input.
 
-Each JSONL rolls on the UTC day and again at 5 MB. Typical growth is about
-1–2 MB/day. The manifest does not copy the k series, so a long history does
-not multiply that figure. The 5 MB roll is the backstop.
+Each JSONL rolls on the UTC day and again at 5 MB. A looked-up manifest row
+stores the S2 inputs that are not derivable, with holder rows compacted.
+A candidate that was not fetched omits the blank input object. Follow-ups
+batch up to 30 mints per DexScreener call and stop once a death label is final.
+Typical growth is about 1–2 MB/day. The 5 MB roll is the backstop.
 
 S2 rules are spec section 4. They are recorded. This module does not enter,
 does not draw a twin sample, and does not read or write config.py.
 """
-import json, os, re, sys, time, urllib.error
+import hashlib, json, os, re, sys, time, urllib.error
 from . import config as C, observe, skips
 
 MANIFEST = "manifest"
@@ -28,6 +30,11 @@ SEEN_NAME = "seen.json"
 MAX_BYTES = 5 * 1024 * 1024
 DEFAULT_EXTRA_CALLS = 24
 EXTRA_CALL_HARD_MAX = 100
+# DexScreener /tokens/v1/{chain}/{addresses} accepts up to 30 comma-separated mints.
+# The cap above is HTTP calls, so one scan can cover 24*30 pools. 300 requests/minute
+# on that route; this desk stays at or under the call cap and paces each call.
+BATCH_SIZE = 30
+BATCH_HARD_MAX = 30
 DEFAULT_EXTRA_GAP_S = 0.3
 DEFAULT_FOLLOW_BUDGET_S = 45
 FOLLOW_BUDGET_HARD_MAX = 60
@@ -91,6 +98,27 @@ def follow_budget():
     if n < 0:
         return 0.0
     return min(n, FOLLOW_BUDGET_HARD_MAX)
+
+
+def batch_size():
+    """Mints per follow-up HTTP call. Hard-capped at the DexScreener batch limit."""
+    raw = os.environ.get("SOLANA_DESK_V2_BATCH", "").strip()
+    if not raw:
+        return BATCH_SIZE
+    try:
+        n = int(raw)
+    except ValueError:
+        return BATCH_SIZE
+    if n < 1:
+        return 1
+    return min(n, BATCH_HARD_MAX)
+
+
+def mint_rank(mint):
+    """Sort key for a capped follow set. Lower is kept. SHA-256 of the mint, not arrival order."""
+    if not isinstance(mint, str):
+        mint = ""
+    return hashlib.sha256(mint.encode("utf-8")).hexdigest()
 
 
 def extra_gap():
@@ -241,6 +269,88 @@ def dev_from_rows(rows):
     return total
 
 
+def _expand_holders(rows):
+    """Holder rows as stored (objects or [pct, excluded, is_creator]) become objects."""
+    if not isinstance(rows, list):
+        return rows
+    if not rows or isinstance(rows[0], dict):
+        return rows
+    out = []
+    for row in rows:
+        if not isinstance(row, (list, tuple)) or len(row) < 3:
+            continue
+        out.append({"pct": row[0], "excluded": bool(row[1]), "is_creator": bool(row[2])})
+    return out
+
+
+def _compact_holders(rows):
+    """[pct, 1 if excluded else 0, 1 if creator else 0]. No wallet, owner, or address."""
+    out = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        out.append([row.get("pct"), 1 if row.get("excluded") else 0, 1 if row.get("is_creator") else 0])
+    return out
+
+
+def hydrate_inputs(inputs, at_s=None):
+    """Fill derivable S2 fields on a copy of a manifest input.
+
+    A slim row omits pair_created_at_s, k, liquidity sides, top10, dev, and boost_window.
+    Those are functions of pairCreatedAt, sol, token, holders, age_s, and graduated_pump.
+    A stored value is left as it was. Holder rows may be objects or compact triples.
+    """
+    if not isinstance(inputs, dict):
+        return inputs
+    out = dict(inputs)
+    holders = out.get("holders")
+    if isinstance(holders, list):
+        holders = _expand_holders(holders)
+        out["holders"] = holders
+        if out.get("top10_ex_pool") is None:
+            out["top10_ex_pool"] = top10_from_rows(holders)
+        if out.get("dev_pct") is None:
+            out["dev_pct"] = dev_from_rows(holders)
+    sol, token = _num(out.get("sol")), _num(out.get("token"))
+    if out.get("k") is None and sol is not None and token is not None and sol >= 0 and token > 0:
+        out["k"] = sol * token
+    created = out.get("pair_created_at_s")
+    if created is None and out.get("pairCreatedAt") is not None:
+        created = observe.pair_created_s({"pairCreatedAt": out.get("pairCreatedAt")})
+        out["pair_created_at_s"] = created
+    age = _num(out.get("age_s"))
+    entry = _num(at_s)
+    if entry is None and created is not None and age is not None:
+        entry = float(created) + float(age)
+    if "boost_window" not in out:
+        out["boost_window"] = observe.boost_window(created, entry, out.get("graduated_pump"))
+    return out
+
+
+_SLIM_INPUT_KEYS = (
+    "dexId", "pairAddress", "pairCreatedAt", "age_s", "graduated_pump",
+    "sol", "token", "txns_h1", "mint_authority", "freeze_authority", "score_normalised",
+)
+
+
+def _slim_inputs(inputs):
+    """Drop fields a reader can recompute. Keep age_s: it is the scan-time snapshot."""
+    if not isinstance(inputs, dict):
+        return inputs
+    out = {key: inputs.get(key) for key in _SLIM_INPUT_KEYS}
+    err = inputs.get("reserve_error")
+    if err:
+        out["reserve_error"] = err
+    holders = inputs.get("holders")
+    if isinstance(holders, list):
+        out["holders"] = _compact_holders(holders) if holders and isinstance(holders[0], dict) else list(holders)
+    else:
+        out["holders"] = None
+    if inputs.get("holders_truncated"):
+        out["holders_truncated"] = True
+    return out
+
+
 def authority_status(container, key):
     """revoked only when the key is present and null. unknown when the key is missing. set when it is truthy.
 
@@ -308,6 +418,7 @@ def rules_from_logged(inputs, k_series, looked_up):
     unknown = {key: "unknown" for key in RULE_IDS}
     if not looked_up or not isinstance(inputs, dict):
         return unknown
+    inputs = hydrate_inputs(inputs)
     out = {}
     grad = inputs.get("graduated_pump")
     age = _num(inputs.get("age_s"))
@@ -369,7 +480,27 @@ def twin_candidate(inputs, rules, pool_lookup):
     return swaps is not None and swaps >= 1
 
 
-def death_label(obs):
+def _too_late(rows, now):
+    """True when now is past t0+2h and an observation at now cannot cover the window.
+
+    Coverage needs every consecutive pair, including that new point, to be at most 1h
+    apart. A later read cannot see price inside the window or swaps the h1 field no
+    longer reaches. The caller marks the label missed and does not fetch.
+    """
+    now_n = _num(now)
+    if now_n is None or not rows:
+        return False
+    t0 = _num(rows[0].get("t_s"))
+    if t0 is None or now_n <= t0 + DEATH_WINDOW_S:
+        return False
+    times = [t for t in (_num(row.get("t_s")) for row in rows) if t is not None]
+    if not times or now_n - times[-1] > H1_S:
+        return True
+    seq = times + [now_n]
+    return any(b - a > H1_S for a, b in zip(seq, seq[1:]))
+
+
+def death_label(obs, *, now=None):
     """Spec section 4 death label, from raw observations only.
 
     Dead when reserve-implied price is at least 80% below the t0 price at any
@@ -385,7 +516,9 @@ def death_label(obs):
 
     dead is true, false, or null. null with pending means the 2h has not elapsed
     and price has not hit the line. null without pending means the swap coverage
-    is not enough to decide and price did not hit the line.
+    is not enough to decide and price did not hit the line. reason missed means
+    now is past the last moment a new observation could still cover the window,
+    so the label stays null and nothing is fetched to fill it in.
     """
     rows = []
     for row in obs or []:
@@ -416,6 +549,8 @@ def death_label(obs):
     closing = [row for row in rows if _num(row.get("t_s")) >= end]
     base = {"dead": None, "pending": True, "reason": None, "price_drop": worst, "obs_n": len(rows)}
     if not closing:
+        if _too_late(rows, now):
+            return {"dead": None, "pending": False, "reason": "missed", "price_drop": worst, "obs_n": len(rows)}
         return base
     close = closing[0]
     span = [row for row in rows if t0 <= _num(row.get("t_s")) <= _num(close.get("t_s"))]
@@ -602,14 +737,56 @@ def _k_point(now, k, pool):
     return {"t_s": _t_s(now), "k": _num(k) if k is not None else None, "pool": pool}
 
 
-def _follow_key(info, mint, now):
-    t0 = _num(info.get("t0_s")) or 0
-    last = _num(info.get("last_snap_s")) or t0
-    open_window = 0 if now <= t0 + DEATH_WINDOW_S else 1
-    # Death window first, oldest t0 first. Then the stalest snapshot, mint as a tie break.
-    if open_window == 0:
-        return (0, t0, mint)
-    return (1, last, mint)
+def _follow_plan(info, now):
+    """('final', label) once the death label cannot change.
+
+    ('missed', label) when the window can no longer be covered honestly.
+    ('follow', 0) while t0+2h is still open. ('follow', 1) when one read at now
+    can still close that window. Tier 0 is read before tier 1.
+    """
+    if not isinstance(info, dict) or info.get("final"):
+        return "final", None
+    obs = info.get("obs") if isinstance(info.get("obs"), list) else []
+    if not obs:
+        t0 = _num(info.get("t0_s"))
+        if t0 is None or now <= t0 + DEATH_WINDOW_S:
+            return "follow", 0
+        return "missed", {"dead": None, "pending": False, "reason": "missed", "price_drop": None, "obs_n": 0}
+    label = death_label(obs, now=now)
+    if not label.get("pending"):
+        if label.get("reason") == "missed":
+            return "missed", label
+        return "final", label
+    t0 = _num(info.get("t0_s"))
+    if t0 is None:
+        t0 = _num(obs[0].get("t_s")) or 0
+    if now <= t0 + DEATH_WINDOW_S:
+        return "follow", 0
+    return "follow", 1
+
+
+def _seal(info, label):
+    """Remember a finished death label and drop the observation copy.
+
+    The death file keeps the rows. seen.json keeps t0, the k series, and this flag.
+    """
+    if not isinstance(info, dict):
+        return
+    info["final"] = True
+    info["final_logged"] = True
+    if isinstance(label, dict):
+        info["death"] = {
+            "dead": label.get("dead"),
+            "pending": False,
+            "reason": label.get("reason"),
+        }
+    info.pop("obs", None)
+
+
+def _chunks(items, size):
+    size = max(1, int(size))
+    for i in range(0, len(items), size):
+        yield items[i:i + size]
 
 
 def _obs(mint, pool, t0_s, at, sol, token, k, h1, scan_id, error):
@@ -631,6 +808,49 @@ def _label_row(mint, t0_s, now, scan_id, label):
         "reason": label.get("reason"), "price_drop": label.get("price_drop"),
         "obs_n": label.get("obs_n"),
     }
+
+
+def _skip_row(mint, now, scan_id, reason, tier):
+    t_s = _t_s(now)
+    return {
+        "type": "skip", "v": V, "mint": mint,
+        "t": _iso(t_s) if t_s is not None else None, "t_s": t_s,
+        "scan_id": str(scan_id), "reason": reason, "tier": tier,
+    }
+
+
+def _emit_candidate(row):
+    """Manifest line. Unfetched mints stay short. Looked-up inputs drop derivable fields."""
+    lookup = row.get("pool_lookup")
+    out = {
+        "type": "candidate", "v": V, "scan_id": row.get("scan_id"),
+        "t_s": row.get("t_s"), "mint": row.get("mint"), "source": row.get("source"),
+        "seen_index": row.get("seen_index"), "selected": bool(row.get("selected")),
+        "pool_lookup": lookup,
+    }
+    stems = list(row.get("snap_stems") or [])
+    if lookup == "not_attempted":
+        n = row.get("k_series_n") or 0
+        if n:
+            out["k_series_n"] = n
+            out["k_last"] = row.get("k_last")
+            out["k_max_drop"] = row.get("k_max_drop")
+        if stems:
+            out["snap_stems"] = stems
+        return out
+    if row.get("pair_at_s") is not None:
+        out["pair_at_s"] = row.get("pair_at_s")
+    if row.get("rug_at_s") is not None:
+        out["rug_at_s"] = row.get("rug_at_s")
+    out["rules"] = row.get("rules")
+    out["k_series_n"] = row.get("k_series_n") or 0
+    out["k_last"] = row.get("k_last")
+    out["k_max_drop"] = row.get("k_max_drop")
+    out["snap_stems"] = stems
+    out["first_pick"] = bool(row.get("first_pick"))
+    if lookup == "ok":
+        out["inputs"] = _slim_inputs(row.get("inputs"))
+    return out
 
 
 def _snap_row(mint, pool, now, sol, token, k, h1, scan_id, origin, error):
@@ -656,6 +876,16 @@ def _touch_pool(pools, mint, at, pool, sol, token, k, h1, scan_id, error=None):
     if info.get("t0_s") is None:
         info["t0_s"] = t_s
     point = _k_point(at, k, pool)
+    if info.get("final"):
+        series = info.get("k_series")
+        if not isinstance(series, list):
+            series = []
+        series.append(point)
+        info["k_series"] = series
+        info["last_snap_s"] = t_s
+        if pool:
+            info["pool"] = pool
+        return info
     series = info.get("k_series")
     if not isinstance(series, list):
         series = []
@@ -696,14 +926,16 @@ def _k_public(series):
 
 
 def record(data_dir, seen, fetched, now, run_id, *, sources, pre_filters, fetch_pair=None,
-           sleep=None, leads_per_run=None, cap=None, log_errors=0, max_bytes=MAX_BYTES,
-           source_pages=None, budget_s=None, now_fn=None):
+           fetch_pairs=None, sleep=None, leads_per_run=None, cap=None, batch=None,
+           log_errors=0, max_bytes=MAX_BYTES, source_pages=None, budget_s=None, now_fn=None):
     """Write this scan's manifest, snapshots, and death rows. Never raises.
 
     seen: every candidate (mint, source) in scanner order, including those past the lead cap.
     fetched: one dict per lead the scan actually looked up (pair, rc, pool_lookup, timestamps).
-    fetch_pair(mint) reads one DexScreener token page. It is used only for pools already
-    seen that this scan did not look up. Each call counts as an extra pool lookup.
+    fetch_pairs(mints) reads one DexScreener page for up to batch mints and returns
+    {mint: pair or None}. fetch_pair(mint) is the one-mint form; it is one HTTP call
+    per mint. Either is used only for pools already seen that this scan did not look up.
+    A finished death label is not read again. cap counts HTTP calls, not mints.
     """
     summary = {
         "enabled": True, "extra_calls": 0, "log_errors": log_errors,
@@ -712,7 +944,8 @@ def record(data_dir, seen, fetched, now, run_id, *, sources, pre_filters, fetch_
     try:
         return _record(
             data_dir, seen, fetched, now, run_id, sources=sources, pre_filters=pre_filters,
-            fetch_pair=fetch_pair, sleep=sleep, leads_per_run=leads_per_run, cap=cap,
+            fetch_pair=fetch_pair, fetch_pairs=fetch_pairs, sleep=sleep,
+            leads_per_run=leads_per_run, cap=cap, batch=batch,
             log_errors=log_errors, max_bytes=max_bytes, summary=summary,
             source_pages=source_pages, budget_s=budget_s, now_fn=now_fn or time.time,
         )
@@ -723,13 +956,27 @@ def record(data_dir, seen, fetched, now, run_id, *, sources, pre_filters, fetch_
 
 
 def _record(data_dir, seen, fetched, now, run_id, *, sources, pre_filters, fetch_pair,
-            sleep, leads_per_run, cap, log_errors, max_bytes, summary, source_pages, budget_s, now_fn):
+            fetch_pairs, sleep, leads_per_run, cap, batch, log_errors, max_bytes, summary,
+            source_pages, budget_s, now_fn):
     if leads_per_run is None:
         leads_per_run = C.LEADS_PER_RUN
     if cap is None:
         cap = extra_cap()
     if budget_s is None:
         budget_s = follow_budget()
+    # One-mint callback: each call is one HTTP call, so the batch width is 1.
+    if fetch_pairs is None:
+        width = 1
+    elif batch is None:
+        width = batch_size()
+    else:
+        try:
+            width = int(batch)
+        except (TypeError, ValueError):
+            width = batch_size()
+        if width < 1:
+            width = 1
+        width = min(width, BATCH_HARD_MAX)
     gap = extra_gap()
     t_s = _t_s(now)
     by_mint = {}
@@ -793,21 +1040,70 @@ def _record(data_dir, seen, fetched, now, run_id, *, sources, pre_filters, fetch
     )
     attempted_mints = set(by_mint)
     clock = t_s if t_s is not None else now
-    pending = [mint for mint in pools if public_id(mint) and mint not in attempted_mints and isinstance(pools.get(mint), dict)]
-    pending.sort(key=lambda mint: _follow_key(pools[mint], mint, clock))
+    pending = [
+        mint for mint in pools
+        if public_id(mint) and mint not in attempted_mints and isinstance(pools.get(mint), dict)
+    ]
+    ranked = []
+    missed = []
+    for mint in pending:
+        info = pools.get(mint)
+        kind, payload = _follow_plan(info, clock)
+        if kind == "final":
+            if isinstance(info, dict) and not info.get("final"):
+                _seal(info, payload)
+            continue
+        if kind == "missed":
+            missed.append((mint, payload))
+            continue
+        ranked.append((payload, mint_rank(mint), mint))
+    ranked.sort()
+    for mint, label in missed:
+        info = pools.get(mint)
+        if not isinstance(info, dict):
+            continue
+        try:
+            if not info.get("final_logged"):
+                append_jsonl(
+                    data_dir, DEATH, _label_row(mint, _t_s(info.get("t0_s")), clock, str(run_id), label),
+                    now, max_bytes=max_bytes,
+                )
+            _seal(info, label)
+        except Exception:
+            log_errors += 1
+    have_fetch = fetch_pairs is not None or fetch_pair is not None
+    pool_limit = (max(0, int(cap)) * width) if have_fetch else 0
+    chosen = ranked[:pool_limit]
+    cap_left = ranked[pool_limit:]
+    skip_reasons = {"cap": 0, "budget": 0, "429": 0}
+
+    def _log_skip(mint, tier, reason):
+        nonlocal log_errors
+        skip_reasons[reason] = skip_reasons.get(reason, 0) + 1
+        try:
+            append_jsonl(
+                data_dir, DEATH, _skip_row(mint, clock, run_id, reason, tier),
+                now, max_bytes=max_bytes,
+            )
+        except Exception:
+            log_errors += 1
+
+    for tier, _rank, mint in cap_left:
+        _log_skip(mint, tier, "cap")
+    extra_calls = 0
     extra_attempted = 0
     extra_failed = 0
     follow_stop = None
     hit_budget = False
     saw_429 = False
-    if fetch_pair is None or cap <= 0:
-        pending_run = []
-    else:
-        pending_run = pending[:cap]
+    batches = list(_chunks([mint for _tier, _rank, mint in chosen], width))
+    tier_of = {mint: tier for tier, _rank, mint in chosen}
+    next_batch = 0
     started = time.monotonic()
-    for mint in pending_run:
+    for index, batch_mints in enumerate(batches):
         if time.monotonic() - started >= budget_s:
             hit_budget = True
+            next_batch = index
             break
         if sleep is not None and gap > 0:
             try:
@@ -816,37 +1112,57 @@ def _record(data_dir, seen, fetched, now, run_id, *, sources, pre_filters, fetch
                 log_errors += 1
             if time.monotonic() - started >= budget_s:
                 hit_budget = True
+                next_batch = index
                 break
-        extra_attempted += 1
+        next_batch = index + 1
+        extra_calls += 1
+        http_err = None
         try:
-            pair = fetch_pair(mint)
+            if fetch_pairs is not None:
+                got = fetch_pairs(list(batch_mints))
+            else:
+                got = {batch_mints[0]: fetch_pair(batch_mints[0])}
+            if not isinstance(got, dict):
+                got = {}
             error = None
         except urllib.error.HTTPError as exc:
-            pair = None
+            got = {}
             error = "lookup_failed"
-            extra_failed += 1
-            if getattr(exc, "code", None) == 429:
-                saw_429 = True
+            http_err = exc
         except Exception:
-            pair = None
+            got = {}
             error = "lookup_failed"
-            extra_failed += 1
         fetched_at = now_fn()
-        try:
-            _follow_snapshot(
-                pools, mint, pair, error, fetched_at, run_id, data_dir, max_bytes, written_stems,
-            )
-        except Exception:
-            log_errors += 1
-        if saw_429:
+        for mint in batch_mints:
+            extra_attempted += 1
+            if error:
+                pair = None
+                err = error
+                extra_failed += 1
+            else:
+                pair = got.get(mint)
+                err = None
+            try:
+                _follow_snapshot(
+                    pools, mint, pair, err, fetched_at, run_id, data_dir, max_bytes, written_stems,
+                )
+            except Exception:
+                log_errors += 1
+        if http_err is not None and getattr(http_err, "code", None) == 429:
+            saw_429 = True
             break
+    rest_reason = "429" if saw_429 else ("budget" if hit_budget else None)
+    if rest_reason:
+        for batch_mints in batches[next_batch:]:
+            for mint in batch_mints:
+                _log_skip(mint, tier_of.get(mint), rest_reason)
     if saw_429:
         follow_stop = "429"
     elif hit_budget:
         follow_stop = "budget"
-    elif len(pending) > extra_attempted:
+    elif cap_left:
         follow_stop = "cap"
-    follow_skipped = len(pending) - extra_attempted
+    follow_skipped = sum(skip_reasons.values())
     for row in candidates:
         if row["pool_lookup"] != "ok":
             continue
@@ -875,10 +1191,13 @@ def _record(data_dir, seen, fetched, now, run_id, *, sources, pre_filters, fetch
         "rug_lookups_attempted": rug_attempted,
         "rug_lookups_failed": rug_failed,
         "rug_fail_rate": None if rug_attempted == 0 else round(rug_failed / rug_attempted, 6),
-        "extra_calls": extra_attempted,
+        "extra_calls": extra_calls,
         "extra_call_cap": int(cap),
+        "batch_size": width if have_fetch else 0,
         "follow_budget_s": budget_s,
         "follow_skipped_budget": follow_skipped,
+        "follow_skip_reasons": skip_reasons,
+        "follow_missed": len(missed),
         "follow_stop": follow_stop,
         "snap_files": sorted(written_stems),
         "s2_picks": picks,
@@ -898,13 +1217,11 @@ def _record(data_dir, seen, fetched, now, run_id, *, sources, pre_filters, fetch
             row["snap_stems"] = list(info.get("snap_stems") or [])
     append_jsonl(data_dir, MANIFEST, header, now, max_bytes=max_bytes)
     for row in candidates:
-        public = dict(row)
-        public.pop("_fetch_at", None)
-        append_jsonl(data_dir, MANIFEST, public, now, max_bytes=max_bytes)
+        append_jsonl(data_dir, MANIFEST, _emit_candidate(row), now, max_bytes=max_bytes)
     state["v"] = V
     save_seen(data_dir, state)
     summary.update(
-        extra_calls=extra_attempted, log_errors=log_errors,
+        extra_calls=extra_calls, log_errors=log_errors,
         pool_lookups_attempted=scan_attempted, pool_lookups_failed=scan_failed, error=None,
         follow_stop=follow_stop, follow_skipped_budget=follow_skipped,
     )
@@ -944,8 +1261,7 @@ def _candidate_row(pools, mint, source, index, selected, rec, pool_lookup, looke
         "t": _iso(_t_s(now)), "t_s": _t_s(now),
         "mint": mint, "source": source, "seen_index": index, "selected": bool(selected),
         "pool_lookup": pool_lookup,
-        "pair_fetched_at": _iso(pair_s) if pair_s is not None else None,
-        "rug_fetched_at": _iso(rug_at) if rug_at is not None else None,
+        "pair_at_s": pair_s, "rug_at_s": rug_at,
         "inputs": inputs, "reserve": reserve, "rules": rules,
         "snap_stems": snap_stems, "first_pick": first_pick,
         "_fetch_at": fetch_at,
@@ -989,6 +1305,8 @@ def _write_observation(data_dir, pools, mint, at, run_id, origin, max_bytes, inp
     )
     if isinstance(info, dict):
         _note_stem(info, path, written)
+    if isinstance(info, dict) and info.get("final"):
+        return
     _write_death(data_dir, mint, info, at, run_id, max_bytes, sol, token, k, h1, pool, err)
 
 
@@ -996,5 +1314,7 @@ def _write_death(data_dir, mint, info, at, run_id, max_bytes, sol, token, k, h1,
     t0_s = _t_s(info.get("t0_s")) if isinstance(info, dict) else _t_s(at)
     obs_line = _obs(mint, pool, t0_s, at, sol, token, k, h1, str(run_id), error)
     append_jsonl(data_dir, DEATH, obs_line, at, max_bytes=max_bytes)
-    label = death_label(info.get("obs") if isinstance(info, dict) else [obs_line])
+    label = death_label(info.get("obs") if isinstance(info, dict) else [obs_line], now=at)
     append_jsonl(data_dir, DEATH, _label_row(mint, t0_s, at, str(run_id), label), at, max_bytes=max_bytes)
+    if isinstance(info, dict) and not label.get("pending"):
+        _seal(info, label)
