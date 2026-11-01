@@ -1342,10 +1342,33 @@
     "comparison_unbonded": "entry = curve price at the run where the swarm flag was first logged; 48h = curve price (Solada API or on-chain) at the first run after 48h; -100% if ADA side < 500 ADA or no price; 'no price' if neither readable, excluded from the mean",
     "swarm_flagged": "existing prefilter flags.json coordinated-buyer or fresh-wallet-swarm flags at launch; first seen = first desk log entry for that policy after 2026-11-01T14:40:00-05:00; swarm-flag timestamps logged in comparison_group"
    }
+  },
+  {
+   "id": "EST-01",
+   "title": "Established-pick test (paper only)",
+   "status": "active",
+   "registered_at": "2026-11-01T16:58:00-05:00",
+   "measurement_locked_at": "2026-11-01T16:58:00-05:00",
+   "universe": "Cardano tokens tagged launchpad 'established' (first minted >14 days ago), pool ADA side >= 300000 at the check, with an owner-approved kill line (tokens without one excluded until approved)",
+   "check_at": "daily 7 PM ET desk run only",
+   "qualify": [
+    "pool ADA side >= 25% above its kill line (pct_from_line >= 25)",
+    "one codenamed whale on the desk whale watch net-buying >= 1000 ADA of the token over the trailing 72h by on-chain trace (LP adds, transfers in, reward claims and loan collateral returns excluded)",
+    "on-chain holders flat or up over 7 days (same holder count the desk logs in cardano_top10)",
+    "pool ADA side down no more than 10% over 7 days"
+   ],
+   "action": "one 100 ADA paper ticket at that run's pool price; one open ticket per token; 7-day cooldown after exit; max 4 tickets per token across the test",
+   "exit": "7 days: GeckoTerminal candle closest to entry+168h, else first run price after; early exit only if a run reads the ADA side under the kill line; no other manual exits",
+   "cost_haircut": "3% round-trip (DEX fees plus batcher fees on a 100 ADA ticket)",
+   "comparison": "per ticket, the equal-weighted 7-day return of every other universe token from the same entry run, same 3% haircut; returns in ADA",
+   "verdict_rule": "Judge at 10 tickets or 2027-02-01, whichever first; under 10 by then = insufficient, no extension. Validated: >= 10 tickets, mean 7d return after haircut > 0, mean excess over comparison > 0, and >= 6 of 10 tickets beat their comparison. Invalidated: at 10 tickets, mean <= 0 OR mean excess <= 0",
+   "locked": "No term changes after peeking; any change may only make passing harder, owner approval required",
+   "tickets": [],
+   "comparison_group": []
   }
  ],
  "book_status": {
   "at": "2026-11-01T14:40:00-05:00",
-  "note": "Normal launch tickets are shelved as of 2026-11-01 (rules k and y unchanged). Only paper test SW-01 may open tickets."
+  "note": "Normal launch tickets are shelved as of 2026-11-01 (rules k and y unchanged). Only paper tests SW-01 and EST-01 may open tickets."
  }
 }
