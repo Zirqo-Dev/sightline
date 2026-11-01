@@ -471,23 +471,25 @@ class CandidateScoreTests(unittest.TestCase):
         self.assertEqual(event["followups"]["h1"]["status"], "filled")
         self.assertEqual(event["followups"]["h6"]["reason"], "not due")
 
+    def _live(self, scores, n6, n24, r6, r24):
+        scores["live"]["h6"]["n_observed"] = n6
+        scores["live"]["h6"]["hit_rate"] = r6
+        scores["live"]["h24"]["n_observed"] = n24
+        scores["live"]["h24"]["hit_rate"] = r24
+
     def test_eligibility_is_a_flag_and_not_a_promotion(self):
         low = WR.empty_scores()
-        low["n_observed_h6"] = 25
-        low["n_observed_h24"] = 25
-        low["hit_rate_h6"] = 0.55
-        low["hit_rate_h24"] = 0.90
+        self._live(low, 25, 25, 0.55, 0.90)
         eligible, reason = WR.promotion_eligibility(low)
         self.assertFalse(eligible)
         self.assertIn("need > 0.55", reason)
-        high = dict(low)
-        high["hit_rate_h6"] = 0.551
-        high["hit_rate_h24"] = 0.56
+        high = WR.empty_scores()
+        self._live(high, 25, 25, 0.551, 0.56)
         eligible, reason = WR.promotion_eligibility(high)
         self.assertTrue(eligible)
         self.assertIn("manual owner decision", reason)
-        short = dict(high)
-        short["n_observed_h6"] = 24
+        short = WR.empty_scores()
+        self._live(short, 24, 25, 0.551, 0.56)
         eligible, _reason = WR.promotion_eligibility(short)
         self.assertFalse(eligible)
         blank = WR.empty_scores()
@@ -585,8 +587,10 @@ class CandidateScoreTests(unittest.TestCase):
         self.assertEqual(event["followups"]["h6"]["outcome"], "unobserved")
         self.assertNotEqual(event["followups"]["h6"]["status"], "missed")
         scores = WR.summarize([event, later])["Grumpy Walrus"]
-        self.assertEqual(scores["n_observed_h1"], 2)
-        self.assertEqual(scores["hits_h1"], 0)
+        self.assertEqual(scores["backfill"]["h1"]["n_observed"], 2)
+        self.assertEqual(scores["backfill"]["h1"]["hits"], 0)
+        self.assertEqual(scores["backfill"]["approximate"], True)
+        self.assertEqual(scores["live"]["h1"]["n_observed"], 0)
         self.assertEqual(scores["n_observed_h6"], 0)
         self.assertIsNone(scores["hit_rate_h6"])
         # Price up and liquidity up is a hit for an accumulate.
@@ -617,6 +621,76 @@ class CandidateScoreTests(unittest.TestCase):
         self.assertEqual(public["dormant_count"], 1)
         self.assertFalse(any(tags[0] in json.dumps(w) for w in public["whales"]))
         self.assertEqual(len(public["whales"]), WR.MAX_CANDIDATES)
+
+    def test_live_and_backfill_stay_split_and_eligibility_uses_live(self):
+        at = 1_700_000_000
+        live = WR.new_event({"at": at, "ticker": "AAA", "action": "accumulate", "tx": "L"}, "Sleepy Otter", "u")
+        live["at_move"]["status"] = "filled"
+        live["at_move"]["price"] = 1
+        live["at_move"]["liquidity"] = 1
+        live["followups"]["h6"]["status"] = "filled"
+        live["followups"]["h6"]["price_change_pct"] = 4
+        live["followups"]["h6"]["liquidity_change_pct"] = 4
+        live["followups"]["h6"]["outcome"] = "hit"
+        live["followups"]["h6"]["source"] = "live"
+        live["followups"]["h24"]["status"] = "filled"
+        live["followups"]["h24"]["price_change_pct"] = -3
+        live["followups"]["h24"]["outcome"] = "miss"
+        live["followups"]["h24"]["source"] = "live"
+        back = WR.new_event({"at": at + 1, "ticker": "AAA", "action": "accumulate", "tx": "B"}, "Sleepy Otter", "u")
+        for name, outcome in (("h6", "hit"), ("h24", "hit")):
+            back["followups"][name]["status"] = "filled"
+            back["followups"][name]["price_change_pct"] = 5
+            back["followups"][name]["outcome"] = outcome
+            back["followups"][name]["source"] = "desk-data"
+        scores = WR.summarize([live, back])["Sleepy Otter"]
+        self.assertEqual(scores["live"]["h6"]["n_observed"], 1)
+        self.assertEqual(scores["live"]["h6"]["hits"], 1)
+        self.assertEqual(scores["live"]["h24"]["hits"], 0)
+        self.assertEqual(scores["backfill"]["h6"]["n_observed"], 1)
+        self.assertEqual(scores["backfill"]["h6"]["hits"], 1)
+        self.assertEqual(scores["backfill"]["h24"]["hits"], 1)
+        self.assertTrue(scores["backfill"]["approximate"])
+        self.assertEqual(scores["n_observed_h6"], 1)
+        self.assertEqual(scores["hits_h24"], 0)
+        # Backfill clears the bar. Live does not. Eligible stays false.
+        for name in ("h6", "h24"):
+            scores["backfill"][name]["n_observed"] = 25
+            scores["backfill"][name]["hits"] = 20
+            scores["backfill"][name]["hit_rate"] = 0.8
+        self.assertFalse(WR.promotion_eligibility(scores)[0])
+        self.assertTrue(WR.promising_backfill(scores))
+        for name in ("h6", "h24"):
+            scores["live"][name]["n_observed"] = 25
+            scores["live"][name]["hits"] = 20
+            scores["live"][name]["hit_rate"] = 0.8
+        self.assertTrue(WR.promotion_eligibility(scores)[0])
+
+    def test_published_lead_live_tally_is_not_replaced_by_backfill(self):
+        previous = {"whales": [{"codename": "Grumpy Walrus", "role": "lead", "status": "active", "scores": {
+            "priced_h1": 49, "hits_h1": 21, "hit_rate_h1": 0.429,
+            "priced_h6": 53, "hits_h6": 30, "hit_rate_h6": 0.566,
+            "priced_h24": 36, "hits_h24": 18, "hit_rate_h24": 0.5,
+        }}]}
+        at = WR.parse_time("2026-10-29T12:00:00Z")
+        event = WR.new_event({"at": at, "ticker": "AAA", "action": "accumulate", "tx": "own"}, "Grumpy Walrus", None)
+        prices = {"AAA": [
+            {"t": at, "price": 1.0, "tx": "own"},
+            {"t": at + WR.H6_S, "price": 1.2, "tx": "later6"},
+            {"t": at + WR.H24_S, "price": 1.3, "tx": "later24"},
+        ]}
+        WR.apply_desk_observations([event], prices, {}, at + WR.H24_S + WR.H24_SLACK_S)
+        self.assertEqual(event["followups"]["h6"]["source"], "desk-data")
+        roster = {"whales": [{"codename": "Grumpy Walrus", "role": "lead", "status": "active"}]}
+        public = WR.public_summary(roster, [event], "2026-11-01T00:00:00Z", None, previous)
+        whale = public["whales"][0]
+        self.assertEqual(whale["scores"]["live"]["h6"]["n_observed"], 53)
+        self.assertEqual(whale["scores"]["live"]["h6"]["hits"], 30)
+        self.assertEqual(whale["scores"]["live"]["h6"]["hit_rate"], 0.566)
+        self.assertEqual(whale["scores"]["live"]["h1"]["hits"], 21)
+        self.assertGreater(whale["scores"]["backfill"]["h6"]["n_observed"], 0)
+        self.assertFalse(whale["eligible_for_active"])
+        self.assertNotEqual(whale["scores"]["live"]["h6"]["hit_rate"], whale["scores"]["backfill"]["h6"]["hit_rate"])
 
 
 if __name__ == "__main__":

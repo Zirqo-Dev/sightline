@@ -134,7 +134,7 @@ def main(argv=None):
             return cache[unit]
     roster, events, public = WR.build(
         log, ledger, liquidity, config, known, cache_roster, events, time.time(), quote, WR.social_counts(previous),
-        big_moves,
+        big_moves, previous,
     )
     _write(os.path.join(args.cache_dir, WR.CACHE_ROSTER), roster)
     _write(os.path.join(args.cache_dir, WR.CACHE_EVENTS), {"events": events})

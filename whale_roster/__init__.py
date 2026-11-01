@@ -44,12 +44,15 @@ MIN_ADA = 2000
 # a whale the owner already kept.
 MM_MIN_MOVES = 100
 MM_BALANCE = 0.10
-# SPD-81 pre-registered promotion bar. eligible_for_active is true only when
-# each of 6h and 24h has at least PROMOTE_MIN_EVENTS observed checkpoints
-# and a hit rate strictly above PROMOTE_MIN_HIT_RATE. Observed means a hit
-# or a wrong-way miss. Unobserved checkpoints are not in that count and are
-# not misses. Rates stay blank under MIN_SAMPLE observed checkpoints on that
-# horizon. Nothing here sets status to active. Promotion stays a manual
+# SPD-81 pre-registered promotion bar. eligible_for_active uses the LIVE
+# tally only: each of 6h and 24h has at least PROMOTE_MIN_EVENTS observed
+# checkpoints and a hit rate strictly above PROMOTE_MIN_HIT_RATE. Observed
+# means a hit or a wrong-way miss. Unobserved checkpoints are not in that
+# count and are not misses. The desk-data backfill is a separate,
+# approximate tally and never fills the live one. promising_backfill is
+# true when that approximate tally alone would clear the same bar. Rates
+# stay blank under MIN_SAMPLE observed checkpoints on that horizon and in
+# that tally. Nothing here sets status to active. Promotion stays a manual
 # owner decision.
 PROMOTE_MIN_EVENTS = 25
 PROMOTE_MIN_HIT_RATE = 0.55
@@ -334,6 +337,8 @@ def advance_event(event, now, quote, one_per_run=True):
         reading = quote(event.get("unit")) if event.get("unit") else {"answered": False, "reason": "full token id unavailable"}
         _fill(event, name, cp, now, reading)
         _mark_outcome(event, name)
+        if cp.get("outcome") in ("hit", "miss") and cp.get("source") != "desk-data":
+            cp["source"] = "live"
 
 
 def favorable(action, price_pct, liq_pct):
@@ -366,30 +371,59 @@ def checkpoint_outcome(action, cp):
     return "unobserved"
 
 
+def _empty_band():
+    return {name: {"n_observed": 0, "hits": 0, "hit_rate": None} for name in HORIZONS}
+
+
+def _finish_band(band, approximate=False):
+    for name in HORIZONS:
+        row = band[name]
+        observed = row["n_observed"]
+        row["hit_rate"] = round(row["hits"] / observed, 3) if observed >= MIN_SAMPLE else None
+    if approximate:
+        band["approximate"] = True
+        band["note"] = "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
+    return band
+
+
+def _mirror_live(scores):
+    """Flat horizon fields stay equal to the live tally for older readers."""
+    live = scores.get("live") or _empty_band()
+    for name in HORIZONS:
+        row = live.get(name) or {}
+        observed = int(row.get("n_observed") or 0)
+        hits = int(row.get("hits") or 0)
+        scores["n_observed_" + name] = observed
+        scores["priced_" + name] = observed
+        scores["hits_" + name] = hits
+        scores["hit_rate_" + name] = row.get("hit_rate")
+    scores["small_sample"] = all(scores["n_observed_" + name] < MIN_SAMPLE for name in HORIZONS)
+    return scores
+
+
 def empty_scores(social=None):
     scores = {
         "events": 0,
         "accumulate": 0,
         "trim": 0,
         "exit": 0,
+        "live": _empty_band(),
+        "backfill": _finish_band(_empty_band(), approximate=True),
     }
-    for name in HORIZONS:
-        scores["n_observed_" + name] = 0
-        scores["priced_" + name] = 0
-        scores["hits_" + name] = 0
-        scores["hit_rate_" + name] = None
-    scores["small_sample"] = True
+    _mirror_live(scores)
     scores["social_moves_matched"] = social if isinstance(social, int) and not isinstance(social, bool) else None
     return scores
 
 
 def summarize(events, social_by_name=None):
-    """Per-codename counts and hit rates.
+    """Per-codename live and backfill tallies.
 
-    n_observed is hits plus wrong-way misses on that horizon. Unobserved
-    checkpoints are left out. A rate stays null under MIN_SAMPLE observed
-    checkpoints on that horizon. small_sample is true when no horizon has
-    that many observations.
+    Live checkpoints are the forward quote path (source live, or a filled
+    row with no source from the private cache). Backfill checkpoints are
+    desk-data prints (source desk-data) and are approximate. Unobserved
+    checkpoints are in neither tally. Flat horizon fields mirror live.
+    A rate stays null under MIN_SAMPLE observed checkpoints in that tally
+    on that horizon.
     """
     social_by_name = social_by_name or {}
     grouped = {}
@@ -413,17 +447,89 @@ def summarize(events, social_by_name=None):
                 outcome = checkpoint_outcome(action, cp)
                 if outcome not in ("hit", "miss"):
                     continue
-                scores["n_observed_" + horizon] += 1
-                scores["priced_" + horizon] += 1
+                band = scores["backfill"] if cp.get("source") == "desk-data" else scores["live"]
+                band[horizon]["n_observed"] += 1
                 if outcome == "hit":
-                    scores["hits_" + horizon] += 1
-        scores["small_sample"] = all(scores["n_observed_" + horizon] < MIN_SAMPLE for horizon in HORIZONS)
-        for horizon in HORIZONS:
-            observed = scores["n_observed_" + horizon]
-            if observed >= MIN_SAMPLE:
-                scores["hit_rate_" + horizon] = round(scores["hits_" + horizon] / observed, 3)
+                    band[horizon]["hits"] += 1
+        _finish_band(scores["live"])
+        _finish_band(scores["backfill"], approximate=True)
+        _mirror_live(scores)
         out[name] = scores
     return out
+
+
+def published_live_band(previous, codename=None):
+    """Live horizon tally already published for one whale, or None.
+
+    The lead's published file is the private-cache tally. Old files store
+    it in the flat horizon fields. Newer files store it under scores.live.
+    """
+    codename = codename or LEAD_CODENAME
+    if not isinstance(previous, dict):
+        return None
+    whale = None
+    for row in previous.get("whales") or []:
+        if isinstance(row, dict) and row.get("codename") == codename:
+            whale = row
+            break
+    if not whale:
+        return None
+    scores = whale.get("scores") if isinstance(whale.get("scores"), dict) else {}
+    band = _empty_band()
+    live = scores.get("live") if isinstance(scores.get("live"), dict) else None
+    found = False
+    for name in HORIZONS:
+        if live and isinstance(live.get(name), dict):
+            raw_n = live[name].get("n_observed")
+            raw_hits = live[name].get("hits")
+        else:
+            raw_n = scores.get("n_observed_" + name)
+            if isinstance(raw_n, bool) or not isinstance(raw_n, (int, float)):
+                raw_n = scores.get("priced_" + name)
+            raw_hits = scores.get("hits_" + name)
+        if isinstance(raw_n, bool) or not isinstance(raw_n, (int, float)):
+            raw_n = 0
+        if isinstance(raw_hits, bool) or not isinstance(raw_hits, (int, float)):
+            raw_hits = 0
+        band[name]["n_observed"] = int(raw_n)
+        band[name]["hits"] = int(raw_hits)
+        if band[name]["n_observed"] or band[name]["hits"]:
+            found = True
+    if not found:
+        return None
+    return _finish_band(band)
+
+
+def _lead_has_live_checkpoints(events):
+    for event in events or []:
+        if not isinstance(event, dict) or event.get("codename") != LEAD_CODENAME:
+            continue
+        for name in HORIZONS:
+            cp = (event.get("followups") or {}).get(name) or {}
+            if cp.get("source") == "desk-data":
+                continue
+            if checkpoint_outcome(event.get("action"), cp) in ("hit", "miss"):
+                return True
+    return False
+
+
+def restore_published_live(scores_by_name, events, previous):
+    """Keep the lead's published live tally. Backfill must not replace it.
+
+    Used when this run has no live checkpoints in the event cache. A cache
+    that already holds live fills is left as counted.
+    """
+    if _lead_has_live_checkpoints(events):
+        return scores_by_name
+    preserved = published_live_band(previous, LEAD_CODENAME)
+    if not preserved:
+        return scores_by_name
+    lead = (scores_by_name or {}).get(LEAD_CODENAME)
+    if not isinstance(lead, dict):
+        return scores_by_name
+    lead["live"] = preserved
+    _mirror_live(lead)
+    return scores_by_name
 
 
 def moves_from_ledger(doc):
@@ -883,6 +989,20 @@ def flag_kind(kind):
     return kind in (NEW_FLAG, OLD_FLAG)
 
 
+def _band_numbers(scores, which, horizon):
+    """(n_observed, hit_rate) from live or backfill, else the flat live fields."""
+    band = (scores or {}).get(which)
+    if isinstance(band, dict) and isinstance(band.get(horizon), dict):
+        row = band[horizon]
+        observed = row.get("n_observed")
+        if isinstance(observed, bool) or not isinstance(observed, (int, float)):
+            observed = 0
+        return int(observed), row.get("hit_rate")
+    if which == "live":
+        return _observed_count(scores, horizon), (scores or {}).get("hit_rate_" + horizon)
+    return 0, None
+
+
 def _observed_count(scores, horizon):
     value = (scores or {}).get("n_observed_" + horizon)
     if isinstance(value, bool) or not isinstance(value, (int, float)):
@@ -890,19 +1010,26 @@ def _observed_count(scores, horizon):
     return int(value)
 
 
+def _bar_result(scores, which):
+    """True when one tally clears the pre-registered bar on its own."""
+    n6, r6 = _band_numbers(scores, which, "h6")
+    n24, r24 = _band_numbers(scores, which, "h24")
+
+    def rate_ok(rate):
+        return isinstance(rate, (int, float)) and not isinstance(rate, bool) and rate > PROMOTE_MIN_HIT_RATE
+
+    return n6 >= PROMOTE_MIN_EVENTS and n24 >= PROMOTE_MIN_EVENTS and rate_ok(r6) and rate_ok(r24), n6, r6, n24, r24
+
+
 def promotion_eligibility(scores):
     """(eligible_for_active, reason). The flag does not change status.
 
-    Pre-registered bar: n_observed at both 6h and 24h is at least
-    PROMOTE_MIN_EVENTS, and each of those hit rates is strictly above
-    PROMOTE_MIN_HIT_RATE. Unobserved checkpoints are not in n_observed.
-    A blank rate does not pass. Promotion stays a manual owner decision.
+    The bar is applied to the LIVE tally only. Backfill never makes a whale
+    eligible. A blank live rate does not pass. Promotion stays a manual
+    owner decision.
     """
     scores = scores or {}
-    n6 = _observed_count(scores, "h6")
-    n24 = _observed_count(scores, "h24")
-    r6 = scores.get("hit_rate_h6")
-    r24 = scores.get("hit_rate_h24")
+    ok, n6, r6, n24, r24 = _bar_result(scores, "live")
 
     def rate_ok(rate):
         return isinstance(rate, (int, float)) and not isinstance(rate, bool) and rate > PROMOTE_MIN_HIT_RATE
@@ -924,18 +1051,28 @@ def promotion_eligibility(scores):
             text += " (need > %s)" % PROMOTE_MIN_HIT_RATE
         return text
 
-    if ok_6n and ok_24n and ok_6 and ok_24:
-        reason = "eligible: 6h observed %d rate %s, 24h observed %d rate %s; promotion is a manual owner decision" % (n6, r6, n24, r24)
+    if ok:
+        reason = "eligible: live 6h observed %d rate %s, live 24h observed %d rate %s; promotion is a manual owner decision" % (n6, r6, n24, r24)
         return True, reason
     reason = "not eligible: %s; %s; promotion is a manual owner decision" % (
-        horizon_text("6h", n6, r6, ok_6n, ok_6),
-        horizon_text("24h", n24, r24, ok_24n, ok_24),
+        horizon_text("live 6h", n6, r6, ok_6n, ok_6),
+        horizon_text("live 24h", n24, r24, ok_24n, ok_24),
     )
     return False, reason
 
 
-def public_summary(roster, events, asof, social_by_name=None):
+def promising_backfill(scores):
+    """True when the approximate backfill alone would clear the live bar.
+
+    This is not eligibility and not a promotion.
+    """
+    ok, _n6, _r6, _n24, _r24 = _bar_result(scores, "backfill")
+    return ok
+
+
+def public_summary(roster, events, asof, social_by_name=None, previous=None):
     scores = summarize(events, social_by_name)
+    restore_published_live(scores, events, previous)
     whales = []
     for whale in (roster or {}).get("whales") or []:
         if not isinstance(whale, dict) or not whale.get("codename"):
@@ -953,6 +1090,7 @@ def public_summary(roster, events, asof, social_by_name=None):
             "status": status,
             "eligible_for_active": eligible,
             "eligible_reason": reason,
+            "promising_backfill": promising_backfill(row_scores),
             "scores": row_scores,
         })
     dormant = sum(1 for whale in (roster or {}).get("whales") or [] if isinstance(whale, dict) and whale.get("status") == "dormant")
@@ -969,10 +1107,13 @@ def public_summary(roster, events, asof, social_by_name=None):
             "(price and liquidity) moves the whale's way at +1h, +6h, or +24h. A wrong-way "
             "observation is a miss. No observation is unobserved and is not a miss. "
             "n_observed is hits plus misses. Rates stay blank under 8 observed checkpoints "
-            "on that horizon. eligible_for_active needs at least 25 observed checkpoints "
-            "and a hit rate above 55% at both 6h and 24h. Past checkpoints use the nearest "
-            "desk-data print (ADA/qty, and pool ADA when a snapshot is inside the tolerance). "
-            "Nothing is promoted automatically. Not a buy signal."
+            "on that horizon in that tally. scores.live is the forward quote path, or the "
+            "lead's published private-cache tally. scores.backfill is approximate: nearest "
+            "desk-data ADA/qty within 20 minutes at 1h, 60 minutes at 6h, and 3 hours at 24h, "
+            "plus pool ADA when a snapshot is in that window. Backfill never replaces live. "
+            "eligible_for_active needs at least 25 live observed checkpoints and a live hit "
+            "rate above 55% at both 6h and 24h. promising_backfill means the approximate "
+            "tally alone would clear that bar. Nothing is promoted automatically. Not a buy signal."
         ),
         "whales": whales,
     }
@@ -993,13 +1134,15 @@ def public_text_ok(doc):
         return False
     if re.search(r"@[A-Za-z0-9_]{2,}", blob) or re.search(r"\$[A-Za-z]", blob):
         return False
-    allowed = {"codename", "role", "status", "scores", "eligible_for_active", "eligible_reason"}
+    allowed = {"codename", "role", "status", "scores", "eligible_for_active", "eligible_reason", "promising_backfill"}
     for whale in doc.get("whales") or []:
         if not isinstance(whale, dict) or set(whale) - allowed:
             return False
         if "wallets" in whale or "handle" in whale or "stake" in whale or "tag" in whale:
             return False
         if "eligible_for_active" in whale and whale["eligible_for_active"] not in (True, False):
+            return False
+        if "promising_backfill" in whale and whale["promising_backfill"] not in (True, False):
             return False
         reason = whale.get("eligible_reason")
         if reason is not None and not isinstance(reason, str):
@@ -1371,7 +1514,7 @@ def _append_event(events, known_ids, move, codename, config, known):
     known_ids.add(event["id"])
 
 
-def build(log, ledger, liquidity, config, known, cache_roster, cache_events, now, quote=None, social_by_name=None, big_moves=None):
+def build(log, ledger, liquidity, config, known, cache_roster, cache_events, now, quote=None, social_by_name=None, big_moves=None, previous=None):
     """Update the private roster and events. Returns (roster, events, public_doc).
 
     quote is optional. Without it, open windows stay pending. Candidates stay
@@ -1437,7 +1580,7 @@ def build(log, ledger, liquidity, config, known, cache_roster, cache_events, now
     if quote is not None:
         for event in events:
             advance_event(event, now, quote, one_per_run=True)
-    public = public_summary(roster, events, iso(now), social_by_name)
+    public = public_summary(roster, events, iso(now), social_by_name, previous)
     if not public_text_ok(public):
         raise RuntimeError("public whale roster rejected")
     return roster, events, public
