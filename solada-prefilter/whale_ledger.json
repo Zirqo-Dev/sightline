@@ -1,14 +1,14 @@
 {
- "at": "2026-11-01T17:14:32Z",
+ "at": "2026-11-01T19:13:02Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14144858,
+ "height": 14145285,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 383.124705,
+ "ada_balance": 1119.416645,
  "positions": {
   "6e917b+fda00259": 2790905,
-  "ASCEND": 340156457421,
+  "ASCEND": 340000212750,
   "ATLAS": 132543787,
   "ATM": 19024975734573,
   "BABYBOLT": 13368031015248,
@@ -38,7 +38,7 @@
   "CHEESE": 16636382428513,
   "CLOVE-3": 25000000424693,
   "CNET": 31327824482276,
-  "COCK": 51267231,
+  "COCK": 51281143,
   "COCKLOCK": 50000000,
   "CORE-2": 7656000,
   "CRAWJU": 3000000,
@@ -72,7 +72,7 @@
   "MEPE": 24754745047051,
   "MISS": 30000000,
   "MSNEK": 8285367129130,
-  "NIGHT": 901096062299,
+  "NIGHT": 908335182781,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -87,10 +87,10 @@
   "ROBIN": 187151209635602,
   "SAD": 696969000000,
   "SER": 131448456026761,
-  "SHARKY": 25491832671365,
+  "SHARKY": 27702843983946,
   "SNEK": 40000000,
   "SOLABLUE": 1438534570029,
-  "SOLADA": 37549976,
+  "SOLADA": 37000000,
   "STABLE": 40331687668046,
   "SUNDAE": 65,
   "SURFY": 44134904454434,
@@ -99,7 +99,6 @@
   "Snekson": 17689198390,
   "TOOLS": 11173430291327,
   "TRUMP": 2094958,
-  "USDCx": 2153293,
   "USDM": 172487,
   "VAL": 85915779,
   "VAMP": 65127836716455,
@@ -123,7 +122,7 @@
  },
  "positions_counted": {
   "6e917b+fda00259": 2790905,
-  "ASCEND": 340156457421,
+  "ASCEND": 340000212750,
   "ATLAS": 132543787,
   "ATM": 19024975734573,
   "BABYBOLT": 13368031015248,
@@ -153,7 +152,7 @@
   "CHEESE": 16636382428513,
   "CLOVE-3": 25000000424693,
   "CNET": 31327824482276,
-  "COCK": 51267231,
+  "COCK": 51281143,
   "COCKLOCK": 50000000,
   "CORE-2": 7656000,
   "CRAWJU": 3000000,
@@ -187,7 +186,7 @@
   "MEPE": 24754745047051,
   "MISS": 30000000,
   "MSNEK": 8285367129130,
-  "NIGHT": 901096062299,
+  "NIGHT": 908335182781,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -202,10 +201,10 @@
   "ROBIN": 187151209635602,
   "SAD": 696969000000,
   "SER": 131448456026761,
-  "SHARKY": 25491832671365,
+  "SHARKY": 27702843983946,
   "SNEK": 40000000,
   "SOLABLUE": 1438534570029,
-  "SOLADA": 37549976,
+  "SOLADA": 37000000,
   "STABLE": 40331687668046,
   "SUNDAE": 65,
   "SURFY": 44134904454434,
@@ -214,7 +213,6 @@
   "Snekson": 17689198390,
   "TOOLS": 11173430291327,
   "TRUMP": 2094958,
-  "USDCx": 2153293,
   "USDM": 172487,
   "VAL": 85915779,
   "VAMP": 65127836716455,
@@ -245,7 +243,7 @@
   {
    "token": "ASCEND",
    "policy": "eb7a93eb",
-   "qty": 340156457421
+   "qty": 340000212750
   },
   {
    "token": "ATLAS",
@@ -395,7 +393,7 @@
   {
    "token": "COCK",
    "policy": "49e42316",
-   "qty": 51267231
+   "qty": 51281143
   },
   {
    "token": "COCKLOCK",
@@ -565,7 +563,7 @@
   {
    "token": "NIGHT",
    "policy": "0691b2fe",
-   "qty": 901096062299
+   "qty": 908335182781
   },
   {
    "token": "NIKY",
@@ -640,7 +638,7 @@
   {
    "token": "SHARKY",
    "policy": "a9c3b13c",
-   "qty": 25491832671365
+   "qty": 27702843983946
   },
   {
    "token": "SNEK",
@@ -655,7 +653,7 @@
   {
    "token": "SOLADA",
    "policy": "e7c77b27",
-   "qty": 37549976
+   "qty": 37000000
   },
   {
    "token": "STABLE",
@@ -696,11 +694,6 @@
    "token": "TRUMP",
    "policy": "c23f33e9",
    "qty": 2094958
-  },
-  {
-   "token": "USDCx",
-   "policy": "1f3aec8b",
-   "qty": 2153293
   },
   {
    "token": "USDM",
@@ -6880,6 +6873,92 @@
    "closed_at": "2026-11-01T16:59:11Z",
    "filled_token": "NIGHT",
    "filled_qty": 321023356
+  },
+  "ae2caf5122#0": {
+   "ref_short": "ae2caf5122#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "ae2caf5122",
+   "opened_at": "2026-11-01T18:19:32Z",
+   "own_stake": true,
+   "closed_at": "2026-11-01T19:13:02Z"
+  },
+  "0105de311f#0": {
+   "ref_short": "0105de311f#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "filled",
+   "opened_tx": "0105de311f",
+   "opened_at": "2026-11-01T18:19:48Z",
+   "own_stake": true,
+   "closed_tx": "ae4bbdb4c6",
+   "closed_at": "2026-11-01T18:20:05Z",
+   "filled_token": "COCK",
+   "filled_qty": 13912
+  },
+  "3893d63b5a#0": {
+   "ref_short": "3893d63b5a#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "3893d63b5a",
+   "opened_at": "2026-11-01T18:20:42Z",
+   "own_stake": true,
+   "closed_at": "2026-11-01T19:13:02Z"
+  },
+  "b95491a20c#0": {
+   "ref_short": "b95491a20c#0",
+   "token": "ASCEND",
+   "qty_raw": 216000000,
+   "ada": 4.0,
+   "status": "filled",
+   "opened_tx": "b95491a20c",
+   "opened_at": "2026-11-01T18:35:01Z",
+   "own_stake": true,
+   "closed_tx": "221c64548e",
+   "closed_at": "2026-11-01T18:35:01Z",
+   "filled_token": "NIGHT",
+   "filled_qty": 1101364627
+  },
+  "c77ba15d6c#0": {
+   "ref_short": "c77ba15d6c#0",
+   "token": "SOLADA",
+   "qty_raw": 492576,
+   "ada": 4.5,
+   "status": "cancelled",
+   "opened_tx": "c77ba15d6c",
+   "opened_at": "2026-11-01T19:00:58Z",
+   "own_stake": true,
+   "closed_tx": "89f1b44ae5",
+   "closed_at": "2026-11-01T19:11:19Z"
+  },
+  "c77ba15d6c#1": {
+   "ref_short": "c77ba15d6c#1",
+   "token": "SOLADA",
+   "qty_raw": 57400,
+   "ada": 4.0,
+   "status": "filled",
+   "opened_tx": "c77ba15d6c",
+   "opened_at": "2026-11-01T19:00:58Z",
+   "own_stake": true,
+   "closed_tx": "b22576ee50",
+   "closed_at": "2026-11-01T19:00:58Z",
+   "filled_ada": 107.747531
+  },
+  "3e6808e36e#0": {
+   "ref_short": "3e6808e36e#0",
+   "token": "SOLADA",
+   "qty_raw": 492576,
+   "ada": 4.5,
+   "status": "closed_elsewhere",
+   "opened_tx": "3e6808e36e",
+   "opened_at": "2026-11-01T19:12:33Z",
+   "own_stake": true,
+   "closed_at": "2026-11-01T19:13:02Z"
   }
  },
  "rows": [
@@ -22435,6 +22514,246 @@
    "order_ref_short": "947a1b63bc#0",
    "order_status": "filled",
    "sold": "Quantum SNEK"
+  },
+  {
+   "time": "2026-11-01T18:15:30Z",
+   "tx_short": "f5b66bb142",
+   "kind": "transfer_in",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 1299.241243,
+   "counterparty_tag": "w-94a65780"
+  },
+  {
+   "time": "2026-11-01T18:19:32Z",
+   "tx_short": "1f03c316c6",
+   "kind": "swap",
+   "token": "ASCEND",
+   "qty": 59755329,
+   "ada_leg": 71.0,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-01T18:19:32Z",
+   "tx_short": "f094743a0a",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 2254625347,
+   "ada_leg": 501.429784,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-01T18:19:32Z",
+   "tx_short": "ae2caf5122",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "ae2caf5122#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-01T18:19:48Z",
+   "tx_short": "0105de311f",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "0105de311f#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-01T18:20:05Z",
+   "tx_short": "ae4bbdb4c6",
+   "kind": "order_fill",
+   "token": "COCK",
+   "qty": 13912,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "0105de311f#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-01T18:20:42Z",
+   "tx_short": "b69b7dc0c8",
+   "kind": "swap",
+   "token": "SHARKY",
+   "qty": 2211011312581,
+   "ada_leg": 71.0,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-01T18:20:42Z",
+   "tx_short": "3893d63b5a",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "3893d63b5a#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-01T18:30:07Z",
+   "tx_short": "8c1f266faa",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 1127427024,
+   "ada_leg": 251.430622,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-01T18:32:11Z",
+   "tx_short": "12b5ce3f35",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 1577479666,
+   "ada_leg": 351.430387,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-01T18:32:58Z",
+   "tx_short": "a4c0723cb4",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 1127031373,
+   "ada_leg": 251.739906,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-01T18:35:01Z",
+   "tx_short": "b95491a20c",
+   "kind": "order_open",
+   "token": "ASCEND",
+   "qty": 216000000,
+   "ada_leg": 4.0,
+   "counterparty_tag": null,
+   "order_ref_short": "b95491a20c#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-01T18:35:01Z",
+   "tx_short": "b95491a20c",
+   "kind": "transfer_out",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 1.369265,
+   "counterparty_tag": "w-71447d92"
+  },
+  {
+   "time": "2026-11-01T18:35:01Z",
+   "tx_short": "221c64548e",
+   "kind": "order_fill",
+   "token": "NIGHT",
+   "qty": 1101364627,
+   "ada_leg": null,
+   "counterparty_tag": null,
+   "order_ref_short": "b95491a20c#0",
+   "order_status": "filled",
+   "sold": "ASCEND"
+  },
+  {
+   "time": "2026-11-01T18:35:39Z",
+   "tx_short": "fb1a42783d",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 51192445,
+   "ada_leg": null,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-01T18:35:39Z",
+   "tx_short": "fb1a42783d",
+   "kind": "swap",
+   "token": "USDCx",
+   "qty": 2153293,
+   "ada_leg": null,
+   "counterparty_tag": null,
+   "direction": "sell"
+  },
+  {
+   "time": "2026-11-01T19:00:58Z",
+   "tx_short": "c77ba15d6c",
+   "kind": "order_open",
+   "token": "SOLADA",
+   "qty": 492576,
+   "ada_leg": 4.5,
+   "counterparty_tag": null,
+   "order_ref_short": "c77ba15d6c#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-01T19:00:58Z",
+   "tx_short": "c77ba15d6c",
+   "kind": "order_open",
+   "token": "SOLADA",
+   "qty": 57400,
+   "ada_leg": 4.0,
+   "counterparty_tag": null,
+   "order_ref_short": "c77ba15d6c#1",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-01T19:00:58Z",
+   "tx_short": "c77ba15d6c",
+   "kind": "transfer_out",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 1.458702,
+   "counterparty_tag": "w-71447d92"
+  },
+  {
+   "time": "2026-11-01T19:00:58Z",
+   "tx_short": "b22576ee50",
+   "kind": "order_fill",
+   "token": "SOLADA",
+   "qty": 57400,
+   "ada_leg": 107.747531,
+   "counterparty_tag": null,
+   "order_ref_short": "c77ba15d6c#1",
+   "order_status": "filled"
+  },
+  {
+   "time": "2026-11-01T19:11:19Z",
+   "tx_short": "89f1b44ae5",
+   "kind": "order_cancel",
+   "token": "SOLADA",
+   "qty": 492576,
+   "ada_leg": null,
+   "counterparty_tag": null,
+   "order_ref_short": "c77ba15d6c#0",
+   "order_status": "cancelled"
+  },
+  {
+   "time": "2026-11-01T19:12:33Z",
+   "tx_short": "fe4790c697",
+   "kind": "swap",
+   "token": "SOLADA",
+   "qty": 492576,
+   "ada_leg": 906.385872,
+   "counterparty_tag": null,
+   "direction": "sell"
+  },
+  {
+   "time": "2026-11-01T19:12:33Z",
+   "tx_short": "3e6808e36e",
+   "kind": "order_open",
+   "token": "SOLADA",
+   "qty": 492576,
+   "ada_leg": 4.5,
+   "counterparty_tag": null,
+   "order_ref_short": "3e6808e36e#0",
+   "order_status": "open"
   }
  ],
  "capped": false,
@@ -22445,7 +22764,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 8,
+ "koios_calls": 9,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
