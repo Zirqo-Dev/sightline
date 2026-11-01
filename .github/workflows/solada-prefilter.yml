@@ -19,6 +19,9 @@ name: Solada prefilter
 # liquidity_moves still gets that 50s from the moment it starts if an earlier slice overran
 # the reserve, and stops by run start + 770s. vetoes.json is derived afterwards. Research
 # only, never a buy signal.
+# SW-01 (solada-prefilter/sw01.py) may POST reason sw01_candidate, and later sw01_exit,
+# after those files are written. Fail-soft: an error is logged and skipped. It does not
+# change rules k, y, aa, kill lines, verdicts, or the threshold and dev_sell reasons.
 # Job budget is 20 min. The scan process is killed at 780s. The remaining time is checkout,
 # setup, tests, cache, the privacy guard, and the commit/push retries. Cancelling during
 # that commit would drop state.json and re-send triggers.
