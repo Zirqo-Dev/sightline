@@ -16,7 +16,7 @@ A new file or desk must be added to `desks.json`; CI validates every file listed
 
 Each desk may also have `<desk>/panels.json`, which chooses the panels on that desk's page. The panel format, built-in types, and how to add a component are in [dashboard/PLUGINS.md](../dashboard/PLUGINS.md).
 
-Bots write daily briefs as `<desk>/briefs/YYYY-MM-DD.json` only. They do not maintain a brief index. The site build writes `<desk>/briefs/index.json` from those files when it publishes.
+Bots write daily briefs as `<desk>/briefs/YYYY-MM-DD.json` only. `scripts/publish_briefs.py` fills a day from the log when that file was never written, and writes `<desk>/briefs/manifest.json` (dates only; the schema check skips it). The site build writes `<desk>/briefs/index.json` from the day files when it publishes. The page reads the manifest from desk-data as well as the index, so a new brief is not stuck behind a main deploy.
 
 `solada/forensics/` is experimental Solana research (`sol_forensics`), not a paper book, run log, brief, or pulse. It is not listed in `desks.json` and this check does not validate it. The privacy guard still scans it. Flag codes in those reports are hypotheses, not pulse signals.
 

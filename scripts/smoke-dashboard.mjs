@@ -517,7 +517,8 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(typeof S.navTabs === "function" && typeof S.navMarkup === "function" && typeof S.canonDesk === "function", "nav helpers installed");
   const idx = load("desks.json");
   const solada = idx.desks.find(d => d.id === "solada");
-  assert(solada && solada.name === "Snek Sentinel: Solada/Cardano", "solada desk title is unchanged");
+  assert(solada && solada.name === "Sentinel: Solada/Cardano" && solada.bot === "Sentinel", "legacy desk title is Sentinel");
+  assert(!/snek sentinel/i.test(solada.name + " " + solada.bot), "the desk title does not say Snek Sentinel");
   assert(solada.log === "solada/log.json" && solada.briefs === "solada/briefs/" && solada.pulse === "solada/pulse.json", "solada data paths unchanged");
   assert(idx.desks.map(d => d.id).join(",") === "solada,nft,solana", "desks.json order is unchanged");
   const live = idx.desks.map(d => ({ id: d.id, status: d.status }));
@@ -769,16 +770,17 @@ print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"),
     assert(theme.includes(piece), "shared theme includes " + piece);
   }
   assert(theme.includes('body[data-desk="solada"]{--sl-wordmark:#3d8bff;--sl-accent:#B5E853}'), "Cardano wordmark is desk blue and the accent stays lime");
-  assert(css.includes("box-shadow:inset 0 -2px 0 var(--sl-accent)"), "nav underline uses the accent");
   assert(theme.includes('body[data-desk="solana"]') && theme.includes("#14F195"), "Solana wordmark token is set");
   assert(theme.includes('body[data-desk="nft"]') && theme.includes("#ff4fd8"), "NFT wordmark token is set");
-  assert(css.includes(".logo span{color:var(--sl-wordmark)") && css.includes(".logo i{font-style:normal;color:var(--sl-wordmark)") && css.includes("animation:blink 1.1s steps(1) infinite"), "logo line and cursor use the per-tab colour and blink");
+  assert(css.includes(".logo span{color:var(--sl-wordmark)") && css.includes(".logo i{font-style:normal;color:var(--sl-wordmark)") && css.includes("animation:blink 1s steps(1) infinite"), "logo line and cursor use the wordmark colour and blink");
   assert(css.includes(".logo i{animation:none !important}"), "reduced motion stops the logo blink");
-  assert(css.includes('body[data-desk="nft"]') && css.includes("#ff4fd8"), "NFT accent reaches the logo token");
-  assert(css.includes("#14F195") && css.includes("#9945FF") && css.includes("#3d8bff"), "Solana and Cardano palettes stay");
+  assert(css.includes("#3d8bff") && css.includes("#B5E853") && css.includes("#0B0E11") && css.includes("#F0B90B"), "mono palette keeps blue, lime, grey, and amber");
+  assert(!css.includes("#9945FF") && !/indigo|purple/i.test(css), "the mono page does not use purple");
   assert(css.includes("prefers-reduced-motion"), "reduced motion is respected");
-  assert(css.includes("@keyframes blink") && css.includes("@keyframes pulse") && css.includes("@keyframes shimmer"), "logo blink and shell motion stay");
+  assert(css.includes("@keyframes blink"), "logo blink stays");
   const build = fs.readFileSync(path.join(root, "scripts/build-site.py"), "utf8");
+  assert(build.includes("x_buzz.json") && build.includes("whale_ledger.json") && build.includes("kill_status.json"), "pages build publishes the three live feeds");
+  assert(build.includes("publish_generated"), "pages build writes briefs from the desk log");
   assert(build.includes("def bust(") && build.includes("?v="), "build adds cache-busting asset versions");
   assert(build.includes("def bust_preview(") && build.includes("def preview_version("), "preview assets are cache-busted on their own");
   assert(build.includes("Kept off asset_version()"), "preview hash does not retint the legacy dashboard assets");

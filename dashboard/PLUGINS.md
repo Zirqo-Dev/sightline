@@ -159,7 +159,7 @@ Each desk page, and each desk on Home, has a Run now button. `desks.json` suppli
 
 ## Daily briefs index
 
-Bots write one file per day: `<desk>/briefs/YYYY-MM-DD.json`. They do not maintain an index. `scripts/build-site.py` scans those files and writes `<desk>/briefs/index.json` into the published site. The Briefs page and the `briefs` panel read that index.
+Bots write one file per day: `<desk>/briefs/YYYY-MM-DD.json`. They do not maintain an index. `scripts/publish_briefs.py` writes a generated brief for any log day that has no hand-written file, plus `<desk>/briefs/manifest.json` (a date list, not a brief). `scripts/build-site.py` scans the day files and writes `<desk>/briefs/index.json` into the published site. The page reads that index and also `manifest.json` from desk-data, because `index.json` is config and stays on main. A brief that exists only on desk-data still shows up once it is listed in the manifest.
 
 ## Adding a component
 

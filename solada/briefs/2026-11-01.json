@@ -1,0 +1,29 @@
+{
+  "schema_version": 2,
+  "desk": "solada",
+  "date": "2026-11-01",
+  "headline": "First EST-01 check: ASCEND and STRIKE both cleared the kill-line, whale and 7-day pool tests, but no ticket opened because the desk has no 7-day-old holder count for either (holder baselines logged today; first checkable run Nov 8). Biggest move found: Wobbly Kiwi bought ~25.2k STRIKE for ~52.4k ADA between 8:04 and 8:28 AM ET. Grumpy Walrus net-bought ~28.9k ADA of ASCEND over 72h and has been quiet since the 6:11 PM MOGE buy. ASCEND side ~1.074M (-6.9% 24h), STRIKE ~1.189M, COCK ~146.5k (under its 150k line, Pass). No SW-01 ticket; ANAKIN and MOGE gates are due Nov 2.",
+  "learned": [
+    "Lessons: the 7 PM EST-01 check needs a logged holder count from 7 days earlier, so the desk now logs on-chain holder-address counts for ASCEND and STRIKE in cardano_top10 every daily run (baseline Nov 1: 866 and 3,610).",
+    "Changed: Wobbly Kiwi moved to the whales list after a ~52.4k ADA STRIKE buy that the prefilter missed (STRIKE was capped in liquidity_moves). dev_checks: 16 rows, 0 complete, 10 skipped (partial). Solana-side snipe candidate: none (closest CORE, unchanged)."
+  ],
+  "generated": true,
+  "generated_by": "sightline-publish-briefs",
+  "source_asof": "2026-11-01T19:00:00-05:00",
+  "scoreboard": {
+    "open": 0,
+    "closed": 4,
+    "wins": 0,
+    "losses": 4,
+    "pnl": -117.0,
+    "unit": "ADA"
+  },
+  "pumpfun": {
+    "open": 0,
+    "closed": 9,
+    "wins": 1,
+    "losses": 8,
+    "pnl": -140.1,
+    "unit": "ADA-equivalent"
+  }
+}

@@ -37,7 +37,7 @@ jobs=[]
 for d in json.load(open("desks.json"))["desks"]:
     if d.get("log"): jobs.append((d["log"],"run-log"))
     for b in d.get("books",[]): jobs.append((b["paper"],"paper-book"))
-    if d.get("briefs"): jobs+= [(f,"brief") for f in sorted(glob.glob(os.path.join(d["briefs"],"*.json"))) if not f.endswith("index.json")]
+    if d.get("briefs"): jobs+= [(f,"brief") for f in sorted(glob.glob(os.path.join(d["briefs"],"*.json"))) if not f.endswith("index.json") and not f.endswith("manifest.json")]
     pulse=d.get("pulse") or os.path.join(d["id"],"pulse.json")
     if os.path.exists(pulse): jobs.append((pulse,"pulse"))
     else: print(f"skip {pulse} (not written yet)")

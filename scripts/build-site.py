@@ -5,10 +5,12 @@ The dashboard reads desks.json and each desk's JSON from the same origin.
 dist/ is what GitHub Pages and (later) Cloudflare Pages publish.
 """
 import json
+import os
 import pathlib
 import re
 import shutil
 import sys
+import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
@@ -87,10 +89,77 @@ def write_brief_indexes(desks):
             continue
         bdir = DIST / rel
         bdir.mkdir(parents=True, exist_ok=True)
-        dates = sorted(p.stem for p in bdir.glob("*.json") if p.name != "index.json")
+        dates = sorted(
+            p.stem for p in bdir.glob("*.json")
+            if p.name not in ("index.json", "manifest.json") and re.fullmatch(r"\d{4}-\d{2}-\d{2}", p.stem)
+        )
         (bdir / "index.json").write_text(json.dumps(dates, indent=2) + "\n", encoding="utf-8")
         found[d["id"]] = dates
     return found
+
+
+DESK_DATA = "https://raw.githubusercontent.com/Zirqo-Dev/sightline/desk-data/"
+# These three 404 on Pages because the build used to copy only desks.json folders.
+# They are written on desk-data (x_buzz.json at the root, the other two under
+# solada-prefilter/) and were never placed in dist/. The page also reads them
+# from desk-data directly; publishing them here makes the same-origin URL work.
+FEEDS = [
+    "x_buzz.json",
+    "x_buzz_history.jsonl",
+    "solada-prefilter/whale_ledger.json",
+    "solada-prefilter/kill_status.json",
+    "solada-prefilter/flags.json",
+    "solada-prefilter/dev_checks.json",
+    "solada-prefilter/vetoes.json",
+    "solada-prefilter/liquidity_moves.json",
+    "solada-prefilter/big_moves.json",
+    "solada-prefilter/whale_roster.json",
+    "solada/log.json",
+    "solada/paper.json",
+    "solada/pulse.json",
+    "solada/pumpfun/paper.json",
+    "nft/log.json",
+    "nft/pulse.json",
+    "nft/paper.json",
+    "solana-desk/health.json",
+    "solana-desk/paper.json",
+    "solana-desk/positions.json",
+    "solana-desk/trades.csv",
+]
+REQUIRED_FEEDS = (
+    "x_buzz.json",
+    "solada-prefilter/whale_ledger.json",
+    "solada-prefilter/kill_status.json",
+)
+
+
+def overlay_feeds(dest):
+    """Copy live desk-data files into the published tree. Stdlib only."""
+    for rel in FEEDS:
+        url = DESK_DATA + rel
+        target = dest / rel
+        try:
+            req = urllib.request.Request(url, headers={"user-agent": "sightline-build"})
+            with urllib.request.urlopen(req, timeout=90) as resp:
+                data = resp.read()
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+            print(f"  feed {rel} ({len(data)} bytes)")
+        except Exception as exc:
+            print(f"  feed {rel} skipped ({exc})")
+    missing = [rel for rel in REQUIRED_FEEDS if not (dest / rel).is_file()]
+    if missing and os.environ.get("SIGHTLINE_REQUIRE_FEEDS") == "1":
+        sys.exit("build-site: required feeds missing from dist: " + ", ".join(missing))
+
+
+def publish_generated(dest):
+    sys.path.insert(0, str(ROOT))
+    from scripts.publish_briefs import publish
+    from scripts.fx_prices import refresh
+    found = publish(str(dest))
+    for desk_id, info in found.items():
+        print(f"  generated briefs {desk_id}: {info['written'] or '(none)'}")
+    refresh(str(dest / "dashboard" / "prices.json"))
 
 
 def main():
@@ -131,6 +200,8 @@ def main():
     desks = json.loads((ROOT / "desks.json").read_text(encoding="utf-8"))["desks"]
     for d in desks:
         copy_desk(d["id"])
+    overlay_feeds(DIST)
+    publish_generated(DIST)
     briefs = write_brief_indexes(desks)
     # The legacy NFT site lives inside nft/ and is copied with that desk.
     if not (DIST / "nft" / "site" / "index.html").is_file():
