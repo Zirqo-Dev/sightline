@@ -1,11 +1,11 @@
 {
- "at": "2026-11-02T01:13:11Z",
+ "at": "2026-11-02T03:10:53Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14146178,
+ "height": 14146667,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 274.167209,
+ "ada_balance": 203.735781,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 340237249252,
@@ -73,7 +73,7 @@
   "MISS": 30000000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 928545964612,
+  "NIGHT": 928862112688,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -188,7 +188,7 @@
   "MISS": 30000000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 928545964612,
+  "NIGHT": 928862112688,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -570,7 +570,7 @@
   {
    "token": "NIGHT",
    "policy": "0691b2fe",
-   "qty": 928545964612
+   "qty": 928862112688
   },
   {
    "token": "NIKY",
@@ -24253,6 +24253,16 @@
    "order_ref_short": "faca83b9e2#0",
    "order_status": "filled",
    "sold": "ADA"
+  },
+  {
+   "time": "2026-11-02T02:59:02Z",
+   "tx_short": "d15993047c",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 316148076,
+   "ada_leg": 70.431428,
+   "counterparty_tag": null,
+   "direction": "buy"
   }
  ],
  "capped": false,
