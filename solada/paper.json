@@ -1381,7 +1381,18 @@
       "verdict_rule": "Judge at 10 tickets or 2027-02-01, whichever first; under 10 by then = insufficient, no extension. Validated: >= 10 tickets, mean 7d return after haircut > 0, mean excess over comparison > 0, and >= 6 of 10 tickets beat their comparison. Invalidated: at 10 tickets, mean <= 0 OR mean excess <= 0",
       "locked": "No term changes after peeking; any change may only make passing harder, owner approval required",
       "tickets": [],
-      "comparison_group": []
+      "comparison_group": [],
+      "check_log": [
+        {
+          "asof": "2026-11-01T19:00:00-05:00",
+          "checked": [
+            "ASCEND",
+            "STRIKE"
+          ],
+          "qualified": [],
+          "note": "ASCEND (+43.2% vs line, Grumpy Walrus +28.9k ADA 72h, pool +8.3% 7d) and STRIKE (+32.1%, Wobbly Kiwi +52.4k ADA 72h, pool -2.7% 7d) failed only on the 7-day holder trend, unverifiable without a logged count from Oct 25; baselines logged"
+        }
+      ]
     }
   ],
   "book_status": {
