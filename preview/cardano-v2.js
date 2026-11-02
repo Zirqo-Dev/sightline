@@ -141,15 +141,13 @@
     if (row.fresh) devLabel += " · fresh funded";
     const rugState = row.rugger == null ? "unk" : row.rugger ? "no" : "yes";
     const rugText = row.rugger ? "On rugger list" : "Not on rugger list";
-    const buzzState = row.buzz == null ? "unk" : row.buzz ? "yes" : "no";
     return [
       { state: tri(row.bonded), label: row.bonded === false ? "Still on the curve" : "Bonded to DEX pool", side: row.bondedSide || "" },
       { state: row.kState, label: kLabel, side: "Rule k" },
-      { state: row.swarm === true ? "warn" : row.swarm === false ? "yes" : "unk", label: row.swarm === false ? "No swarm flag" : swarmLabel, side: row.swarm === true ? "Swarm → pass" : "" },
+      { state: row.swarm === true ? "warn" : row.swarm === false ? "yes" : "unk", label: row.swarm === false ? "No swarm flag" : swarmLabel, side: row.swarm === true ? "flag only" : "" },
       { state: whaleState, label: whaleText, side: whaleSide },
       { state: devState, label: devLabel, side: row.devSide || "Dev check", sideHtml: row.devSideHtml || "" },
-      { state: rugState, label: rugText, side: row.ruggerSide || "" },
-      { state: buzzState, label: "X buzz rising", side: row.buzzSide || "" }
+      { state: rugState, label: rugText, side: row.ruggerSide || "" }
     ];
   }
 
@@ -236,7 +234,6 @@
     const flags = flagIndex(d.flags);
     const devs = devIndex(d.devs);
     const vetoes = d.vetoes;
-    const buzz = buzzIndex(d.buzz);
     const launches = indexLaunches(t, v2.launches);
     const groups = swarmGroups(t, v2.swarms);
     const trends = trendIndex(t, v2.rotation);
@@ -323,8 +320,6 @@
       row.rugger = ruggerOf(tk, vetoes, devs[tk]);
       if (row.rugger === true) row.ruggerSide = "List";
       else if (row.rugger === false) row.ruggerSide = "Log-only";
-      const b = buzz[tk];
-      if (b) { row.buzz = b.rising; row.buzzSide = b.side; }
       const tr = trends[tk];
       if (tr) { row.whaleTrend = tr.trend; if (!row.whaleName) row.whaleName = tr.name || lead; }
       const led = ledgerTrend[tk];
@@ -736,26 +731,6 @@
     }
     if (dev) return false;
     return null;
-  }
-  function buzzIndex(doc) {
-    const map = {};
-    const tokens = doc && Array.isArray(doc.tokens) ? doc.tokens : [];
-    tokens.forEach(row => {
-      if (!row || row.chain === "solana") return;
-      const tk = validRaw(row.ticker);
-      if (!tk || map[tk]) return;
-      const vel = row.velocity || {};
-      let rising = null;
-      if (typeof vel.ratio_1h_vs_prev_hr === "number") rising = vel.ratio_1h_vs_prev_hr > 1;
-      else if (Array.isArray(row.hourly_24h) && row.hourly_24h.length >= 2) {
-        const a = Number(row.hourly_24h[row.hourly_24h.length - 1]);
-        const b = Number(row.hourly_24h[row.hourly_24h.length - 2]);
-        if (isFinite(a) && isFinite(b)) rising = a > b;
-      }
-      const conf = row.confidence === "low" || row.confidence === "medium" || row.confidence === "high" ? String(row.confidence).toUpperCase() : "";
-      map[tk] = { rising, side: conf };
-    });
-    return map;
   }
   function leadName(t, log, v2) {
     const whales = Array.isArray(log.whales) ? log.whales : [];

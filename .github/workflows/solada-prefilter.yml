@@ -22,6 +22,9 @@ name: Solada prefilter
 # SW-01 (solada-prefilter/sw01.py) may POST reason sw01_candidate, and later sw01_exit,
 # after those files are written. Fail-soft: an error is logged and skipped. It does not
 # change rules k, y, aa, kill lines, verdicts, or the threshold and dev_sell reasons.
+# After that, est_log.py appends holder counts and kill lines for the EST-01 universe,
+# and x_buzz_shortlist.py names the next X buzz rows inside the existing read budget.
+# Both are log-only. They do not post, and they do not change a kill line or a verdict.
 # Job budget is 20 min. The scan process is killed at 780s. The remaining time is checkout,
 # setup, tests, cache, the privacy guard, and the commit/push retries. Cancelling during
 # that commit would drop state.json and re-send triggers.

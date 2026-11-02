@@ -1528,7 +1528,26 @@ def main():
             http._fail("sw01", type(e).__name__)
             sw01_summary = {"candidates": [], "exits": [], "error": type(e).__name__}
 
+    # Log-only. No webhook, no kill line, no verdict. A failure here is skipped.
+    est_note = None
+    try:
+        import est_log
+        est_note = est_log.record(args.data_dir, log, paper, time.time())
+        print(f"est universe log: {json.dumps(est_note)}")
+    except (SystemExit, Exception) as e:
+        http._fail("est_log", type(e).__name__)
+    short_note = None
+    try:
+        import x_buzz_shortlist as XB
+        buzz_path = os.path.join(desk, "x_buzz.json")
+        short_note = XB.record(args.data_dir, log, paper, time.time(), buzz_path=buzz_path)
+        print(f"x buzz shortlist: {json.dumps(short_note)}")
+    except (SystemExit, Exception) as e:
+        http._fail("x_buzz_shortlist", type(e).__name__)
+
     summary = build_summary(big_moves, whale_ledger, liquidity, veto_summary, sw01_summary)
+    summary["est_universe_log"] = est_note
+    summary["x_buzz_shortlist"] = short_note
     write_json(summary_path, summary, indent=1)
     print(f"whale: {json.dumps(summary['whale'])[:300]}")
     print(json.dumps({k: summary[k] for k in ("launches", "new_launches", "candidates", "passed_k_y", "first_block_hits", "data_failures", "api_calls")}))

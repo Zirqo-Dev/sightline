@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Score Sightline rows from the desk files at build time.
+"""Build the desk pages from the desk files at build time.
 
-Five signals, each 1 or 0: whale net-buy, holder trend, distance above the
-kill line, X buzz, liquidity. A missing feed counts as 0 and is named in the
-line. X buzz is left out of the tier while its file is missing. Nothing here
-invents a position the feed did not name.
+Rows carry a display-only risk panel: kill-line distance, the swarm flag,
+codenamed whale flow, and holders. The swarm flag is never a point. X buzz
+is not a score and is not read into the panel. WHY and CHANGE MY MIND stay
+factual and do not name a size.
 
-Paper ticket: Skip at 0–2 or a failed rule, Small at 3 without a rule pass,
-Standard at 4 or more with a rule pass.
+Paper test status lists EST-01 and SW-01 near-misses with each registered
+check passed or failed. A ticket is only an open row on those tests, and
+that size is the registered 100 ADA paper. Nothing here opens a ticket.
 """
 import argparse
 import csv
@@ -66,117 +67,304 @@ def signed(n, digits=1):
     return ("−" if n < 0 else "+" if n > 0 else "") + body
 
 
-def tier_of(counted, rule_pass):
-    if rule_pass and counted >= 4:
-        return "Standard"
-    if counted <= 2 or not rule_pass:
-        if counted >= 3 and not rule_pass:
-            return "Small" if counted == 3 else "Skip"
-        return "Skip"
-    return "Small"
+SIZE_WORD = re.compile(
+    r"\b(?:skip|small|standard|tiny)\s+lottery\b|\b(?:skip|small|standard)\s+ticket\b|\bbuy\s+\d+",
+    re.I,
+)
+EST_LABELS = (
+    ("kill", "pool at least 25% above the kill line"),
+    ("whale", "codenamed whale net-buying at least 1,000 ADA over 72h"),
+    ("holders", "holders flat or up over 7d"),
+    ("liquidity", "liquidity down no more than 10%"),
+)
+EST_SHORT = {
+    "kill": "kill-line distance",
+    "whale": "whale net-buy",
+    "holders": "holder trend",
+    "liquidity": "liquidity",
+}
+SW_LABELS = (
+    ("bonded", "bonded to a DEX pool"),
+    ("rule_k", "120 holders, pool at least 25k ADA, 6h buys above sells"),
+    ("whale", "codenamed whale still net-buying after 24h"),
+)
+WHALE_NET_MIN = 1000
+ABOVE_LINE = 25
+LIQ_FLOOR = -10
 
 
-def score_row(facts, buzz_live):
-    """facts: whale buy|trim|exit|None, holders up|down|None, above True|False|None,
-    buzz True|False|None (None = token not in a live file), liquid True|False|None.
-    """
-    notes = []
+def no_size(text):
+    s = SIZE_WORD.sub("", str(text or ""))
+    return re.sub(r"\s+", " ", s).strip(" ;,")
+
+
+def risk_panel(facts):
+    """Display only. The swarm flag is separate and is not a point."""
+    above = facts.get("above")
+    dist = facts.get("dist") or ""
+    if above is True:
+        kill, kill_cls = (dist or "above the kill line"), "up"
+    elif above is False:
+        kill, kill_cls = (dist or "under the kill line"), "dn"
+    else:
+        kill, kill_cls = "kill distance not logged", "mu"
+    name = facts.get("whale_name") or "Whale"
     whale = facts.get("whale")
     if whale == "buy":
-        w = 1
+        flow = name + " net-buying"
+    elif whale == "trim":
+        flow = name + " trimming"
+    elif whale == "exit":
+        flow = name + " exiting"
     else:
-        w = 0
-        if whale is None:
-            notes.append("no whale flow logged (0)")
-    holders = facts.get("holders")
-    if holders == "up":
-        h = 1
+        flow = "no whale flow logged"
+    holders_n = facts.get("holders_n")
+    if holders_n is None:
+        hold = "holders not logged"
     else:
-        h = 0
-        if holders is None:
-            notes.append("holder trend not logged (0)")
-    above = facts.get("above")
-    if above is True:
-        k = 1
-    else:
-        k = 0
-        if above is None:
-            notes.append("kill distance not logged (0)")
-    buzz = facts.get("buzz")
-    excluded = not buzz_live
-    if excluded:
-        b = 0
-        notes.append("X buzz feed missing (0, not in the tier)")
-    elif buzz is None:
-        b = 0
-        notes.append("no X buzz row (0)")
-    else:
-        b = 1 if buzz else 0
-    liquid = facts.get("liquid")
-    if liquid is True:
-        liq = 1
-    else:
-        liq = 0
-        if liquid is None:
-            notes.append("liquidity not logged (0)")
-    bits = [w, h, k, 0 if excluded else b, liq]
-    counted = w + h + k + (0 if excluded else b) + liq
-    rule = bool(facts.get("rule_pass"))
-    # A failed rule cannot be Standard. Score 3 without a pass is Small.
-    # Score 4+ with a pass is Standard. Anything else at 0–2, or a fail
-    # that is not the Small case, is Skip.
-    if rule and counted >= 4:
-        tier = "Standard"
-    elif counted == 3 and not rule:
-        tier = "Small"
-    elif counted <= 2 or not rule:
-        tier = "Skip"
-    else:
-        tier = "Small"
-    return {"score": bits, "counted": counted, "tier": tier, "buzz_excluded": excluded, "gaps": notes}
+        trend = ""
+        if facts.get("holders") == "up":
+            trend = " up"
+        elif facts.get("holders") == "down":
+            trend = " down"
+        elif facts.get("holders_delta") == 0:
+            trend = " flat"
+        hold = f"holders {compact(float(holders_n))}{trend}"
+    return {
+        "kill": scrub(kill),
+        "kill_cls": kill_cls,
+        "swarm": bool(facts.get("swarm")),
+        "whale": scrub(flow),
+        "holders": scrub(hold),
+    }
 
 
 def change_line(facts):
     if facts.get("above") is False:
-        return "Side back above the kill line."
-    if facts.get("whale") == "trim":
-        return (facts.get("whale_name") or "The whale") + " flips to net-buy."
-    if facts.get("whale") == "exit":
-        return (facts.get("whale_name") or "The whale") + " stops selling."
-    if facts.get("swarm_fail"):
-        return "Swarm exits and the side holds the 25k ₳ bar."
-    if facts.get("holders") != "up":
-        return "Holder trend is logged up on the next run."
-    if not facts.get("buzz"):
-        return "A live X buzz print shows up."
-    return "A later run still clears the desk rule."
+        text = "Side back above the kill line."
+    elif facts.get("whale") == "trim":
+        text = (facts.get("whale_name") or "The whale") + " flips to net-buy."
+    elif facts.get("whale") == "exit":
+        text = (facts.get("whale_name") or "The whale") + " stops selling."
+    elif facts.get("swarm"):
+        text = "Swarm exits and the side holds the 25k ₳ bar."
+    elif facts.get("holders") != "up":
+        text = "Holder trend is logged up on the next run."
+    else:
+        text = "A later run still clears the registered test."
+    return no_size(text)
 
 
-def why_line(facts, score):
-    parts = []
-    if facts.get("why"):
-        parts.append(facts["why"])
-    extra = [g for g in score["gaps"] if g not in (facts.get("why") or "")]
-    if extra:
-        parts.append("; ".join(extra))
-    return scrub(" ".join(parts)) or "No reading in this feed (signals 0)."
+def why_line(facts):
+    return no_size(scrub(facts.get("why") or "")) or "No reading in this feed."
 
 
-def row(ticker, facts, buzz_live, right="–", right_cls="mu", pill="", pill_cls=""):
-    scored = score_row(facts, buzz_live)
+def row(ticker, facts, right="–", right_cls="mu", pill="", pill_cls=""):
     return {
         "ticker": ticker,
         "logo": facts.get("logo") or ticker,
         "pill": pill,
         "pill_cls": pill_cls,
-        "why": why_line(facts, scored),
-        "change": scrub(facts.get("change") or change_line(facts)),
-        "score": scored["score"],
-        "counted": scored["counted"],
-        "tier": scored["tier"],
-        "buzz_excluded": scored["buzz_excluded"],
+        "why": why_line(facts),
+        "change": no_size(scrub(facts.get("change") or "")) or change_line(facts),
+        "risk": risk_panel(facts),
         "right": right,
         "right_cls": right_cls,
+    }
+
+
+def _num(value):
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _check(cid, label, ok, detail, short):
+    return {"id": cid, "label": label, "pass": bool(ok), "detail": scrub(detail), "short": short}
+
+
+def _holder_7d(value):
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return value >= 0, signed(value, 1) + "% over 7d"
+    text = str(value or "").strip()
+    if not text:
+        return False, "not logged"
+    low = text.lower()
+    if "unverifiable" in low or "no logged" in low or "missing" in low:
+        return False, "unverifiable"
+    if low in ("flat", "up") or low.startswith("+") or "flat or up" in low:
+        return True, text
+    return False, text
+
+
+def est_checks(src):
+    """The four EST-01 qualify checks. The 300k pool gate is the universe, not a fifth check."""
+    src = src or {}
+    pct = _num(src.get("pct_from_line"))
+    net = _num(src.get("whale_net_72h_ada"))
+    pool7 = _num(src.get("pool_7d_pct"))
+    who = scrub(src.get("whale") or "")
+    kill_ok = pct is not None and pct >= ABOVE_LINE
+    whale_ok = net is not None and net >= WHALE_NET_MIN
+    hold_ok, hold_detail = _holder_7d(src.get("holders_7d"))
+    liq_ok = pool7 is not None and pool7 >= LIQ_FLOOR
+    if net is None:
+        whale_detail = "no 72h net-buy logged"
+    else:
+        whale_detail = ((who + " ") if who else "") + compact(net) + " ADA"
+    if pct is None:
+        kill_detail = "not logged"
+    else:
+        kill_detail = signed(pct, 1) + "% vs line"
+    if pool7 is None:
+        liq_detail = "not logged"
+    else:
+        liq_detail = signed(pool7, 1) + "% over 7d"
+    return [
+        _check("kill", EST_LABELS[0][1], kill_ok, kill_detail, EST_SHORT["kill"]),
+        _check("whale", EST_LABELS[1][1], whale_ok, whale_detail, EST_SHORT["whale"]),
+        _check("holders", EST_LABELS[2][1], hold_ok, hold_detail, EST_SHORT["holders"]),
+        _check("liquidity", EST_LABELS[3][1], liq_ok, liq_detail, EST_SHORT["liquidity"]),
+    ]
+
+
+def sw_checks(src, launch=None):
+    src = src or {}
+    launch = launch or {}
+    bonded = src.get("bonded") is True or launch.get("graduated") is True
+    holders = _num(src.get("holders"))
+    if holders is None:
+        holders = _num(launch.get("holders"))
+    pool = _num(src.get("pool_ada"))
+    if pool is None:
+        pool = _num(launch.get("pool_ada"))
+    buys = _num(src.get("buys_6h"))
+    sells = _num(src.get("sells_6h"))
+    if holders is None and pool is None and buys is None:
+        k_ok = False
+        k_detail = "unverifiable, not counted"
+    else:
+        flow_ok = buys is not None and sells is not None and buys > sells
+        k_ok = holders is not None and holders >= HOLDER_BAR and pool is not None and pool >= POOL_BAR and flow_ok
+        bits = []
+        bits.append("holders " + (compact(holders) if holders is not None else "not logged"))
+        bits.append("side " + (compact(pool) + " ₳" if pool is not None else "not logged"))
+        if buys is None or sells is None:
+            bits.append("6h flow unverifiable")
+        else:
+            bits.append(f"6h {compact(buys)}/{compact(sells)}")
+        k_detail = "; ".join(bits)
+    whale = src.get("whale_accumulating")
+    if whale is True:
+        w_ok, w_detail = True, "net-buying after 24h"
+    elif whale is False:
+        w_ok, w_detail = False, "not net-buying after 24h"
+    else:
+        due = scrub(src.get("gate_check_due") or "")
+        w_ok, w_detail = False, ("not checked yet" + (f" ({due})" if due else ""))
+    return [
+        _check("bonded", SW_LABELS[0][1], bonded, "bonded" if bonded else "not bonded", "bonded pool"),
+        _check("rule_k", SW_LABELS[1][1], k_ok, k_detail, "rule k"),
+        _check("whale", SW_LABELS[2][1], w_ok, w_detail, "whale after 24h"),
+    ]
+
+
+def _pack_near(ticker, checks):
+    return {
+        "ticker": ticker,
+        "passed": sum(1 for c in checks if c["pass"]),
+        "total": len(checks),
+        "missing": [c.get("short") or c["id"] for c in checks if not c["pass"]],
+        "checks": checks,
+    }
+
+
+def _ticket_open(ticket):
+    if not isinstance(ticket, dict) or ticket.get("closed_at"):
+        return False
+    return str(ticket.get("status") or "open").lower() not in ("closed", "exited", "cancelled", "canceled")
+
+
+def _test(paper, tid):
+    for test in (paper or {}).get("tests") or []:
+        if isinstance(test, dict) and str(test.get("id") or "").upper() == tid:
+            return test
+    return {}
+
+
+def est_near_misses(log, paper):
+    check = (log or {}).get("est01_check") if isinstance((log or {}).get("est01_check"), dict) else {}
+    by = {}
+    for row in check.get("rows") or []:
+        if isinstance(row, dict) and row.get("ticker"):
+            by[str(row["ticker"]).upper()] = row
+    names = [str(t).upper() for t in (check.get("universe") or []) if t]
+    if not names:
+        last = ((_test(paper, "EST-01").get("check_log") or [{}])[-1])
+        if isinstance(last, dict):
+            names = [str(t).upper() for t in (last.get("checked") or []) if t]
+    out = []
+    for tk in names:
+        checks = est_checks(by.get(tk) or {"ticker": tk})
+        if all(c["pass"] for c in checks):
+            continue
+        out.append(_pack_near(tk, checks))
+    return out
+
+
+def sw_near_misses(log, paper):
+    test = _test(paper, "SW-01")
+    launches = {}
+    for src in ((log or {}).get("cardano_v2") or {}).get("launches") or []:
+        if isinstance(src, dict) and src.get("ticker"):
+            launches[str(src["ticker"]).upper()] = src
+    open_names = set()
+    for ticket in test.get("tickets") or []:
+        if _ticket_open(ticket) and ticket.get("ticker"):
+            open_names.add(str(ticket["ticker"]).upper())
+    out = []
+    for src in test.get("comparison_group") or []:
+        if not isinstance(src, dict) or not src.get("ticker"):
+            continue
+        tk = str(src["ticker"]).upper()
+        if tk in open_names:
+            continue
+        checks = sw_checks(src, launches.get(tk))
+        if all(c["pass"] for c in checks):
+            continue
+        out.append(_pack_near(tk, checks))
+    return out
+
+
+def ticket_line(paper, chain):
+    if chain != "cardano":
+        return "No EST-01 or SW-01 test on this chain. No sized ticket."
+    bits = []
+    for tid in ("EST-01", "SW-01"):
+        for ticket in _test(paper, tid).get("tickets") or []:
+            if not _ticket_open(ticket):
+                continue
+            name = scrub(ticket.get("ticker") or "")
+            if name:
+                bits.append(f"{name} {tid} fixed 100 ADA paper")
+    if not bits:
+        return "No open ticket. A ticket is only a registered test's fixed 100 ADA paper."
+    return "Open: " + "; ".join(bits) + "."
+
+
+def paper_status(log, paper, chain):
+    cardano = chain == "cardano"
+    return {
+        "label": "Not a pick, not a ranking",
+        "ticket": ticket_line(paper, chain),
+        "universe": "Pool at least 300k ADA, established, with an owner-approved kill line." if cardano else "",
+        "est01": est_near_misses(log, paper) if cardano else [],
+        "sw01": sw_near_misses(log, paper) if cardano else [],
     }
 
 
@@ -223,6 +411,19 @@ def cardano_section(data_dir, buzz, buzz_live):
     for tok in (buzz or {}).get("tokens") or []:
         if str(tok.get("chain") or "") == "cardano":
             buzz_by[str(tok.get("ticker") or "").upper()] = tok
+    swarm_names = set()
+    v2 = log.get("cardano_v2") or {}
+    for src in v2.get("launches") or []:
+        if isinstance(src, dict) and src.get("swarm") and src.get("ticker"):
+            swarm_names.add(str(src["ticker"]).upper())
+    for group in v2.get("swarms") or []:
+        if not isinstance(group, dict):
+            continue
+        for name in group.get("last_seen") or []:
+            swarm_names.add(str(name).upper())
+        for item in group.get("launches") or []:
+            if isinstance(item, dict) and item.get("ticker"):
+                swarm_names.add(str(item["ticker"]).upper())
 
     def facts_for(tk, seed=None):
         v = verdicts.get(tk) or {}
@@ -255,24 +456,11 @@ def cardano_section(data_dir, buzz, buzz_live):
         else:
             holders = None
         above, dist = _distance(reasons or blob)
-        if pool is None:
-            liquid = None
-        else:
-            liquid = float(pool) >= POOL_BAR
-        b = buzz_by.get(tk)
-        if not buzz_live:
-            buzz_hit = None
-        elif b is None:
-            buzz_hit = None
-        else:
-            ratio = (b.get("velocity") or {}).get("ratio_1h_vs_prev_hr")
-            buzz_hit = bool(ratio is not None and float(ratio) >= 1)
-        swarm_fail = bool(re.search(r"rule y|swarm", blob, re.I) and re.search(r"fail", blob, re.I))
-        rule = (
-            holders_n is not None and float(holders_n) >= HOLDER_BAR
-            and pool is not None and float(pool) >= POOL_BAR
-            and above is True and not swarm_fail
-        )
+        pct_line = _num(v.get("pct_from_line"))
+        if above is None and pct_line is not None:
+            above = pct_line > 0
+            dist = signed(pct_line, 1) + "% vs line"
+        swarm = tk in swarm_names or bool((seed or {}).get("swarm"))
         bits = []
         if whale == "buy":
             bits.append((who or "Whale") + " net-buying")
@@ -287,9 +475,17 @@ def cardano_section(data_dir, buzz, buzz_live):
         if dist:
             bits.append(dist)
         pct = _pct_24h(blob)
+        try:
+            holders_num = None if holders_n is None else float(holders_n)
+        except (TypeError, ValueError):
+            holders_num = None
+        try:
+            delta_num = None if delta is None else float(delta)
+        except (TypeError, ValueError):
+            delta_num = None
         return {
-            "whale": whale, "whale_name": who, "holders": holders, "above": above,
-            "buzz": buzz_hit, "liquid": liquid, "rule_pass": rule, "swarm_fail": swarm_fail,
+            "whale": whale, "whale_name": who, "holders": holders, "holders_n": holders_num,
+            "holders_delta": delta_num, "above": above, "dist": dist, "swarm": swarm,
             "why": "; ".join(bits), "logo": tk, "pct": pct,
         }
 
@@ -298,7 +494,7 @@ def cardano_section(data_dir, buzz, buzz_live):
         pct = facts.get("pct")
         right = "–" if pct is None else signed(pct, 1) + "%"
         cls = "mu" if pct is None else "up" if pct > 0 else "dn" if pct < 0 else "mu"
-        return row(tk, facts, buzz_live, right, cls, pill, pill_cls)
+        return row(tk, facts, right, cls, pill, pill_cls)
 
     runners = []
     established = []
@@ -318,7 +514,7 @@ def cardano_section(data_dir, buzz, buzz_live):
     # Keep top-10 order for established, runners by whether they are moving.
     rank = {tk: i for i, tk in enumerate(top)}
     established.sort(key=lambda r: (0 if r["pill"] == "watch" else 1, rank.get(r["ticker"], 99)))
-    runners.sort(key=lambda r: (0 if r["right_cls"] == "up" else 1, -r["counted"], r["ticker"]))
+    runners.sort(key=lambda r: (0 if r["right_cls"] == "up" else 1, r["ticker"]))
     runners = runners[:12]
     established = established[:10]
 
@@ -327,10 +523,12 @@ def cardano_section(data_dir, buzz, buzz_live):
         tk = str(src.get("ticker") or "").upper()
         if not tk:
             continue
-        facts = facts_for(tk)
+        facts = facts_for(tk, src)
         facts["why"] = " · ".join(x for x in [src.get("age"), f"{src.get('holders')} holders" if src.get("holders") is not None else "", "swarm" if src.get("swarm") else "", "sniper" if src.get("sniper") else ""] if x)
         facts["change"] = "Gate check: 120 holders and side at the 25k ₳ bar."
-        launches.append(row(tk, facts, buzz_live, "–", "mu", "pass", ""))
+        if src.get("swarm"):
+            facts["swarm"] = True
+        launches.append(row(tk, facts, "–", "mu", "pass", ""))
     launches = launches[:8]
 
     whales = []
@@ -394,10 +592,6 @@ def cardano_section(data_dir, buzz, buzz_live):
     skipped = cov.get("skipped")
     nskip = len(skipped) if isinstance(skipped, list) else (skipped or 0)
     failure = (nskip / tracked) if tracked else None
-    best = None
-    pool = runners + established
-    if pool:
-        best = sorted(pool, key=lambda r: (-r["counted"], 0 if r["tier"] != "Skip" else 1))[0]
     buzz_rows = []
     for tok in sorted(buzz_by.values(), key=lambda t: -(t.get("mentions_1h") or 0))[:5]:
         ratio = (tok.get("velocity") or {}).get("ratio_1h_vs_prev_hr")
@@ -420,7 +614,7 @@ def cardano_section(data_dir, buzz, buzz_live):
         "sw01": {"tickets": len(sw.get("tickets") or []), "names": pending[:4]},
         "est01": {"names": (check.get("checked") or [])[:4], "note": scrub(check.get("note") or "")},
         "books": {"solada": book_side(paper), "pump": book_side(pump)},
-        "best": best,
+        "paper_status": paper_status(log, paper, "cardano"),
         "buzz": buzz_rows,
     }
 
@@ -479,18 +673,13 @@ def solana_section(data_dir, buzz, buzz_live):
                     pct = (float(mark) / float(entry) - 1) * 100
             except (TypeError, ValueError):
                 pct = None
-            buzz_hit = None
-            if buzz_live:
-                hit = next((t for t in (buzz or {}).get("tokens") or [] if str(t.get("chain")) == "solana" and str(t.get("ticker") or "").upper() == symbol.upper()), None)
-                buzz_hit = None if hit is None else bool(((hit.get("velocity") or {}).get("ratio_1h_vs_prev_hr") or 0) >= 1)
             facts = {
-                "whale": None, "holders": None, "above": None, "buzz": buzz_hit, "liquid": None,
-                "rule_pass": False,
+                "whale": None, "holders": None, "holders_n": None, "above": None, "swarm": False,
                 "why": f"{scrub(str(p.get('why') or 'open').replace('_', ' '))}" + (f"; mark {signed(pct, 1)}%" if pct is not None else ""),
-                "change": "F book back above −15% per trade by Nov 11, or a logged whale, holder, or liquidity print shows up.",
+                "change": "A logged whale, holder, or kill-line print shows up. The day-14 line is not a ticket.",
                 "logo": symbol,
             }
-            item = row(symbol, facts, buzz_live, "–" if pct is None else signed(pct, 1) + "%", "up" if pct and pct > 0 else "dn" if pct and pct < 0 else "mu", book, "")
+            item = row(symbol, facts, "–" if pct is None else signed(pct, 1) + "%", "up" if pct and pct > 0 else "dn" if pct and pct < 0 else "mu", book, "")
             item["book"] = book
             opens.append(item)
     opens.sort(key=lambda r: -(float(r["right"].replace("−", "-").replace("%", "").replace("+", "") or 0) if r["right"] not in ("–",) else -1e9))
@@ -538,22 +727,6 @@ def solana_section(data_dir, buzz, buzz_live):
             "pnl": None if pnl is None else round(pnl, 3),
         })
     trades.reverse()
-    f = books[0] if books else {}
-    closest = opens[0] if opens else None
-    best = {
-        "name": "Skip today",
-        "why": (
-            f"Closest is {closest['ticker']} ({closest['right']})" if closest else "No open position in the feed"
-        ) + (
-            f", and the F book is {f.get('rule')} at {signed(f.get('exp_pct'), 1)}% per trade over {f.get('n')} closes. "
-            "Whale, holder, kill line and liquidity are not in the Solana feed (0)."
-        ),
-        "change": "F book back above −15% per trade by Nov 11, or a fresh pass with a live X buzz row.",
-        "score": closest["score"] if closest else [0, 0, 0, 0, 0],
-        "tier": "Skip",
-        "buzz_excluded": not buzz_live,
-        "logo": closest["logo"] if closest else "",
-    }
     buzz_rows = []
     for tok in (buzz or {}).get("tokens") or []:
         if str(tok.get("chain")) != "solana":
@@ -575,7 +748,7 @@ def solana_section(data_dir, buzz, buzz_live):
         "costs": costs,
         "win_pct": round(100 * nwin / nsell, 1) if nsell else None,
         "fills": int(nsell),
-        "best": best,
+        "paper_status": paper_status({}, {}, "solana"),
         "buzz": buzz_rows[:5],
         "buzz_live": buzz_live,
     }
@@ -616,13 +789,12 @@ def nft_section(data_dir, prices):
         whale = "buy" if re.search(r"one whale|whale sweep|whale", text, re.I) else None
         status = str(w.get("status") or "pass")
         facts = {
-            "whale": whale, "holders": None, "above": None, "buzz": None, "liquid": None,
-            "rule_pass": False,
-            "why": f"{w.get('chain') or ''} · " + (f"{floor} {unit} floor" if floor is not None else "floor not in the pulse") + ". Holder trend, kill line, X buzz and liquidity are not in this pulse (0).",
+            "whale": whale, "holders": None, "holders_n": None, "above": None, "swarm": False,
+            "why": f"{w.get('chain') or ''} · " + (f"{floor} {unit} floor" if floor is not None else "floor not in the pulse") + ". Holders and the kill line are not in this pulse.",
             "change": "A fresh KING pulse with the floor up and 3 or more distinct buyers.",
             "logo": name,
         }
-        item = row(name, facts, False, "floor n/a" if usd is None else ("$" + f"{usd:,.0f}" if usd >= 100 else f"${usd:,.2f}"), "" if usd is None else "", "watch" if status.lower() == "watch" else "pass", "a" if status.lower() == "watch" else "")
+        item = row(name, facts, "floor n/a" if usd is None else ("$" + f"{usd:,.0f}" if usd >= 100 else f"${usd:,.2f}"), "" if usd is None else "", "watch" if status.lower() == "watch" else "pass", "a" if status.lower() == "watch" else "")
         item["chain"] = w.get("chain") or ""
         item["floor"] = floor
         item["unit"] = unit
@@ -637,18 +809,6 @@ def nft_section(data_dir, prices):
             age_days = int((datetime.now(timezone.utc) - dt.astimezone(timezone.utc)).total_seconds() // 86400)
         except ValueError:
             age_days = None
-    best_row = next((r for r in rows if r["pill"] == "watch"), rows[0] if rows else None)
-    best = None
-    if best_row:
-        best = {
-            "name": "Skip today",
-            "logo": best_row["logo"],
-            "why": f"Closest is {best_row['ticker']}. " + best_row["why"],
-            "change": best_row["change"],
-            "score": best_row["score"],
-            "tier": "Skip",
-            "buzz_excluded": True,
-        }
     return {
         "rows": rows,
         "open": len(paper.get("open") or []),
@@ -657,7 +817,7 @@ def nft_section(data_dir, prices):
         "asof": asof,
         "age_days": age_days,
         "prices": {"source": (prices or {}).get("source"), "asof": (prices or {}).get("asof"), "ETH": px.get("ETH"), "SOL": px.get("SOL")},
-        "best": best,
+        "paper_status": paper_status({}, {}, "nft"),
     }
 
 
@@ -688,9 +848,9 @@ def build(data_dir):
         "solana": solana_section(data_dir, buzz, buzz_live),
         "nft": nft_section(data_dir, prices),
         "briefs": briefs_section(data_dir),
-        "legend": "Score = 5 signals, 1 bar each: whale net-buy · holder trend · above kill line · X buzz · liquidity. A missing signal is 0. "
-        + ("X buzz is in the file and counts when the token has a row. " if buzz_live else "X buzz feed is missing, shown dashed, and not counted toward a tier. ")
-        + "Paper ticket: Skip (0–2 or a failed rule) · Small (3, no rule pass) · Standard (4 or more and a rule pass). Research and paper only.",
+        "legend": "Risk panel is display only: kill-line distance, swarm (red, never a point), codenamed whale flow, holders. "
+        "X buzz is not a score. Paper test status is not a pick and not a ranking. "
+        "A ticket is only a registered test's fixed 100 ADA paper. Research and paper only.",
     }
 
 

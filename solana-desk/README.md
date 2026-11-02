@@ -54,6 +54,10 @@ All generated files (tasks/trades CSVs, state, daily summaries, `paper.json`,
 `log.json`, briefs, review notes, health) are committed to the **`desk-data`** branch
 (folder `solana-desk/`) by the Actions bot, with pull-rebase retries and no force-push. `main` holds code only and changes only via PRs the owner merges.
 
+## Whale flow (not started)
+
+A Solana whale-flow ledger is not feasible yet. There is no codename-to-wallet map in this repo, and a public holder list is addresses, which this repo does not publish. `desk/whale_flow.py` records that TODO. `run.py`, the fill and exit path, and `specs/day14_verdict.py` do not import it. v6.5 stays frozen through the Nov 11 verdict.
+
 ## Rugger list (log only)
 RugCheck `rugged` is remembered per deployer in this desk's private Actions cache
 (`--cache-dir`, workflow cache `solana-desk-rugger-`, file `rugger-blacklist.json`).
