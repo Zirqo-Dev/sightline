@@ -24,6 +24,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
+from zoneinfo import ZoneInfo
 
 BOOKS = ("F", "R", "S")
 TRADE_NEED = ("time", "book", "action", "frac", "pnl", "mint")
@@ -47,6 +48,15 @@ SYMBOL = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,31}")
 MINT = re.compile(r"[1-9A-HJ-NP-Za-km-z]{32,48}")
 RUN_ID = re.compile(r"\d{8}T\d{4}")
 DAY = re.compile(r"\d{4}-\d{2}-\d{2}")
+TWIN_NAME = re.compile(r"random_twin_(\d{4}-\d{2}-\d{2})\.json")
+# 14 days after day14_verdict.CUTOFF_DEFAULT, same 15:00Z clock.
+# The pre-registration names Nov 25 and does not store a clock. This constant is the checkpoint.
+DAY28_AT = "2026-11-25T15:00:00Z"
+TICKET_ASSUMPTION = (
+    "The ticket is the buy row's sol when that cell is a positive number. "
+    "A blank or non-positive sol uses TICKET_SOL from solana-desk/desk/config.py."
+)
+TORONTO = ZoneInfo("America/Toronto")
 
 
 def gap(reason):
@@ -107,7 +117,11 @@ def public_text(value, limit=400):
 
 
 def assigned(path, name):
-    """Module-level assignment of a string or number. No execution."""
+    """Read one module-level constant with ast.parse.
+
+    This does not import the file and does not call exec_module. EXIT is a dict
+    with arithmetic, so load_exit_program reads that one file with exec_module.
+    """
     try:
         with open(path, encoding="utf-8") as fh:
             tree = ast.parse(fh.read())
@@ -313,8 +327,24 @@ def read_trades(path):
     return header, rows, None
 
 
+def positive_decimal(cell):
+    if cell in (None, ""):
+        return None
+    try:
+        value = Decimal(str(cell))
+    except Exception:
+        return None
+    if value > 0:
+        return value
+    return None
+
+
 def book_closes(rows, book):
-    """Fully closed lots from append-only trades. pnl is the logged net. Blank pnl is incomplete."""
+    """Fully closed lots from append-only trades. pnl is the logged net. Blank pnl is incomplete.
+
+    The buy row's sol, when positive, is that lot's ticket. Sell rows carry proceeds in sol, not the ticket.
+    A lot is post-v3 when every sell row's cost_model is non-blank, matching scripts/analysis/random_twin_check.py.
+    """
     from collections import defaultdict
     lots = defaultdict(list)
     closed = []
@@ -324,12 +354,15 @@ def book_closes(rows, book):
             continue
         mint = row.get("mint") or ""
         try:
-            int(float(row.get("time") or ""))
+            ts = int(float(row.get("time") or ""))
         except (TypeError, ValueError):
             incomplete += 1
             continue
         if row.get("action") == "buy":
-            lots[mint].append({"pnl": Decimal("0"), "frac": Decimal("0")})
+            lots[mint].append({
+                "pnl": Decimal("0"), "frac": Decimal("0"), "opened": ts, "closed": None,
+                "mint": mint, "ticket": positive_decimal(row.get("sol")), "models": [],
+            })
             continue
         if row.get("pnl") in ("", None):
             incomplete += 1
@@ -344,66 +377,184 @@ def book_closes(rows, book):
         except Exception:
             incomplete += 1
             continue
+        lot["closed"] = ts
+        lot["models"].append((row.get("cost_model") or "").strip())
         if lot["frac"] >= 1 - Decimal("0.0001"):
             closed.append(lots[mint].pop(0))
     return closed, incomplete
 
 
-def solana_book(rows, trade_err, positions, pos_err, book, program, ticket_gap):
+def median_decimal(values):
+    ordered = sorted(values)
+    count = len(ordered)
+    mid = count // 2
+    if count % 2:
+        return ordered[mid]
+    return (ordered[mid - 1] + ordered[mid]) / 2
+
+
+def returns_block(lots, fallback, source, note):
+    """n, mean, and median of pnl/ticket. fallback is config TICKET_SOL when the buy row has no sol."""
+    if not lots:
+        return {
+            "n": measured(0, source),
+            "mean": gap("no closes in " + source),
+            "median": gap("no closes in " + source),
+            "ticket_logged_lots": measured(0, source),
+            "ticket_assumed_lots": measured(0, source),
+            "ticket_assumption": TICKET_ASSUMPTION,
+            "note": note,
+        }
+    returns = []
+    logged = assumed = 0
+    for lot in lots:
+        if lot.get("ticket") is not None:
+            ticket = lot["ticket"]
+            logged += 1
+        elif fallback is not None:
+            ticket = fallback
+            assumed += 1
+        else:
+            why = "a buy row has no positive sol and TICKET_SOL was not read"
+            return {
+                "n": measured(len(lots), source),
+                "mean": gap(why),
+                "median": gap(why),
+                "ticket_logged_lots": measured(logged, source),
+                "ticket_assumed_lots": gap(why),
+                "ticket_assumption": TICKET_ASSUMPTION,
+                "note": note,
+            }
+        returns.append(lot["pnl"] / ticket)
+    mean = sum(returns, Decimal("0")) / len(returns)
+    med = median_decimal(returns)
+    return {
+        "n": measured(len(returns), source),
+        "mean": {
+            "value": quant(mean),
+            "percent": quant(mean * 100),
+            "unit": "fraction of that lot's ticket; percent is the fraction times 100",
+            "reason": None,
+            "source": source,
+        },
+        "median": {
+            "value": quant(med),
+            "percent": quant(med * 100),
+            "unit": "fraction of that lot's ticket; percent is the fraction times 100",
+            "reason": None,
+            "source": source,
+        },
+        "total_pnl_sol": measured(quant(sum((lot["pnl"] for lot in lots), Decimal("0"))), source),
+        "ticket_logged_lots": measured(logged, source + " buy sol"),
+        "ticket_assumed_lots": measured(assumed, "solana-desk/desk/config.py TICKET_SOL"),
+        "ticket_assumption": TICKET_ASSUMPTION,
+        "note": note,
+    }
+
+
+def is_post_v3(lot, cost_model):
+    labels = lot.get("models") or []
+    return bool(labels) and all(label == cost_model for label in labels)
+
+
+def apply_void(lots, window):
+    """Same split as day14_verdict.select_closes: void-window entries out, closes after the cutoff out."""
+    kept, voided, late = [], [], []
+    for lot in lots:
+        if window["start"] <= lot["opened"] < window["end"]:
+            voided.append(lot)
+            continue
+        if lot["closed"] is None or lot["closed"] > window["cutoff"]:
+            late.append(lot)
+            continue
+        kept.append(lot)
+    return kept, voided, late
+
+
+def fallback_ticket(program):
+    if not program or not program.get("ticket_sol"):
+        return None
+    try:
+        value = Decimal(program["ticket_sol"])
+    except Exception:
+        return None
+    return value if value > 0 else None
+
+
+def solana_book(trade_err, closed, incomplete, positions, pos_err, book, program, void, cost_model):
     source = "solana-desk/trades.csv"
     pos_source = "solana-desk/positions.json"
     out = {"id": book}
+    fallback = fallback_ticket(program)
     if trade_err == "absent":
-        out["close_count"] = gap("solana-desk/trades.csv is missing. positions.json keeps a capped closed list and is not used as the count")
-        out["mean_return_after_costs"] = gap("solana-desk/trades.csv is missing")
-        out["total_pnl_sol"] = gap("solana-desk/trades.csv is missing")
+        why = "solana-desk/trades.csv is missing. positions.json keeps a capped closed list and is not used as the count"
+        out["all_closes"] = gap(why)
+        out["post_v3"] = gap(why)
     elif trade_err:
-        out["close_count"] = gap("solana-desk/trades.csv " + trade_err)
-        out["mean_return_after_costs"] = gap("solana-desk/trades.csv " + trade_err)
-        out["total_pnl_sol"] = gap("solana-desk/trades.csv " + trade_err)
+        why = "solana-desk/trades.csv " + trade_err
+        out["all_closes"] = gap(why)
+        out["post_v3"] = gap(why)
     else:
-        closed, incomplete = book_closes(rows, book)
         out["incomplete_rows"] = measured(incomplete, source)
         if incomplete:
             why = "%d sell or buy rows for %s could not be matched or had a blank pnl" % (incomplete, book)
-            out["close_count"] = gap(why)
             out["complete_lots"] = measured(len(closed), source)
-            out["mean_return_after_costs"] = gap(why + "; the mean is not taken from a partial ledger")
-            out["total_pnl_sol"] = gap(why)
-        elif not closed:
-            out["close_count"] = measured(0, source)
-            out["mean_return_after_costs"] = gap("no realized closes for %s in solana-desk/trades.csv" % book)
-            out["total_pnl_sol"] = measured("0.000000000", source)
-        elif ticket_gap or program is None:
-            total = sum((lot["pnl"] for lot in closed), Decimal("0"))
-            out["close_count"] = measured(len(closed), source)
-            out["total_pnl_sol"] = measured(quant(total), source)
-            out["mean_return_after_costs"] = ticket_gap or gap("ticket size was not read")
+            out["all_closes"] = gap(why + "; the mean is not taken from a partial ledger")
+            out["post_v3"] = gap(why)
         else:
-            total = sum((lot["pnl"] for lot in closed), Decimal("0"))
-            ticket = Decimal(program["ticket_sol"])
-            mean = total / (ticket * len(closed))
-            out["close_count"] = measured(len(closed), source)
-            out["total_pnl_sol"] = measured(quant(total), source)
-            out["mean_return_after_costs"] = {
-                "value": quant(mean),
-                "percent": quant(mean * 100),
-                "unit": "fraction of ticket; percent is that fraction times 100",
-                "formula": "sum of sell pnl on each fully closed lot / (TICKET_SOL * close_count)",
-                "reason": None,
-                "source": "solana-desk/trades.csv pnl / solana-desk/desk/config.py TICKET_SOL",
-            }
-        out["note"] = "Every realized close in trades.csv. The day-14 void window is not applied. pnl is the logged net."
+            out["all_closes"] = returns_block(
+                closed, fallback, source,
+                "Every realized close in trades.csv, pre-v3 and post-v3 together. The day-14 void window is not applied. pnl is the logged net.",
+            )
+            out["post_v3"] = post_v3_block(closed, fallback, source, void, cost_model)
     if program:
         out["ticket_sol"] = measured(program["ticket_sol"], "solana-desk/desk/config.py TICKET_SOL")
     else:
-        out["ticket_sol"] = ticket_gap or gap("solana-desk/desk/config.py TICKET_SOL was not read")
+        out["ticket_sol"] = gap("solana-desk/desk/config.py TICKET_SOL was not read")
     out["open_positions"] = open_positions(positions, pos_err, book, program)
     if isinstance(out["open_positions"], list):
         out["open_count"] = measured(len(out["open_positions"]), pos_source)
     else:
         out["open_count"] = gap(out["open_positions"]["reason"])
     return out
+
+
+def post_v3_block(closed, fallback, source, void, cost_model):
+    if not cost_model:
+        return gap("COST_MODEL was not read from solana-desk/desk/config.py")
+    if void is None:
+        return gap("the day-14 void window was not read from solana-desk/specs/day14_verdict.py")
+    labelled = [lot for lot in closed if is_post_v3(lot, cost_model)]
+    kept, voided, late = apply_void(labelled, void)
+    block = returns_block(
+        kept, fallback, source,
+        "Post-v3 closes only: every sell row's cost_model is %s. "
+        "Entries in [%s, %s) are excluded, and closes after %s are excluded, "
+        "the same split as day14_verdict.select_closes."
+        % (cost_model, void["start_text"], void["end_text"], void["cutoff_text"]),
+    )
+    block["cost_model"] = cost_model
+    block["excluded_void_entry"] = measured(len(voided), source)
+    block["excluded_after_cutoff"] = measured(len(late), source)
+    block["void_window"] = {
+        "start": void["start_text"],
+        "end": void["end_text"],
+        "cutoff": void["cutoff_text"],
+        "source": "solana-desk/specs/day14_verdict.py VOID_START, VOID_END, CUTOFF_DEFAULT",
+    }
+    return block
+
+
+def not_overlapping_f(f_lots, r_lots, fallback):
+    """R closes whose mint and open time are not also an F close. Cheap set difference, not the sampler replay."""
+    keys = {(lot["mint"], lot["opened"]) for lot in f_lots}
+    kept = [lot for lot in r_lots if (lot["mint"], lot["opened"]) not in keys]
+    block = returns_block(
+        kept, fallback, "solana-desk/trades.csv",
+        "Realized R closes whose mint and open time are not also an F close. The day-14 void window is not applied.",
+    )
+    block["overlapping_f"] = measured(len(r_lots) - len(kept), "solana-desk/trades.csv")
+    return block
 
 
 def open_positions(positions, pos_err, book, program):
@@ -631,9 +782,40 @@ def tests_log(path):
     }
 
 
+def load_void(roots):
+    """VOID_START, VOID_END, and CUTOFF_DEFAULT from the day-14 script. No execution."""
+    path = roots.code("solana-desk/specs/day14_verdict.py")
+    if not path:
+        return None
+    values = {}
+    for name in ("VOID_START", "VOID_END", "CUTOFF_DEFAULT"):
+        text = assigned(path, name)
+        epoch = parse_time(text) if isinstance(text, str) else None
+        if epoch is None:
+            return None
+        values[name] = (text, epoch)
+    return {
+        "start_text": values["VOID_START"][0],
+        "end_text": values["VOID_END"][0],
+        "cutoff_text": values["CUTOFF_DEFAULT"][0],
+        "start": values["VOID_START"][1],
+        "end": values["VOID_END"][1],
+        "cutoff": values["CUTOFF_DEFAULT"][1],
+    }
+
+
+def cost_model_name(roots):
+    path = roots.code("solana-desk/desk/config.py")
+    if not path:
+        return None
+    value = assigned(path, "COST_MODEL")
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
 def checkpoints(roots, date):
     cut_path = roots.code("solana-desk/specs/day14_verdict.py")
-    reg_path = roots.code("solana-desk/specs/v2-preregistration.md")
     report = _date(date)
     day14 = {"label": "day-14 verdict"}
     if not cut_path:
@@ -652,36 +834,51 @@ def checkpoints(roots, date):
                 target = datetime.strptime(cutoff[:10], "%Y-%m-%d").date()
                 day14["days"] = measured((target - report).days, "report date to the UTC date of CUTOFF_DEFAULT")
     day28 = {"label": "day-28 checkpoint"}
-    if not reg_path:
-        day28["date"] = gap("solana-desk/specs/v2-preregistration.md is missing")
-        day28["days"] = gap("day-28 date was not read")
+    if parse_time(DAY28_AT) is None or not DAY28_AT.endswith("Z"):
+        day28["at"] = gap("DAY28_AT is not a Z timestamp")
+        day28["days"] = gap("day-28 clock was not read")
     else:
-        try:
-            with open(reg_path, encoding="utf-8") as fh:
-                text = fh.read()
-        except (OSError, UnicodeError):
-            text = ""
-        if "Nov 25" not in text:
-            day28["date"] = gap("solana-desk/specs/v2-preregistration.md does not name Nov 25")
-            day28["days"] = gap("day-28 date was not read")
+        day28["at"] = measured(DAY28_AT, "scripts/status/daily_status.py DAY28_AT")
+        day28["date"] = measured(DAY28_AT[:10], "scripts/status/daily_status.py DAY28_AT")
+        if report is None:
+            day28["days"] = gap("report date is not YYYY-MM-DD")
         else:
-            year = None
-            at = day14.get("at") or {}
-            if isinstance(at, dict) and isinstance(at.get("value"), str) and DAY.match(at["value"]):
-                year = int(at["value"][:4])
-            if year is None:
-                day28["date"] = gap("Nov 25 is named but the year is not on the day-14 clock")
-                day28["days"] = gap("day-28 year was not read")
-            else:
-                stamped = "%04d-11-25" % year
-                day28["date"] = measured(stamped, "solana-desk/specs/v2-preregistration.md names Nov 25; year from CUTOFF_DEFAULT")
-                day28["at"] = gap("the pre-registration names Nov 25 and does not store a clock")
-                if report is None:
-                    day28["days"] = gap("report date is not YYYY-MM-DD")
-                else:
-                    target = datetime.strptime(stamped, "%Y-%m-%d").date()
-                    day28["days"] = measured((target - report).days, "report date to " + stamped)
+            target = datetime.strptime(DAY28_AT[:10], "%Y-%m-%d").date()
+            day28["days"] = measured((target - report).days, "report date to the UTC date of DAY28_AT")
     return {"day14_verdict": day14, "day28_checkpoint": day28}
+
+
+def expected_evening(report):
+    """19:00 America/Toronto on the Toronto date of the 00:40 UTC status slot."""
+    slot = datetime(report.year, report.month, report.day, 0, 40, tzinfo=timezone.utc)
+    local = slot.astimezone(TORONTO)
+    return local.replace(hour=19, minute=0, second=0, microsecond=0)
+
+
+def freshness(report_date, desk_epoch, desk_source):
+    report = _date(report_date)
+    if report is None:
+        return gap("report date is not YYYY-MM-DD")
+    evening = expected_evening(report)
+    expected = fmt_time(evening.timestamp())
+    body = {
+        "expected_evening": expected,
+        "expected_evening_local": evening.isoformat(),
+        "rule": "stale when the newest Solana desk timestamp is older than 19:00 America/Toronto on the Toronto date of 00:40 UTC on the report date",
+        "source": "scripts/status/daily_status.py expected evening; Solana desk files for the timestamp",
+    }
+    if desk_epoch is None:
+        body["stale"] = None
+        body["reason"] = "no Solana desk timestamp was read"
+        body["desk_as_of"] = None
+        body["desk_as_of_source"] = None
+        return body
+    stale = desk_epoch < evening.timestamp()
+    body["stale"] = stale
+    body["reason"] = None if not stale else "the newest Solana desk timestamp is older than the expected evening run"
+    body["desk_as_of"] = fmt_time(desk_epoch)
+    body["desk_as_of_source"] = desk_source
+    return body
 
 
 def _date(value):
@@ -808,14 +1005,52 @@ def buzz_health(doc):
     return {"source": source, "asof": asof_value, "asof_reason": asof_reason, "token_count": count}
 
 
+def twin_problems(doc, name, cost_model):
+    """Reject a twin file whose own date, cost model, or universe window does not match."""
+    problems = []
+    match = TWIN_NAME.fullmatch(name)
+    file_date = match.group(1) if match else None
+    if not file_date:
+        problems.append("filename is not random_twin_YYYY-MM-DD.json")
+    if doc.get("analysis") != "random_twin":
+        problems.append("analysis is not random_twin")
+    if not cost_model:
+        problems.append("COST_MODEL was not read from solana-desk/desk/config.py")
+    elif doc.get("cost_model") != cost_model:
+        problems.append("cost_model is not %s" % cost_model)
+    sample = doc.get("sample") if isinstance(doc.get("sample"), dict) else None
+    post = None if sample is None else sample.get("post_v3")
+    if isinstance(post, bool) or not isinstance(post, int):
+        problems.append("sample.post_v3 is not an integer count of post-v3 closes")
+    scans = doc.get("scans") if isinstance(doc.get("scans"), dict) else None
+    if not isinstance(scans, dict) or not scans.get("first") or not scans.get("last") or not isinstance(scans.get("n"), int):
+        problems.append("scans window (n, first, last) is missing, so the universe is not identified")
+    last_t = scans.get("last_t") if isinstance(scans, dict) else None
+    last_epoch = parse_time(last_t) if isinstance(last_t, str) else None
+    if last_epoch is None:
+        problems.append("scans.last_t is not a timestamp for the universe window")
+    elif file_date and fmt_time(last_epoch)[:10] != file_date:
+        problems.append("scans.last_t date does not match the filename date %s" % file_date)
+    data_ref = doc.get("data_ref")
+    if not isinstance(data_ref, str) or "solana-desk" not in data_ref:
+        problems.append("data_ref is not the solana-desk universe")
+    return problems
+
+
 def random_twin(roots):
+    """Latest reports/random_twin_*.json. The repo checkout is searched, not only --data.
+
+    The 2026-11-02 file lives on main (reports/) and is not on desk-data. A sample
+    built from this branch before that commit, with --data pointed at desk-data,
+    therefore had neither copy.
+    """
     found = []
     seen = set()
     for root, label in ((roots.data, "data"), (roots.repo, "repo")):
         pattern = os.path.join(root, "reports", "random_twin_*.json")
         for path in glob.glob(pattern):
             name = os.path.basename(path)
-            if not name.startswith("random_twin_") or not name.endswith(".json"):
+            if not TWIN_NAME.fullmatch(name):
                 continue
             key = (name, os.path.abspath(path))
             if key in seen:
@@ -835,13 +1070,65 @@ def random_twin(roots):
     doc, err = load_json(path)
     if err:
         return gap(rel + " " + err)
+    if not isinstance(doc, dict):
+        return gap(rel + " is not an object")
+    problems = twin_problems(doc, name, cost_model_name(roots))
+    if problems:
+        return {
+            "source": rel,
+            "root": label,
+            "value": None,
+            "reason": rel + " was not used: " + "; ".join(problems),
+        }
     try:
         body = json.dumps(doc, sort_keys=True)
     except TypeError:
         return gap(rel + " is not JSON-serializable")
     if BANNED.search(body):
         return gap(rel + " failed the public-text check and was not copied")
-    return {"source": rel, "value": doc, "reason": None}
+    scans = doc.get("scans") or {}
+    return {
+        "source": rel,
+        "root": label,
+        "value": doc,
+        "reason": None,
+        "checked": {
+            "date": TWIN_NAME.fullmatch(name).group(1),
+            "cost_model": doc.get("cost_model"),
+            "post_v3": (doc.get("sample") or {}).get("post_v3"),
+            "universe": "solana-desk scans %s through %s" % (scans.get("first"), scans.get("last")),
+            "data_ref": doc.get("data_ref"),
+        },
+    }
+
+
+def desk_clock(positions, rows, health_doc):
+    """Newest Solana desk timestamp. Pulse and buzz files are not the desk run."""
+    candidates = []
+
+    def add(epoch, source):
+        if epoch is not None:
+            candidates.append((epoch, source))
+
+    if isinstance(positions, dict):
+        add(parse_time(positions.get("last_run_ts")), "solana-desk/positions.json last_run_ts")
+    if isinstance(health_doc, dict):
+        add(parse_time(health_doc.get("last_run_utc")), "solana-desk/health.json last_run_utc")
+        times = health_doc.get("run_times_utc")
+        if isinstance(times, list):
+            for value in times:
+                add(parse_time(value), "solana-desk/health.json run_times_utc")
+    if rows:
+        latest = None
+        for row in rows:
+            epoch = parse_time(row.get("time"))
+            if epoch is not None and (latest is None or epoch > latest):
+                latest = epoch
+        add(latest, "solana-desk/trades.csv time")
+    if not candidates:
+        return None, None
+    candidates.sort()
+    return candidates[-1]
 
 
 def evidence_as_of(roots):
@@ -935,10 +1222,25 @@ def build(repo, data, date, as_of=None):
         elif not isinstance(positions, dict):
             pos_err = "is not an object"
             positions = None
+    void = load_void(roots)
+    model = cost_model_name(roots)
+    closed = {}
+    incomplete = {}
+    if trade_err:
+        closed = {book: [] for book in BOOKS}
+        incomplete = {book: 0 for book in BOOKS}
+    else:
+        for book in BOOKS:
+            closed[book], incomplete[book] = book_closes(rows, book)
     books = {
-        book: solana_book(rows, trade_err, positions, pos_err, book, program, ticket_gap)
+        book: solana_book(trade_err, closed[book], incomplete[book], positions, pos_err, book, program, void, model)
         for book in BOOKS
     }
+    if trade_err or incomplete.get("F") or incomplete.get("R"):
+        why = "solana-desk/trades.csv is missing or incomplete, so R-versus-F overlap is not counted"
+        books["R"]["not_overlapping_f"] = gap(why)
+    else:
+        books["R"]["not_overlapping_f"] = not_overlapping_f(closed["F"], closed["R"], fallback_ticket(program))
     ledgers = []
     registered = []
     for _desk_id, book_id, rel in desk_papers(roots):
@@ -956,11 +1258,14 @@ def build(repo, data, date, as_of=None):
         registered.extend(registered_from_tests(doc, rel))
     log = tests_log(roots.code("solana-desk/specs/tests-log.csv"))
     health_path = roots.evidence("solana-desk/health.json")
+    health_raw = None
     if not health_path:
         health = gap("solana-desk/health.json is missing")
     else:
-        doc, err = load_json(health_path)
-        health = gap("solana-desk/health.json " + err) if err else copy_health(doc)
+        health_raw, err = load_json(health_path)
+        health = gap("solana-desk/health.json " + err) if err else copy_health(health_raw)
+        if err:
+            health_raw = None
     last_path = roots.evidence("solada-prefilter/last-run.json")
     if not last_path:
         prefilter = gap("solada-prefilter/last-run.json is missing")
@@ -990,6 +1295,7 @@ def build(repo, data, date, as_of=None):
     else:
         as_of_field = derived_measured
     twin = random_twin(roots)
+    desk_epoch, desk_source = desk_clock(positions, rows, health_raw)
     # evidence() above records misses. Drop duplicate misses that were later found via the other root.
     roots.missing = [item for item in roots.missing if item["path"] not in roots.used]
     doc = {
@@ -999,6 +1305,7 @@ def build(repo, data, date, as_of=None):
         "date": date if _date(date) else None,
         "date_reason": None if _date(date) else "report date is not YYYY-MM-DD",
         "as_of": as_of_field,
+        "freshness": freshness(date, desk_epoch, desk_source),
         "checkpoints": checkpoints(roots, date),
         "books": books,
         "exit_program": program if program else ticket_gap,
