@@ -1,11 +1,11 @@
 {
- "at": "2026-11-02T07:12:34Z",
+ "at": "2026-11-02T09:12:37Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14147253,
+ "height": 14147657,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 85.620113,
+ "ada_balance": 610.927967,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 340000325670,
@@ -26459,6 +26459,15 @@
    "order_ref_short": "91c9bf9c1a#0",
    "order_status": "filled",
    "sold": "ADA"
+  },
+  {
+   "time": "2026-11-02T08:11:19Z",
+   "tx_short": "565f5cd63b",
+   "kind": "transfer_in",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 525.307854,
+   "counterparty_tag": "w-bc1f0e39"
   }
  ],
  "capped": false,
@@ -26469,7 +26478,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 11,
+ "koios_calls": 8,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true

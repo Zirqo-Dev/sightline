@@ -1,49 +1,9 @@
 {
- "at": "2026-11-02T07:10:47Z",
+ "at": "2026-11-02T09:10:37Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
- "new": [
-  {
-   "kind": "coordinated_buys",
-   "ticker": "CBUCKS",
-   "wallets": [
-    "w-9d7e7db5",
-    "w-e97f4aa3",
-    "w-e9ed8a1a",
-    "w-faad3320"
-   ],
-   "window_s": 120,
-   "at": "2026-11-02T07:10:47Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "CBUCKS",
-   "wallet": "w-faad3320",
-   "tags": [],
-   "at": "2026-11-02T07:10:47Z"
-  },
-  {
-   "kind": "holder_concentration",
-   "ticker": "CORE",
-   "top_addr_pct": 79.5,
-   "top_cluster_pct": 79.5,
-   "top_cluster": "w-13d53c47",
-   "basis": "ex-fe819d",
-   "at": "2026-11-02T07:10:47Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "MEWH",
-   "tag": "w-f3186187",
-   "delta": 13801519353061,
-   "new_position": true,
-   "curve_pct": 4.5,
-   "decimals": 6,
-   "qty": 13801519.3531,
-   "at": "2026-11-02T07:10:47Z"
-  }
- ],
+ "new": [],
  "recent": [
   {
    "kind": "sniper_full_exit",
@@ -3318,8 +3278,7 @@
   }
  ],
  "api_calls": {
-  "blockfrost": 2,
-  "koios": 6
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,
