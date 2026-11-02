@@ -159,7 +159,7 @@ Each desk page, and each desk on Home, has a Run now button. `desks.json` suppli
 
 ## Daily briefs index
 
-Bots write one file per day: `<desk>/briefs/YYYY-MM-DD.json`. They do not maintain an index. `scripts/build-site.py` scans those files and writes `<desk>/briefs/index.json` into the published site. The Briefs page and the `briefs` panel read that index.
+Bots write one file per day: `<desk>/briefs/YYYY-MM-DD.json`. They do not maintain an index. `scripts/publish_briefs.py` writes a brief for a day the log already covered when that file is missing, and refreshes only briefs it generated. `scripts/build-site.py` scans the brief files (main, then the desk-data overlay) and writes `<desk>/briefs/index.json`. The page reads that index from desk-data and from the site and keeps every date either side lists.
 
 ## Adding a component
 
@@ -200,7 +200,7 @@ python3 -m http.server -d dist
 
 Since Oct 24 `main` only takes PRs, so the desk bots push their data to the `desk-data` branch. `S.get()` in `dashboard/core.js` reads desk data JSON (each desk's `log`, `pulse`, `paper` books, briefs, and `nft/site/intel.json` / `watchlist.json` via `window.sightlineData` in `nft/site/index.html`) from `https://raw.githubusercontent.com/Zirqo-Dev/sightline/desk-data/<path>?ts=<now>` and the same-origin Pages copy from `main` in parallel. The desk-data copy wins; main's copy is used when the file is missing on desk-data (404/not JSON) or when main's `asof`/`updated_at` is strictly newer. The freshness stamp is computed from whatever was picked, so it reflects the newer data.
 
-Code and config always come from `main`: `desks.json`, `panels.json`, `config.json`, the build-generated `briefs/index.json` (so a brief must also be listed by a main build to appear; each listed brief is then read desk-data-first), icons and schema. raw.githubusercontent has a ~5 minute CDN cache; the `?ts=` buster usually avoids it, but allow a few minutes. Set `window.SIGHTLINE_DESK_DATA = ""` before `core.js` to read main only (or set another base URL). Why client-side rather than overlaying desk-data at build time: a Pages build is only triggered by `main` pushes, and pushes made with the workflow `GITHUB_TOKEN` do not trigger other workflows, so the overlay would go stale between deploys.
+Code and config always come from `main`: `desks.json`, `panels.json`, `config.json`, icons and schema. `briefs/index.json` is the union of the desk-data list and the list built into the site, so a brief that exists on only one side still appears. `prices.json` is a USD quote fetched when the site or the pre-filter runs; the browser reads that file and does not call a price host. raw.githubusercontent has a ~5 minute CDN cache; the `?ts=` buster usually avoids it, but allow a few minutes. Set `window.SIGHTLINE_DESK_DATA = ""` before `core.js` to read main only (or set another base URL). Pages also copies the live feeds (`x_buzz.json`, `solada-prefilter/whale_ledger.json`, `solada-prefilter/kill_status.json`, and the other desk JSON the page reads) from desk-data into the artifact, because those files are not on main. A Pages build still only runs on a main push, so between deploys the browser keeps reading desk-data first.
 
 
 GitHub Actions (`.github/workflows/pages.yml`) runs `scripts/privacy-guard.sh` and `scripts/validate-desks.py` on every push to `main`, then builds `dist/` and deploys it with `actions/upload-pages-artifact` and `actions/deploy-pages` only if both checks pass.

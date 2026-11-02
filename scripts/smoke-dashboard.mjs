@@ -399,10 +399,12 @@ for (const p of ["solada/log.json", "nft/log.json", "solada/pulse.json", "nft/pu
   assert(S.isDeskData(p), p + " should be read from desk-data");
   assert(S.deskDataUrl(p).startsWith("https://raw.githubusercontent.com/Zirqo-Dev/sightline/desk-data/" + p + "?ts="), p + " desk-data url");
 }
-for (const p of ["desks.json", "solada/panels.json", "nft/panels.json", "solada/briefs/index.json", "dashboard/icons/icons.json",
+for (const p of ["desks.json", "solada/panels.json", "nft/panels.json", "dashboard/icons/icons.json",
   "schema/run-log.schema.json", "solada/forensics/config.json", "solada/README.md"]) {
   assert(!S.isDeskData(p), p + " must stay on main");
 }
+assert(S.isDeskData("solada/briefs/index.json") && S.isDeskData("nft/briefs/index.json"), "brief indexes are read from desk-data and main");
+assert(S.isDeskData("x_buzz.json") && S.isDeskData("prices.json"), "root feeds x_buzz.json and prices.json come from desk-data");
 for (const d of load("desks.json").desks) {
   assert((d.log == null || S.isDeskData(d.log)) && S.isDeskData(d.pulse), d.id + " log and pulse come from desk-data");
   for (const b of d.books || []) assert(S.isDeskData(b.paper), d.id + " paper comes from desk-data");
@@ -517,7 +519,7 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(typeof S.navTabs === "function" && typeof S.navMarkup === "function" && typeof S.canonDesk === "function", "nav helpers installed");
   const idx = load("desks.json");
   const solada = idx.desks.find(d => d.id === "solada");
-  assert(solada && solada.name === "Snek Sentinel: Solada/Cardano", "solada desk title is unchanged");
+  assert(solada && solada.name === "Sentinel: Solada/Cardano", "legacy desk title says Sentinel");
   assert(solada.log === "solada/log.json" && solada.briefs === "solada/briefs/" && solada.pulse === "solada/pulse.json", "solada data paths unchanged");
   assert(idx.desks.map(d => d.id).join(",") === "solada,nft,solana", "desks.json order is unchanged");
   const live = idx.desks.map(d => ({ id: d.id, status: d.status }));
@@ -755,42 +757,63 @@ print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"),
   const preview = fs.readFileSync(path.join(root, "preview.html"), "utf8");
   const legacyPage = fs.readFileSync(path.join(root, "legacy.html"), "utf8");
   const legacyLogo = '<a class="logo" href="#/">&gt;sight<span>line</span><i>_</i></a>';
-  assert(legacyPage.includes(legacyLogo) && index.includes(legacyLogo) && preview.includes(legacyLogo), "every shell keeps the >sightline_ logo");
+  const monoLogo = '&gt;sight<b>line</b><i>_</i>';
+  assert(legacyPage.includes(legacyLogo), "legacy shell keeps the >sightline_ logo");
+  assert(index.includes(monoLogo) && preview.includes(monoLogo), "the scrolling page keeps >sightline_ with line in the wordmark");
   assert(index.includes('href="preview/theme.css"') && preview.includes('href="preview/theme.css"'), "live shell loads the shared theme");
-  assert(index.includes('href="preview/app.css"') && index.includes('src="preview/app.js"') && index.includes('src="preview/cardano-v2.js"'), "live page serves the redesigned shell");
+  assert(index.includes('href="preview/app.css"') && index.includes('src="preview/app.js"') && index.includes('src="preview/mono.js"') && index.includes('src="preview/cardano-v2.js"'), "live page serves the monolithic shell");
   assert(!index.includes("preview.html") && !index.includes("preview-tag"), "live page is not the design sandbox");
+  assert(!index.includes('class="banner"'), "the scrolling page has one note line, not a second banner");
+  assert(index.includes("Paper / research only"), "the note line is on the page");
   assert(index.includes("legacy.html"), "live page points at the legacy fallback");
   assert(preview.includes('href="preview/app.css"') && preview.includes('src="preview/app.js"') && preview.includes("preview-tag"), "preview shell still iterates on its own");
   assert(legacyPage.includes("dashboard/core.js") && legacyPage.includes("<!-- panels:begin -->") && legacyPage.includes("dashboard/pages.js"), "legacy dashboard keeps the old shell");
   assert(!legacyPage.includes("preview/app.js"), "legacy page does not load the redesigned shell");
+  assert(!/Snek Sentinel/.test(legacyPage), "legacy.html does not say Snek Sentinel");
   const css = fs.readFileSync(path.join(root, "preview/app.css"), "utf8");
   const theme = fs.readFileSync(path.join(root, "preview/theme.css"), "utf8");
   for (const piece of ["--sl-bg:#0B0E11", "--sl-surface:#161A1E", "--sl-wordmark", ".logo span,.logo i{color:var(--sl-wordmark)", ".sl-row", ".sl-pill", ".sl-pick", ".sl-sheet", ".sl-mascot", ".sl-mark"]) {
     assert(theme.includes(piece), "shared theme includes " + piece);
   }
-  assert(theme.includes('body[data-desk="solada"]{--sl-wordmark:#3d8bff;--sl-accent:#B5E853}'), "Cardano wordmark is desk blue and the accent stays lime");
-  assert(css.includes("box-shadow:inset 0 -2px 0 var(--sl-accent)"), "nav underline uses the accent");
-  assert(theme.includes('body[data-desk="solana"]') && theme.includes("#14F195"), "Solana wordmark token is set");
-  assert(theme.includes('body[data-desk="nft"]') && theme.includes("#ff4fd8"), "NFT wordmark token is set");
-  assert(css.includes(".logo span{color:var(--sl-wordmark)") && css.includes(".logo i{font-style:normal;color:var(--sl-wordmark)") && css.includes("animation:blink 1.1s steps(1) infinite"), "logo line and cursor use the per-tab colour and blink");
+  assert(theme.includes('body[data-desk="solada"]{--sl-wordmark:#3d8bff;--sl-accent:#B5E853}'), "wordmark is desk blue and the accent stays lime");
+  assert(!theme.includes("#ff4fd8") && !theme.includes("#9945FF") && !css.includes("#9945FF") && !css.includes("#ff4fd8"), "purple and pink are not in the page theme");
+  assert(css.includes(".logo b,.logo i{color:#3d8bff") && css.includes("animation:blink 1s steps(1) infinite"), "logo line and cursor are desk blue and blink");
   assert(css.includes(".logo i{animation:none !important}"), "reduced motion stops the logo blink");
-  assert(css.includes('body[data-desk="nft"]') && css.includes("#ff4fd8"), "NFT accent reaches the logo token");
-  assert(css.includes("#14F195") && css.includes("#9945FF") && css.includes("#3d8bff"), "Solana and Cardano palettes stay");
+  assert(css.includes("#3d8bff") && css.includes("#B5E853") && css.includes("#F0B90B") && css.includes("#0ECB81") && css.includes("#F6465D"), "desk blue, lime, amber, up, and down stay");
   assert(css.includes("prefers-reduced-motion"), "reduced motion is respected");
-  assert(css.includes("@keyframes blink") && css.includes("@keyframes pulse") && css.includes("@keyframes shimmer"), "logo blink and shell motion stay");
+  assert(css.includes("@keyframes blink"), "logo blink stays");
   const build = fs.readFileSync(path.join(root, "scripts/build-site.py"), "utf8");
   assert(build.includes("def bust(") && build.includes("?v="), "build adds cache-busting asset versions");
   assert(build.includes("def bust_preview(") && build.includes("def preview_version("), "preview assets are cache-busted on their own");
   assert(build.includes("Kept off asset_version()"), "preview hash does not retint the legacy dashboard assets");
   assert(build.includes("bust_preview(index)"), "published index cache-busts the redesigned assets");
   assert(build.includes("legacy.html"), "build publishes the legacy dashboard");
-  assert(P.isDeskData("x_buzz.json"), "x_buzz.json is read from desk-data");
+  assert(P.isDeskData("x_buzz.json") && P.isDeskData("prices.json") && P.isDeskData("solada/briefs/index.json"), "buzz, prices, and brief indexes are read from desk-data");
   assert(!P.isDeskData("desks.json") && !P.isDeskData("schema/x-buzz.schema.json"), "root config and schema stay on main");
   const appSrc = fs.readFileSync(previewJs, "utf8");
-  assert(appSrc.includes('p === "x_buzz.json"') && appSrc.includes("x_buzz_history.jsonl") && appSrc.includes("SightlineBuzz") && appSrc.includes("previewPage"), "buzz snapshot and history load only on the preview page");
-  assert(!index.includes("buzz.js") && !index.includes("buzz.css"), "live page does not load the buzz preview");
+  assert(appSrc.includes('p === "x_buzz.json"') && appSrc.includes("prices.json") && appSrc.includes("x_buzz_history.jsonl") && appSrc.includes("SightlineMono"), "the page loads buzz, prices, and the single scroll");
+  assert(!index.includes("buzz.js") && !index.includes("buzz.css") && !preview.includes("buzz.js"), "the scrolling page does not load the old buzz charts");
   assert(!legacyPage.includes("buzz.js") && !legacyPage.includes("buzz.css"), "legacy page does not load the buzz preview");
-  assert(preview.includes('src="preview/buzz.js"') && preview.includes('href="preview/buzz.css"'), "preview page loads the buzz assets");
+  vm.runInNewContext(fs.readFileSync(path.join(root, "preview/mono.js"), "utf8"), pbox);
+  const page = pbox.SightlineMono.html({
+    cardano: { log: { asof: "2026-11-01T19:00:00-05:00", headline: "EST-01 logged holder baselines.", verdicts: [
+      { ticker: "MEPE", verdict: "pass", launchpad: "solada", pool_ada: 42000, holders: 157, kill_line: "holders meet rule k numbers but rule y fail" },
+      { ticker: "ASCEND", verdict: "watch", launchpad: "established", pool_ada: 1074023, pct_from_line: 43.2, kill_limit: 750000 }
+    ], cardano_top10: [{ ticker: "ASCEND", rank: 1 }], whales: [{ codename: "Wobbly Kiwi", net_flow_ada: 52447, line: "Bought STRIKE" }], paper_actions: ["SW-01: no qualifying launch"] } },
+    solanaModel: P.solanaModel(null, [], null),
+    health: { data_failure_rate: 0, runs: 1, expected_runs: 48 },
+    buzz: { tokens: [{ ticker: "NIGHT", mentions_1h: 45, mentions_24h: 100, velocity: { ratio_1h_vs_prev_hr: 0.63 } }] },
+    nftPulse: { latest: [{ ticker: "argonauts", chain: "ethereum", floor: 0.7, unit: "ETH", role: "pass" }], updated_at: "2026-10-19T19:41:04Z" },
+    nftLog: { asof: "2026-10-19T13:14:48Z", runs: [] },
+    nftPaper: { open: [] },
+    prices: { asof: "2026-11-02T00:20:00Z", source: "coingecko", quotes: { ETH: 2000, SOL: 90, ADA: 0.2, HYPE: 80, USD: 1 } },
+    briefs: [{ date: "2026-10-19", desk: "Cardano", headline: "old" }]
+  });
+  assert(page.includes("Sentinel's pick") && page.includes("Runners") && page.includes("Paper tests") && page.includes("Whale codenames") && page.includes("Solana") && page.includes("measured, not a signal") && page.includes("KING watchlist") && page.includes("Latest from the desk"), "section order is the single page");
+  assert(page.includes("passed · moving") && page.includes("$1,400"), "a rule-y miss is the closest name and an ETH floor converts with the stored quote");
+  assert(!page.includes("EXAMPLE") && !/buy now|class="buy"/i.test(page), "real buzz and NFT rows drop the example badge and there is no buy button");
+  assert(!/Snek Sentinel/.test(page), "the page says Sentinel, not Snek Sentinel");
+  assert(pbox.SightlineMono.failureRate({ coverage: { tracked: 16, skipped: new Array(10) } }) === 0.625, "Cardano failure rate is skipped over tracked");
 }
 
 {
