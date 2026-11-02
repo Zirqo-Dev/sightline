@@ -56,7 +56,7 @@ The live Cardano tab (`preview/cardano-v2.js`, route `#/cardano`) is two boards:
 
 Runners are fresh launches (`cardano_v2.launches` and verdicts whose `launchpad` is not `established` or `minswap`), ranked by the newest percent move. Established is `cardano_top10` plus verdicts tagged `established` or `minswap`, in the desk's high-cap order. The row pill is SW-01 only for an open SW-01 ticket, otherwise Lottery, Watch, Passed·moving (a pass whose price is up), or Pass. ▲ renders only when both holders and volume rose over the last 6h. A sparkline renders only when price or market-cap history is fresh enough to draw.
 
-Sentinel's pick cards read open tickets on `paper.tests` SW-01 and EST-01 (and `paper.open` or `log.picks` only when the id says SW-01 or EST-01). SW-01 sits on the runners board (100 ADA, 48h, from the registered test). EST-01 sits on the established board (100 ADA, 7d). A closed ticket is not a pick. The why-sheet checklist uses bonded, rule k, swarm flags, a whale buy after 24h, dev sold, rugger vetoes, and X buzz. Unknown checks stay "?".
+Sentinel's pick cards read open tickets on `paper.tests` SW-01 and EST-01 (and `paper.open` or `log.picks` only when the id says SW-01 or EST-01). SW-01 sits on the runners board (100 ADA, 48h, from the registered test). EST-01 sits on the established board (100 ADA, 7d). A closed ticket is not a pick. The why-sheet checklist uses bonded, rule k, swarm flags (a flag only, not a point), a whale buy after 24h, dev sold, and rugger vetoes. X buzz is not a check. Unknown checks stay "?".
 
 ### Fields the board reads
 
@@ -69,7 +69,7 @@ Sentinel's pick cards read open tickets on `paper.tests` SW-01 and EST-01 (and `
 | `dev_checks.json` | Dev sold and fresh funded. A `w-` tag is not printed. |
 | `vetoes.json` | `known_rugger` codes. No row for that token stays "?". |
 | `whale_ledger.json` `rows[]` | Buy or sell direction after launch+24h, and a trend. Balances, positions, and quantities are not shown. |
-| `x_buzz.json` | Cardano `velocity.ratio_1h_vs_prev_hr`. Missing ratio stays "?". |
+| `x_buzz.json` | Measured mentions only. Not a checklist and not a score. |
 
 Kill distance is `pct_from_line` when the desk wrote it. The old heat grid, radar cards, and money-flow chart are not drawn.
 

@@ -23,11 +23,10 @@ patterns=(
   '"wallet_snapshot"'
   '"held"[[:space:]]*:[[:space:]]*true'
   # Generic full-length Cardano wallet ids (no owner-specific values live in this file).
-  # Full stake keys and full base (addr1q) addresses are never published; short tags only.
-  # Enterprise/script addresses (addr1v/addr1w) are not matched generically: public platform
-  # addresses (e.g. the Solada curve address in solada/log.json) use them.
+  # Full stake keys and full addresses (addr1, including enterprise/script addr1v) are
+  # never published. Known platform addresses are listed in privacy-public-keys.txt and masked.
   'stake1[02-9ac-hj-np-z]{50,}'
-  'addr1q[02-9ac-hj-np-z]{90,}'
+  'addr1[02-9ac-hj-np-z]{50,}'
 )
 n_generic=${#patterns[@]}  # patterns above are generic; any added below are owner-specific
 # Owner-specific wallet patterns come ONLY from the PRIVACY_GUARD_PATTERNS secret (one ERE per line)
@@ -41,21 +40,19 @@ if [ -f .privacy-patterns ]; then
   while IFS= read -r p; do case "$p" in ''|'#'*) ;; *) patterns+=("$p");; esac; done < .privacy-patterns
 fi
 
-# Exact public third-party keys (scripts/privacy-public-keys.txt next to this script) are masked before the
-# generic checks, so e.g. the lead whale's public stake key in config can be published. Owner patterns still apply to them.
-# Hardened (review M4): every entry must be one full stake key (^stake1 + 53 bech32 chars, nothing else); masking
-# is OFF when no owner patterns are loaded (an allowlist must never be checked against an empty owner list); only
-# whole tokens are masked (a longer id containing the key is not hidden); and only in the files listed in
-# mask_files (the key lives in solada-prefilter/config.json; anywhere else it is still a failure).
+# Platform addresses (scripts/privacy-public-keys.txt next to this script), one full addr1 per line.
+# Stake keys are not allowlisted. Masking is whole-token and applies to every scanned file, including
+# when owner patterns are not loaded. A stake1 id is never masked, so a missing owner list cannot publish
+# one. An allowlisted address that matches an owner pattern, or that shares the stake part of an owner
+# address pattern, fails the guard. Nothing is printed except a generic failure line.
 allow_file="$script_dir/privacy-public-keys.txt"
-mask_files=("solada-prefilter/config.json")
 allow=()
 if [ -f "$allow_file" ]; then
   while IFS= read -r a; do a="${a%$'\r'}"; case "$a" in ''|'#'*) ;; *) allow+=("$a");; esac; done < "$allow_file"
 fi
 for a in "${allow[@]}"; do
-  if ! printf '%s\n' "$a" | grep -qxE -- 'stake1[02-9ac-hj-np-z]{53}'; then
-    echo "PRIVACY GUARD FAILED: an entry in privacy-public-keys.txt is not exactly one full stake key" >&2; exit 1
+  if ! printf '%s\n' "$a" | grep -qxE -- 'addr1[02-9ac-hj-np-z]{50,}'; then
+    echo "PRIVACY GUARD FAILED: an entry in privacy-public-keys.txt is not exactly one full platform address" >&2; exit 1
   fi
   for p in "${patterns[@]:$n_generic}"; do
     if printf '%s\n' "$a" | grep -qE -- "$p"; then
@@ -63,38 +60,44 @@ for a in "${allow[@]}"; do
     fi
   done
 done
-# Re-review M4: (1) every entry must be pinned to solada-prefilter/config.json whale.stake (the one public key it
-# exists for); (2) the owner's stake key is derived from any owner pattern that contains a full base address
-# (addr1q/r/s/t... with a stake part) and must not be allowlisted, so a secret listing only the owner's payment
-# address still protects the owner's stake key. Nothing is printed except a generic failure line.
 if [ ${#allow[@]} -gt 0 ]; then
   here="$script_dir"
   pycode=$(cat <<'PYEOF'
-import json, os, re, sys
+import re, sys
 src, allow = sys.argv[1], sys.argv[2:]
 sys.path.insert(0, src)
 try:
     import flags as F
-    pinned = (json.load(open(os.path.join(src, "config.json"))).get("whale") or {}).get("stake")
 except Exception:
-    sys.stderr.write("PRIVACY GUARD FAILED: cannot read solada-prefilter/config.json to pin the allowlist\n"); sys.exit(1)
-if any(a != pinned for a in allow):
-    sys.stderr.write("PRIVACY GUARD FAILED: a privacy-public-keys.txt entry is not config.json whale.stake\n"); sys.exit(1)
+    F = None
+owner = sys.stdin.read().splitlines()
+if F is None and any(re.search(r"addr1[02-9ac-hj-np-z]{50,}", line) for line in owner):
+    sys.stderr.write("PRIVACY GUARD FAILED: cannot derive stake keys from owner addresses\n")
+    sys.exit(1)
 owner_stakes = set()
-for line in sys.stdin:
-    for m in re.findall(r"addr1[02-9ac-hj-np-z]{50,}", line):
-        st = F.addr_info(m)[0]
-        if st:
-            owner_stakes.add(st)
-if owner_stakes & set(allow):
-    sys.stderr.write("PRIVACY GUARD FAILED: an allowlisted key is the stake key of an owner address pattern\n"); sys.exit(1)
+if F is not None:
+    for line in owner:
+        for m in re.findall(r"addr1[02-9ac-hj-np-z]{50,}", line):
+            try:
+                st = F.addr_info(m)[0]
+            except Exception:
+                st = None
+            if st:
+                owner_stakes.add(st)
+    for a in allow:
+        try:
+            st = F.addr_info(a)[0]
+        except Exception:
+            st = None
+        if st and st in owner_stakes:
+            sys.stderr.write("PRIVACY GUARD FAILED: an allowlisted address shares the stake key of an owner address pattern\n")
+            sys.exit(1)
 PYEOF
 )
   if ! printf '%s\n' "${patterns[@]:$n_generic}" | python3 -c "$pycode" "$here/../solada-prefilter" "${allow[@]}"; then exit 1; fi
 fi
-if [ ${#allow[@]} -gt 0 ] && [ ${#patterns[@]} -le "$n_generic" ]; then
-  echo "::warning::privacy-guard: no owner patterns loaded; the public-key allowlist is NOT applied (fail closed)" >&2
-  allow=()
+if [ ${#patterns[@]} -le "$n_generic" ]; then
+  echo "::warning::privacy-guard: no owner patterns loaded; platform addresses are still masked, stake keys are not" >&2
 fi
 mask() {  # stdin -> stdout with allowlisted exact values (whole tokens only) replaced
   if [ ${#allow[@]} -eq 0 ]; then cat; return; fi
@@ -104,7 +107,6 @@ for line in sys.stdin:
     for r in al: line=r.sub("<public-key>", line)
     sys.stdout.write(line)' "${allow[@]}"
 }
-maskable() { local m; for m in "${mask_files[@]}"; do [ "$1" = "$m" ] && return 0; done; return 1; }
 
 if [ $# -gt 0 ]; then
   files=("$@")
@@ -116,8 +118,8 @@ fi
 # desk-data publishes solada-prefilter/dev_checks.json, liquidity_moves.json and vetoes.json.
 # In --root mode (desk-data-guard and the prefilter push) those files are always
 # part of the scan, even if the caller passed a list that left them out. Pattern
-# and allowlist handling below is unchanged; none of these files are in mask_files, so an
-# allowlisted key here still fails.
+# and allowlist handling below is unchanged. A platform address is masked in these files too.
+# A stake key is not on the allowlist, so it still fails.
 if [ -n "${root_mode:-}" ]; then
   for need in solada-prefilter/dev_checks.json solada-prefilter/liquidity_moves.json solada-prefilter/vetoes.json solana-desk/rugger_would_veto.json solada-prefilter/whale_roster.json; do
     [ -f "$need" ] || continue
@@ -152,7 +154,7 @@ for f in "${files[@]}"; do
   grep -qI . "$f" 2>/dev/null || continue  # binary / empty
   for i in "${!patterns[@]}"; do
     p="${patterns[$i]}"
-    if [ "$i" -lt "$n_generic" ] && maskable "$f"; then hits=$(mask < "$f" | grep -nEI -- "$p"); else hits=$(grep -nEI -- "$p" "$f" 2>/dev/null); fi
+    if [ "$i" -lt "$n_generic" ]; then hits=$(mask < "$f" | grep -nEI -- "$p"); else hits=$(grep -nEI -- "$p" "$f" 2>/dev/null); fi
     if [ -n "$hits" ]; then
       n=$(printf '%s\n' "$hits" | wc -l)
       echo "PRIVACY GUARD: $f: $n line(s) match a private pattern (#$(( $(printf '%s\n' "${patterns[@]}" | grep -nFx -- "$p" | head -1 | cut -d: -f1) )) ): lines $(printf '%s\n' "$hits" | cut -d: -f1 | head -10 | paste -sd, -)" >&2

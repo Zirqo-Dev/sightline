@@ -194,11 +194,13 @@ class Idempotent(unittest.TestCase):
 
 
 class Config(unittest.TestCase):
-    def test_config_stake_matches_prefix_and_guard_allows_only_it(self):
+    def test_config_has_no_stake_key_and_guard_blocks_stake_keys(self):
         cfg = json.load(open(os.path.join(HERE, "..", "config.json")))
-        self.assertTrue(cfg["whale"]["stake"].startswith("stake1" + cfg["whale"]["stake_prefix"]))
+        self.assertNotIn("stake", cfg["whale"])
         self.assertEqual(cfg["whale"]["stake_prefix"], "uylu74g0")
         guard = os.path.join(ROOT, "scripts", "privacy-guard.sh")
+        allow = os.path.join(ROOT, "scripts", "privacy-public-keys.txt")
+        curve = next(ln.strip() for ln in open(allow) if ln.strip() and not ln.startswith("#"))
         dummy = "^zzOWNERzz-not-a-real-pattern$"  # a loaded owner pattern (the real one is a secret)
         env = dict(os.environ, PRIVACY_GUARD_PATTERNS=dummy)
         run = lambda f, e=env: subprocess.run(["bash", guard, f], env=e, capture_output=True, cwd=ROOT).returncode  # noqa: E731
@@ -206,31 +208,37 @@ class Config(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             bad = os.path.join(d, "bad.txt")
             open(bad, "w").write(STAKE + "\n")
-            other = os.path.join(d, "other.txt")  # the allowlisted key outside config.json is NOT masked
-            open(other, "w").write(cfg["whale"]["stake"] + "\n")
+            platform = os.path.join(d, "platform.txt")
+            open(platform, "w").write(curve + "\n")
             longer = os.path.join(d, "longer.txt")
-            open(longer, "w").write(cfg["whale"]["stake"] + "qqqq\n")
+            open(longer, "w").write(curve + "qqqq\n")
             self.assertEqual(run(cfgp), 0)
             self.assertEqual(run(bad), 1)
-            self.assertEqual(run(other), 1)
+            self.assertEqual(run(platform), 0)
             self.assertEqual(run(longer), 1)
-            # M4: with NO owner patterns loaded the allowlist is not applied -> config.json fails closed
-            self.assertEqual(run(cfgp, dict(os.environ, PRIVACY_GUARD_PATTERNS="")), 1)
-            e2 = dict(env, PRIVACY_GUARD_PATTERNS=cfg["whale"]["stake"][:20])  # an owner pattern always wins
-            self.assertEqual(run(cfgp, e2), 1)
+            # No owner patterns: platform addresses stay masked, a stake key still fails.
+            bare = dict(os.environ, PRIVACY_GUARD_PATTERNS="")
+            self.assertEqual(run(cfgp, bare), 0)
+            self.assertEqual(run(bad, bare), 1)
+            self.assertEqual(run(platform, bare), 0)
+            e2 = dict(env, PRIVACY_GUARD_PATTERNS=curve[:20])  # an owner pattern always wins
+            blocked = subprocess.run(["bash", guard, platform], env=e2, capture_output=True, cwd=ROOT)
+            self.assertEqual(blocked.returncode, 1)
+            self.assertNotIn(curve.encode(), blocked.stderr + blocked.stdout)
 
     def test_guard_rejects_malformed_allowlist_entry(self):
         src = os.path.join(ROOT, "scripts")
         with tempfile.TemporaryDirectory() as d:
             os.makedirs(os.path.join(d, "scripts"))
             shutil.copy(os.path.join(src, "privacy-guard.sh"), os.path.join(d, "scripts"))
-            open(os.path.join(d, "scripts", "privacy-public-keys.txt"), "w").write("stake1u\n")  # prefix, not a key
+            open(os.path.join(d, "scripts", "privacy-public-keys.txt"), "w").write("stake1u\n")  # prefix, not an address
             f = os.path.join(d, "x.txt")
             open(f, "w").write("hello\n")
             env = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
             r = subprocess.run(["bash", os.path.join(d, "scripts", "privacy-guard.sh"), f], env=env, capture_output=True, cwd=d)
             self.assertEqual(r.returncode, 1)
-            self.assertIn(b"not exactly one full stake key", r.stderr)
+            self.assertIn(b"not exactly one full platform address", r.stderr)
+            self.assertNotIn(b"stake1u", r.stderr + r.stdout)
 
 if __name__ == "__main__":
     unittest.main()

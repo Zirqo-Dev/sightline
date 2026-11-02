@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import os
 import pathlib
 import time
 import urllib.request
@@ -1042,23 +1043,57 @@ def _status_counts(report):
     return old, busy
 
 
+def _read_json_dict(path):
+    path = pathlib.Path(path)
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
 def _load_cache(path):
-    if path.is_file():
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                return data
-        except json.JSONDecodeError:
-            return {}
-    return {}
+    """Raw funding map for this process. The public file is hashes and is not a lookup key.
+
+    Order: the map already loaded in this process, FORENSICS_RAW_CACHE, the private
+    repo when SIGHTLINE_PRIVATE_TOKEN is set, then a public file that still has raw
+    keys (a desk-data seed from before codenames). A hashed public file is ignored.
+    """
+    from sol_forensics.private_cache import current, read_repo, remember
+    from sol_forensics.public_names import cache_is_public
+    mem = current(path)
+    if mem is not None:
+        return mem
+    raw_env = os.environ.get("FORENSICS_RAW_CACHE", "").strip()
+    if raw_env:
+        data = _read_json_dict(raw_env)
+        if data and not cache_is_public(data):
+            remember(path, data)
+            return data
+    data = read_repo()
+    if data:
+        remember(path, data)
+        return data
+    data = _read_json_dict(path)
+    if data and not cache_is_public(data):
+        remember(path, data)
+        return data
+    empty = {}
+    remember(path, empty)
+    return empty
 
 
 def _persist(config, report, cache):
+    from sol_forensics.private_cache import remember
+    from sol_forensics.public_names import redact, redact_cache
     reports = _path(config, "reports", "reports")
     index = _path(config, "index", "index.jsonl")
     cache_path = _path(config, "cache", "cache/funding.json")
     panel = _path(config, "panel", "panel.json")
-    _write_json(reports / f"{report['mint']}.json", report)
+    # The returned report stays raw so this process can still trace. The file is public.
+    _write_json(reports / f"{report['mint']}.json", redact(report))
     index.parent.mkdir(parents=True, exist_ok=True)
     line = {
         "mint": report["mint"],
@@ -1077,7 +1112,11 @@ def _persist(config, report, cache):
     }
     with index.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(line) + "\n")
-    _write_json(cache_path, cache)
+    remember(cache_path, cache)
+    raw_env = os.environ.get("FORENSICS_RAW_CACHE", "").strip()
+    if raw_env:
+        _write_json(pathlib.Path(raw_env), cache)
+    _write_json(cache_path, redact_cache(cache))
     _write_panel(panel, reports)
 
 

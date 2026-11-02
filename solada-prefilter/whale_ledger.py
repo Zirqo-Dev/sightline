@@ -26,8 +26,9 @@ to a script address without getting value back opens an order (ref = tx#index). 
 that ref is a fill (whale gets the other side) or a cancel (whale gets the same token back). If the ref is
 spent by a tx the whale does not appear in, status = closed_elsewhere (checked with utxo_info).
 
-The whale stake key is public third-party research data in config.json (whale.stake). Output carries only
-its tag; counterparties are tags (<= 12 chars). Never touches the owner's wallet.
+The whale stake key is loaded at runtime (WHALE_STAKE, else the private repo, else an
+in-memory config value used by tests). It is not in the committed config. Output carries
+only its tag; counterparties are tags (<= 12 chars). Never touches the owner's wallet.
 """
 import hashlib, json, os
 from datetime import datetime, timezone
@@ -989,12 +990,13 @@ def run(http, cfg, data_dir, dry_run, now_s, lp_pols, bf_key=None, deadline=None
     import big_moves as BM
     pats, bad = BM.owner_patterns(owner_env)
     wc["_owner_pats"] = pats if pats and not bad else None
-    stake = ((cfg.get("whale") or {}).get("stake") or "").strip()
+    import whale_stake
+    stake = whale_stake.resolve(cfg)
     prefix = ((cfg.get("whale") or {}).get("stake_prefix") or "").strip()
     if not wc["enabled"] or not stake:
         return {"enabled": False}
     if prefix and not stake.startswith("stake1" + prefix):
-        raise SystemExit("whale_ledger: config whale.stake does not match whale.stake_prefix")
+        raise SystemExit("whale_ledger: stake key does not match whale.stake_prefix")
     if bf_key is None:
         bf_key = os.environ.get("BLOCKFROST_PROJECT_ID", "")
     kl = KoiosLedger(http, wc, bf_key)

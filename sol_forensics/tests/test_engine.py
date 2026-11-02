@@ -328,6 +328,16 @@ class EngineTests(unittest.TestCase):
             self.assertFalse(report["data_quality"]["history_too_deep"])
             self.assertEqual(report["dev_wallet"], DEV)
             self.assertEqual(report["symbol"], "TEST")
+            from sol_forensics.public_names import public_id
+            written = json.loads((tmp / "reports" / f"{MINT}.json").read_text(encoding="utf-8"))
+            self.assertEqual(written["mint"], MINT)
+            self.assertEqual(written["dev_wallet"], public_id(DEV))
+            published = json.dumps(written)
+            for raw in (DEV, BUYER, FUNDER, GRAND, USDC_W, USDC_F, BUSY, CURVE):
+                self.assertNotIn(raw, published)
+            cached = json.loads((tmp / "cache.json").read_text(encoding="utf-8"))
+            self.assertNotIn(BUYER, json.dumps(cached))
+            self.assertIn(public_id(BUYER), json.dumps(cached))
             wallets = {b["wallet"] for b in report["buyers"]}
             self.assertEqual(wallets, {DEV, BUYER, USDC_W, BUSY})
             self.assertNotIn(CURVE, wallets)
@@ -374,6 +384,8 @@ class EngineTests(unittest.TestCase):
             blob = json.dumps(panel)
             for code in ("HIGH_SNIPE", "CLUSTERED", "FRESH_HEAVY", "DEV_HEAVY", "STILL_LOADED", "DEV_PAID_BUY"):
                 self.assertNotIn(code, blob)
+            self.assertNotIn(DEV, blob)
+            self.assertIn(public_id(DEV), blob)
 
     def test_history_cap_is_partial_only_as_too_deep_and_budget_does_not_crash(self):
         import tempfile

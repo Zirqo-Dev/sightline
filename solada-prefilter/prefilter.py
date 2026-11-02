@@ -17,6 +17,7 @@ import flags as flagmod  # noqa: E402  flag-only signals, never triggers
 import valuation as V  # noqa: E402  LP detection, raw-unit valuation, kill dedupe
 import big_moves as BM  # noqa: E402  SPD-43 big-move detector (research rows, never triggers)
 import whale_ledger as WL  # noqa: E402  SPD-44 lead whale ledger (research rows, never triggers)
+import whale_stake  # noqa: E402  lead stake from WHALE_STAKE or the private repo, never printed
 import dev_checks as DC  # noqa: E402  phase-1 dev sells / serial / drawdown (own budget; may add a dev_sell trigger)
 import liquidity_moves as LM  # noqa: E402  SPD-55 pool reserves (research rows, never triggers)
 import vetoes as vetoes_mod  # noqa: E402  SPD-65 research vetoes from those files (never a buy signal)
@@ -1134,7 +1135,8 @@ def main():
         else:
             state["kill_reported"][tk] = entry
 
-    # ---- lead whale (public codename). The ADA handle, when needed, comes from WHALE_ADA_HANDLE.
+    # ---- lead whale (public codename). The ADA handle, when set, comes from WHALE_ADA_HANDLE.
+    # Otherwise the stake comes from WHALE_STAKE or the private repo. It is not in config.json.
     wcfg = cfg["whale"]
     lp_pols = V.lp_policies(cfg)
     unit_decimals = {unit_of(l): 6 for l in launches if l.get("curve") and unit_of(l)}
@@ -1152,7 +1154,7 @@ def main():
         addr = chain.handle_address(wcfg.get("handle_policy") or "", handle)
         stake = chain.stake_of(addr) if addr else None
     if not stake:
-        stake = (wcfg.get("stake") or "").strip() or None
+        stake = whale_stake.resolve(cfg) or None
     if not stake:
         http._fail("whale", "whale not resolved")
     else:
@@ -1528,7 +1530,26 @@ def main():
             http._fail("sw01", type(e).__name__)
             sw01_summary = {"candidates": [], "exits": [], "error": type(e).__name__}
 
+    # Log-only. No webhook, no kill line, no verdict. A failure here is skipped.
+    est_note = None
+    try:
+        import est_log
+        est_note = est_log.record(args.data_dir, log, paper, time.time())
+        print(f"est universe log: {json.dumps(est_note)}")
+    except (SystemExit, Exception) as e:
+        http._fail("est_log", type(e).__name__)
+    short_note = None
+    try:
+        import x_buzz_shortlist as XB
+        buzz_path = os.path.join(desk, "x_buzz.json")
+        short_note = XB.record(args.data_dir, log, paper, time.time(), buzz_path=buzz_path)
+        print(f"x buzz shortlist: {json.dumps(short_note)}")
+    except (SystemExit, Exception) as e:
+        http._fail("x_buzz_shortlist", type(e).__name__)
+
     summary = build_summary(big_moves, whale_ledger, liquidity, veto_summary, sw01_summary)
+    summary["est_universe_log"] = est_note
+    summary["x_buzz_shortlist"] = short_note
     write_json(summary_path, summary, indent=1)
     print(f"whale: {json.dumps(summary['whale'])[:300]}")
     print(json.dumps({k: summary[k] for k in ("launches", "new_launches", "candidates", "passed_k_y", "first_block_hits", "data_failures", "api_calls")}))

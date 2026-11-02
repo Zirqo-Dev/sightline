@@ -21,6 +21,7 @@ import hashlib
 import json
 import os
 import re
+import sys
 
 SCHEMA = 1
 PUBLIC_KIND = "whale_roster_public"
@@ -852,6 +853,25 @@ def union_roster(local, remote):
     return base
 
 
+def lead_wallet(config):
+    """Stake key for the lead row. Env, in-memory config, then the private repo.
+
+    The committed prefilter config does not carry the key. A failure to import
+    the resolver leaves only an in-memory value, which tests pass in.
+    """
+    if not isinstance(config, dict):
+        config = {}
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "solada-prefilter"))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    try:
+        import whale_stake
+        return whale_stake.resolve(config) or None
+    except Exception:
+        raw = (config.get("whale") or {}).get("stake")
+        return raw.strip() if isinstance(raw, str) and raw.strip() else None
+
+
 def ensure_lead(roster, wallet, tag):
     """Seed Grumpy Walrus once. An existing row keeps its status."""
     lead = _whale(
@@ -1528,7 +1548,7 @@ def build(log, ledger, liquidity, config, known, cache_roster, cache_events, now
     """
     roster = union_roster(cache_roster, None)
     tag = (ledger or {}).get("whale_tag") if isinstance(ledger, dict) else None
-    wallet = ((config or {}).get("whale") or {}).get("stake") if isinstance(config, dict) else None
+    wallet = lead_wallet(config)
     ensure_lead(roster, wallet, tag)
     lead_tags = [tag] if is_tag(tag or "") else []
     for whale in roster.get("whales") or []:
