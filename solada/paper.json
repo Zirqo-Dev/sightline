@@ -1334,6 +1334,11 @@
               "at": "2026-11-02T18:14:00-05:00",
               "bonded": false,
               "note": "no DEX pool on GeckoTerminal; gate not met, stays pending_gate (qualify_at = first run where all three hold)"
+            },
+            {
+              "at": "2026-11-02T19:00:00-05:00",
+              "bonded": false,
+              "note": "past launch+24h; no DEX pool on GeckoTerminal; gate not met, stays in comparison group (pending_gate) for its 48h return"
             }
           ]
         },
@@ -1358,6 +1363,11 @@
               "at": "2026-11-02T18:14:00-05:00",
               "bonded": false,
               "note": "no DEX pool on GeckoTerminal; gate not met, stays pending_gate (qualify_at = first run where all three hold)"
+            },
+            {
+              "at": "2026-11-02T19:00:00-05:00",
+              "bonded": false,
+              "note": "past launch+24h; no DEX pool on GeckoTerminal; gate not met, stays in comparison group (pending_gate) for its 48h return"
             }
           ]
         },
@@ -1596,6 +1606,16 @@
           ],
           "qualified": [],
           "note": "ASCEND (+43.2% vs line, Grumpy Walrus +28.9k ADA 72h, pool +8.3% 7d) and STRIKE (+32.1%, Wobbly Kiwi +52.4k ADA 72h, pool -2.7% 7d) failed only on the 7-day holder trend, unverifiable without a logged count from Oct 25; baselines logged"
+        },
+        {
+          "asof": "2026-11-02T19:00:00-05:00",
+          "checked": [
+            "ASCEND",
+            "STRIKE",
+            "FLOW"
+          ],
+          "qualified": [],
+          "note": "ASCEND (+46.3% vs line, Grumpy Walrus +~6.6k ADA 72h, pool +4.2% 7d) and STRIKE (+32.1%, Wobbly Kiwi +~53.7k ADA 72h, pool -3.2% 7d) failed only on the 7-day holder trend (unverifiable until Nov 8); FLOW +24.1% vs line fails condition 1"
         }
       ]
     }
