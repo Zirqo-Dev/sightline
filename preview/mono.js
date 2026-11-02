@@ -1,36 +1,84 @@
-/* Single-page Sightline desk. Research and paper only.
-   Reads the pack preview/app.js already loaded. No third-party calls. */
+/* Four Sightline pages. Research and paper only.
+   Reads the pack preview/app.js already loaded. No third-party calls.
+   Layout rhythm follows baseline-desk: header card, one large figure, two stacks. */
 (function (root) {
   const FRESH_MS = 26 * 3600 * 1000;
   const FAIL_AMBER = 0.1;
   const EST_PADS = { established: 1, minswap: 1 };
 
-  function page(pack, api) {
+  function page(routeId, pack, api) {
+    const id = routeId || "home";
     const p = pack || {};
-    const log = (p.cardano && p.cardano.log) || {};
-    const lanes = cardanoLanes(log, p.cardano && p.cardano.kills);
-    const failure = cardanoFailure(p.cardano && p.cardano.devs);
-    return [
-      sentinel(api, pack, lanes),
-      runners(api, lanes),
-      established(api, lanes),
-      paperTests(api, p),
-      whales(api, log),
-      solana(api, p),
-      buzz(api, p.cardano && p.cardano.buzz),
-      nft(api, p),
-      desk(api, p)
-    ].join("");
+    if (id === "cardano") return cardanoPage(p, api);
+    if (id === "solana") return solanaPage(p, api);
+    if (id === "nft") return nftPage(p, api);
+    return homePage(p, api);
   }
 
-  function status(pack, api) {
+  function cols(left, right) {
+    return `<div class="cols"><div class="col">${left}</div><div class="col">${right}</div></div>`;
+  }
+
+  function homePage(pack, api) {
+    const log = (pack.cardano && pack.cardano.log) || {};
+    const lanes = cardanoLanes(log, pack.cardano && pack.cardano.kills);
+    const closest = lanes.moving || lanes.runners[0] || null;
+    const picks = collectPicks(pack.cardano && pack.cardano.paper);
+    const adaKey = picks.length ? picks[0].ticker : "No pick";
+    const adaSub = closest
+      ? closest.ticker + " " + (closest.pct == null ? "" : signed(closest.pct, 1) + "%") + " · closest passed name"
+      : "Nothing cleared rule k + y";
+    const books = (pack.solanaModel && pack.solanaModel.bookRows) || [];
+    const f = books[0] || {};
+    const fPct = f.exp == null ? "–" : signed(f.exp * 100, 1) + "%";
+    const solSub = (f.n || 0) + " closes" + (f.rule ? " · " + f.rule : "") + " · " + ((pack.solanaModel && pack.solanaModel.day14Verdict) || "NOT_FINAL");
+    const nftRows = pricedNft(pack, api);
+    const top = nftRows.find(r => r.usd != null) || nftRows[0];
+    const nftKey = top && top.usd != null ? usdText(top.usd) : (nftRows.length ? String(nftRows.length) : "–");
+    const nftSub = top ? top.name + (top.usd == null ? "" : "") : "No KING names";
+    const left = linkCard("#/cardano", "Cardano", "Sentinel", adaKey, adaSub)
+      + linkCard("#/solana", "Solana", "Day-14 · F", fPct, solSub);
+    const right = linkCard("#/nft", "NFT", "KING", nftKey, nftSub)
+      + freshBriefs(api, pack);
+    return cols(left, right);
+  }
+
+  function cardanoPage(pack, api) {
+    const log = (pack.cardano && pack.cardano.log) || {};
+    const lanes = cardanoLanes(log, pack.cardano && pack.cardano.kills);
+    const left = sentinel(api, pack, lanes) + runners(api, lanes) + established(api, lanes);
+    const right = paperTests(api, pack) + whales(api, log) + changed(api, pack) + buzz(api, pack.cardano && pack.cardano.buzz, "cardano");
+    return cols(left, right);
+  }
+
+  function solanaPage(pack, api) {
+    const left = solanaBooks(pack) + openPositions(api, pack) + netGross(pack);
+    const right = tradesLog(api, pack) + buzz(api, pack.cardano && pack.cardano.buzz, "solana");
+    return cols(left, right);
+  }
+
+  function nftPage(pack, api) {
+    return `<div class="cols"><div class="wide">${nft(api, pack)}</div></div>`;
+  }
+
+  function pricedNft(pack, api) {
+    const rows = (api.nftRows ? api.nftRows(pack.nftPulse, pack.nftLog) : []).filter(r => r && !r.example);
+    fillNftFloors(rows, pack.nftPulse);
+    return rows.map(r => ({ name: r.name, usd: toUsd(r.floor, r.unit, pack.prices) })).filter(r => r.name);
+  }
+  function linkCard(href, title, kicker, figure, sub) {
+    const down = /−|-/.test(String(figure));
+    return `<a class="c" href="${href}"><div class="h"><h2>${esc(title)}</h2><span class="k">${esc(kicker)}</span></div><p class="bal ${down ? "dn" : ""}">${esc(figure)}</p><p class="pnl mu">${esc(sub)}</p></a>`;
+  }
+
+  function status(routeId, pack, api) {
     const log = pack && pack.cardano && pack.cardano.log;
-    const asof = log && log.asof;
+    const asof = (routeId === "solana" && pack && pack.health && (pack.health.generated_at || pack.health.asof)) || (log && log.asof);
     const clock = asof ? clockLine(asof) : "";
     const updated = asof && api.ago ? api.ago(asof) : "";
-    const bits = [clock, updated ? "updated " + updated : ""].filter(Boolean).join(" · ");
+    const bits = [updated ? updated : clock].filter(Boolean).join(" · ");
     const fail = cardanoFailure(pack && pack.cardano && pack.cardano.devs);
-    const warn = fail != null && fail >= FAIL_AMBER
+    const warn = routeId === "home" && fail != null && fail >= FAIL_AMBER
       ? `<br><span class="w">Cardano feed ${esc(pct1(fail * 100))} failures</span>`
       : "";
     return (bits || "Sightline") + warn;
@@ -117,43 +165,83 @@
     return card("Whale codenames", "last 24h", body, "");
   }
 
-  function solana(api, pack) {
-    const model = pack.solanaModel || (api.solanaModel ? api.solanaModel(null, [], null) : { bookRows: [], opens: [], openCount: 0, activity: [] });
-    const names = { F: "F desk", R: "R random", S: "S shadow" };
-    const bodyRows = (model.bookRows || []).map(b => {
-      const pnl = b.pnl;
-      const exp = b.exp;
-      return `<tr><td>${esc(names[b.id] || b.id)}</td><td class="${pnl < 0 ? "dn" : pnl > 0 ? "up" : ""}">${esc(signed(pnl, 3))}</td><td class="${exp < 0 ? "dn" : exp > 0 ? "up" : ""}">${esc(exp == null ? "–" : signed(exp * 100, 1) + "%")}</td><td>${esc(String(b.n))}</td></tr>`;
-    }).join("");
-    const table = `<table><tr><th>Book</th><th>P&amp;L SOL</th><th>Exp/tr</th><th>N</th></tr>${bodyRows || `<tr><td colspan="4">No day-14 books yet</td></tr>`}</table>`;
-    const f = (model.bookRows || [])[0] || {};
-    const stop = f.rule === "STOP";
-    const gap = model.gap == null ? "–" : signed(model.gap, 1) + " pp";
+  function modelOf(pack) {
+    return (pack && pack.solanaModel) || { bookRows: [], opens: [], openCount: 0, activity: [], net: null, gross: null };
+  }
+  /* Expectancy is day14_verdict.py: total realised pnl / (0.5 * n). Shown as a percent per trade, never the SOL sum. */
+  function expPct(book) {
+    if (!book || book.exp == null || !isFinite(book.exp)) return null;
+    return book.exp * 100;
+  }
+  function solanaBooks(pack) {
+    const model = modelOf(pack);
+    const books = model.bookRows || [];
+    const f = books.find(b => b.id === "F") || books[0] || {};
+    const pct = expPct(f);
+    const cls = pct == null ? "" : pct < 0 ? "dn" : pct > 0 ? "up" : "";
+    const rule = f.rule === "STOP" ? pill("STOP", "d") : f.rule ? pill(f.rule, "") : "";
     const verdict = model.day14Verdict || "NOT_FINAL";
-    const rule = `<div class="row" style="margin-top:6px"><div class="gr"><div class="nm">Rule: ${esc(f.rule || "–")} ${stop ? pill("F below −15%", "d") : ""}</div><div class="sub">F vs R ${esc(gap)} · ${esc(verdict)} until Nov 11, 10:00 AM ET</div></div></div>`;
-    const opens = model.opens || [];
-    const counts = { F: 0, R: 0, S: 0 };
-    opens.forEach(o => { if (counts[o.book] != null) counts[o.book] += 1; });
-    const best = opens.slice().sort((a, b) => (markPct(b) || -1e9) - (markPct(a) || -1e9))[0];
-    const bestBit = best && markPct(best) != null ? " · " + (api.sanitize ? api.sanitize(best.ticker) : best.ticker) + " " + signed(markPct(best), 1) + "%" : "";
-    const h = pack.health || {};
-    const fail = num(h.data_failure_rate);
-    const ok = fail == null ? "–" : pct0((1 - fail) * 100) + "%";
-    const runs = num(h.runs) == null ? "–" : String(h.runs) + (num(h.expected_runs) == null ? "" : "/" + h.expected_runs);
-    const summary = `${model.openCount || 0} open (${counts.F} F / ${counts.R} R)${bestBit} · data OK ${ok} · ${runs} runs`;
-    const last = (model.activity || []).find(a => /sell|exit|close/i.test(a.action || ""));
-    const lastLine = last
-      ? "Last close: " + (api.sanitize ? api.sanitize(last.symbol) : last.symbol) + " · " + (clip(api.sanitize ? api.sanitize(last.reason) : last.reason, 80) || "no reason logged") + " · " + signed(last.pnl, 3) + " SOL"
-      : "";
-    const netLine = (model.net != null || model.gross != null)
-      ? "Net " + signed(model.net, 3) + " · gross " + signed(model.gross, 3) + " SOL"
-      : "";
-    const extra = [summary, lastLine, netLine].filter(Boolean).join(" · ");
-    return card("Solana · F / R / S", "day-14 verdict script", table + rule + `<div class="sub" style="white-space:normal">${esc(extra)}</div>`, "");
+    const others = books.filter(b => b !== f).map(b => {
+      const p = expPct(b);
+      const c = p == null ? "" : p < 0 ? "dn" : p > 0 ? "up" : "";
+      const name = b.id === "R" ? "R random" : b.id === "S" ? "S shadow" : b.id;
+      return `<div class="book"><div class="lab">${esc(name)}</div><div class="big ${c}">${esc(p == null ? "–" : signed(p, 1) + "%")}</div><div class="sub">${esc(String(b.n || 0))} closes</div></div>`;
+    }).join("");
+    const body = `<p class="lab">F desk · expectancy</p><p class="bal ${cls}">${esc(pct == null ? "–" : signed(pct, 1) + "%")}</p><p class="pnl">over ${esc(String(f.n || 0))} closes ${rule}</p><p class="verdict">${esc(verdict)} until Nov 11, 10:00 AM ET</p>${others ? `<div class="vs">${others}</div>` : ""}`;
+    return card("Day-14 books", "same rule as the verdict script", body, "");
+  }
+  function openPositions(api, pack) {
+    const opens = modelOf(pack).opens || [];
+    const rows = opens.slice(0, 8).map(p => {
+      const pct = markPct(p);
+      const reason = clip(api.sanitize ? api.sanitize(p.reason) : p.reason, 72);
+      return coinRow(api, p.ticker, esc(p.book || ""), esc(reason), pct == null ? "–" : signed(pct, 1) + "%", pct < 0 ? "dn" : pct > 0 ? "up" : "mu");
+    }).join("");
+    return card("Open positions", opens.length + " paper", rows || `<p class="sub">No open paper positions.</p>`, "");
+  }
+  function tradesLog(api, pack) {
+    const rows = (modelOf(pack).activity || []).filter(a => /sell|exit|close/i.test(a.action || "")).slice(0, 8);
+    const body = rows.map(a => {
+      const reason = clip(api.sanitize ? api.sanitize(a.reason) : a.reason, 80) || "no reason logged";
+      const pnl = a.pnl;
+      return `<div class="row"><div class="gr"><div class="nm">${esc(api.sanitize ? api.sanitize(a.symbol) : a.symbol)} ${esc(a.book || "")}</div><div class="sub">${esc(reason)}</div></div><div class="r m ${pnl < 0 ? "dn" : pnl > 0 ? "up" : "mu"}">${esc(signed(pnl, 3))} SOL</div></div>`;
+    }).join("");
+    return card("Trades log", "exit reason", body || `<p class="sub">No closed fills yet.</p>`, "");
+  }
+  function netGross(pack) {
+    const model = modelOf(pack);
+    const netCls = model.net < 0 ? "dn" : model.net > 0 ? "up" : "";
+    const grossCls = model.gross < 0 ? "dn" : model.gross > 0 ? "up" : "";
+    const body = `<div class="vs"><div class="book"><div class="lab">Net SOL</div><div class="big ${netCls}">${esc(signed(model.net, 3))}</div></div><div class="book"><div class="lab">Gross SOL</div><div class="big ${grossCls}">${esc(signed(model.gross, 3))}</div></div></div><p class="sub" style="margin-top:8px;white-space:normal">Closed paper fills. This is not the day-14 expectancy.</p>`;
+    return card("Net vs gross", "SOL, not the verdict %", body, "");
+  }
+  function freshBriefs(api, pack) {
+    const briefs = (pack.briefs || []).slice().sort((a, b) => String(b.date || b.source_asof || "").localeCompare(String(a.date || a.source_asof || "")));
+    const fresh = briefs.filter(briefIsFresh);
+    const body = fresh.length
+      ? fresh.slice(0, 3).map(b => `<p class="t"><span class="lab">${esc(b.desk || "Desk")} · ${esc(whenStamp(b.date) || "")}</span><br>${esc(clip(api.sanitize ? api.sanitize(b.headline) : b.headline, 280))}</p>`).join("")
+      : `<p class="sub">No brief from the last day.</p>`;
+    const stale = briefs.find(b => !briefIsFresh(b));
+    const note = stale ? `<p class="t mu" style="font-size:12px">Earlier briefs stay in the archive. Latest hidden ${esc(whenStamp(stale.date) || stale.date || "")}. <span class="p">stale</span></p>` : "";
+    return card("Latest briefs", "fresh only", body + note, "");
+  }
+  function briefIsFresh(b) {
+    const raw = b && b.source_asof ? b.source_asof : (b && b.date ? b.date + "T12:00:00Z" : "");
+    const ms = Date.parse(raw);
+    return Number.isFinite(ms) && (Date.now() - ms) < FRESH_MS;
+  }
+  function changed(api, pack) {
+    const log = (pack.cardano && pack.cardano.log) || {};
+    const asof = log.asof;
+    const fresh = asof && (Date.now() - Date.parse(asof)) < FRESH_MS;
+    const learned = (log.learned_or_changed || []).filter(x => typeof x === "string").map(x => api.sanitize ? api.sanitize(x) : x).filter(Boolean);
+    const headline = api.sanitize ? api.sanitize(log.headline || "") : (log.headline || "");
+    const text = !fresh ? "No fresh desk note in the last day." : (learned.length ? learned.join(" ") : headline);
+    return card("What changed this run", fresh && asof ? whenStamp(asof) : "Cardano", `<p class="t">${esc(text)}</p>`, "");
   }
 
-  function buzz(api, doc) {
-    const tokens = ((doc && doc.tokens) || []).filter(t => t && /^[A-Za-z][A-Za-z0-9]{1,14}$/.test(String(t.ticker || "")) && String(t.ticker).toLowerCase() !== "unknown");
+  function buzz(api, doc, chain) {
+    const tokens = ((doc && doc.tokens) || []).filter(t => t && (!chain || String(t.chain || "").toLowerCase() === chain) && /^[A-Za-z][A-Za-z0-9]{1,14}$/.test(String(t.ticker || "")) && String(t.ticker).toLowerCase() !== "unknown");
     tokens.sort((a, b) => (b.mentions_1h || 0) - (a.mentions_1h || 0));
     const live = tokens.length > 0;
     const rows = tokens.slice(0, 5).map(t => {
@@ -162,8 +250,8 @@
       const sub = `${t.mentions_1h == null ? "–" : t.mentions_1h} posts / 1h` + (ratio == null ? "" : ` · ${trim(ratio)}× ${ratioLabel}`);
       return coinRow(api, String(t.ticker).toUpperCase(), "", esc(sub), "measured", "mu");
     }).join("");
-    const missing = live ? "" : `<div class="sub" style="margin-top:6px">x_buzz.json is not on this origin yet.</div>`;
-    const meta = live ? "" : `<span class="ex">NO FEED</span>`;
+    const missing = live ? "" : `<div class="sub" style="margin-top:6px">${doc && doc.tokens ? "No posts for this desk in the latest file." : "x_buzz.json is not on this origin yet."}</div>`;
+    const meta = live ? (chain || "") : (doc && doc.tokens ? "none this run" : "no file yet");
     return card(`X buzz ${pill("measured, not a signal", "")}`, meta, (rows || `<div class="row"><div class="gr"><div class="nm">No measured posts</div></div></div>`) + missing, "");
   }
 

@@ -16,8 +16,7 @@
     { id: "home", href: "#/", label: "Home", desk: "home" },
     { id: "cardano", href: "#/cardano", label: "Cardano", desk: "solada" },
     { id: "solana", href: "#/solana", label: "Solana", desk: "solana" },
-    { id: "nft", href: "#/nft", label: "NFT", desk: "nft" },
-    { id: "briefs", href: "#/briefs", label: "Briefs", desk: "briefs" }
+    { id: "nft", href: "#/nft", label: "NFT", desk: "nft" }
   ];
 
   function isDeskData(path) {
@@ -1307,7 +1306,7 @@
     if (path === "cardano" || path === "solada" || path === "desk/solada" || path === "desk/cardano") return NAV[1];
     if (path === "solana" || path === "desk/solana") return NAV[2];
     if (path === "nft" || path === "desk/nft") return NAV[3];
-    if (path === "briefs") return NAV[4];
+    if (path === "briefs") return NAV[0];
     return NAV[0];
   }
   function navHtml(active) {
@@ -1460,10 +1459,10 @@
     if (document.body.dataset.layout === "mono" && root.SightlineMono) {
       const api = { assetLogo, nftRows, ago, sanitize, tx };
       let html = "";
-      try { html = root.SightlineMono.page(p, api); }
+      try { html = root.SightlineMono.page(route.id, p, api); }
       catch (err) { html = empty("This desk couldn't render", "This view hit a display error and kept the raw feed off the page."); }
       view.innerHTML = html;
-      if (status) status.innerHTML = root.SightlineMono.status(p, api);
+      if (status) status.innerHTML = root.SightlineMono.status(route.id, p, api);
       const visible = view.innerText || "";
       if (/(?:stake|addr)(?:_test)?1[0-9a-z]{8,}/i.test(visible)) {
         view.innerHTML = empty("Privacy hold", "This view was cleared because a wallet or stake key reached the page.");
