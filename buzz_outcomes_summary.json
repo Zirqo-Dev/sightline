@@ -1,5 +1,5 @@
 {
-  "asof": "2026-11-02T11:37:46Z",
+  "asof": "2026-11-02T13:36:56Z",
   "buy_signal": false,
   "definitions": {
     "adverse": "later veto, rug, kill, or lp_pull is true. A null flag means that file or time was missing.",
@@ -33,12 +33,12 @@
       "up_24h_reason": "small_sample"
     },
     {
-      "adverse_rate": 0.0566,
+      "adverse_rate": 0.0545,
       "adverse_reason": null,
       "by": "author_pattern",
-      "n": 53,
+      "n": 55,
       "n_adverse": 3,
-      "n_adverse_known": 53,
+      "n_adverse_known": 55,
       "n_h24_priced": 20,
       "n_h24_up": 0,
       "pattern": "many_authors",
@@ -75,12 +75,12 @@
       "up_24h_reason": "small_sample"
     },
     {
-      "adverse_rate": 0.0189,
+      "adverse_rate": 0.0182,
       "adverse_reason": null,
       "by": "spike_kind",
-      "n": 53,
+      "n": 55,
       "n_adverse": 1,
-      "n_adverse_known": 53,
+      "n_adverse_known": 55,
       "n_h24_priced": 20,
       "n_h24_up": 0,
       "pattern": "zero_start",
@@ -89,12 +89,12 @@
       "up_24h_reason": null
     },
     {
-      "adverse_rate": 0.0484,
+      "adverse_rate": 0.0469,
       "adverse_reason": null,
       "by": "chain",
-      "n": 62,
+      "n": 64,
       "n_adverse": 3,
-      "n_adverse_known": 62,
+      "n_adverse_known": 64,
       "n_h24_priced": 25,
       "n_h24_up": 0,
       "pattern": "solana",
@@ -145,12 +145,12 @@
       "up_24h_reason": "small_sample"
     },
     {
-      "adverse_rate": 0.0217,
+      "adverse_rate": 0.0208,
       "adverse_reason": null,
       "by": "combined",
-      "n": 46,
+      "n": 48,
       "n_adverse": 1,
-      "n_adverse_known": 46,
+      "n_adverse_known": 48,
       "n_h24_priced": 16,
       "n_h24_up": 0,
       "pattern": "solana|zero_start|many_authors",
@@ -165,9 +165,9 @@
   "note": "Research tally only. Not a buy signal and not a veto.",
   "schema_version": 1,
   "totals": {
-    "events": 62,
+    "events": 64,
     "excluded": 0,
-    "scored": 62
+    "scored": 64
   },
   "up_pct": 20.0,
   "veto": false
