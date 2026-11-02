@@ -1,0 +1,81 @@
+name: Daily status
+
+# Paper-only status JSON. No AI and no network.
+# Reads main for the script and the frozen clocks, and desk-data for the
+# ledgers the nightly desk run has already written. 00:40 UTC is after the
+# 7 PM America/Toronto desk run (midnight UTC once clocks are on standard
+# time). GitHub's own schedule can lag; workflow_dispatch is the same job.
+# The JSON is committed to desk-data. It is not merged to main.
+
+on:
+  schedule:
+    - cron: "40 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-status
+  cancel-in-progress: false
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out main (script)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: code
+      - name: Check out desk-data (ledgers)
+        uses: actions/checkout@v4
+        with:
+          ref: desk-data
+          path: data
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Status tests
+        working-directory: code
+        run: python3 -m unittest discover -s scripts/tests -p test_daily_status.py
+      - name: Write daily status
+        run: |
+          python3 "$GITHUB_WORKSPACE/code/scripts/status/daily_status.py" \
+            --repo "$GITHUB_WORKSPACE/code" \
+            --data "$GITHUB_WORKSPACE/data" \
+            --out "$GITHUB_WORKSPACE/data/reports/status" \
+            --date "$(date -u +%Y-%m-%d)"
+      - name: Commit to desk-data
+        working-directory: data
+        env:
+          # The guard applies these two lists directly. It does not need
+          # SIGHTLINE_PRIVATE_TOKEN (that only fetches a private hash file, and
+          # the guard warns and continues when the token is unset) or
+          # RUGGER_ID_PEPPER (that only adds r- ids on top of the w- ids already
+          # derived from PRIVACY_GUARD_PATTERNS). The status JSON has no rugger ids.
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          PRIVACY_IDENTITY_HASHES: ${{ secrets.PRIVACY_IDENTITY_HASHES }}
+        run: |
+          git config user.name "daily-status-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A reports/status
+          if git diff --cached --quiet; then
+            echo "status unchanged"
+            exit 0
+          fi
+          if ! bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"; then
+            echo "::error::privacy guard failed on the daily status; not committing"
+            git reset -q
+            exit 1
+          fi
+          git commit -q -m "daily status $(date -u +%Y-%m-%d)"
+          pushed=0
+          for i in 1 2 3 4 5; do
+            git push origin HEAD:desk-data && { pushed=1; break; }
+            echo "push conflict, retry $i"
+            sleep $((i * 5))
+            git pull --rebase origin desk-data || { git rebase --abort; exit 1; }
+          done
+          [ "$pushed" = 1 ]
