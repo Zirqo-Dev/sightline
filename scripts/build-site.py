@@ -4,6 +4,7 @@
 The dashboard reads desks.json and each desk's JSON from the same origin.
 dist/ is what GitHub Pages and (later) Cloudflare Pages publish.
 """
+import hashlib
 import json
 import os
 import pathlib
@@ -99,10 +100,16 @@ def write_brief_indexes(desks):
 
 
 DESK_DATA = "https://raw.githubusercontent.com/Zirqo-Dev/sightline/desk-data/"
-# These three 404 on Pages because the build used to copy only desks.json folders.
-# They are written on desk-data (x_buzz.json at the root, the other two under
-# solada-prefilter/) and were never placed in dist/. The page also reads them
-# from desk-data directly; publishing them here makes the same-origin URL work.
+# Desk-data has x_buzz.json at the branch root and whale_ledger.json / kill_status.json
+# under solada-prefilter/. The first publish put them only at those paths, so
+# /whale_ledger.json, /kill_status.json, and /solada/<name>.json 404 on Pages.
+# The fetch itself succeeds. FEED_ALIASES copies the same bytes to the URLs that 404.
+_CARDANO_ID = re.compile(r"stake1[0-9a-z]{20,}|addr1[0-9a-z]{20,}")
+FEED_ALIASES = {
+    "x_buzz.json": ("solada/x_buzz.json",),
+    "solada-prefilter/whale_ledger.json": ("whale_ledger.json", "solada/whale_ledger.json"),
+    "solada-prefilter/kill_status.json": ("kill_status.json", "solada/kill_status.json"),
+}
 FEEDS = [
     "x_buzz.json",
     "x_buzz_history.jsonl",
@@ -133,6 +140,40 @@ REQUIRED_FEEDS = (
 )
 
 
+def platform_addresses():
+    """Allowlisted platform addresses. They may stay in a published feed."""
+    path = ROOT / "scripts" / "privacy-public-keys.txt"
+    out = set()
+    if not path.is_file():
+        return out
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#"):
+            out.add(line)
+    return out
+
+
+def scrub_public_feed(data, platform=None):
+    """Replace stake keys and non-platform addresses with a stable w- id."""
+    keep = platform if platform is not None else platform_addresses()
+    text = data.decode("utf-8")
+
+    def repl(match):
+        token = match.group(0)
+        if token in keep:
+            return token
+        return "w-" + hashlib.sha256(token.encode()).hexdigest()[:8]
+
+    return _CARDANO_ID.sub(repl, text).encode("utf-8")
+
+
+def publish_aliases(dest, rel, data):
+    for alias in FEED_ALIASES.get(rel, ()):
+        target = dest / alias
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+
+
 def overlay_feeds(dest):
     """Copy live desk-data files into the published tree. Stdlib only."""
     for rel in FEEDS:
@@ -141,13 +182,19 @@ def overlay_feeds(dest):
         try:
             req = urllib.request.Request(url, headers={"user-agent": "sightline-build"})
             with urllib.request.urlopen(req, timeout=90) as resp:
-                data = resp.read()
+                data = scrub_public_feed(resp.read())
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(data)
+            publish_aliases(dest, rel, data)
             print(f"  feed {rel} ({len(data)} bytes)")
         except Exception as exc:
             print(f"  feed {rel} skipped ({exc})")
     missing = [rel for rel in REQUIRED_FEEDS if not (dest / rel).is_file()]
+    if os.environ.get("SIGHTLINE_REQUIRE_FEEDS") == "1":
+        for rel in REQUIRED_FEEDS:
+            for alias in FEED_ALIASES.get(rel, ()):
+                if not (dest / alias).is_file():
+                    missing.append(alias)
     if missing and os.environ.get("SIGHTLINE_REQUIRE_FEEDS") == "1":
         sys.exit("build-site: required feeds missing from dist: " + ", ".join(missing))
 

@@ -157,6 +157,7 @@ jobs:
         env:
           SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}
           MINT: ${{ github.event.inputs.mint }}
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
         run: |
           set -euo pipefail
           if [ -n "${MINT}" ]; then

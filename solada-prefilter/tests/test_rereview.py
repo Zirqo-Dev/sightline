@@ -53,19 +53,20 @@ class Revert1ResearchAfterWebhook(unittest.TestCase):
 
 class Revert2WholeTokenMask(unittest.TestCase):
     def test_key_inside_a_longer_token_in_config_is_not_masked(self):
-        cfg = json.load(open(os.path.join(SRC, "config.json")))
-        key = cfg["whale"]["stake"]
+        key = F.b32_encode("stake", b"\xe1" + kh("mask-probe"))
         with tempfile.TemporaryDirectory() as d:
             shutil.copytree(os.path.join(ROOT, "scripts"), os.path.join(d, "scripts"))
             os.makedirs(os.path.join(d, "solada-prefilter"))
             for f in os.listdir(SRC):
                 if f.endswith(".py"):
                     shutil.copy(os.path.join(SRC, f), os.path.join(d, "solada-prefilter"))
-            cfg["_probe"] = "zz" + key  # a different (longer) id that merely contains the public key
+            cfg = json.load(open(os.path.join(SRC, "config.json")))
+            cfg["_probe"] = "zz" + key  # a longer id that merely contains a stake key
             json.dump(cfg, open(os.path.join(d, "solada-prefilter", "config.json"), "w"))
             env = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
             r = subprocess.run(["bash", "scripts/privacy-guard.sh", "solada-prefilter/config.json"], cwd=d, env=env, capture_output=True)
             self.assertEqual(r.returncode, 1, r.stderr)
+            self.assertNotIn(key.encode(), r.stderr + r.stdout)
             del cfg["_probe"]
             json.dump(cfg, open(os.path.join(d, "solada-prefilter", "config.json"), "w"))
             r = subprocess.run(["bash", "scripts/privacy-guard.sh", "solada-prefilter/config.json"], cwd=d, env=env, capture_output=True)
@@ -180,29 +181,32 @@ def guard_tree(d, allow_lines, patterns):
 
 class SF3OwnerKeyDerivation(unittest.TestCase):
     def test_owner_payment_address_pattern_protects_its_stake_key(self):
-        key = json.load(open(os.path.join(SRC, "config.json")))["whale"]["stake"]
-        owner_addr = F.b32_encode("addr", b"\x01" + b"\x11" * 28 + F.b32_decode(key)[1][1:])  # same stake part
+        key = F.b32_encode("stake", b"\xe1" + kh("owner-stake"))
+        stake_part = F.b32_decode(key)[1][1:]
+        owner_addr = F.b32_encode("addr", b"\x01" + b"\x11" * 28 + stake_part)
+        other = F.b32_encode("addr", b"\x01" + b"\x22" * 28 + stake_part)
         with tempfile.TemporaryDirectory() as d:
-            r = guard_tree(d, [key], owner_addr)
+            r = guard_tree(d, [other], owner_addr)
         self.assertEqual(r.returncode, 1)
-        self.assertIn(b"stake key of an owner address pattern", r.stderr)
+        self.assertIn(b"shares the stake key of an owner address pattern", r.stderr)
         self.assertNotIn(key.encode(), r.stderr + r.stdout)
+        self.assertNotIn(other.encode(), r.stderr + r.stdout)
 
-    def test_entries_are_pinned_to_whale_stake(self):
-        other = F.b32_encode("stake", b"\xe1" + kh("someone-else"))
-        key = json.load(open(os.path.join(SRC, "config.json")))["whale"]["stake"]
+    def test_a_stake_key_is_not_an_allowlist_entry(self):
+        key = F.b32_encode("stake", b"\xe1" + kh("not-public"))
         with tempfile.TemporaryDirectory() as d:
-            r = guard_tree(d, [key, other], "^zzOWNERzz$")
+            r = guard_tree(d, [key], "^zzOWNERzz$")
         self.assertEqual(r.returncode, 1)
-        self.assertIn(b"not config.json whale.stake", r.stderr)
+        self.assertIn(b"not exactly one full platform address", r.stderr)
+        self.assertNotIn(key.encode(), r.stderr + r.stdout)
 
 
 class RootModePublicKeys(unittest.TestCase):
     def test_root_mode_loads_public_keys_after_cd(self):
         # CI runs `bash main/scripts/privacy-guard.sh --root desk-data` from the parent
         # of both checkouts. The script directory has to be resolved before that cd,
-        # or privacy-public-keys.txt is missed and the public whale key is not masked.
-        key = F.b32_encode("stake", b"\xe1" + kh("public-whale"))
+        # or privacy-public-keys.txt is missed and the platform address is not masked.
+        key = F.b32_encode("addr", bytes([0x61]) + kh("platform-curve"))
         with tempfile.TemporaryDirectory() as d:
             main = os.path.join(d, "main")
             os.makedirs(os.path.join(main, "scripts"))
@@ -210,18 +214,12 @@ class RootModePublicKeys(unittest.TestCase):
             with open(os.path.join(main, "scripts", "privacy-public-keys.txt"), "w") as f:
                 f.write(key + "\n")
             shutil.copytree(SRC, os.path.join(main, "solada-prefilter"), ignore=shutil.ignore_patterns("tests", "__pycache__"))
-            cfg_path = os.path.join(main, "solada-prefilter", "config.json")
-            with open(cfg_path) as f:
-                cfg = json.load(f)
-            cfg["whale"]["stake"] = key
-            with open(cfg_path, "w") as f:
-                json.dump(cfg, f)
             desk = os.path.join(d, "desk-data")
-            os.makedirs(os.path.join(desk, "solada-prefilter"))
-            with open(os.path.join(desk, "solada-prefilter", "config.json"), "w") as f:
-                json.dump({"whale": {"stake": key}}, f)
+            os.makedirs(os.path.join(desk, "solada"))
+            with open(os.path.join(desk, "solada", "note.txt"), "w") as f:
+                f.write("curve " + key + "\n")
             subprocess.run(["git", "init", "-q"], cwd=desk, check=True)
-            subprocess.run(["git", "add", "solada-prefilter/config.json"], cwd=desk, check=True)
+            subprocess.run(["git", "add", "solada/note.txt"], cwd=desk, check=True)
             env = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
             r = subprocess.run(
                 ["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data"],
@@ -446,22 +444,21 @@ class DevChecksFileGuard(unittest.TestCase):
                 json.dump(doc, f)
             with open(os.path.join(desk, "note.json"), "w") as f:
                 json.dump({"ok": True}, f)
-            cfg = json.load(open(os.path.join(main, "solada-prefilter", "config.json")))
             with open(os.path.join(desk, "config.json"), "w") as f:
-                json.dump({"whale": {"stake": cfg["whale"]["stake"]}}, f)
+                json.dump({"whale": {"stake_prefix": "uylu74g0"}}, f)
             data = os.path.join(d, "desk-data")
             subprocess.run(["git", "init", "-q"], cwd=data, check=True)
             subprocess.run(["git", "add", "-A"], cwd=data, check=True)
             env = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
             r = subprocess.run(["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data", *args],
                                cwd=d, env=env, capture_output=True)
-            return r, cfg["whale"]["stake"]
+            return r
 
     def test_prefix_fails_even_if_the_caller_omits_the_file(self):
         raw = F.b32_encode("stake", b"\xe1" + kh("dev-tag-guard"))
         prefix = raw[6:16]
         doc = {"entries": [{"ticker": "T", "dev_tag": prefix}, {"ticker": "U", "dev_tag": "w-0123abcd"}]}
-        r, _ = self._run(doc, ["solada-prefilter/note.json"])
+        r = self._run(doc, ["solada-prefilter/note.json"])
         self.assertEqual(r.returncode, 1)
         self.assertIn(b"dev_tag is not a role label or w- hash", r.stderr)
         self.assertFalse(prefix.encode() in r.stdout + r.stderr)
@@ -469,13 +466,12 @@ class DevChecksFileGuard(unittest.TestCase):
 
     def test_role_and_hash_pass_and_the_allowlist_does_not_mask_this_file(self):
         good = {"entries": [{"dev_tag": "w-0123abcd"}, {"dev_tag": "repeat_launcher"}, {"dev_tag": None}]}
-        r, key = self._run(good, [])
+        r = self._run(good, [])
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertFalse(key.encode() in r.stdout + r.stderr)
-        bad = {"entries": [{"dev_tag": key}]}
-        r, key = self._run(bad, [])
+        raw = F.b32_encode("stake", b"\xe1" + kh("dev-tag-guard"))
+        r = self._run({"entries": [{"dev_tag": raw}]}, [])
         self.assertEqual(r.returncode, 1)
-        self.assertFalse(key.encode() in r.stdout + r.stderr)
+        self.assertFalse(raw.encode() in r.stdout + r.stderr)
 
 
 if __name__ == "__main__":

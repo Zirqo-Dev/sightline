@@ -12,10 +12,10 @@ Code lives in this package. Data lives next to the Solada desk, because the repo
 |---|---|
 | `sol_forensics/` | Library and `python3 -m sol_forensics` |
 | `solada/forensics/config.json` | Window, budget, watchlist, sourced labels |
-| `solada/forensics/reports/<mint>.json` | One report per mint, overwritten each run |
+| `solada/forensics/reports/<mint>.json` | One report per mint, overwritten each run. Dev, owner, buyer, funder, and cluster wallets are `w-` hashes. Token mints stay. |
 | `solada/forensics/index.jsonl` | One summary line appended per run |
-| `solada/forensics/cache/funding.json` | Funder cache checked before any wallet is paged |
-| `solada/forensics/panel.json` | Experimental forensics notes for the desk page |
+| `solada/forensics/cache/funding.json` | Public funder cache, `w-` hashes only. The raw map used before a wallet is paged comes from `FORENSICS_RAW_CACHE` or `forensics/funding.json` in the private repo when `SIGHTLINE_PRIVATE_TOKEN` is set. |
+| `solada/forensics/panel.json` | Experimental forensics notes for the desk page. Wallet ids in the notes are `w-` hashes. |
 
 `schema/README.md` describes the desk paper format. Forensics JSON is not that format and is not registered as a paper book.
 

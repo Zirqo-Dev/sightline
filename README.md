@@ -4,7 +4,7 @@ Paper-trading and research desks. Not financial advice. No real positions.
 
 https://zirqo-dev.github.io/sightline/
 
-The site root is four pages, Home, Cardano, Solana, and NFT (`index.html` with `preview/app.js`, `preview/mono.js`, and `preview/app.css`). It reads `desks.json` and each desk's JSON from the same origin, and newer copies from the `desk-data` branch when those are fresher. The build also copies `x_buzz.json`, `solada-prefilter/whale_ledger.json`, and `solada-prefilter/kill_status.json` into the published site. The previous dashboard stays at `legacy.html`. `preview.html` is the same page with a preview badge. Legacy panel layout: [dashboard/PLUGINS.md](dashboard/PLUGINS.md). File format: [schema/README.md](schema/README.md). Privacy: [PRIVACY.md](PRIVACY.md).
+The site root is four pages, Home, Cardano, Solana, and NFT (`index.html` with `preview/app.js`, `preview/mono.js`, and `preview/app.css`). It reads `desks.json` and each desk's JSON from the same origin, and newer copies from the `desk-data` branch when those are fresher. The build copies `x_buzz.json`, `whale_ledger.json`, and `kill_status.json` to the site root and under `solada/`, and also keeps `solada-prefilter/whale_ledger.json` and `solada-prefilter/kill_status.json`. The previous dashboard stays at `legacy.html`. `preview.html` is the same page with a preview badge. Legacy panel layout: [dashboard/PLUGINS.md](dashboard/PLUGINS.md). File format: [schema/README.md](schema/README.md). Privacy: [PRIVACY.md](PRIVACY.md).
 
 The older NFT finder still runs at [nft/site/](nft/site/). After deploy: `https://zirqo-dev.github.io/sightline/nft/site/`. Paste an OpenSea key in that page only. Never commit it.
 

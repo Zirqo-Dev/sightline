@@ -111,6 +111,8 @@ jobs:
           RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
           RUGGER_ACCEPT_RESET: ${{ vars.RUGGER_ACCEPT_RESET }}
           WHALE_ADA_HANDLE: ${{ secrets.WHALE_ADA_HANDLE }}
+          WHALE_STAKE: ${{ secrets.WHALE_STAKE }}
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
         working-directory: code
         run: |
           [ -z "$BLOCKFROST_PROJECT_ID" ] && echo "::warning::BLOCKFROST_PROJECT_ID not set; using Koios"
@@ -123,6 +125,9 @@ jobs:
       - name: Whale roster research
         if: always() && github.event.inputs.ping != 'true'
         timeout-minutes: 2
+        env:
+          WHALE_STAKE: ${{ secrets.WHALE_STAKE }}
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
         working-directory: code
         run: |
           [ -d "$GITHUB_WORKSPACE/data/solada-prefilter" ] || { echo "no desk-data"; exit 0; }

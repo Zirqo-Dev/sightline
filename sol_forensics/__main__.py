@@ -13,6 +13,7 @@ import sys
 import time
 
 from sol_forensics.engine import (
+    _path,
     analyse,
     load_config,
     make_client,
@@ -58,13 +59,22 @@ def main(argv=None):
     client = make_client(cfg, url, budget=args.budget)
     # One budget covers every mint in this process. Watchlist runs share it.
     mints = _mints(cfg, args)
-    if not mints:
-        print("no mints to scan")
-        return 0
     index_path = os.path.join(cfg["_base"], (cfg.get("paths") or {}).get("index", "index.jsonl"))
     now = time.time()
     skip_recent = (args.watchlist or args.skip_recent) and not args.force
-    exit_code = 0
+    try:
+        if not mints:
+            print("no mints to scan")
+            return 0
+        return _scan(cfg, client, mints, index_path, now, skip_recent, args, 0)
+    finally:
+        from sol_forensics.private_cache import flush
+        from sol_forensics.public_names import redact_public_tree
+        redact_public_tree(cfg["_base"])
+        flush(_path(cfg, "cache", "cache/funding.json"))
+
+
+def _scan(cfg, client, mints, index_path, now, skip_recent, args, exit_code):
     for row in mints:
         mint = row["mint"]
         if skip_recent and recently_reported(pathlib.Path(index_path), mint, now=now):
