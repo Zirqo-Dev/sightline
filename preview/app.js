@@ -24,8 +24,11 @@
     const p = String(path).replace(/^\/|^\.\//, "");
     if (/^(https?:)?\/\//.test(p) || !p.endsWith(".json")) return false;
     if (/(^|\/)forensics\/panel\.json$/.test(p)) return true;
-    if (p === "x_buzz.json") return true;
-    if (!p.includes("/") || CONFIG_NAMES.test(p)) return false;
+    if (p === "x_buzz.json" || p === "prices.json") return true;
+    /* briefs/index.json is generated on desk-data as well as at build time.
+       A date that exists on only one side still has to be listed. */
+    if (CONFIG_NAMES.test(p) && !/\/briefs\/index\.json$/.test(p)) return false;
+    if (!p.includes("/")) return false;
     if (/^(dashboard|schema|scripts|tools|preview|\.github)\//.test(p)) return false;
     return true;
   }
@@ -52,13 +55,26 @@
     const a = stampOf(branch), b = stampOf(mainCopy);
     return isFinite(b) && (!isFinite(a) || b > a) ? mainCopy : branch;
   }
+  function unionIndex(a, b) {
+    const items = [];
+    [a, b].forEach(src => {
+      if (!Array.isArray(src)) return;
+      src.forEach(x => {
+        const name = String(x || "").replace(/\.json$/, "");
+        if (/^\d{4}-\d{2}-\d{2}$/.test(name) && items.indexOf(name) < 0) items.push(name);
+      });
+    });
+    items.sort();
+    if (items.length) return items;
+    return Array.isArray(a) ? a : (Array.isArray(b) ? b : null);
+  }
   const getJson = u => fetch(u, { cache: "no-cache" }).then(r => (r.ok ? r.json() : null)).catch(() => null);
   const jsonCache = {};
   function get(path) {
     const u = originUrl(path);
     if (!(u in jsonCache)) {
       const d = deskDataUrl(path);
-      jsonCache[u] = d ? Promise.all([getJson(d), getJson(u)]).then(([a, b]) => pickNewer(a, b)) : getJson(u);
+      jsonCache[u] = d ? Promise.all([getJson(d), getJson(u)]).then(([a, b]) => (/\/briefs\/index\.json$/.test(u) ? unionIndex(a, b) : pickNewer(a, b))) : getJson(u);
     }
     return jsonCache[u];
   }
@@ -1319,8 +1335,7 @@
     return typeof document !== "undefined" && typeof document.querySelector === "function" && !!document.querySelector(".preview-tag");
   }
   async function loadPack() {
-    const wantBuzz = !!(root.SightlineBuzz && previewPage());
-    const [health, paper, positions, tradesText, log, pulse, sPaper, flags, vetoes, devs, whale, liq, big, kills, pump, sIdx, nPulse, nLog, nPaper, nIdx, xbuzz, buzzHistory, icons] = await Promise.all([
+    const [health, paper, positions, tradesText, log, pulse, sPaper, flags, vetoes, devs, whale, liq, big, kills, pump, sIdx, nPulse, nLog, nPaper, nIdx, xbuzz, buzzHistory, icons, prices] = await Promise.all([
       get("solana-desk/health.json"),
       get("solana-desk/paper.json"),
       get("solana-desk/positions.json"),
@@ -1342,8 +1357,9 @@
       get("nft/paper.json"),
       get("nft/briefs/index.json"),
       get("x_buzz.json"),
-      wantBuzz ? getDeskRootText("x_buzz_history.jsonl") : Promise.resolve(null),
-      get("dashboard/icons/icons.json")
+      getDeskRootText("x_buzz_history.jsonl"),
+      get("dashboard/icons/icons.json"),
+      get("prices.json")
     ]);
     if (icons && icons.coins) ICONS = icons;
     async function briefsIn(idx, dir, desk) {
@@ -1364,7 +1380,7 @@
       health, paper, positions, trades: parseCsv(tradesText),
       cardano, cardanoView: cardanoView(cardano), cardanoBrief: cBrief,
       solanaModel: solanaModel(paper, parseCsv(tradesText), positions),
-      nftPulse: nPulse, nftLog: nLog, nftPaper: nPaper, briefs, buzz: wantBuzz ? xbuzz : null, buzzHistory
+      nftPulse: nPulse, nftLog: nLog, nftPaper: nPaper, briefs, buzz: xbuzz, buzzHistory, prices
     };
   }
   function freshest(pack, route) {
@@ -1429,35 +1445,21 @@
     if (route === "briefs") return { mode: "research", version: "–", frozen: null, fresh: freshest(pack, route), failure: null };
     return { mode: "paper", version: h.cfg_version || "–", frozen: typeof h.frozen === "boolean" ? h.frozen : null, fresh: freshest(pack, route), failure: num(h.data_failure_rate) };
   }
-  function render(route) {
+  function render() {
     const view = document.getElementById("view");
-    const nav = document.getElementById("nav");
     const status = document.getElementById("status");
     if (!view) return;
-    document.body.dataset.desk = route.desk;
-    document.title = "Sightline · " + route.label;
-    if (nav) nav.innerHTML = navHtml(route.id);
-    if (!store.ready) {
-      if (status) status.innerHTML = statusPills({ mode: "…", version: "…", fresh: null, failure: null });
+    document.body.dataset.desk = "solada";
+    document.title = "Sightline";
+    if (!store.ready || !root.SightlineMono) {
+      if (status) status.innerHTML = root.SightlineMono ? root.SightlineMono.status(null) : "";
       view.innerHTML = skeleton();
       return;
     }
-    if (status) status.innerHTML = statusPills(statusFor(store.pack, route.id));
-    const p = store.pack;
+    if (status) status.innerHTML = root.SightlineMono.status(store.pack);
     let html = "";
-    try {
-      if (route.id === "home") html = homeHtml(p);
-      else if (route.id === "cardano") html = cardanoHtml(p.cardano);
-      else if (route.id === "solana") html = solanaHtml(p.solanaModel, p.health);
-      else if (route.id === "nft") html = nftHtml(p.nftPulse, p.nftLog, store.nftChain, p.nftPaper);
-      else html = briefsHtml(p.briefs);
-    } catch (err) {
-      html = empty("This tab couldn't render", "This view hit a display error and kept the raw feed off the page.");
-    }
-    if (root.SightlineBuzz && previewPage()) {
-      try { html = root.SightlineBuzz.decorate(route.id, html, p && p.buzz, p && p.buzzHistory) || html; }
-      catch (err) { /* desk html stays; a missing buzz file is an empty state inside decorate */ }
-    }
+    try { html = root.SightlineMono.html(store.pack); }
+    catch (err) { html = empty("This page couldn't render", "This view hit a display error and kept the raw feed off the page."); }
     view.innerHTML = html;
     const visible = view.innerText || "";
     if (/(?:stake|addr)(?:_test)?1[0-9a-z]{8,}/i.test(visible)) {
@@ -1465,14 +1467,14 @@
       return;
     }
     animateNumbers(view);
-    if (root.SightlineBuzz && previewPage()) {
-      try { root.SightlineBuzz.mount(view, route.id, p && p.buzz, p && p.buzzHistory); }
-      catch (err) { /* counts and the detail tap are optional on top of the desk */ }
-    }
   }
   function boot() {
-    const draw = () => render(routeOf(location.hash));
-    window.addEventListener("hashchange", draw);
+    const draw = () => render();
+    window.addEventListener("hashchange", () => {
+      const id = String(location.hash || "").replace(/^#\/?/, "");
+      const el = id && document.getElementById(id);
+      if (el && el.scrollIntoView) el.scrollIntoView();
+    });
     document.addEventListener("keydown", e => {
       if (e.key !== "Escape") return;
       const board = document.getElementById("ada-board");

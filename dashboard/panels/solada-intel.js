@@ -70,7 +70,7 @@
   }
 
   function top10(rows) {
-    if (!Array.isArray(rows) || !rows.length) return `<p class="muted si-empty">Top 10 not published yet (Snek's <code>cardano_top10</code> lands with the 7 PM run).</p>`;
+    if (!Array.isArray(rows) || !rows.length) return `<p class="muted si-empty">Top 10 not published yet (the desk's <code>cardano_top10</code> lands with the 7 PM run).</p>`;
     const r = rows.slice().sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99)).slice(0, 10);
     return `<table class="tbl si-top"><thead><tr><th>#</th><th>Ticker</th><th>Lvl</th><th class="num">ADA side</th><th class="num">Holders</th><th>Whales</th><th class="num si-dim">Mcap</th></tr></thead><tbody>${r.map(x => `<tr data-x>
       <td class="num">${S.esc(x.rank ?? "")}</td><td class="c-main"><b>${S.esc(x.ticker || "–")}</b>${x.policy_short && safeTag(x.policy_short) ? ` <span class="si-dim mono">${S.esc(x.policy_short)}</span>` : ""}</td>

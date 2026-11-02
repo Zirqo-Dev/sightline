@@ -4,7 +4,7 @@ Paper-trading and research desks. Not financial advice. No real positions.
 
 https://zirqo-dev.github.io/sightline/
 
-The site root is the redesigned shell (`index.html` with `preview/app.js` and `preview/app.css`): Home, Cardano, Solana, NFT, and Briefs. It reads `desks.json` and each desk's JSON from the same origin. The previous dashboard stays at `legacy.html`. `preview.html` is the same shell with a preview badge, for the next design pass. Legacy panel layout: [dashboard/PLUGINS.md](dashboard/PLUGINS.md). File format: [schema/README.md](schema/README.md). Privacy: [PRIVACY.md](PRIVACY.md).
+The site root is one scrolling page (`index.html`, `preview/mono.js`, `preview/app.js`, `preview/app.css`): Sentinel's pick, the Cardano lanes, paper tests, whale codenames, Solana F/R/S, X buzz, the NFT watchlist, and the latest desk note. It reads `desks.json` and each desk's JSON from the same origin, desk-data first. The previous dashboard stays at `legacy.html`. `preview.html` is the same page with a preview badge. Legacy panel layout: [dashboard/PLUGINS.md](dashboard/PLUGINS.md). File format: [schema/README.md](schema/README.md). Privacy: [PRIVACY.md](PRIVACY.md).
 
 The older NFT finder still runs at [nft/site/](nft/site/). After deploy: `https://zirqo-dev.github.io/sightline/nft/site/`. Paste an OpenSea key in that page only. Never commit it.
 
@@ -13,9 +13,12 @@ Experimental Solana early-buyer forensics lives in [sol_forensics/](sol_forensic
 ## Build
 
 ```bash
-python3 scripts/build-site.py
+python3 scripts/coin_prices.py --out prices.json
+python3 scripts/build-site.py --desk-data /path/to/desk-data
 python3 -m http.server -d dist
 ```
+
+`--desk-data` copies the live feeds (`x_buzz.json`, `solada-prefilter/whale_ledger.json`, `solada-prefilter/kill_status.json`, desk JSON, and briefs) into `dist/`. Without that checkout the build still publishes the copies on main. `prices.json` is the stored USD quote the NFT rows use.
 
 The build uses the Python standard library only. It writes `dist/`, generates each desk's `briefs/index.json` from `briefs/YYYY-MM-DD.json`, and includes every file in `dashboard/panels/`. Adding a panel does not require an `index.html` edit: the build injects those script tags into `legacy.html`. Published `index.html` and `preview.html` get a `?v=` query on `preview/app.css` and `preview/app.js`. `legacy.html` gets its own `?v=` on `dashboard/` assets, so a design edit does not retint the previous dashboard.
 

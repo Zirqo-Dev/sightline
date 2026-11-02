@@ -4,6 +4,7 @@
 The dashboard reads desks.json and each desk's JSON from the same origin.
 dist/ is what GitHub Pages and (later) Cloudflare Pages publish.
 """
+import argparse
 import json
 import pathlib
 import re
@@ -79,6 +80,65 @@ def copy_desk(desk_id):
     )
 
 
+# Live feeds that exist on desk-data and 404 on Pages when the build only
+# copies main. state.json and config.json stay off the site (working state).
+COPY_GLOBS = (
+    "x_buzz.json",
+    "x_buzz_history.jsonl",
+    "buzz_outcomes.jsonl",
+    "buzz_outcomes_summary.json",
+    "prices.json",
+    "solada/log.json",
+    "solada/pulse.json",
+    "solada/paper.json",
+    "solada/briefs/*.json",
+    "solada/pumpfun/paper.json",
+    "nft/log.json",
+    "nft/pulse.json",
+    "nft/paper.json",
+    "nft/briefs/*.json",
+    "nft/site/watchlist.json",
+    "nft/site/intel.json",
+    "solana-desk/health.json",
+    "solana-desk/paper.json",
+    "solana-desk/positions.json",
+    "solana-desk/trades.csv",
+    "solada-prefilter/whale_ledger.json",
+    "solada-prefilter/kill_status.json",
+    "solada-prefilter/flags.json",
+    "solada-prefilter/vetoes.json",
+    "solada-prefilter/dev_checks.json",
+    "solada-prefilter/liquidity_moves.json",
+    "solada-prefilter/big_moves.json",
+    "solada-prefilter/whale_roster.json",
+    "solada-prefilter/last-run.json",
+)
+SKIP_NAMES = {"state.json", "config.json", "whale_ledger_state.json", "index.json"}
+
+
+def overlay_desk_data(dest, src):
+    """Copy published desk-data files onto dest. Returns repo-relative paths.
+
+    dest and src are directories. Missing sources are skipped. index.json is
+    rebuilt by write_brief_indexes, so a stale index is not copied.
+    """
+    copied = []
+    dest = pathlib.Path(dest)
+    src = pathlib.Path(src)
+    if not src.is_dir():
+        return copied
+    for pattern in COPY_GLOBS:
+        for path in sorted(src.glob(pattern)):
+            if not path.is_file() or path.name in SKIP_NAMES:
+                continue
+            rel = path.relative_to(src).as_posix()
+            target = dest / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, target)
+            copied.append(rel)
+    return copied
+
+
 def write_brief_indexes(desks):
     found = {}
     for d in desks:
@@ -93,7 +153,10 @@ def write_brief_indexes(desks):
     return found
 
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Assemble the static Sightline site into dist/")
+    parser.add_argument("--desk-data", default="", help="desk-data checkout to copy live feeds from")
+    args = parser.parse_args(argv)
     if DIST.exists():
         shutil.rmtree(DIST)
     DIST.mkdir()
@@ -131,6 +194,11 @@ def main():
     desks = json.loads((ROOT / "desks.json").read_text(encoding="utf-8"))["desks"]
     for d in desks:
         copy_desk(d["id"])
+    if args.desk_data:
+        copied = overlay_desk_data(DIST, args.desk_data)
+        print(f"  desk-data files: {len(copied)}")
+    if not (DIST / "prices.json").is_file() and (ROOT / "prices.json").is_file():
+        shutil.copy2(ROOT / "prices.json", DIST / "prices.json")
     briefs = write_brief_indexes(desks)
     # The legacy NFT site lives inside nft/ and is copied with that desk.
     if not (DIST / "nft" / "site" / "index.html").is_file():
