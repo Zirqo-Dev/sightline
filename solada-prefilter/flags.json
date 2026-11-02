@@ -1,184 +1,50 @@
 {
- "at": "2026-11-02T05:11:48Z",
+ "at": "2026-11-02T07:10:47Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "watch_tags_early_buyers",
-   "ticker": "GATO",
-   "tags": [
-    "u9534d4g"
-   ],
-   "roles": [
-    "first_block_sniper"
-   ],
-   "at": "2026-11-02T05:11:48Z"
-  },
-  {
    "kind": "coordinated_buys",
-   "ticker": "GATO",
+   "ticker": "CBUCKS",
    "wallets": [
-    "w-24b88f52",
-    "w-8bb4d2f0",
     "w-9d7e7db5",
-    "w-a6383ebe",
-    "w-bd9200d2",
     "w-e97f4aa3",
-    "w-f7844f67",
-    "w-f9fa564d"
+    "w-e9ed8a1a",
+    "w-faad3320"
    ],
    "window_s": 120,
-   "at": "2026-11-02T05:11:48Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "GATO",
-   "wallets": [
-    "w-1732ef38",
-    "w-a6383ebe",
-    "w-bd9200d2",
-    "w-f9fa564d"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-02T05:11:48Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-24b88f52",
-   "launches": [
-    "ANAKIN",
-    "GATO",
-    "JSON",
-    "MASCOT",
-    "MEOW",
-    "MEPI",
-    "NERF",
-    "PATRICK"
-   ],
-   "at": "2026-11-02T05:11:48Z"
+   "at": "2026-11-02T07:10:47Z"
   },
   {
    "kind": "sniper_full_exit",
-   "ticker": "GATO",
-   "wallet": "w-a6383ebe",
+   "ticker": "CBUCKS",
+   "wallet": "w-faad3320",
    "tags": [],
-   "at": "2026-11-02T05:11:48Z"
+   "at": "2026-11-02T07:10:47Z"
   },
   {
-   "kind": "sniper_full_exit",
-   "ticker": "GATO",
-   "wallet": "w-8bb4d2f0",
-   "tags": [],
-   "at": "2026-11-02T05:11:48Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "GATO",
-   "wallet": "w-f9fa564d",
-   "tags": [],
-   "at": "2026-11-02T05:11:48Z"
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 79.5,
+   "top_cluster_pct": 79.5,
+   "top_cluster": "w-13d53c47",
+   "basis": "ex-fe819d",
+   "at": "2026-11-02T07:10:47Z"
   },
   {
    "kind": "whale_move",
-   "ticker": "USDCX",
+   "ticker": "MEWH",
    "tag": "w-f3186187",
-   "delta": 798998,
+   "delta": 13801519353061,
    "new_position": true,
+   "curve_pct": 4.5,
    "decimals": 6,
-   "qty": 0.799,
-   "ada_equiv": 20,
-   "value_basis": "decimals_x_price",
-   "at": "2026-11-02T05:11:48Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "SNEK",
-   "tag": "w-f3186187",
-   "delta": -2000000,
-   "decimals": 0,
-   "qty": -2000000.0,
-   "ada_equiv": 5745,
-   "value_basis": "ada_leg_rate",
-   "pct": 5.1,
-   "at": "2026-11-02T05:11:48Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "ASCEND",
-   "tag": "w-f3186187",
-   "delta": -236923582,
-   "decimals": 6,
-   "qty": -236.9236,
-   "ada_equiv": 272,
-   "value_basis": "ada_leg_rate",
-   "pct": 0.1,
-   "at": "2026-11-02T05:11:48Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "STRIKE",
-   "tag": "w-f3186187",
-   "delta": 1727666,
-   "new_position": true,
-   "decimals": 6,
-   "qty": 1.7277,
-   "ada_equiv": 4,
-   "value_basis": "decimals_x_price",
-   "at": "2026-11-02T05:11:48Z"
+   "qty": 13801519.3531,
+   "at": "2026-11-02T07:10:47Z"
   }
  ],
  "recent": [
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-9d7e7db5",
-   "launches": [
-    "HI",
-    "JASON",
-    "NITE",
-    "PILLSEY",
-    "SSSS",
-    "TCM",
-    "TOT",
-    "VALHALLA",
-    "VEPE",
-    "VIP"
-   ],
-   "at": "2026-10-31T00:11:50Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-b75ca007",
-   "launches": [
-    "EVIL",
-    "HI"
-   ],
-   "at": "2026-10-31T00:11:50Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-f7844f67",
-   "launches": [
-    "LAPTOP",
-    "MASCOT",
-    "NITE",
-    "PILLSEY",
-    "ROCKET",
-    "SENSE",
-    "SHEF",
-    "SSSS",
-    "TCM",
-    "TOT"
-   ],
-   "at": "2026-10-31T00:11:50Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "VIP",
-   "wallet": "w-9d7e7db5",
-   "tags": [],
-   "at": "2026-10-31T00:11:50Z"
-  },
   {
    "kind": "sniper_full_exit",
    "ticker": "AAPLCAT",
@@ -3410,11 +3276,50 @@
    "ada_equiv": 4,
    "value_basis": "decimals_x_price",
    "at": "2026-11-02T05:11:48Z"
+  },
+  {
+   "kind": "coordinated_buys",
+   "ticker": "CBUCKS",
+   "wallets": [
+    "w-9d7e7db5",
+    "w-e97f4aa3",
+    "w-e9ed8a1a",
+    "w-faad3320"
+   ],
+   "window_s": 120,
+   "at": "2026-11-02T07:10:47Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "CBUCKS",
+   "wallet": "w-faad3320",
+   "tags": [],
+   "at": "2026-11-02T07:10:47Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 79.5,
+   "top_cluster_pct": 79.5,
+   "top_cluster": "w-13d53c47",
+   "basis": "ex-fe819d",
+   "at": "2026-11-02T07:10:47Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "MEWH",
+   "tag": "w-f3186187",
+   "delta": 13801519353061,
+   "new_position": true,
+   "curve_pct": 4.5,
+   "decimals": 6,
+   "qty": 13801519.3531,
+   "at": "2026-11-02T07:10:47Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 1,
-  "koios": 8
+  "blockfrost": 2,
+  "koios": 6
  },
  "thresholds": {
   "enabled": true,
