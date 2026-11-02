@@ -16,8 +16,7 @@
     { id: "home", href: "#/", label: "Home", desk: "home" },
     { id: "cardano", href: "#/cardano", label: "Cardano", desk: "solada" },
     { id: "solana", href: "#/solana", label: "Solana", desk: "solana" },
-    { id: "nft", href: "#/nft", label: "NFT", desk: "nft" },
-    { id: "briefs", href: "#/briefs", label: "Briefs", desk: "briefs" }
+    { id: "nft", href: "#/nft", label: "NFT", desk: "nft" }
   ];
 
   function isDeskData(path) {
@@ -1307,7 +1306,7 @@
     if (path === "cardano" || path === "solada" || path === "desk/solada" || path === "desk/cardano") return NAV[1];
     if (path === "solana" || path === "desk/solana") return NAV[2];
     if (path === "nft" || path === "desk/nft") return NAV[3];
-    if (path === "briefs") return NAV[4];
+    if (path === "briefs") return NAV[0];
     return NAV[0];
   }
   function navHtml(active) {
@@ -1320,7 +1319,7 @@
   }
   async function loadPack() {
     const wantBuzz = !!(root.SightlineBuzz && previewPage());
-    const [health, paper, positions, tradesText, log, pulse, sPaper, flags, vetoes, devs, whale, liq, big, kills, pump, sIdx, nPulse, nLog, nPaper, nIdx, xbuzz, buzzHistory, icons] = await Promise.all([
+    const [health, paper, positions, tradesText, log, pulse, sPaper, flags, vetoes, devs, whale, liq, big, kills, pump, sIdx, sMan, nPulse, nLog, nPaper, nIdx, nMan, xbuzz, buzzHistory, icons, prices, picks] = await Promise.all([
       get("solana-desk/health.json"),
       get("solana-desk/paper.json"),
       get("solana-desk/positions.json"),
@@ -1337,24 +1336,38 @@
       get("solada-prefilter/kill_status.json"),
       get("solada/pumpfun/paper.json"),
       get("solada/briefs/index.json"),
+      get("solada/briefs/manifest.json"),
       get("nft/pulse.json"),
       get("nft/log.json"),
       get("nft/paper.json"),
       get("nft/briefs/index.json"),
+      get("nft/briefs/manifest.json"),
       get("x_buzz.json"),
       wantBuzz ? getDeskRootText("x_buzz_history.jsonl") : Promise.resolve(null),
-      get("dashboard/icons/icons.json")
+      get("dashboard/icons/icons.json"),
+      get("dashboard/prices.json"),
+      get("dashboard/picks.json")
     ]);
     if (icons && icons.coins) ICONS = icons;
-    async function briefsIn(idx, dir, desk) {
-      if (!Array.isArray(idx) || !idx.length) return [];
-      const names = idx.map(n => String(n).endsWith(".json") ? String(n) : String(n) + ".json").sort();
-      const files = await Promise.all(names.map(name => get(dir + name)));
+    function briefDates(idx, manifest) {
+      const set = {};
+      const add = n => {
+        const s = String(n || "").replace(/\.json$/, "");
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) set[s] = 1;
+      };
+      (Array.isArray(idx) ? idx : []).forEach(add);
+      ((manifest && manifest.dates) || []).forEach(add);
+      return Object.keys(set).sort();
+    }
+    async function briefsIn(idx, manifest, dir, desk) {
+      const names = briefDates(idx, manifest);
+      if (!names.length) return [];
+      const files = await Promise.all(names.map(name => get(dir + name + ".json")));
       return files.map(file => briefBits(file, desk)).filter(Boolean);
     }
     const [cBriefs, nBriefs] = await Promise.all([
-      briefsIn(sIdx, "solada/briefs/", "Cardano"),
-      briefsIn(nIdx, "nft/briefs/", "NFT")
+      briefsIn(sIdx, sMan, "solada/briefs/", "Cardano"),
+      briefsIn(nIdx, nMan, "nft/briefs/", "NFT")
     ]);
     const cBrief = cBriefs.length ? cBriefs[cBriefs.length - 1] : null;
     const nBrief = nBriefs.length ? nBriefs[nBriefs.length - 1] : null;
@@ -1364,7 +1377,7 @@
       health, paper, positions, trades: parseCsv(tradesText),
       cardano, cardanoView: cardanoView(cardano), cardanoBrief: cBrief,
       solanaModel: solanaModel(paper, parseCsv(tradesText), positions),
-      nftPulse: nPulse, nftLog: nLog, nftPaper: nPaper, briefs, buzz: wantBuzz ? xbuzz : null, buzzHistory
+      nftPulse: nPulse, nftLog: nLog, nftPaper: nPaper, briefs, prices, picks, buzz: wantBuzz ? xbuzz : null, buzzHistory
     };
   }
   function freshest(pack, route) {
@@ -1438,12 +1451,34 @@
     document.title = "Sightline · " + route.label;
     if (nav) nav.innerHTML = navHtml(route.id);
     if (!store.ready) {
+      if (document.body.dataset.layout === "mono") return;
       if (status) status.innerHTML = statusPills({ mode: "…", version: "…", fresh: null, failure: null });
       view.innerHTML = skeleton();
       return;
     }
-    if (status) status.innerHTML = statusPills(statusFor(store.pack, route.id));
     const p = store.pack;
+    if (document.body.dataset.layout === "mono" && (root.SightlineV19 || root.SightlineMono)) {
+      const api = { assetLogo, nftRows, ago, sanitize, tx };
+      const sub = document.getElementById("subt");
+      if (sub) sub.textContent = ({ home: "Research desks · Cardano · Solana · NFT", cardano: "Cardano desk · runners and established", solana: "Solana paper desk · F / R / S books", nft: "KING · NFT watchlist in USD" })[route.id] || "";
+      let html = "";
+      try {
+        html = p.picks && root.SightlineV19 ? root.SightlineV19.page(route.id, p.picks, api) : root.SightlineMono.page(route.id, p, api);
+      }
+      catch (err) { html = empty("This desk couldn't render", "This view hit a display error and kept the raw feed off the page."); }
+      view.innerHTML = html;
+      const warn = document.getElementById("warn");
+      if (warn && p.picks && root.SightlineV19) warn.innerHTML = root.SightlineV19.warn(p.picks, route.id);
+      const asof = p.picks && p.picks.cardano && p.picks.cardano.asof;
+      if (status) status.innerHTML = "<b>●</b> Live" + (asof ? "<br>" + esc(when(asof)) : "");
+      const visible = view.innerText || "";
+      if (/(?:stake|addr)(?:_test)?1[0-9a-z]{8,}/i.test(visible)) {
+        view.innerHTML = empty("Privacy hold", "This view was cleared because a wallet or stake key reached the page.");
+      }
+      document.title = "Sightline";
+      return;
+    }
+    if (status) status.innerHTML = statusPills(statusFor(store.pack, route.id));
     let html = "";
     try {
       if (route.id === "home") html = homeHtml(p);
