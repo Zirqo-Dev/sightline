@@ -46,6 +46,7 @@ jobs:
         run: |
           python3 scripts/tests/test_publish_briefs.py
           python3 scripts/tests/test_fx_prices.py
+          python3 scripts/tests/test_score_picks.py
       - name: Build static site
         env:
           SIGHTLINE_REQUIRE_FEEDS: "1"

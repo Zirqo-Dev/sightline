@@ -1319,7 +1319,7 @@
   }
   async function loadPack() {
     const wantBuzz = !!(root.SightlineBuzz && previewPage());
-    const [health, paper, positions, tradesText, log, pulse, sPaper, flags, vetoes, devs, whale, liq, big, kills, pump, sIdx, sMan, nPulse, nLog, nPaper, nIdx, nMan, xbuzz, buzzHistory, icons, prices] = await Promise.all([
+    const [health, paper, positions, tradesText, log, pulse, sPaper, flags, vetoes, devs, whale, liq, big, kills, pump, sIdx, sMan, nPulse, nLog, nPaper, nIdx, nMan, xbuzz, buzzHistory, icons, prices, picks] = await Promise.all([
       get("solana-desk/health.json"),
       get("solana-desk/paper.json"),
       get("solana-desk/positions.json"),
@@ -1345,7 +1345,8 @@
       get("x_buzz.json"),
       wantBuzz ? getDeskRootText("x_buzz_history.jsonl") : Promise.resolve(null),
       get("dashboard/icons/icons.json"),
-      get("dashboard/prices.json")
+      get("dashboard/prices.json"),
+      get("dashboard/picks.json")
     ]);
     if (icons && icons.coins) ICONS = icons;
     function briefDates(idx, manifest) {
@@ -1376,7 +1377,7 @@
       health, paper, positions, trades: parseCsv(tradesText),
       cardano, cardanoView: cardanoView(cardano), cardanoBrief: cBrief,
       solanaModel: solanaModel(paper, parseCsv(tradesText), positions),
-      nftPulse: nPulse, nftLog: nLog, nftPaper: nPaper, briefs, prices, buzz: wantBuzz ? xbuzz : null, buzzHistory
+      nftPulse: nPulse, nftLog: nLog, nftPaper: nPaper, briefs, prices, picks, buzz: wantBuzz ? xbuzz : null, buzzHistory
     };
   }
   function freshest(pack, route) {
@@ -1456,13 +1457,20 @@
       return;
     }
     const p = store.pack;
-    if (document.body.dataset.layout === "mono" && root.SightlineMono) {
+    if (document.body.dataset.layout === "mono" && (root.SightlineV19 || root.SightlineMono)) {
       const api = { assetLogo, nftRows, ago, sanitize, tx };
+      const sub = document.getElementById("subt");
+      if (sub) sub.textContent = ({ home: "Research desks · Cardano · Solana · NFT", cardano: "Cardano desk · runners and established", solana: "Solana paper desk · F / R / S books", nft: "KING · NFT watchlist in USD" })[route.id] || "";
       let html = "";
-      try { html = root.SightlineMono.page(route.id, p, api); }
+      try {
+        html = p.picks && root.SightlineV19 ? root.SightlineV19.page(route.id, p.picks, api) : root.SightlineMono.page(route.id, p, api);
+      }
       catch (err) { html = empty("This desk couldn't render", "This view hit a display error and kept the raw feed off the page."); }
       view.innerHTML = html;
-      if (status) status.innerHTML = root.SightlineMono.status(route.id, p, api);
+      const warn = document.getElementById("warn");
+      if (warn && p.picks && root.SightlineV19) warn.innerHTML = root.SightlineV19.warn(p.picks, route.id);
+      const asof = p.picks && p.picks.cardano && p.picks.cardano.asof;
+      if (status) status.innerHTML = "<b>●</b> Live" + (asof ? "<br>" + esc(when(asof)) : "");
       const visible = view.innerText || "";
       if (/(?:stake|addr)(?:_test)?1[0-9a-z]{8,}/i.test(visible)) {
         view.innerHTML = empty("Privacy hold", "This view was cleared because a wallet or stake key reached the page.");

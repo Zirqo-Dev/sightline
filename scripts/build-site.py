@@ -195,6 +195,11 @@ def main():
     shutil.copytree(src_preview, DIST / "preview")
     print(f"  preview assets ?v={preview_version()}")
     shutil.copytree(ROOT / "dashboard", DIST / "dashboard")
+    archive = ROOT / "archive" / "v75"
+    if not (archive / "index.html").is_file():
+        sys.exit("build-site: archive/v75/index.html is missing (frozen PR #75 dashboard)")
+    shutil.copytree(archive, DIST / "archive" / "v75")
+    print("  archive v75")
     (DIST / ".nojekyll").write_text("", encoding="utf-8")
     shutil.copy(ROOT / "desks.json", DIST / "desks.json")
     desks = json.loads((ROOT / "desks.json").read_text(encoding="utf-8"))["desks"]
@@ -202,6 +207,10 @@ def main():
         copy_desk(d["id"])
     overlay_feeds(DIST)
     publish_generated(DIST)
+    sys.path.insert(0, str(ROOT))
+    from scripts.score_picks import write as write_picks
+    write_picks(str(DIST), str(DIST / "dashboard" / "picks.json"))
+    print("  picks dashboard/picks.json")
     briefs = write_brief_indexes(desks)
     # The legacy NFT site lives inside nft/ and is copied with that desk.
     if not (DIST / "nft" / "site" / "index.html").is_file():

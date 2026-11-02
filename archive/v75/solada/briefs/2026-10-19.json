@@ -1,0 +1,125 @@
+{
+  "schema_version": 2,
+  "desk": "solada",
+  "date": "2026-10-19",
+  "headline": "Monday: both books went 0 for 7 on closes since last night (RAIN -72.9% was the worst), nothing cleared the ticket gate after 10 AM, and the clearest lesson is to move a kill line up to entry once a paper gain is big, because RAIN and PIERRE both gave back large gains within an hour.",
+  "learned": [
+    "Big paper gains disappeared within an hour. RAIN (Solada, opened 10 AM at L3, 44.9k ADA) marked +57.9% at 12:15 PM after graduating, was -13.4% by the 12:40 PM pulse and closed at -72.9% at 1:08 PM (12.2k ADA, holders 72 -> 59) on net selling into a ~12k ADA pool. PIERRE (Pump.fun) marked +28.1% at 10:15 AM, was -27.4% by 11:30 AM and closed at -42.3% at its kill line. Both kill lines sat too far below the high.",
+    "Fresh graduates open on thin pools. Solada curves graduate with about 10.3k ADA, so RAIN, DEXY and HIVE all started under the ~11k side where a few wallets move price. DEXY bounced three times (64.9k -> 97.1k -> 126.7k ADA) and SER ran 58.3k -> 145.9k, and both faded by 9 PM (DEXY 106.8k with 78 holders, SER 109.2k with 77). Not opening either of them was right.",
+    "The Solana-side hunt found no real traction. MISS bonded on pump.fun around 3:20 PM after a 93% -> 99% curve run with natives rising 18 -> 38, but natives fell 38 -> 29 -> 24 -> 21 within about 90 minutes as the post-bond hours were sell-led (h1 10 buys / 26 sells at 5 PM), and it hit its kill line. No Solana-side paper snipe opened, because rule q's 50 natives was never met, so there is nothing to grade. CORE sat at a 72.8% curve with 28 natives all evening.",
+    "Swarm keys win on timing, not shape. Across BRO, DEXY, IAGONE, GUINEA and BESSTIVE, the 28 swarm round trips that entered within 15 minutes of go-live won 25 times (median hold 19 minutes), while the 18 later entries won 7 times. A 100-ADA paper ticket checked every few hours can't copy that."
+  ],
+  "pulse_caught_early": [
+    "RAIN's collapse: the 12:40 PM pulse had it below entry and the 1:08 PM pulse closed the ticket, nearly an hour before the 2 PM desk run.",
+    "DEXY on its graduation (first seen at the 12:40 PM pulse), before the 2 PM run.",
+    "MISS's curve push to 99% with natives 18 -> 38 at the 3:10 PM pulse, before it bonded and before the 4 PM run.",
+    "SER's rebound (holders 74 -> 87, 58.3k -> 124.1k ADA) at 5:15 PM and DEXY's 126.7k peak at 8:13 PM, both of which faded by the 9 PM run. The pulse spots pops quickly, so rule y now makes single-pulse pops wait."
+  ],
+  "adapted": [
+    "Solada rule z (new tonight): once a ticket on a pool with under ~15k ADA side marks +50%, its kill line moves up to entry. RAIN would have closed near -13% instead of -72.9%.",
+    "Pump.fun rule pf-u (new tonight, mirrors solada:z): the same move to entry after a +25% mark. PIERRE would have closed near -27% instead of -42.3%.",
+    "Rules added during today's runs: Solada u (confirm an ADA-side kill caused by an LP pull on the next pulse), v (fresh graduates stay L2 for about 3 hours until the side is 15k+), w (pump.fun bonds shed natives; Solana-side names stay L2 for 2 hours after bonding), x (swarm entries after 15 minutes add nothing) and y (thin-pool rebounds need two pulses of holder growth with the side rising); Pump.fun pf-r, pf-s and pf-t; and day reviews for both books.",
+    "Thresholds moved: rule v caps fresh graduates at L2, and rule w adds a 2-hour post-bond wait on top of rule q's 50 natives. pf-r would loosen pf-m to a 1% cumulative holder drop on 5,000+ holder coins only if two more pf-m exits recover the way Dacity did.",
+    "Tomorrow the lean schedule starts: desk runs at 10 AM, 2 PM and 7 PM, and the hourly pulse comes back for 9 AM to 9 PM only once a ticket opens, which is also when rules z and pf-u need marks."
+  ],
+  "scoreboard": {
+    "open": 0,
+    "closed": 12,
+    "wins": 0,
+    "losses": 12,
+    "pnl": -311.5,
+    "unit": "ADA (Solada) + ADA-equivalent (Pump.fun), closed tickets only",
+    "closed_since_last_brief": 7,
+    "solada": {
+      "open": [],
+      "closed_since_last_brief": [
+        {
+          "id": "BOLT-20261018-1020",
+          "ticker": "BOLT",
+          "pct": -10.8,
+          "closed_at": "2026-10-18T23:12:00-04:00"
+        },
+        {
+          "id": "RAIN-7cc1-20261019-1000",
+          "ticker": "RAIN",
+          "pct": -72.9,
+          "closed_at": "2026-10-19T13:08:00-04:00"
+        }
+      ],
+      "record": "0-4",
+      "avg_closed_pct": -29.3,
+      "pnl": -117.0,
+      "unit": "ADA"
+    },
+    "pumpfun": {
+      "open": [],
+      "closed_since_last_brief": [
+        {
+          "id": "Macca-AKot-20261018-1925",
+          "ticker": "Macca",
+          "pct": -32.0,
+          "closed_at": "2026-10-18T22:12:00-04:00"
+        },
+        {
+          "id": "CATE-Ai66-20261017-1918",
+          "ticker": "CATE",
+          "pct": -0.3,
+          "closed_at": "2026-10-18T23:12:00-04:00"
+        },
+        {
+          "id": "Dacity-nxPq-20261018-2125",
+          "ticker": "Dacity",
+          "pct": -16.8,
+          "closed_at": "2026-10-19T05:15:00-04:00"
+        },
+        {
+          "id": "PIERRE-D3S6-20261019-0750",
+          "ticker": "PIERRE",
+          "pct": -42.3,
+          "closed_at": "2026-10-19T12:15:00-04:00"
+        },
+        {
+          "id": "UHI-FGkC-20261019-1000",
+          "ticker": "UHI",
+          "pct": -25.3,
+          "closed_at": "2026-10-19T11:30:00-04:00"
+        }
+      ],
+      "record": "0-8",
+      "avg_closed_pct": -24.3,
+      "pnl": -194.5,
+      "unit": "ADA-equivalent"
+    },
+    "verdict": "Pump.fun's exit signals held up better today: its holder-drop exits closed Dacity at -16.8% and UHI at -25.3%, while Solada's one entry signal, RAIN's curve re-hold, lost 72.9%. Neither launchpad produced a winning entry."
+  },
+  "asks": [
+    "The Solana forensics pull request (#6) is tested green and still waiting for a merge. Merging it lets workflow runs trace Solana holder funding, which replaces yesterday's request for a Birdeye or Solscan key."
+  ],
+  "highlights": [
+    "RAIN -72.9% after a +57.9% mark",
+    "PIERRE -42.3% after a +28.1% mark",
+    "MISS bonded, then natives fell 38 -> 21",
+    "No tickets open in either book tonight"
+  ],
+  "rules_learned": [
+    "solada:u",
+    "solada:v",
+    "solada:w",
+    "solada:x",
+    "solada:y",
+    "solada:z",
+    "solada:daily-2026-10-19",
+    "pumpfun:pf-r",
+    "pumpfun:pf-s",
+    "pumpfun:pf-t",
+    "pumpfun:pf-u",
+    "pumpfun:pf-daily-2026-10-19"
+  ],
+  "next_watch": [
+    "DEXY and SER: holder growth at two pulses in a row with the ADA side rising (rule y), plus rule k's 120 holders and 25k side",
+    "CORE: 50+ Solana-native holders that hold across two pulses",
+    "BOLT: holder growth above ~277; kill under 400k pool mcap or 265 holders",
+    "COLLECTOOOR: a pf-t re-hold after a ~30% pullback; NTRNDM: a 2% holder step (pf-o)"
+  ],
+  "disclaimer": "Paper trades and public research only. Not financial advice."
+}

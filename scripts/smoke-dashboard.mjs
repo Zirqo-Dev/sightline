@@ -781,6 +781,7 @@ print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"),
   const build = fs.readFileSync(path.join(root, "scripts/build-site.py"), "utf8");
   assert(build.includes("x_buzz.json") && build.includes("whale_ledger.json") && build.includes("kill_status.json"), "pages build publishes the three live feeds");
   assert(build.includes("publish_generated"), "pages build writes briefs from the desk log");
+  assert(build.includes("archive/v75") && fs.existsSync(path.join(root, "archive/v75/index.html")), "PR #75 dashboard is frozen for the pages build");
   assert(build.includes("def bust(") && build.includes("?v="), "build adds cache-busting asset versions");
   assert(build.includes("def bust_preview(") && build.includes("def preview_version("), "preview assets are cache-busted on their own");
   assert(build.includes("Kept off asset_version()"), "preview hash does not retint the legacy dashboard assets");

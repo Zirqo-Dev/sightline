@@ -1,0 +1,52 @@
+{
+  "schema_version": 2,
+  "note": "Index of research desks. Paper and research data only. The dashboard and CI read this file.",
+  "desks": [
+    {
+      "id": "solada",
+      "name": "Snek Sentinel: Solada/Cardano",
+      "bot": "Snek Sentinel",
+      "status": "active",
+      "log": "solada/log.json",
+      "briefs": "solada/briefs/",
+      "pulse": "solada/pulse.json",
+      "run": {
+        "label": "RUN NOW",
+        "url": "https://github.com/Zirqo-Dev/sightline/actions/workflows/run-solada.yml"
+      },
+      "books": [
+        {"id": "solada", "name": "Solada/Cardano", "paper": "solada/paper.json"},
+        {"id": "pumpfun", "name": "Pump.fun comparison (Solana)", "paper": "solada/pumpfun/paper.json"}
+      ]
+    },
+    {
+      "id": "nft",
+      "name": "KING: all-chain NFT",
+      "bot": "KING",
+      "status": "active",
+      "log": "nft/log.json",
+      "briefs": "nft/briefs/",
+      "pulse": "nft/pulse.json",
+      "run": {
+        "label": "RUN NOW",
+        "url": "https://github.com/Zirqo-Dev/sightline/actions/workflows/run-nft.yml"
+      },
+      "books": [
+        {"id": "nft", "name": "KING all-chain NFT (paper)", "paper": "nft/paper.json"}
+      ]
+    },
+    {
+      "id": "solana",
+      "name": "Solana Paper Desk",
+      "bot": "Grok Bot",
+      "status": "active",
+      "pulse": "solana-desk/pulse.json",
+      "health": "solana-desk/health.json",
+      "run": {
+        "label": "RUN NOW",
+        "url": "https://github.com/Zirqo-Dev/sightline/actions/workflows/solana-desk-scan.yml"
+      },
+      "books": []
+    }
+  ]
+}
