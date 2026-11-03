@@ -1,11 +1,11 @@
 {
- "at": "2026-11-03T03:13:35Z",
+ "at": "2026-11-03T05:13:18Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14151041,
+ "height": 14151095,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 2413.651572,
+ "ada_balance": 1986.36161,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 340587467362,
@@ -35,7 +35,7 @@
   "Bullmania": 1000000,
   "CAMP": 34632631851536,
   "CHADDY": 16848771299364,
-  "CHEESE": 18072309942233,
+  "CHEESE": 18679049499592,
   "CLOVE-3": 23000000424693,
   "CNET": 31327824482276,
   "COCK": 51977227,
@@ -69,7 +69,7 @@
   "KRAKEN": 4536305955503,
   "Kat coin": 11616622,
   "MEAT": 10396970868299,
-  "MEPE": 27070573182389,
+  "MEPE": 27419340448878,
   "MEWH": 13801519353061,
   "MISS": 30000000,
   "MOGE": 13956342138051,
@@ -153,7 +153,7 @@
   "Bullmania": 1000000,
   "CAMP": 34632631851536,
   "CHADDY": 16848771299364,
-  "CHEESE": 18072309942233,
+  "CHEESE": 18679049499592,
   "CLOVE-3": 23000000424693,
   "CNET": 31327824482276,
   "COCK": 51977227,
@@ -187,7 +187,7 @@
   "KRAKEN": 4536305955503,
   "Kat coin": 11616622,
   "MEAT": 10396970868299,
-  "MEPE": 27070573182389,
+  "MEPE": 27419340448878,
   "MEWH": 13801519353061,
   "MISS": 30000000,
   "MOGE": 13956342138051,
@@ -386,7 +386,7 @@
   {
    "token": "CHEESE",
    "policy": "0d7a6838",
-   "qty": 18072309942233
+   "qty": 18679049499592
   },
   {
    "token": "CLOVE-3",
@@ -556,7 +556,7 @@
   {
    "token": "MEPE",
    "policy": "50741124",
-   "qty": 27070573182389
+   "qty": 27419340448878
   },
   {
    "token": "MEWH",
@@ -8912,6 +8912,90 @@
    "closed_at": "2026-11-03T03:11:16Z",
    "filled_token": "CHEESE",
    "filled_qty": 723591883132
+  },
+  "b5a7b1d6bf#0": {
+   "ref_short": "b5a7b1d6bf#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "filled",
+   "opened_tx": "b5a7b1d6bf",
+   "opened_at": "2026-11-03T03:19:07Z",
+   "own_stake": true,
+   "closed_tx": "3824be58fc",
+   "closed_at": "2026-11-03T03:19:07Z",
+   "filled_token": "CHEESE",
+   "filled_qty": 606739557359
+  },
+  "200b36bf6a#0": {
+   "ref_short": "200b36bf6a#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "filled",
+   "opened_tx": "200b36bf6a",
+   "opened_at": "2026-11-03T03:19:52Z",
+   "own_stake": true,
+   "closed_tx": "6222db143b",
+   "closed_at": "2026-11-03T03:19:52Z",
+   "filled_token": "MEPE",
+   "filled_qty": 64416626316
+  },
+  "ce81af0915#0": {
+   "ref_short": "ce81af0915#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "filled",
+   "opened_tx": "ce81af0915",
+   "opened_at": "2026-11-03T03:23:01Z",
+   "own_stake": true,
+   "closed_tx": "41a995efb5",
+   "closed_at": "2026-11-03T03:23:23Z",
+   "filled_token": "MEPE",
+   "filled_qty": 71185343358
+  },
+  "8e756bc071#0": {
+   "ref_short": "8e756bc071#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "filled",
+   "opened_tx": "8e756bc071",
+   "opened_at": "2026-11-03T03:24:22Z",
+   "own_stake": true,
+   "closed_tx": "ebe31b50bc",
+   "closed_at": "2026-11-03T03:25:07Z",
+   "filled_token": "MEPE",
+   "filled_qty": 70999346629
+  },
+  "949cf50c37#0": {
+   "ref_short": "949cf50c37#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "filled",
+   "opened_tx": "949cf50c37",
+   "opened_at": "2026-11-03T03:26:53Z",
+   "own_stake": true,
+   "closed_tx": "854f12f8e8",
+   "closed_at": "2026-11-03T03:26:55Z",
+   "filled_token": "MEPE",
+   "filled_qty": 71140906418
+  },
+  "cdab211b44#0": {
+   "ref_short": "cdab211b44#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "filled",
+   "opened_tx": "cdab211b44",
+   "opened_at": "2026-11-03T03:31:35Z",
+   "own_stake": true,
+   "closed_tx": "4e76672ef8",
+   "closed_at": "2026-11-03T03:32:07Z",
+   "filled_token": "MEPE",
+   "filled_qty": 71025043768
   }
  },
  "rows": [
@@ -29075,6 +29159,144 @@
    "order_ref_short": "cb60d9cf23#0",
    "order_status": "filled",
    "sold": "ADA"
+  },
+  {
+   "time": "2026-11-03T03:19:07Z",
+   "tx_short": "b5a7b1d6bf",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "b5a7b1d6bf#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-03T03:19:07Z",
+   "tx_short": "3824be58fc",
+   "kind": "order_fill",
+   "token": "CHEESE",
+   "qty": 606739557359,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "b5a7b1d6bf#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-03T03:19:52Z",
+   "tx_short": "200b36bf6a",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "200b36bf6a#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-03T03:19:52Z",
+   "tx_short": "6222db143b",
+   "kind": "order_fill",
+   "token": "MEPE",
+   "qty": 64416626316,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "200b36bf6a#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-03T03:23:01Z",
+   "tx_short": "ce81af0915",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "ce81af0915#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-03T03:23:23Z",
+   "tx_short": "41a995efb5",
+   "kind": "order_fill",
+   "token": "MEPE",
+   "qty": 71185343358,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "ce81af0915#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-03T03:24:22Z",
+   "tx_short": "8e756bc071",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "8e756bc071#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-03T03:25:07Z",
+   "tx_short": "ebe31b50bc",
+   "kind": "order_fill",
+   "token": "MEPE",
+   "qty": 70999346629,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "8e756bc071#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-03T03:26:53Z",
+   "tx_short": "949cf50c37",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "949cf50c37#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-03T03:26:55Z",
+   "tx_short": "854f12f8e8",
+   "kind": "order_fill",
+   "token": "MEPE",
+   "qty": 71140906418,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "949cf50c37#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-03T03:31:35Z",
+   "tx_short": "cdab211b44",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "cdab211b44#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-03T03:32:07Z",
+   "tx_short": "4e76672ef8",
+   "kind": "order_fill",
+   "token": "MEPE",
+   "qty": 71025043768,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "cdab211b44#0",
+   "order_status": "filled",
+   "sold": "ADA"
   }
  ],
  "capped": false,
@@ -29085,7 +29307,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 13,
+ "koios_calls": 8,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
