@@ -1,233 +1,39 @@
 {
- "at": "2026-11-02T23:11:20Z",
+ "at": "2026-11-03T01:10:58Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "watch_tags_early_buyers",
-   "ticker": "BUOY",
-   "tags": [
-    "ux3cvv58",
-    "uxfernv7",
-    "uynnk0mezk"
-   ],
-   "roles": [
-    "first_block_sniper",
-    "pool_preseeder"
-   ],
-   "at": "2026-11-02T23:11:20Z"
-  },
-  {
-   "kind": "pool_preseeder_early",
-   "ticker": "BUOY",
-   "tags": [
-    "uynnk0mezk"
-   ],
-   "at": "2026-11-02T23:11:20Z"
-  },
-  {
-   "kind": "coordinated_buys",
-   "ticker": "BUOY",
-   "wallets": [
-    "w-0f4fa0da",
-    "w-288cfff8",
-    "w-395cea61",
-    "w-4bc40d59",
-    "w-4bd659ff",
-    "w-916babbc",
-    "w-9d7e7db5",
-    "w-cc579dcb",
-    "w-e3302da6",
-    "w-e52f1e17",
-    "w-e97f4aa3"
-   ],
-   "window_s": 120,
-   "at": "2026-11-02T23:11:20Z"
-  },
-  {
-   "kind": "watch_tags_early_buyers",
-   "ticker": "EVRG",
-   "tags": [
-    "uxz6fvju"
-   ],
-   "roles": [
-    "first_block_sniper"
-   ],
-   "at": "2026-11-02T23:11:20Z"
-  },
-  {
-   "kind": "coordinated_buys",
-   "ticker": "EVRG",
-   "wallets": [
-    "w-14434643",
-    "w-2cc5dfb9",
-    "w-38457da7",
-    "w-5a257995",
-    "w-62f4e894",
-    "w-9d7e7db5",
-    "w-c428b96b",
-    "w-cdb39d5f",
-    "w-e87d53fa",
-    "w-e97f4aa3"
-   ],
-   "window_s": 120,
-   "at": "2026-11-02T23:11:20Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "EVRG",
-   "wallets": [
-    "w-14434643",
-    "w-38457da7",
-    "w-c428b96b",
-    "w-cdb39d5f"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-02T23:11:20Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-288cfff8",
-   "launches": [
-    "BUOY",
-    "HALLOW",
-    "SLIP"
-   ],
-   "at": "2026-11-02T23:11:20Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-62f4e894",
-   "launches": [
-    "BMEPE",
-    "BOMEPE",
-    "CZT",
-    "EVRG",
-    "JSON",
-    "MEPI",
-    "PLUG",
-    "SENSE",
-    "VEPE"
-   ],
-   "at": "2026-11-02T23:11:20Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-9d7e7db5",
-   "launches": [
-    "MEWH",
-    "OWL",
-    "POPU",
-    "SNEKG",
-    "TIPR",
-    "TMC",
-    "VICECITY",
-    "VSO",
-    "WASTED",
-    "WEN"
-   ],
-   "at": "2026-11-02T23:11:20Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-ddf5e81d",
-   "launches": [
-    "BEPE",
-    "BUOY",
-    "HALLOW",
-    "ROCKET"
-   ],
-   "at": "2026-11-02T23:11:20Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-e52f1e17",
-   "launches": [
-    "BUOY",
-    "MOGE",
-    "MPIG",
-    "PLUG",
-    "PUG",
-    "SLIP"
-   ],
-   "at": "2026-11-02T23:11:20Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-e87d53fa",
-   "launches": [
-    "EVRG",
-    "MCFA",
-    "MEPE",
-    "OWL",
-    "PINU",
-    "PLUG",
-    "SLIP",
-    "TMC",
-    "UNFAZED"
-   ],
-   "at": "2026-11-02T23:11:20Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-e97f4aa3",
-   "launches": [
-    "MEWH",
-    "MOGE",
-    "MOON",
-    "OWL",
-    "PLUG",
-    "ROCKET",
-    "SNEKG",
-    "TMC",
-    "UHH",
-    "VSO"
-   ],
-   "at": "2026-11-02T23:11:20Z"
-  },
-  {
    "kind": "sniper_full_exit",
-   "ticker": "BUOY",
-   "wallet": "w-ddf5e81d",
+   "ticker": "EVRG",
+   "wallet": "w-14434643",
    "tags": [],
-   "at": "2026-11-02T23:11:20Z"
+   "at": "2026-11-03T01:10:58Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 81.4,
+   "top_cluster_pct": 81.4,
+   "top_cluster": "w-13d53c47",
+   "basis": "ex-fe819d",
+   "at": "2026-11-03T01:10:58Z"
   },
   {
    "kind": "whale_move",
    "ticker": "ASCEND",
    "tag": "w-f3186187",
-   "delta": 57274506,
+   "delta": 229182381,
    "decimals": 6,
-   "qty": 57.2745,
-   "ada_equiv": 71,
+   "qty": 229.1824,
+   "ada_equiv": 284,
    "value_basis": "ada_leg",
-   "pct": 0.0,
-   "at": "2026-11-02T23:11:20Z"
+   "pct": 0.1,
+   "at": "2026-11-03T01:10:58Z"
   }
  ],
  "recent": [
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "BUTTHOLE",
-   "wallet": "w-c5af9630",
-   "tags": [],
-   "at": "2026-10-31T16:11:24Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "GM",
-   "wallet": "w-44c0a15c",
-   "tags": [],
-   "at": "2026-10-31T16:11:24Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "GM",
-   "wallet": "w-8880f61b",
-   "tags": [],
-   "at": "2026-10-31T16:11:24Z"
-  },
   {
    "kind": "watch_tags_early_buyers",
    "ticker": "PLUG",
@@ -3583,11 +3389,39 @@
    "value_basis": "ada_leg",
    "pct": 0.0,
    "at": "2026-11-02T23:11:20Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "EVRG",
+   "wallet": "w-14434643",
+   "tags": [],
+   "at": "2026-11-03T01:10:58Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 81.4,
+   "top_cluster_pct": 81.4,
+   "top_cluster": "w-13d53c47",
+   "basis": "ex-fe819d",
+   "at": "2026-11-03T01:10:58Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 229182381,
+   "decimals": 6,
+   "qty": 229.1824,
+   "ada_equiv": 284,
+   "value_basis": "ada_leg",
+   "pct": 0.1,
+   "at": "2026-11-03T01:10:58Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 2,
-  "koios": 23
+  "blockfrost": 1,
+  "koios": 3
  },
  "thresholds": {
   "enabled": true,
