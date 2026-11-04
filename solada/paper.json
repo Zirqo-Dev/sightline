@@ -1405,7 +1405,8 @@
               "bonded": false,
               "note": "past launch+24h; no DEX pool on GeckoTerminal; gate not met, stays in comparison group (pending_gate) for its 48h return"
             }
-          ]
+          ],
+          "return_48h": "no price"
         },
         {
           "ticker": "SNEKG",
@@ -1427,7 +1428,8 @@
               "bonded": false,
               "note": "past launch+24h; no DEX pool on GeckoTerminal; gate not met, stays in comparison group (pending_gate) for its 48h return"
             }
-          ]
+          ],
+          "return_48h": "no price"
         },
         {
           "ticker": "GATO",
@@ -1631,6 +1633,19 @@
           "first_seen": "2026-11-03T18:14:00-05:00",
           "flags": [
             "10 coordinated in 120s, 4 repeat early buyers, pool pre-seeder, first-block sniper, 1 sniper out"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "PUP",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-04T01:11:33Z",
+          "first_seen": "2026-11-03T20:14:00-05:00",
+          "flags": [
+            "11 coordinated in 120s, 4 fresh wallets, 8 repeat early buyers"
           ],
           "bonded": false,
           "entry_curve_price_ada": null,
