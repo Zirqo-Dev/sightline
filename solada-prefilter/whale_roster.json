@@ -5,7 +5,7 @@
   "measured_factor": true,
   "min_sample": 8,
   "dormant_count": 9,
-  "asof": "2026-11-04T13:16:42Z",
+  "asof": "2026-11-04T15:19:40Z",
   "note": "Research tally. A hit is an observed checkpoint where every measured series (price and liquidity) moves the whale's way at +1h, +6h, or +24h. A wrong-way observation is a miss. No observation is unobserved and is not a miss. n_observed is hits plus misses. Rates stay blank under 8 observed checkpoints on that horizon in that tally. scores.live is the forward quote path, or the lead's published private-cache tally. scores.backfill is approximate: nearest desk-data ADA/qty within 20 minutes at 1h, 60 minutes at 6h, and 3 hours at 24h, plus pool ADA when a snapshot is in that window. Backfill never replaces live. eligible_for_active needs at least 25 live observed checkpoints and a live hit rate above 55% at both 6h and 24h. promising_backfill means the approximate tally alone would clear that bar. Nothing is promoted automatically. Not a buy signal.",
   "whales": [
     {
@@ -16,8 +16,8 @@
       "eligible_reason": "not eligible: live 6h observed 157, rate 0.395 (need > 0.55); live 24h observed 124, rate 0.306 (need > 0.55); promotion is a manual owner decision",
       "promising_backfill": false,
       "scores": {
-        "events": 999,
-        "accumulate": 992,
+        "events": 1022,
+        "accumulate": 1015,
         "trim": 0,
         "exit": 7,
         "live": {
@@ -433,9 +433,9 @@
             "hit_rate": 0.469
           },
           "h24": {
-            "n_observed": 20,
-            "hits": 12,
-            "hit_rate": 0.6
+            "n_observed": 26,
+            "hits": 14,
+            "hit_rate": 0.538
           },
           "approximate": true,
           "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
@@ -497,9 +497,9 @@
             "hit_rate": 0.478
           },
           "h24": {
-            "n_observed": 17,
-            "hits": 9,
-            "hit_rate": 0.529
+            "n_observed": 18,
+            "hits": 10,
+            "hit_rate": 0.556
           },
           "approximate": true,
           "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
@@ -561,9 +561,9 @@
             "hit_rate": 0.391
           },
           "h24": {
-            "n_observed": 21,
-            "hits": 12,
-            "hit_rate": 0.571
+            "n_observed": 24,
+            "hits": 13,
+            "hit_rate": 0.542
           },
           "approximate": true,
           "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
@@ -592,8 +592,8 @@
       "eligible_reason": "not eligible: live 6h observed 1 (need 25), rate blank (need > 0.55); live 24h observed 0 (need 25), rate blank (need > 0.55); promotion is a manual owner decision",
       "promising_backfill": true,
       "scores": {
-        "events": 48,
-        "accumulate": 44,
+        "events": 49,
+        "accumulate": 45,
         "trim": 4,
         "exit": 0,
         "live": {
@@ -625,9 +625,9 @@
             "hit_rate": 0.553
           },
           "h24": {
-            "n_observed": 34,
-            "hits": 24,
-            "hit_rate": 0.706
+            "n_observed": 38,
+            "hits": 28,
+            "hit_rate": 0.737
           },
           "approximate": true,
           "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
@@ -679,9 +679,9 @@
         },
         "backfill": {
           "h1": {
-            "n_observed": 27,
+            "n_observed": 28,
             "hits": 14,
-            "hit_rate": 0.519
+            "hit_rate": 0.5
           },
           "h6": {
             "n_observed": 29,
@@ -817,9 +817,9 @@
             "hit_rate": 0.327
           },
           "h24": {
-            "n_observed": 39,
-            "hits": 11,
-            "hit_rate": 0.282
+            "n_observed": 43,
+            "hits": 14,
+            "hit_rate": 0.326
           },
           "approximate": true,
           "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
