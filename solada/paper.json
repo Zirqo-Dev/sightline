@@ -1608,7 +1608,7 @@
         },
         {
           "ticker": "CITY",
-          "status": "pending_gate",
+          "status": "failed_gate",
           "swarm_flagged_at": "2026-11-03T17:11:14Z",
           "first_seen": "2026-11-03T12:16:00-05:00",
           "flags": [
@@ -1624,8 +1624,15 @@
               "at": "2026-11-03T19:00:00-05:00",
               "bonded": true,
               "note": "before launch+24h gate (~11:44 AM Nov 4); not evaluated yet"
+            },
+            {
+              "at": "2026-11-04T14:20:00-05:00",
+              "bonded": true,
+              "pool_ada": 13349,
+              "note": "past launch+24h; pool side ~18.7k at 10:13 AM and ~13.3k at 2:14 PM, both under 25k; Grumpy Walrus sold ~10.54M CITY at 12:28 and 1:41 PM"
             }
-          ]
+          ],
+          "gate_result": "failed: pool ADA side under 25k at launch+24h (~13.3k at 2:14 PM ET Nov 4); tracked whale net-selling after the gate"
         },
         {
           "ticker": "MEMECOIN",
@@ -1647,6 +1654,32 @@
           "first_seen": "2026-11-03T20:14:00-05:00",
           "flags": [
             "11 coordinated in 120s, 4 fresh wallets, 8 repeat early buyers"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "GG",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-04T19:12:06Z",
+          "first_seen": "2026-11-04T14:20:00-05:00",
+          "flags": [
+            "19 coordinated in 120s, 7 fresh, pool pre-seeder, first-block sniper"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "MIXI",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-04T19:12:06Z",
+          "first_seen": "2026-11-04T14:20:00-05:00",
+          "flags": [
+            "19 coordinated in 120s, 7 fresh, pool pre-seeder, first-block sniper"
           ],
           "bonded": false,
           "entry_curve_price_ada": null,
