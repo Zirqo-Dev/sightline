@@ -1,338 +1,216 @@
 {
- "at": "2026-11-03T23:11:43Z",
+ "at": "2026-11-04T01:11:33Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "watch_tags_early_buyers",
-   "ticker": "MEMECOIN",
-   "tags": [
-    "uxz6fvju",
-    "uynnk0mezk"
-   ],
-   "roles": [
-    "first_block_sniper",
-    "pool_preseeder"
-   ],
-   "at": "2026-11-03T23:11:43Z"
-  },
-  {
-   "kind": "pool_preseeder_early",
-   "ticker": "MEMECOIN",
-   "tags": [
-    "uynnk0mezk"
-   ],
-   "at": "2026-11-03T23:11:43Z"
-  },
-  {
    "kind": "coordinated_buys",
-   "ticker": "MEMECOIN",
+   "ticker": "PUP",
    "wallets": [
-    "w-0bd3f718",
-    "w-36fd066c",
-    "w-4bd659ff",
-    "w-5959aea0",
-    "w-6a08c4e3",
-    "w-ac850ced",
-    "w-e3501686",
-    "w-e87d53fa",
-    "w-edf7992f",
-    "w-f7844f67"
-   ],
-   "window_s": 120,
-   "at": "2026-11-03T23:11:43Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-36fd066c",
-   "launches": [
-    "BERT",
-    "MANDO",
-    "MEMECOIN",
-    "TMC",
-    "VICECITY",
-    "WASTED",
-    "WEN"
-   ],
-   "at": "2026-11-03T23:11:43Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-4bd659ff",
-   "launches": [
-    "MEMECOIN",
-    "MEOW",
-    "MEPE",
-    "MONKEY",
-    "MPIG",
-    "NERF",
-    "PLUG",
-    "PUG",
-    "SENSE",
-    "TECHMAGE"
-   ],
-   "at": "2026-11-03T23:11:43Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-6a08c4e3",
-   "launches": [
-    "MEMECOIN",
-    "TECHMAGE"
-   ],
-   "at": "2026-11-03T23:11:43Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-e87d53fa",
-   "launches": [
-    "EVRG",
-    "MCFA",
-    "MEMECOIN",
-    "MEPE",
-    "OWL",
-    "PINU",
-    "PLUG",
-    "SLIP",
-    "TMC",
-    "UNFAZED"
-   ],
-   "at": "2026-11-03T23:11:43Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "MOGE",
-   "wallet": "w-5659186a",
-   "tags": [],
-   "at": "2026-11-03T23:11:43Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "MEMECOIN",
-   "wallet": "w-5959aea0",
-   "tags": [],
-   "at": "2026-11-03T23:11:43Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "ASCEND",
-   "tag": "w-f3186187",
-   "delta": 3502994,
-   "decimals": 6,
-   "qty": 3.503,
-   "ada_equiv": 4,
-   "value_basis": "decimals_x_price",
-   "dust": true,
-   "at": "2026-11-03T23:11:43Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "STRIKE",
-   "tag": "w-f3186187",
-   "delta": 336070,
-   "decimals": 6,
-   "qty": 0.3361,
-   "ada_equiv": 1,
-   "value_basis": "decimals_x_price",
-   "dust": true,
-   "at": "2026-11-03T23:11:43Z"
-  }
- ],
- "recent": [
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-e87d53fa",
-   "launches": [
-    "MCFA",
-    "MEPE",
-    "OWL",
-    "PINU",
-    "PLUG",
-    "SLIP",
-    "UNFAZED"
-   ],
-   "at": "2026-11-01T17:12:36Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-e97f4aa3",
-   "launches": [
-    "MEPI",
-    "MEWH",
-    "MOON",
-    "OWL",
-    "PATRICK",
-    "PLUG",
-    "ROCKET",
-    "SENSE",
-    "UHH",
-    "VEPE"
-   ],
-   "at": "2026-11-01T17:12:36Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-f1a6677c",
-   "launches": [
-    "MEPE",
-    "OWL"
-   ],
-   "at": "2026-11-01T17:12:36Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-f24dee62",
-   "launches": [
-    "BOAR",
-    "INTEL",
-    "MCFA",
-    "MEPE",
-    "MEWH",
-    "TCM"
-   ],
-   "at": "2026-11-01T17:12:36Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-f7844f67",
-   "launches": [
-    "LAPTOP",
-    "LEVERHED",
-    "MEWH",
-    "NIO",
-    "NITE",
-    "OWL",
-    "PILLSEY",
-    "SATURWEE",
-    "TCM",
-    "TIPR"
-   ],
-   "at": "2026-11-01T17:12:36Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "OWL",
-   "wallet": "w-03f22a75",
-   "tags": [],
-   "at": "2026-11-01T17:12:36Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "OWL",
-   "wallet": "w-b63ae822",
-   "tags": [],
-   "at": "2026-11-01T17:12:36Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "OWL",
-   "wallet": "w-d3bb6326",
-   "tags": [],
-   "at": "2026-11-01T17:12:36Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "ASCEND",
-   "tag": "w-f3186187",
-   "delta": 4179671,
-   "decimals": 6,
-   "qty": 4.1797,
-   "ada_equiv": 5,
-   "value_basis": "decimals_x_price",
-   "dust": true,
-   "at": "2026-11-01T17:12:36Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "STRIKE",
-   "tag": "w-f3186187",
-   "delta": -2619222,
-   "decimals": 6,
-   "qty": -2.6192,
-   "ada_equiv": 6,
-   "value_basis": "decimals_x_price",
-   "dust": true,
-   "at": "2026-11-01T17:12:36Z"
-  },
-  {
-   "kind": "coordinated_buys",
-   "ticker": "POPU",
-   "wallets": [
-    "w-117c40bd",
-    "w-266ce105",
-    "w-2ebea9dd",
-    "w-5659186a",
-    "w-97f3bb74",
-    "w-985c018a",
+    "w-0f5eba15",
+    "w-118ab166",
+    "w-399e339a",
+    "w-4f31ccd4",
+    "w-68535d5c",
     "w-9d7e7db5",
-    "w-ade6b44c",
-    "w-b1394f09",
-    "w-c5af9630",
-    "w-f7844f67"
+    "w-ac850ced",
+    "w-c4719a10",
+    "w-d9765db1",
+    "w-e52f1e17",
+    "w-e97f4aa3"
    ],
    "window_s": 120,
-   "at": "2026-11-01T19:11:10Z"
+   "at": "2026-11-04T01:11:33Z"
   },
   {
    "kind": "fresh_wallet_swarm",
-   "ticker": "POPU",
+   "ticker": "PUP",
    "wallets": [
-    "w-117c40bd",
-    "w-97f3bb74",
-    "w-985c018a",
-    "w-b1394f09"
+    "w-0f5eba15",
+    "w-4f31ccd4",
+    "w-68535d5c",
+    "w-d9765db1"
    ],
    "max_age_blocks": 4320,
-   "at": "2026-11-01T19:11:10Z"
+   "at": "2026-11-04T01:11:33Z"
   },
   {
    "kind": "repeat_early_buyer",
-   "wallet": "w-2ebea9dd",
+   "wallet": "w-095576b3",
    "launches": [
-    "BUTTHOLE",
-    "MEWH",
-    "OWL",
-    "PLUG",
-    "POPU",
-    "TIPR"
+    "BEPE",
+    "BMEPE",
+    "HACK",
+    "PUG",
+    "PUP",
+    "TCM"
    ],
-   "at": "2026-11-01T19:11:10Z"
+   "at": "2026-11-04T01:11:33Z"
   },
   {
    "kind": "repeat_early_buyer",
-   "wallet": "w-5659186a",
+   "wallet": "w-399e339a",
    "launches": [
-    "HI",
     "MEWH",
-    "MOON",
-    "NIO",
     "OWL",
-    "PLUG",
-    "POPU",
-    "ROCKET",
-    "TCM",
-    "VIP"
+    "PUP",
+    "VEPE"
    ],
-   "at": "2026-11-01T19:11:10Z"
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-7adca108",
+   "launches": [
+    "DUSTER",
+    "EVIL",
+    "FLUIDY",
+    "MSNEK",
+    "PATRICK",
+    "PUP"
+   ],
+   "at": "2026-11-04T01:11:33Z"
   },
   {
    "kind": "repeat_early_buyer",
    "wallet": "w-9d7e7db5",
    "launches": [
-    "MEWH",
-    "MOON",
-    "OWL",
-    "PILLSEY",
-    "PLUG",
-    "POPU",
-    "SATURWEE",
-    "TIPR",
-    "VALHALLA",
-    "VIP"
+    "HACK",
+    "HACKSNEK",
+    "MANDO",
+    "PUP",
+    "SNEKG",
+    "TMC",
+    "VICECITY",
+    "VSO",
+    "WASTED",
+    "WEN"
    ],
-   "at": "2026-11-01T19:11:10Z"
+   "at": "2026-11-04T01:11:33Z"
   },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-ac850ced",
+   "launches": [
+    "MEMECOIN",
+    "PUP"
+   ],
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-c4719a10",
+   "launches": [
+    "BUTTHOLE",
+    "CITY",
+    "GARRETT",
+    "GM",
+    "JSON",
+    "MOON",
+    "PUP",
+    "ROCKET",
+    "TECHMAGE",
+    "UHH"
+   ],
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-e52f1e17",
+   "launches": [
+    "BUOY",
+    "HACK",
+    "MOGE",
+    "MPIG",
+    "PLUG",
+    "PUG",
+    "PUP",
+    "SLIP",
+    "TECHMAGE",
+    "VOPI"
+   ],
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-e97f4aa3",
+   "launches": [
+    "MOGE",
+    "OWL",
+    "PLUG",
+    "PUP",
+    "SNEKG",
+    "TECHMAGE",
+    "TMC",
+    "UHH",
+    "VOPI",
+    "VSO"
+   ],
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "NIGHT",
+   "tag": "w-f3186187",
+   "delta": 15101502383,
+   "decimals": 6,
+   "qty": 15101.5024,
+   "ada_equiv": 4509,
+   "value_basis": "ada_leg_rate",
+   "pct": 1.6,
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "CHEESE",
+   "tag": "w-f3186187",
+   "delta": -3679049000000,
+   "decimals": 6,
+   "qty": -3679049.0,
+   "ada_equiv": 314,
+   "value_basis": "ada_leg",
+   "pct": 19.7,
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "CITY",
+   "tag": "w-f3186187",
+   "delta": 7812200190612,
+   "decimals": 6,
+   "qty": 7812200.1906,
+   "ada_equiv": 597,
+   "value_basis": "ada_leg_rate",
+   "pct": 60.5,
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": -10000000000,
+   "decimals": 6,
+   "qty": -10000.0,
+   "ada_equiv": 10781,
+   "value_basis": "ada_leg",
+   "pct": 3.0,
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "STRIKE",
+   "tag": "w-f3186187",
+   "delta": -3287097,
+   "decimals": 6,
+   "qty": -3.2871,
+   "ada_equiv": 7,
+   "value_basis": "decimals_x_price",
+   "dust": true,
+   "at": "2026-11-04T01:11:33Z"
+  }
+ ],
+ "recent": [
   {
    "kind": "repeat_early_buyer",
    "wallet": "w-ade6b44c",
@@ -3562,11 +3440,216 @@
    "value_basis": "decimals_x_price",
    "dust": true,
    "at": "2026-11-03T23:11:43Z"
+  },
+  {
+   "kind": "coordinated_buys",
+   "ticker": "PUP",
+   "wallets": [
+    "w-0f5eba15",
+    "w-118ab166",
+    "w-399e339a",
+    "w-4f31ccd4",
+    "w-68535d5c",
+    "w-9d7e7db5",
+    "w-ac850ced",
+    "w-c4719a10",
+    "w-d9765db1",
+    "w-e52f1e17",
+    "w-e97f4aa3"
+   ],
+   "window_s": 120,
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "fresh_wallet_swarm",
+   "ticker": "PUP",
+   "wallets": [
+    "w-0f5eba15",
+    "w-4f31ccd4",
+    "w-68535d5c",
+    "w-d9765db1"
+   ],
+   "max_age_blocks": 4320,
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-095576b3",
+   "launches": [
+    "BEPE",
+    "BMEPE",
+    "HACK",
+    "PUG",
+    "PUP",
+    "TCM"
+   ],
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-399e339a",
+   "launches": [
+    "MEWH",
+    "OWL",
+    "PUP",
+    "VEPE"
+   ],
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-7adca108",
+   "launches": [
+    "DUSTER",
+    "EVIL",
+    "FLUIDY",
+    "MSNEK",
+    "PATRICK",
+    "PUP"
+   ],
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-9d7e7db5",
+   "launches": [
+    "HACK",
+    "HACKSNEK",
+    "MANDO",
+    "PUP",
+    "SNEKG",
+    "TMC",
+    "VICECITY",
+    "VSO",
+    "WASTED",
+    "WEN"
+   ],
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-ac850ced",
+   "launches": [
+    "MEMECOIN",
+    "PUP"
+   ],
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-c4719a10",
+   "launches": [
+    "BUTTHOLE",
+    "CITY",
+    "GARRETT",
+    "GM",
+    "JSON",
+    "MOON",
+    "PUP",
+    "ROCKET",
+    "TECHMAGE",
+    "UHH"
+   ],
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-e52f1e17",
+   "launches": [
+    "BUOY",
+    "HACK",
+    "MOGE",
+    "MPIG",
+    "PLUG",
+    "PUG",
+    "PUP",
+    "SLIP",
+    "TECHMAGE",
+    "VOPI"
+   ],
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-e97f4aa3",
+   "launches": [
+    "MOGE",
+    "OWL",
+    "PLUG",
+    "PUP",
+    "SNEKG",
+    "TECHMAGE",
+    "TMC",
+    "UHH",
+    "VOPI",
+    "VSO"
+   ],
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "NIGHT",
+   "tag": "w-f3186187",
+   "delta": 15101502383,
+   "decimals": 6,
+   "qty": 15101.5024,
+   "ada_equiv": 4509,
+   "value_basis": "ada_leg_rate",
+   "pct": 1.6,
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "CHEESE",
+   "tag": "w-f3186187",
+   "delta": -3679049000000,
+   "decimals": 6,
+   "qty": -3679049.0,
+   "ada_equiv": 314,
+   "value_basis": "ada_leg",
+   "pct": 19.7,
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "CITY",
+   "tag": "w-f3186187",
+   "delta": 7812200190612,
+   "decimals": 6,
+   "qty": 7812200.1906,
+   "ada_equiv": 597,
+   "value_basis": "ada_leg_rate",
+   "pct": 60.5,
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": -10000000000,
+   "decimals": 6,
+   "qty": -10000.0,
+   "ada_equiv": 10781,
+   "value_basis": "ada_leg",
+   "pct": 3.0,
+   "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "STRIKE",
+   "tag": "w-f3186187",
+   "delta": -3287097,
+   "decimals": 6,
+   "qty": -3.2871,
+   "ada_equiv": 7,
+   "value_basis": "decimals_x_price",
+   "dust": true,
+   "at": "2026-11-04T01:11:33Z"
   }
  ],
  "api_calls": {
   "blockfrost": 1,
-  "koios": 8
+  "koios": 11
  },
  "thresholds": {
   "enabled": true,
