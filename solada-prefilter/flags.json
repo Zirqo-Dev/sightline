@@ -1,262 +1,44 @@
 {
- "at": "2026-11-04T01:11:33Z",
+ "at": "2026-11-04T03:12:02Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "coordinated_buys",
-   "ticker": "PUP",
-   "wallets": [
-    "w-0f5eba15",
-    "w-118ab166",
-    "w-399e339a",
-    "w-4f31ccd4",
-    "w-68535d5c",
-    "w-9d7e7db5",
-    "w-ac850ced",
-    "w-c4719a10",
-    "w-d9765db1",
-    "w-e52f1e17",
-    "w-e97f4aa3"
-   ],
-   "window_s": 120,
-   "at": "2026-11-04T01:11:33Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "PUP",
-   "wallets": [
-    "w-0f5eba15",
-    "w-4f31ccd4",
-    "w-68535d5c",
-    "w-d9765db1"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-04T01:11:33Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-095576b3",
-   "launches": [
-    "BEPE",
-    "BMEPE",
-    "HACK",
-    "PUG",
-    "PUP",
-    "TCM"
-   ],
-   "at": "2026-11-04T01:11:33Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-399e339a",
-   "launches": [
-    "MEWH",
-    "OWL",
-    "PUP",
-    "VEPE"
-   ],
-   "at": "2026-11-04T01:11:33Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-7adca108",
-   "launches": [
-    "DUSTER",
-    "EVIL",
-    "FLUIDY",
-    "MSNEK",
-    "PATRICK",
-    "PUP"
-   ],
-   "at": "2026-11-04T01:11:33Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-9d7e7db5",
-   "launches": [
-    "HACK",
-    "HACKSNEK",
-    "MANDO",
-    "PUP",
-    "SNEKG",
-    "TMC",
-    "VICECITY",
-    "VSO",
-    "WASTED",
-    "WEN"
-   ],
-   "at": "2026-11-04T01:11:33Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-ac850ced",
-   "launches": [
-    "MEMECOIN",
-    "PUP"
-   ],
-   "at": "2026-11-04T01:11:33Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-c4719a10",
-   "launches": [
-    "BUTTHOLE",
-    "CITY",
-    "GARRETT",
-    "GM",
-    "JSON",
-    "MOON",
-    "PUP",
-    "ROCKET",
-    "TECHMAGE",
-    "UHH"
-   ],
-   "at": "2026-11-04T01:11:33Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-e52f1e17",
-   "launches": [
-    "BUOY",
-    "HACK",
-    "MOGE",
-    "MPIG",
-    "PLUG",
-    "PUG",
-    "PUP",
-    "SLIP",
-    "TECHMAGE",
-    "VOPI"
-   ],
-   "at": "2026-11-04T01:11:33Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-e97f4aa3",
-   "launches": [
-    "MOGE",
-    "OWL",
-    "PLUG",
-    "PUP",
-    "SNEKG",
-    "TECHMAGE",
-    "TMC",
-    "UHH",
-    "VOPI",
-    "VSO"
-   ],
-   "at": "2026-11-04T01:11:33Z"
+   "kind": "holder_concentration",
+   "ticker": "HERO",
+   "top_addr_pct": 30.7,
+   "top_cluster_pct": 30.7,
+   "top_cluster": "w-24adb331",
+   "basis": "ex-fe819d",
+   "at": "2026-11-04T03:12:02Z"
   },
   {
    "kind": "whale_move",
-   "ticker": "NIGHT",
+   "ticker": "IAG",
    "tag": "w-f3186187",
-   "delta": 15101502383,
+   "delta": 178752008,
+   "new_position": true,
    "decimals": 6,
-   "qty": 15101.5024,
-   "ada_equiv": 4509,
-   "value_basis": "ada_leg_rate",
-   "pct": 1.6,
-   "at": "2026-11-04T01:11:33Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "CHEESE",
-   "tag": "w-f3186187",
-   "delta": -3679049000000,
-   "decimals": 6,
-   "qty": -3679049.0,
-   "ada_equiv": 314,
-   "value_basis": "ada_leg",
-   "pct": 19.7,
-   "at": "2026-11-04T01:11:33Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "CITY",
-   "tag": "w-f3186187",
-   "delta": 7812200190612,
-   "decimals": 6,
-   "qty": 7812200.1906,
-   "ada_equiv": 597,
-   "value_basis": "ada_leg_rate",
-   "pct": 60.5,
-   "at": "2026-11-04T01:11:33Z"
+   "qty": 178.752,
+   "ada_equiv": 63,
+   "value_basis": "decimals_x_price",
+   "at": "2026-11-04T03:12:02Z"
   },
   {
    "kind": "whale_move",
    "ticker": "ASCEND",
    "tag": "w-f3186187",
-   "delta": -10000000000,
+   "delta": -103000000,
    "decimals": 6,
-   "qty": -10000.0,
-   "ada_equiv": 10781,
-   "value_basis": "ada_leg",
-   "pct": 3.0,
-   "at": "2026-11-04T01:11:33Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "STRIKE",
-   "tag": "w-f3186187",
-   "delta": -3287097,
-   "decimals": 6,
-   "qty": -3.2871,
-   "ada_equiv": 7,
+   "qty": -103.0,
+   "ada_equiv": 109,
    "value_basis": "decimals_x_price",
-   "dust": true,
-   "at": "2026-11-04T01:11:33Z"
+   "pct": 0.0,
+   "at": "2026-11-04T03:12:02Z"
   }
  ],
  "recent": [
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-ade6b44c",
-   "launches": [
-    "GARRETT",
-    "MEPE",
-    "MEWH",
-    "PINU",
-    "POPU",
-    "SLIP",
-    "UHH"
-   ],
-   "at": "2026-11-01T19:11:10Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-c5af9630",
-   "launches": [
-    "BET",
-    "BUTTHOLE",
-    "EVIL",
-    "MEWH",
-    "PINU",
-    "POPU",
-    "ROCKET",
-    "UHH"
-   ],
-   "at": "2026-11-01T19:11:10Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-f7844f67",
-   "launches": [
-    "LEVERHED",
-    "MEWH",
-    "NIO",
-    "NITE",
-    "OWL",
-    "PILLSEY",
-    "POPU",
-    "SATURWEE",
-    "TCM",
-    "TIPR"
-   ],
-   "at": "2026-11-01T19:11:10Z"
-  },
   {
    "kind": "sniper_full_exit",
    "ticker": "POPU",
@@ -3645,11 +3427,43 @@
    "value_basis": "decimals_x_price",
    "dust": true,
    "at": "2026-11-04T01:11:33Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "HERO",
+   "top_addr_pct": 30.7,
+   "top_cluster_pct": 30.7,
+   "top_cluster": "w-24adb331",
+   "basis": "ex-fe819d",
+   "at": "2026-11-04T03:12:02Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "IAG",
+   "tag": "w-f3186187",
+   "delta": 178752008,
+   "new_position": true,
+   "decimals": 6,
+   "qty": 178.752,
+   "ada_equiv": 63,
+   "value_basis": "decimals_x_price",
+   "at": "2026-11-04T03:12:02Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": -103000000,
+   "decimals": 6,
+   "qty": -103.0,
+   "ada_equiv": 109,
+   "value_basis": "decimals_x_price",
+   "pct": 0.0,
+   "at": "2026-11-04T03:12:02Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 1,
-  "koios": 11
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,
