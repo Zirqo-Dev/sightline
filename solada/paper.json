@@ -1339,8 +1339,15 @@
               "at": "2026-11-02T19:00:00-05:00",
               "bonded": false,
               "note": "past launch+24h; no DEX pool on GeckoTerminal; gate not met, stays in comparison group (pending_gate) for its 48h return"
+            },
+            {
+              "at": "2026-11-03T19:00:00-05:00",
+              "bonded": false,
+              "note": "48h reached; no DEX pool; return logged as no price"
             }
-          ]
+          ],
+          "return_48h": "no price",
+          "return_48h_note": "48h reached Nov 3; never bonded and no curve price read at first flag, so return unmeasurable"
         },
         {
           "ticker": "MOGE",
@@ -1368,8 +1375,15 @@
               "at": "2026-11-02T19:00:00-05:00",
               "bonded": false,
               "note": "past launch+24h; no DEX pool on GeckoTerminal; gate not met, stays in comparison group (pending_gate) for its 48h return"
+            },
+            {
+              "at": "2026-11-03T19:00:00-05:00",
+              "bonded": false,
+              "note": "48h reached; no DEX pool; return logged as no price"
             }
-          ]
+          ],
+          "return_48h": "no price",
+          "return_48h_note": "48h reached Nov 3; never bonded and no curve price read at first flag, so return unmeasurable"
         },
         {
           "ticker": "AIDA",
@@ -1601,7 +1615,14 @@
           "entry_curve_price_ada": null,
           "entry_note": "DEX pool ~12.2k ADA side at first sight; no curve price read",
           "gate_check_due": "launch+24h",
-          "whale_note": "Grumpy Walrus bought ~11.75M CITY for ~754 ADA at 12:17-12:19 PM ET Nov 3 (before the 24h gate)"
+          "whale_note": "Grumpy Walrus bought ~11.75M CITY for ~754 ADA at 12:17-12:19 PM ET Nov 3 (before the 24h gate)",
+          "gate_checks": [
+            {
+              "at": "2026-11-03T19:00:00-05:00",
+              "bonded": true,
+              "note": "before launch+24h gate (~11:44 AM Nov 4); not evaluated yet"
+            }
+          ]
         },
         {
           "ticker": "MEMECOIN",
@@ -1670,6 +1691,16 @@
           ],
           "qualified": [],
           "note": "ASCEND (+46.3% vs line, Grumpy Walrus +~6.6k ADA 72h, pool +4.2% 7d) and STRIKE (+32.1%, Wobbly Kiwi +~53.7k ADA 72h, pool -3.2% 7d) failed only on the 7-day holder trend (unverifiable until Nov 8); FLOW +24.1% vs line fails condition 1"
+        },
+        {
+          "asof": "2026-11-03T19:00:00-05:00",
+          "checked": [
+            "ASCEND",
+            "STRIKE",
+            "FLOW"
+          ],
+          "qualified": [],
+          "note": "STRIKE (+29.2% vs line, Wobbly Kiwi +~52.4k ADA 72h, pool -5.9% 7d) failed only on the 7-day holder trend (unverifiable until Nov 8); ASCEND (+41.2%) fails condition 2 (Grumpy Walrus 72h net ~-8.3k ADA); FLOW +24.1% fails condition 1"
         }
       ]
     }
