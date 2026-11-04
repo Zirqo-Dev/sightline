@@ -7,66 +7,9 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-11-04T08:00:31Z",
+ "generated_at": "2026-11-04T08:30:28Z",
  "cfg_version": "v1-v6.5",
- "open": [
-  {
-   "id": "R-20261104T0800-5fgJpump",
-   "ticker": "icapy",
-   "mint": "5fgJwPNtsohc1FwjkjvmVWoXTbSzD8Z3zzbcuXdepump",
-   "book": "R",
-   "status": "open",
-   "size": 0.5,
-   "cost_model": "v3-exit-aware",
-   "cost_model_started_at": "2026-10-29T00:30:25Z",
-   "opened_at": "2026-11-04T08:00:31Z",
-   "window_ends_at": "2026-11-04T10:00:31Z",
-   "entry": {
-    "px": 0.0022827938780046308
-   },
-   "frac": 1.0,
-   "last_mark": 0.0022827938780046308,
-   "thesis": "random_match",
-   "result": {
-    "pnl": 0.0,
-    "pct": 0.0,
-    "unit": "SOL",
-    "net_pnl": 0.0,
-    "gross_pnl": 0.0
-   },
-   "obs_v": 1,
-   "entry_sol_reserve": 342.3055,
-   "entry_token_reserve": 161773999.0,
-   "entry_k": 55376129614.694496,
-   "entry_reserve_error": null,
-   "last_sol_reserve": 342.3055,
-   "last_token_reserve": 161773999.0,
-   "last_k": 55376129614.694496,
-   "last_reserve_error": null,
-   "reserve_snaps": [
-    {
-     "t": "2026-11-04T08:00:31Z",
-     "sol": 342.3055,
-     "token": 161773999.0,
-     "k": 55376129614.694496,
-     "pool": "6eX7ud2Kgb9grPEbyyVouGvLVkD41yMn2n8erbhYTooq"
-    }
-   ],
-   "entry_pool": "6eX7ud2Kgb9grPEbyyVouGvLVkD41yMn2n8erbhYTooq",
-   "pool_created_at": "2026-11-04T07:43:31Z",
-   "pool_age_at_entry_s": 1020.0,
-   "graduated_pump": true,
-   "boost_window": false,
-   "entry_quote_out": 219029849702,
-   "entry_quote_px": 0.0022827938780046308,
-   "entry_quote_impact": 0.019208662324888985,
-   "entry_quote_error": null,
-   "max_price_held": 0.0022827938780046308,
-   "min_price_held": 0.0022827938780046308,
-   "max_price_held_pct": 0.0,
-   "min_price_held_pct": 0.0
-  }
- ],
+ "open": [],
  "closed": [
   {
    "id": "F-20261028T1330-96AUWRAY",
@@ -9796,6 +9739,83 @@
    "min_price_held_pct": -32.1392
   },
   {
+   "id": "R-20261104T0800-5fgJpump",
+   "ticker": "icapy",
+   "mint": "5fgJwPNtsohc1FwjkjvmVWoXTbSzD8Z3zzbcuXdepump",
+   "book": "R",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-11-04T08:00:31Z",
+   "closed_at": "2026-11-04T08:30:28Z",
+   "entry": {
+    "px": 0.0022827938780046308
+   },
+   "exit": {
+    "px": 2.135495233350055e-05
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": -0.498624965,
+    "pct": -99.09,
+    "unit": "SOL",
+    "net_pnl": -0.498624965,
+    "net_pct": -99.09,
+    "gross_pnl": -0.495322628,
+    "gross_pct": -99.06
+   },
+   "thesis": "random_match",
+   "obs_v": 1,
+   "entry_sol_reserve": 342.3055,
+   "entry_token_reserve": 161773999.0,
+   "entry_k": 55376129614.694496,
+   "entry_reserve_error": null,
+   "exit_sol_reserve": 3.04531,
+   "exit_token_reserve": 953656998.0,
+   "exit_k": 2904181192.57938,
+   "exit_reserve_error": null,
+   "last_sol_reserve": 3.04531,
+   "last_token_reserve": 953656998.0,
+   "last_k": 2904181192.57938,
+   "last_reserve_error": null,
+   "reserve_snaps": [
+    {
+     "t": "2026-11-04T08:00:31Z",
+     "sol": 342.3055,
+     "token": 161773999.0,
+     "k": 55376129614.694496,
+     "pool": "6eX7ud2Kgb9grPEbyyVouGvLVkD41yMn2n8erbhYTooq"
+    },
+    {
+     "t": "2026-11-04T08:30:28Z",
+     "sol": 3.04531,
+     "token": 953656998.0,
+     "k": 2904181192.57938,
+     "pool": "6eX7ud2Kgb9grPEbyyVouGvLVkD41yMn2n8erbhYTooq"
+    }
+   ],
+   "entry_pool": "6eX7ud2Kgb9grPEbyyVouGvLVkD41yMn2n8erbhYTooq",
+   "exit_pool": "6eX7ud2Kgb9grPEbyyVouGvLVkD41yMn2n8erbhYTooq",
+   "same_pool": true,
+   "pool_created_at": "2026-11-04T07:43:31Z",
+   "pool_age_at_entry_s": 1020.0,
+   "graduated_pump": true,
+   "boost_window": false,
+   "entry_quote_out": 219029849702,
+   "entry_quote_px": 0.0022827938780046308,
+   "entry_quote_impact": 0.019208662324888985,
+   "entry_quote_error": null,
+   "exit_quote_out": 4677372,
+   "exit_quote_px": 2.135495233350055e-05,
+   "exit_quote_impact": 0.008870581046708743,
+   "exit_quote_error": null,
+   "max_price_held": 0.0022827938780046308,
+   "min_price_held": 2.135495233350055e-05,
+   "max_price_held_pct": 0.0,
+   "min_price_held_pct": -99.0645
+  },
+  {
    "id": "S-20261028T1330-5Zjdpump",
    "ticker": "X TOKEN ",
    "mint": "5ZjdToZE9mEtjQ5AMQhn3Sb12i5u3qcpiCcN189Spump",
@@ -12594,11 +12614,11 @@
    "realized_gross_pnl": -6.402618696
   },
   "R": {
-   "cash": 0.194763473,
-   "equity": 0.691571153,
-   "realized_pnl": -9.302044208,
-   "open": 1,
-   "closed": 67,
+   "cash": 0.199330826,
+   "equity": 0.199330826,
+   "realized_pnl": -9.800669174,
+   "open": 0,
+   "closed": 68,
    "fills_today": 15,
    "would_halt": [
     {
@@ -12626,7 +12646,7 @@
      "drawdown": 0.4646
     }
    ],
-   "realized_gross_pnl": -7.120348691
+   "realized_gross_pnl": -7.615671319
   },
   "S": {
    "cash": 0.4021697,
@@ -12694,8 +12714,8 @@
   "started_at": "2026-10-29T00:30:25Z",
   "windows": {
    "7": {
-    "counted_closes": 219,
-    "net_pnl": -23.613626768,
+    "counted_closes": 220,
+    "net_pnl": -24.112251733,
     "wins": 85,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
@@ -12704,8 +12724,8 @@
     }
    },
    "28": {
-    "counted_closes": 219,
-    "net_pnl": -23.613626768,
+    "counted_closes": 220,
+    "net_pnl": -24.112251733,
     "wins": 85,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
