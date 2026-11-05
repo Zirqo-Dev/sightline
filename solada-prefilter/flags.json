@@ -1,76 +1,23 @@
 {
- "at": "2026-11-05T15:11:30Z",
+ "at": "2026-11-05T17:10:27Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "coordinated_buys",
-   "ticker": "ZELDA",
-   "wallets": [
-    "w-34f59c88",
-    "w-47277d63",
-    "w-63546263",
-    "w-9d7e7db5"
-   ],
-   "window_s": 120,
-   "at": "2026-11-05T15:11:30Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-9d7e7db5",
-   "launches": [
-    "MIXI",
-    "MSFT",
-    "PEAK",
-    "PLUG",
-    "PRT",
-    "SLANG",
-    "TCM",
-    "TRUMPDUL",
-    "WED",
-    "ZELDA"
-   ],
-   "at": "2026-11-05T15:11:30Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "ZELDA",
-   "wallet": "w-63546263",
-   "tags": [],
-   "at": "2026-11-05T15:11:30Z"
-  },
-  {
    "kind": "whale_move",
    "ticker": "ASCEND",
    "tag": "w-f3186187",
-   "delta": 126617513,
+   "delta": 505678434,
    "decimals": 6,
-   "qty": 126.6175,
-   "ada_equiv": 123,
-   "value_basis": "decimals_x_price",
-   "pct": 0.0,
-   "at": "2026-11-05T15:11:30Z"
+   "qty": 505.6784,
+   "ada_equiv": 548,
+   "value_basis": "ada_leg_rate",
+   "pct": 0.2,
+   "at": "2026-11-05T17:10:27Z"
   }
  ],
  "recent": [
-  {
-   "kind": "coordinated_buys",
-   "ticker": "TECHMAGE",
-   "wallets": [
-    "w-00a2dd7e",
-    "w-2081dfb2",
-    "w-4bd659ff",
-    "w-6a08c4e3",
-    "w-7f49306d",
-    "w-a7862e8a",
-    "w-bc3db4ff",
-    "w-d7ebb118",
-    "w-e52f1e17"
-   ],
-   "window_s": 120,
-   "at": "2026-11-03T03:11:47Z"
-  },
   {
    "kind": "identical_size_buys",
    "ticker": "TECHMAGE",
@@ -3709,11 +3656,23 @@
    "value_basis": "decimals_x_price",
    "pct": 0.0,
    "at": "2026-11-05T15:11:30Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 505678434,
+   "decimals": 6,
+   "qty": 505.6784,
+   "ada_equiv": 548,
+   "value_basis": "ada_leg_rate",
+   "pct": 0.2,
+   "at": "2026-11-05T17:10:27Z"
   }
  ],
  "api_calls": {
   "blockfrost": 1,
-  "koios": 6
+  "koios": 2
  },
  "thresholds": {
   "enabled": true,
