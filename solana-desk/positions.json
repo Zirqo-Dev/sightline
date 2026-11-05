@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793901633,
+ "last_run_ts": 1793903431,
  "voids": [
   {
    "ts": "2026-10-31T02:00:29Z",
@@ -10080,10 +10080,65 @@
    "realized_gross": -6.03179405512939
   },
   "S": {
-   "cash": 0.7339485146656997,
-   "open": {},
+   "cash": 0.2291111147779752,
+   "open": {
+    "S-20261105T1830-141XAYgK": {
+     "entry": 0.00010581647374392884,
+     "peak": 0.00010581647374392884,
+     "steps": 0,
+     "liq0": 33.7016,
+     "opened": 1793903431,
+     "frac": 1.0,
+     "last_mark": 0.00010581647374392884,
+     "stale": 0,
+     "no_route_count": 0,
+     "mint": "141XGGGB1RZ9YTxmgMm92tavRwjH19YndJtB3aEwAYgK",
+     "symbol": "BURNIT",
+     "tokens": 4725162182308,
+     "run_id": "20261105T1830",
+     "why": "safety:too_fresh",
+     "book": "S",
+     "pnl": 0.0,
+     "gross_pnl": 0.0,
+     "entry_haircut": 0.009654799775449103,
+     "entry_cost": 0.5048373998877245,
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z",
+     "obs_v": 1,
+     "entry_sol_reserve": 33.7016,
+     "entry_token_reserve": 347196716.0,
+     "entry_k": 11701084843.9456,
+     "entry_reserve_error": null,
+     "last_sol_reserve": 33.7016,
+     "last_token_reserve": 347196716.0,
+     "last_k": 11701084843.9456,
+     "last_reserve_error": null,
+     "reserve_snaps": [
+      {
+       "t": "2026-11-05T18:30:31Z",
+       "sol": 33.7016,
+       "token": 347196716.0,
+       "k": 11701084843.9456,
+       "pool": "9bbt6hrU5sGw6o7hRiUsiCM4uvLvS1HpFiywmJqciFBa"
+      }
+     ],
+     "entry_pool": "9bbt6hrU5sGw6o7hRiUsiCM4uvLvS1HpFiywmJqciFBa",
+     "pool_created_at": "2026-11-05T18:15:45Z",
+     "pool_age_at_entry_s": 886.0,
+     "graduated_pump": true,
+     "boost_window": false,
+     "entry_quote_out": 4725162182308,
+     "entry_quote_px": 0.00010581647374392884,
+     "entry_quote_impact": 0.0,
+     "entry_quote_error": null,
+     "max_price_held": 0.00010581647374392884,
+     "min_price_held": 0.00010581647374392884,
+     "max_price_held_pct": 0.0,
+     "min_price_held_pct": 0.0
+    }
+   },
    "fills_day": "2026-11-05",
-   "fills_today": 15,
+   "fills_today": 16,
    "realized_pnl": -13.863881785171797,
    "closed": [
     {

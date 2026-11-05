@@ -7,9 +7,66 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-11-05T18:00:33Z",
+ "generated_at": "2026-11-05T18:30:31Z",
  "cfg_version": "v1-v6.5",
- "open": [],
+ "open": [
+  {
+   "id": "S-20261105T1830-141XAYgK",
+   "ticker": "BURNIT",
+   "mint": "141XGGGB1RZ9YTxmgMm92tavRwjH19YndJtB3aEwAYgK",
+   "book": "S",
+   "status": "open",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-11-05T18:30:31Z",
+   "window_ends_at": "2026-11-05T20:30:31Z",
+   "entry": {
+    "px": 0.00010581647374392884
+   },
+   "frac": 1.0,
+   "last_mark": 0.00010581647374392884,
+   "thesis": "safety:too_fresh",
+   "result": {
+    "pnl": 0.0,
+    "pct": 0.0,
+    "unit": "SOL",
+    "net_pnl": 0.0,
+    "gross_pnl": 0.0
+   },
+   "obs_v": 1,
+   "entry_sol_reserve": 33.7016,
+   "entry_token_reserve": 347196716.0,
+   "entry_k": 11701084843.9456,
+   "entry_reserve_error": null,
+   "last_sol_reserve": 33.7016,
+   "last_token_reserve": 347196716.0,
+   "last_k": 11701084843.9456,
+   "last_reserve_error": null,
+   "reserve_snaps": [
+    {
+     "t": "2026-11-05T18:30:31Z",
+     "sol": 33.7016,
+     "token": 347196716.0,
+     "k": 11701084843.9456,
+     "pool": "9bbt6hrU5sGw6o7hRiUsiCM4uvLvS1HpFiywmJqciFBa"
+    }
+   ],
+   "entry_pool": "9bbt6hrU5sGw6o7hRiUsiCM4uvLvS1HpFiywmJqciFBa",
+   "pool_created_at": "2026-11-05T18:15:45Z",
+   "pool_age_at_entry_s": 886.0,
+   "graduated_pump": true,
+   "boost_window": false,
+   "entry_quote_out": 4725162182308,
+   "entry_quote_px": 0.00010581647374392884,
+   "entry_quote_impact": 0.0,
+   "entry_quote_error": null,
+   "max_price_held": 0.00010581647374392884,
+   "min_price_held": 0.00010581647374392884,
+   "max_price_held_pct": 0.0,
+   "min_price_held_pct": 0.0
+  }
+ ],
  "closed": [
   {
    "id": "F-20261028T1330-96AUWRAY",
@@ -15526,12 +15583,12 @@
    "realized_gross_pnl": -6.031794055
   },
   "S": {
-   "cash": 0.733948515,
-   "equity": 0.733948515,
+   "cash": 0.229111115,
+   "equity": 0.724273715,
    "realized_pnl": -13.863881785,
-   "open": 0,
+   "open": 1,
    "closed": 74,
-   "fills_today": 15,
+   "fills_today": 16,
    "would_halt": [
     {
      "day": "2026-11-05",
