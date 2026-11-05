@@ -1764,7 +1764,7 @@
         },
         {
           "ticker": "PUP",
-          "status": "pending_gate",
+          "status": "failed_gate",
           "swarm_flagged_at": "2026-11-04T01:11:33Z",
           "first_seen": "2026-11-03T20:14:00-05:00",
           "flags": [
@@ -1773,7 +1773,14 @@
           "bonded": false,
           "entry_curve_price_ada": null,
           "entry_note": "curve price not readable this run (no DEX pool found)",
-          "gate_check_due": "launch+24h"
+          "gate_check_due": "launch+24h",
+          "gate_checks": [
+            {
+              "at": "2026-11-04T20:13:00-05:00",
+              "bonded": false,
+              "note": "launch+24h passed ~8:11 PM ET; no DEX pool; 48h return due ~8:11 PM Nov 5"
+            }
+          ]
         },
         {
           "ticker": "GG",
@@ -1851,6 +1858,108 @@
           "flags": [
             "coordinated_buys (120s)",
             "sniper_full_exit"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "BREAK",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-05T01:12:28Z",
+          "first_seen": "2026-11-04T20:13:00-05:00",
+          "flags": [
+            "coordinated_buys (8 wallets, 120s)",
+            "fresh_wallet_swarm (4)",
+            "repeat early buyers"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "CAPY",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-05T01:12:28Z",
+          "first_seen": "2026-11-04T20:13:00-05:00",
+          "flags": [
+            "coordinated_buys (8 wallets, 120s)",
+            "fresh_wallet_swarm (5)",
+            "repeat early buyers"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "CHANCOIN",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-05T01:12:28Z",
+          "first_seen": "2026-11-04T20:13:00-05:00",
+          "flags": [
+            "coordinated_buys (7 wallets, 120s)",
+            "fresh_wallet_swarm (5)",
+            "repeat early buyers"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "MAGE",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-05T01:12:28Z",
+          "first_seen": "2026-11-04T20:13:00-05:00",
+          "flags": [
+            "coordinated_buys (6 wallets, 120s)",
+            "repeat early buyers",
+            "sniper_full_exit"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "PEAK",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-05T01:12:28Z",
+          "first_seen": "2026-11-04T20:13:00-05:00",
+          "flags": [
+            "coordinated_buys (7 wallets, 120s)",
+            "repeat early buyers"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "PRT",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-05T01:12:28Z",
+          "first_seen": "2026-11-04T20:13:00-05:00",
+          "flags": [
+            "coordinated_buys (5 wallets, 120s)",
+            "repeat early buyers"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "TCM",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-05T01:12:28Z",
+          "first_seen": "2026-11-04T20:13:00-05:00",
+          "flags": [
+            "coordinated_buys (11 wallets, 120s)",
+            "7 repeat early buyers"
           ],
           "bonded": false,
           "entry_curve_price_ada": null,
