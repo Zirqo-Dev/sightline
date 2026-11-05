@@ -1784,7 +1784,7 @@
         },
         {
           "ticker": "GG",
-          "status": "pending_gate",
+          "status": "failed_gate",
           "swarm_flagged_at": "2026-11-04T19:12:06Z",
           "first_seen": "2026-11-04T14:20:00-05:00",
           "flags": [
@@ -1793,11 +1793,19 @@
           "bonded": false,
           "entry_curve_price_ada": null,
           "entry_note": "curve price not readable this run (no DEX pool found)",
-          "gate_check_due": "launch+24h"
+          "gate_check_due": "launch+24h",
+          "gate_checks": [
+            {
+              "at": "2026-11-05T14:15:00-05:00",
+              "bonded": false,
+              "note": "launch+24h passed (~2:12-2:20 PM ET Nov 5); no DEX pool found; 48h return due ~2:20 PM Nov 6"
+            }
+          ],
+          "gate_result": "failed: not bonded (no DEX pool) at launch+24h"
         },
         {
           "ticker": "MIXI",
-          "status": "pending_gate",
+          "status": "failed_gate",
           "swarm_flagged_at": "2026-11-04T19:12:06Z",
           "first_seen": "2026-11-04T14:20:00-05:00",
           "flags": [
@@ -1806,7 +1814,15 @@
           "bonded": false,
           "entry_curve_price_ada": null,
           "entry_note": "curve price not readable this run (no DEX pool found)",
-          "gate_check_due": "launch+24h"
+          "gate_check_due": "launch+24h",
+          "gate_checks": [
+            {
+              "at": "2026-11-05T14:15:00-05:00",
+              "bonded": false,
+              "note": "launch+24h passed (~2:12-2:20 PM ET Nov 5); no DEX pool found; 48h return due ~2:20 PM Nov 6"
+            }
+          ],
+          "gate_result": "failed: not bonded (no DEX pool) at launch+24h"
         },
         {
           "ticker": "WED",
@@ -1975,6 +1991,50 @@
             "coordinated_buys (4 wallets, 120s)",
             "repeat early buyer w-9d7e7db5",
             "sniper_full_exit w-63546263"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "DESSA",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-05T19:12:38Z",
+          "first_seen": "2026-11-05T14:15:00-05:00",
+          "flags": [
+            "coordinated_buys (5 wallets, 120s)",
+            "repeat early buyers w-6a08c4e3, w-f7844f67"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "GEORGE",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-05T19:12:38Z",
+          "first_seen": "2026-11-05T14:15:00-05:00",
+          "flags": [
+            "coordinated_buys (7 wallets, 120s)",
+            "first-block sniper tag early",
+            "repeat early buyers"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "MEPA",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-05T19:12:38Z",
+          "first_seen": "2026-11-05T14:15:00-05:00",
+          "flags": [
+            "coordinated_buys (15 wallets, 120s)",
+            "pool pre-seeder and first-block sniper tags early",
+            "repeat early buyers"
           ],
           "bonded": false,
           "entry_curve_price_ada": null,
