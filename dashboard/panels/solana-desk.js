@@ -59,10 +59,25 @@
     older.forEach(t => { const k = modelOf(t); labels[k] = (labels[k] || 0) + 1; });
     return { closes: counted.length, net: sum(counted), wins: counted.filter(t => num(t.pnl) > 0).length, older: older.length, olderNet: sum(older), labels };
   }
+  function refillNote(paper) {
+    const events = paper && Array.isArray(paper.refills) ? paper.refills : [];
+    if (!events.length) return "";
+    const bits = [];
+    events.forEach(r => {
+      const books = r && r.books || {};
+      "FRS".split("").forEach(name => {
+        const info = books[name];
+        if (info && num(info.added) != null) bits.push(name + " +" + S.fmt(num(info.added), 3) + " SOL");
+      });
+    });
+    const reason = (events[0] && events[0].reason) || "cash refill";
+    return `<p class="muted">Cash refill, not a trade: ${S.esc(bits.join(", "))}. ${S.esc(reason)}. The equity jump is cash added. P&amp;L does not include it.</p>`;
+  }
   function book(trades, paper, now) {
     const sells = trades.filter(t => /sell|exit|close/i.test(t.action));
     const pos = {};
     for (const t of trades) {
+      if (t.action === "refill") continue;  // cash top-up: sol is not a position and pnl is blank
       const k = (t.book || "") + "|" + t.mint;
       const p = pos[k] = pos[k] || { book: t.book, mint: t.mint, symbol: t.symbol, frac: 0, sol: 0, px: null };
       const f = num(t.frac) ?? 1;
@@ -81,6 +96,7 @@
       <div class="card"><div class="k">P&amp;L (SOL)</div><div class="v ${S.pnlClass(total)}">${sol(total)}</div></div><div class="card"><div class="k">Win rate</div><div class="v">${pnls.length ? Math.round(wins / pnls.length * 100) + "%" : "–"}</div></div>
       ${winLine(w7, 7)}${winLine(w28, 28)}</div>
       <p class="muted">7-day and 28-day P&amp;L count only <code>v3-exit-aware</code> closes. Older closes stay in the table, labelled.</p>
+      ${refillNote(paper)}
       ${open.length ? `<div class="sd-h">Open positions</div><table class="tbl"><thead><tr><th>Token</th><th>Book</th><th class="num">Size SOL</th><th class="num">Entry px</th><th>Links</th></tr></thead><tbody>${open.map(p => `<tr><td><b>${S.esc(p.symbol || short(p.mint))}</b></td><td class="c-meta">${S.esc(p.book)}</td><td class="num">${S.fmt(p.sol, 3)}</td><td class="num">${p.px == null ? "–" : S.esc(p.px)}</td><td>${links(p.mint)}</td></tr>`).join("")}</tbody></table>` : ""}
       ${sells.length ? `<div class="sd-h">Closed trades</div><table class="tbl"><thead><tr><th>Token</th><th>When</th><th>Why</th><th>Model</th><th class="num">P&amp;L SOL</th></tr></thead><tbody>${sells.slice(-20).reverse().map(t => `<tr><td><b>${S.esc(t.symbol || short(t.mint))}</b></td><td class="c-meta">${S.esc(S.when(new Date(+t.time * 1000).toISOString()))}</td><td class="c-meta">${S.esc(t.why)}</td><td class="c-meta">${S.esc(modelOf(t))}</td><td class="num ${S.pnlClass(num(t.pnl) || 0)}">${sol(num(t.pnl))}</td></tr>`).join("")}</tbody></table>` : ""}`;
   }

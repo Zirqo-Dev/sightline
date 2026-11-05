@@ -351,7 +351,7 @@ def book_closes(rows, book):
     incomplete = 0
     for row in rows:
         if row.get("book") != book or row.get("action") not in ("buy", "sell"):
-            continue
+            continue  # refill is a cash top-up, not a lot
         mint = row.get("mint") or ""
         try:
             ts = int(float(row.get("time") or ""))
