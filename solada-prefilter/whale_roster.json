@@ -5,7 +5,7 @@
   "measured_factor": true,
   "min_sample": 8,
   "dormant_count": 11,
-  "asof": "2026-11-05T19:18:51Z",
+  "asof": "2026-11-05T21:17:14Z",
   "note": "Research tally. A hit is an observed checkpoint where every measured series (price and liquidity) moves the whale's way at +1h, +6h, or +24h. A wrong-way observation is a miss. No observation is unobserved and is not a miss. n_observed is hits plus misses. Rates stay blank under 8 observed checkpoints on that horizon in that tally. scores.live is the forward quote path, or the lead's published private-cache tally. scores.backfill is approximate: nearest desk-data ADA/qty within 20 minutes at 1h, 60 minutes at 6h, and 3 hours at 24h, plus pool ADA when a snapshot is in that window. Backfill never replaces live. eligible_for_active needs at least 25 live observed checkpoints and a live hit rate above 55% at both 6h and 24h. promising_backfill means the approximate tally alone would clear that bar. Nothing is promoted automatically. Not a buy signal.",
   "whales": [
     {
@@ -13,35 +13,35 @@
       "role": "lead",
       "status": "active",
       "eligible_for_active": false,
-      "eligible_reason": "not eligible: live 6h observed 174, rate 0.374 (need > 0.55); live 24h observed 158, rate 0.272 (need > 0.55); promotion is a manual owner decision",
+      "eligible_reason": "not eligible: live 6h observed 177, rate 0.384 (need > 0.55); live 24h observed 166, rate 0.265 (need > 0.55); promotion is a manual owner decision",
       "promising_backfill": false,
       "scores": {
-        "events": 1090,
-        "accumulate": 1080,
+        "events": 1103,
+        "accumulate": 1092,
         "trim": 0,
-        "exit": 10,
+        "exit": 11,
         "live": {
           "h1": {
-            "n_observed": 173,
-            "hits": 70,
-            "hit_rate": 0.405
+            "n_observed": 177,
+            "hits": 72,
+            "hit_rate": 0.407
           },
           "h6": {
-            "n_observed": 174,
-            "hits": 65,
-            "hit_rate": 0.374
+            "n_observed": 177,
+            "hits": 68,
+            "hit_rate": 0.384
           },
           "h24": {
-            "n_observed": 158,
-            "hits": 43,
-            "hit_rate": 0.272
+            "n_observed": 166,
+            "hits": 44,
+            "hit_rate": 0.265
           }
         },
         "backfill": {
           "h1": {
-            "n_observed": 122,
-            "hits": 50,
-            "hit_rate": 0.41
+            "n_observed": 123,
+            "hits": 51,
+            "hit_rate": 0.415
           },
           "h6": {
             "n_observed": 113,
@@ -56,18 +56,18 @@
           "approximate": true,
           "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
         },
-        "n_observed_h1": 173,
-        "priced_h1": 173,
-        "hits_h1": 70,
-        "hit_rate_h1": 0.405,
-        "n_observed_h6": 174,
-        "priced_h6": 174,
-        "hits_h6": 65,
-        "hit_rate_h6": 0.374,
-        "n_observed_h24": 158,
-        "priced_h24": 158,
-        "hits_h24": 43,
-        "hit_rate_h24": 0.272,
+        "n_observed_h1": 177,
+        "priced_h1": 177,
+        "hits_h1": 72,
+        "hit_rate_h1": 0.407,
+        "n_observed_h6": 177,
+        "priced_h6": 177,
+        "hits_h6": 68,
+        "hit_rate_h6": 0.384,
+        "n_observed_h24": 166,
+        "priced_h24": 166,
+        "hits_h24": 44,
+        "hit_rate_h24": 0.265,
         "small_sample": false,
         "social_moves_matched": null
       }
@@ -364,9 +364,9 @@
             "hit_rate": 0.375
           },
           "h6": {
-            "n_observed": 32,
+            "n_observed": 34,
             "hits": 15,
-            "hit_rate": 0.469
+            "hit_rate": 0.441
           },
           "h24": {
             "n_observed": 28,
@@ -684,9 +684,9 @@
             "hit_rate": 0.426
           },
           "h6": {
-            "n_observed": 62,
-            "hits": 21,
-            "hit_rate": 0.339
+            "n_observed": 63,
+            "hits": 22,
+            "hit_rate": 0.349
           },
           "h24": {
             "n_observed": 59,
