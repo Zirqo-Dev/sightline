@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "desk": "nft",
-  "asof": "2026-11-02T13:04:09-05:00",
+  "asof": "2026-11-03T13:03:52-05:00",
   "headline": "2026-11-02 Desk pass: crossover scan, hot-on-OpenSea, Cardano live bids, Alchemy owners second source",
   "levels": {
     "pudgy-penguins": "pass",
@@ -20,10 +20,267 @@
   "kill_lines": {},
   "paper_actions": [],
   "followups": [
-    "next routine: Nightly learning brief at 2026-11-02T21:45:00-05:00"
+    "next routine: Nightly learning brief at 2026-11-03T21:45:00-05:00"
   ],
   "sources": "CryptoSlam, OpenSea, GlintLore, Blockscout, Magic Eden, Wayup, X (public market data only)",
   "runs": [
+    {
+      "asof": "2026-11-03T13:25:00-05:00",
+      "tape": "2026-11-03T13:25:00-05:00",
+      "type": "tape",
+      "headline": "2026-11-02 Desk pass: crossover scan, hot-on-OpenSea, Cardano live bids, Alchemy owners second source",
+      "last_checked_note": "2026-11-02 Desk pass: crossover scan, hot-on-OpenSea, Cardano live bids, Alchemy owners second source",
+      "levels": {
+        "pudgy-penguins": "pass",
+        "courtyard": "pass",
+        "retardio-cousins-classic": "pass",
+        "argonauts": "pass",
+        "beezie": "pass",
+        "claus": "pass",
+        "credits": "pass",
+        "cambria-charters": "pass",
+        "birds-marfa": "pass",
+        "milady-maker": "pass",
+        "hypurr": "pass",
+        "frontonauts": "pass"
+      },
+      "watchlist": [
+        {
+          "name": "Pudgy Penguins",
+          "slug": "pudgy-penguins",
+          "chain": "ethereum",
+          "status": "pass",
+          "last_checked": "2026-10-28T13:24:00-04:00",
+          "kill": "FIRED 2026-10-08 07:36 ET: OpenSea floor 2.8495 ETH and Blur 2.8494 ETH, both under the 2.95 line."
+        },
+        {
+          "name": "Courtyard",
+          "slug": "courtyard",
+          "chain": "polygon",
+          "status": "pass",
+          "last_checked": "2026-10-15T13:10:00-04:00",
+          "kill": "n/a: passed 2026-10-15 Desk as explicit miss. No collection-level kill can be written: OS floor is a 5.39 USDC slab (mixed graded cards), OS collection offers disabled, no GlintLore page."
+        },
+        {
+          "name": "Retardio Cousins Classic",
+          "slug": "retardio-cousins-classic",
+          "chain": "solana",
+          "status": "pass",
+          "last_checked": "2026-10-06T12:31:00-04:00",
+          "kill": "FIRED 2026-10-06 12:31 ET: Tensor floor 1.19 SOL and Magic Eden 1.194 SOL agree below the 1.39 band."
+        },
+        {
+          "name": "Argonauts",
+          "slug": "argonauts",
+          "chain": "ethereum",
+          "status": "pass",
+          "last_checked": "2026-10-28T13:24:00-04:00",
+          "kill": "FIRED 2026-10-18 19:45 ET (hourly pulse, confirmed on a second read): OS floor 0.6777 ETH, under the 0.70 line. Old lines were: OS floor under 0.70, OS top collection offer under 0.55, OS 24h under $30K, CS buyers under 15."
+        },
+        {
+          "name": "Beezie",
+          "slug": "beezie",
+          "chain": "base",
+          "status": "pass",
+          "last_checked": "2026-10-05T11:03:00-04:00",
+          "kill": "n/a — passed"
+        },
+        {
+          "name": "Claus",
+          "slug": "claus",
+          "chain": "ethereum",
+          "status": "pass",
+          "last_checked": "2026-10-15T07:40:00-04:00",
+          "kill": "FIRED 2026-10-09 07:40 ET: hook upgraded 8 times since 8 Oct 14:03 ET and NFT_FEE_PIPS changed from 3,500 to 7,000 (impl FwaRewardBoostHook [addr], 07:12 ET). Written kill was any upgrade that changes the 3,500 share. Floor and volume kills not fired."
+        },
+        {
+          "name": "Credits (Jack Butcher / Visualize Value)",
+          "slug": "credits",
+          "chain": "ethereum",
+          "status": "pass",
+          "last_checked": "2026-10-15T07:40:00-04:00",
+          "kill": "FIRED 2026-10-09 07:42 ET: OpenSea 24h volume $29.7K, under the $30K line (marginal). Floor 0.0089 still above the 0.0064 low; top offer ~4% under floor."
+        },
+        {
+          "name": "Cambria Charters",
+          "slug": "cambria-charters",
+          "chain": "ethereum",
+          "status": "pass",
+          "last_checked": "2026-10-18T07:42:00-04:00",
+          "kill": "FIRED 2026-10-10 07:41 ET: CryptoSlam 24h buyers 82, under the 100 line (82 buyers vs 166 sellers). Onchain agrees: 358 transfers, 91 receivers vs 178 senders in 24h. Floor (0.0789 > 0.06 mint) and offer (~8% under floor) kills not fired. Written by KING 9 Oct."
+        },
+        {
+          "name": "Birds, Marfa",
+          "slug": "birds-marfa",
+          "chain": "ethereum",
+          "status": "pass",
+          "last_checked": "2026-10-16T07:40:00-04:00",
+          "kill": "n/a: passed. 100 pieces and 73 owners cannot carry a floor kill; no second-venue bid (GlintLore has no page)."
+        },
+        {
+          "name": "Milady Maker",
+          "slug": "milady-maker",
+          "chain": "ethereum",
+          "status": "pass",
+          "last_checked": "2026-10-28T13:24:00-04:00",
+          "kill": "n/a: passed 17 Oct tape. Reopen as watch only if OS and GlintLore floors hold at or above 0.67 for two tapes, buyers beat sellers without the [addr] seller, and holders rise above 5,160."
+        },
+        {
+          "name": "Hypurr",
+          "slug": "hypurr",
+          "chain": "hyperevm",
+          "status": "pass",
+          "last_checked": "2026-10-28T13:24:00-04:00",
+          "kill": "OS floor under 179 HYPE (sweep fully retraced), or OS top collection offer under 160 WHYPE, or 24h buyers under 5. Thesis break (added 19 Oct Desk): [addr] (holds 41, owns ~14 of the bid units under floor) or [addr] (holds 25) starts sending Hypurr out, or [addr]'s 188 x8 bid is pulled. || FIRED 2026-10-28 13:20 ET: 24h buyers 4 (OS 4 sales; Etherscan V2 chain 999: 4 transfers, 4 receivers), under the 5 line. Floor 228.91 HYPE and top offer 199.5 WHYPE did not fire; [addr] still bidding (195 x4) and received 2 more (24 and 25 Oct); no outflows from [addr] or [addr] since 19 Oct."
+        },
+        {
+          "name": "Frontonauts",
+          "slug": "frontonauts",
+          "chain": "ethereum",
+          "status": "pass",
+          "last_checked": "2026-10-19T07:43:00-04:00",
+          "kill": "n/a: passed 19 Oct tape as an explicit miss."
+        }
+      ],
+      "chains": [
+        {
+          "chain": "Ethereum",
+          "status": "alive",
+          "sales_24h_usd": 2421122,
+          "wash_pct": 1.04,
+          "buyers": 2124,
+          "tx": 9907,
+          "last_checked": "2026-10-28T13:24:00-04:00",
+          "note": "CS 28 Oct 13:04 ET: raw $2.42M, wash 1.0%, buyers 2,124 / sellers 1,534 / tx 9,907. Stripped ~$1.29M: Uniswap V3 Positions $1.00M (LP, 6 buyers/2 sellers), BEEE Different $100k (403 buyers/11 sellers/1,965 tx, mint flow), Killa $79k (known bad feed), INFLATION $4.6k mint flow, GONDI vault, Alchemix, and 1-2 tx rows (Deafbeef, Family Mooks, identity.md, LUCI, others). Real secondary ~$1.13M vs ~$1.36M on 19 Oct (-17%). Top real: BAYC $320k on 10 tx/9 buyers (thin, Mudwater TCG chatter), MAYC $93k 24/25, Argonauts $71k 31/31, Pudgy $50k 8/8, Azuki $48k 23/18, Normies $23k 17/18, Milady $16k 5/6, Credits $12k 119/74."
+        },
+        {
+          "chain": "Polygon",
+          "status": "quiet_for_desk",
+          "sales_24h_usd": 3350871,
+          "wash_pct": 63.9,
+          "buyers": 8704,
+          "tx": 27370,
+          "last_checked": "2026-10-28T13:24:00-04:00",
+          "note": "CS 28 Oct $3.35M, wash 64%, 8,704 buyers. Courtyard house/pack flow (X @cydelmg claims Courtyard $13.8M 7d, single-source). quiet_for_desk stands."
+        },
+        {
+          "chain": "Base",
+          "status": "quiet_for_desk",
+          "sales_24h_usd": 3514378,
+          "wash_pct": 82.4,
+          "buyers": 185,
+          "tx": 32410,
+          "last_checked": "2026-10-28T13:24:00-04:00",
+          "note": "CS 28 Oct $3.51M, wash 82%, 185 buyers / 235 sellers / 32,410 tx. Buyer-dead; override holds."
+        },
+        {
+          "chain": "Bitcoin",
+          "status": "quiet_for_desk",
+          "sales_24h_usd": 3293560,
+          "wash_pct": 0.14,
+          "buyers": 753,
+          "tx": 1142,
+          "last_checked": "2026-10-28T13:24:00-04:00",
+          "note": "CS 28 Oct raw $3.29M but $2.82M is one '$8888 BRC-20' row on 1 tx / 1 buyer (phantom, stripped); remaining BRC-20 rows ~$0.43M. Collectibles tiny: OMB $11.6k, Puppets $11.0k, NodeMonkes $6.4k. Quiet stands."
+        },
+        {
+          "chain": "Solana",
+          "status": "quiet",
+          "sales_24h_usd": 325559,
+          "wash_pct": 1.41,
+          "buyers": 3672,
+          "tx": 33330,
+          "last_checked": "2026-10-28T13:24:00-04:00",
+          "note": "CS 28 Oct $326k, buyers 3,672 / sellers 5,470. ME stats 1d top-50 = 936 SOL (~$94k at $100.94), up from 594. Leaders thin: Tomorrowland Letter 199 SOL on 4 tx, Bozo Benk 161 SOL / 7 tx (56 owners), OTC Desks 89 / 12 (pool flow), Retardio Classic 74 / 64 (fp 1.149, passed), Mad Lads 39 / 4 (fp 7.48). No name with breadth."
+        },
+        {
+          "chain": "Cardano",
+          "status": "quiet_for_desk",
+          "sales_24h_usd": 1991,
+          "wash_pct": 0.0,
+          "buyers": 32,
+          "tx": 117,
+          "last_checked": "2026-11-03T13:25:00-05:00",
+          "note": "Walkers out of the top 20. Bid ladders not re-read (stale). Quiet stands."
+        },
+        {
+          "chain": "Immutable",
+          "status": "off_desk",
+          "sales_24h_usd": 316905,
+          "wash_pct": 0.0,
+          "buyers": 501,
+          "tx": 3358,
+          "last_checked": "2026-10-28T13:24:00-04:00",
+          "note": "CS 28 Oct $317k. Off desk, no wallet."
+        },
+        {
+          "chain": "Panini",
+          "status": "off_desk",
+          "sales_24h_usd": 168914,
+          "wash_pct": 0.0,
+          "buyers": 213,
+          "tx": 1853,
+          "last_checked": "2026-10-28T13:24:00-04:00",
+          "note": "CS 28 Oct $169k. Off desk."
+        },
+        {
+          "chain": "BNB",
+          "status": "quiet_for_desk",
+          "sales_24h_usd": 271378,
+          "wash_pct": 0.0,
+          "buyers": 1930,
+          "tx": 5036,
+          "last_checked": "2026-10-28T13:24:00-04:00",
+          "note": "CS 28 Oct $271k / 1,930 buyers / 1,861 sellers. Rows not re-read; explicit miss stands."
+        },
+        {
+          "chain": "Flow",
+          "status": "quiet",
+          "sales_24h_usd": 16,
+          "wash_pct": 0.0,
+          "buyers": 333,
+          "tx": 3079,
+          "last_checked": "2026-10-28T13:24:00-04:00",
+          "note": "CS 28 Oct $16 (feed likely broken; 254 buyers / 2 tx)."
+        },
+        {
+          "chain": "Arbitrum",
+          "status": "quiet",
+          "sales_24h_usd": 11605,
+          "wash_pct": 0.0,
+          "buyers": 103,
+          "tx": 444,
+          "last_checked": "2026-10-28T13:24:00-04:00",
+          "note": "CS 28 Oct $11.6k; ~1% of stripped ETH."
+        },
+        {
+          "chain": "Abstract",
+          "status": "dead_closing",
+          "last_checked": "2026-10-08T07:45:00-04:00",
+          "note": "Igloo shuts the chain 15 Dec 2026; bridge assets off via official Migration Hub (migrate.abs.xyz) or native bridge (3h delay). Not on CS chain table. Fake @ChainAbsrtact claims an Oct 20 date: scam. ~$76M still bridged (CoinDesk/DefiLlama). 28 Oct: no fresh read; shutdown date 15 Dec unchanged per book (stale since 8 Oct)."
+        },
+        {
+          "chain": "HyperEVM (Hyperliquid)",
+          "status": "alive_thin",
+          "last_checked": "2026-10-28T13:24:00-04:00",
+          "note": "28 Oct: Hypurr OS floor 228.91 HYPE (~$18.3k at $80.03), but 24h only 4 sales / 4 onchain receivers (Etherscan V2 chain 999). One-collection venue; Hypurr kill fired on buyers. Not on CS table."
+        },
+        {
+          "chain": "Robinhood Chain",
+          "status": "emerging_unconfirmed",
+          "last_checked": "2026-10-28T13:24:00-04:00",
+          "note": "New venue logged 28 Oct from own X pass. Claim (X news only, single-source): Yield Fields 3,333 Founding Deeds sold out in ~30s for ~$8.3M via Dutch auction; OS slug not found keyless. Vaultlings (free mint, 2,965 supply) OS floor 0.032 ETH, top offer 0.0278, 834 owners, 1d 11.1 ETH / 238 sales, 7d 45.9 ETH / 5,006 sales: mint-flip churn. Fortune Foes auction backlash (founder silent). Not on CS. Hoodscout lane is off book; this read is KING's own."
+        },
+        {
+          "chain": "ApeChain",
+          "status": "quiet_unread",
+          "last_checked": "2026-10-28T13:24:00-04:00",
+          "note": "Not on CS table; OS chain stats need a key (expired). Only X: $APE ecosystem promo posts, no NFT tape. Treat as quiet until read."
+        }
+      ],
+      "paper_open": [],
+      "research_only": true
+    },
     {
       "asof": "2026-11-02T13:20:00-05:00",
       "tape": "2026-11-02T13:20:00-05:00",
@@ -1735,6 +1992,10 @@
     }
   ],
   "history": [
+    {
+      "asof": "2026-11-02T13:20:00-05:00",
+      "headline": "2026-11-02 Desk pass: crossover scan, hot-on-OpenSea, Cardano live bids, Alchemy owners second source"
+    },
     {
       "asof": "2026-10-19T13:14:00-04:00",
       "headline": "Desk 19 Oct 13:13 ET: nothing actionable. Closed the Hypurr second-source hole: onchain transfers (Etherscan V2, HyperEVM) match OpenSea, so the sweep is real money but still two wallets (25 of 42 transfers, 15 receivers vs 29 senders); onchain shows the main sweeper ([addr]) is the wallet that sold grail #9 for 4,000 HYPE, so the sweep is one whale recycling that sale, not new demand; the sweep stopped after the morning tape and the floor slipped 221.9 to 219.8 HYPE."
