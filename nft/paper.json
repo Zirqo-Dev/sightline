@@ -113,6 +113,19 @@
       ],
       "rule": "No ticket on a new crossover mint before mint or in its first 24h. Open only if the floor holds at or above the public mint price for 24h, owners are at least 25% of minted, and no single wallet takes more than 20% of sales. Count free and OG claims as day-one sell supply (TMO: 1,300 free Effigies plus 1,152 OG claims of 10,000). Evidence 1 Nov: one wallet bought 29 of 61 Suited Ape sales, while Vaultlings' top buyer was 10 of 101 with 59 buyers vs 62 sellers.",
       "source": "KING"
+    },
+    {
+      "id": "R004",
+      "added_at": "2026-11-02",
+      "title": "When mint allocations stack, check holder concentration before any ticket",
+      "category": "entry",
+      "evidence": [
+        "tmo-initiates",
+        "suited-ape-society",
+        "vaultlings"
+      ],
+      "rule": "If a crossover mint lets GTD spots stack across allied houses, R3's 20% single-wallet sales cap is not enough: after mint, read holders via Alchemy getOwnersForContract and open no ticket if the top 10 wallets hold more than 15% of minted supply.",
+      "source": "KING"
     }
   ],
   "forecast_stats": {
