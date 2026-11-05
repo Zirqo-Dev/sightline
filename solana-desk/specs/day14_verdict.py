@@ -204,7 +204,7 @@ def build_closes(trades):
     ok = True
     for row in trades:
         if row.get("book") != "F" or row.get("action") not in ("buy", "sell"):
-            continue
+            continue  # refill is a cash top-up, not a lot
         mint = row.get("mint") or ""
         try:
             ts = int(float(row.get("time") or ""))

@@ -6,7 +6,9 @@ or write a book, and does not change config, day14_verdict.py, or a workflow.
 Post-v3 closes are lots in trades.csv whose every sell row has a non-blank
 cost_model. A lot is one mint in one book: sells fill the oldest open buy and
 the lot closes when the sold fraction reaches 1. The per-trade return is the
-summed `pnl` divided by the 0.5 SOL ticket.
+summed `pnl` divided by the 0.5 SOL ticket. This check has no cash book.
+action=refill rows are cash top-ups and are skipped, so a refill does not
+move those returns.
 
 The twin redraws, at each close's entry scan, a different mint from that
 scan's pre-filter candidate list and replays the frozen v6.5 exit rule with
@@ -67,7 +69,7 @@ def build_closes(rows):
     for row in rows:
         action = row.get("action")
         if action not in ("buy", "sell"):
-            continue
+            continue  # refill is a cash top-up, not a lot
         book = row.get("book") or ""
         mint = row.get("mint") or ""
         try:

@@ -30,7 +30,7 @@ script (no AI): `python -m desk.run --mode scan --data-dir PATH`. Runs never ove
 
 - `--mode scan` (default): checks leads with DexScreener, RugCheck and a Jupiter quote,
   logs `tasks.csv`, updates `state.json` and `health.json`. Never fills.
-- `--mode fill`: scan + paper fill step (`desk/fills.py`): marks/exits open positions, then opens fixed 0.5 SOL paper entries in books F, R, S. Writes `trades.csv`, `positions.json` (open positions per book, persisted between runs) and `paper.json` on desk-data. Paper only: no wallet, no signing.
+- `--mode fill`: scan + paper fill step (`desk/fills.py`): marks/exits open positions, then opens fixed 0.5 SOL paper entries in books F, R, S. Writes `trades.csv`, `positions.json` (open positions per book, persisted between runs) and `paper.json` on desk-data. Paper only: no wallet, no signing. On the first fill where F, R, and S are all flat and each has cash below one ticket, refill id `2026-11-04-cash-5` sets available cash to 5 SOL and appends `action=refill` rows with a blank pnl. Past trades stay as they are.
 - `--mode auto` (workflow default): fill when `config.FROZEN` and `run.FILL_READY`, else scan. Set the repo variable `SOLANA_DESK_MODE=scan` to pause fills without a PR.
 
 Runs are idempotent: one scan per 30-min UTC slot, so a duplicate trigger is a no-op.

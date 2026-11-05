@@ -15,6 +15,10 @@ plus stress_exit_bps on hard_stop, trailing_stop and liquidity_pulled, capped at
 Jupiter priceImpactPct is logged and is not an input. Exits still use the raw quote price.
 Gross and net PnL are both recorded; pnl stays the net figure. New rows carry cost_model
 v3-exit-aware and the time that model started. Older rows are not rewritten.
+A one-time cash refill (id 2026-11-04-cash-5) tops books F, R, and S to 5 SOL of
+available cash when all three are flat and each is short of a 0.5 SOL ticket.
+It appends action=refill rows with a blank pnl and does not rewrite past trades.
+The ticket, the start balance, and the v6.5 rules stay as they are.
 desk.observe adds reserve, migration, quote, and held-price fields. Those fields are
 logs. They are not read by exits, books, or the fill price. log=False skips them.
 """
@@ -25,6 +29,10 @@ STATE = "positions.json"
 LAMPORTS = 1e9
 EXCLUDED_SAFETY = {"not_graduated", "missing_data"}  # out of scope / no execution check ran: never fill (S or R)
 CLOSED_KEEP = 200
+# One capital event. Not a new book and not a change to TICKET_SOL or START_BALANCE_SOL.
+REFILL_ID = "2026-11-04-cash-5"
+REFILL_REASON = "owner-approved refill Nov 4 2026, rule change"
+REFILL_CASH = 5.0
 
 def iso(ts): return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(ts))
 
@@ -142,6 +150,87 @@ def exit_haircut_of(pos):
 
 def equity(b):
     return b["cash"] + sum(net_proceeds(p, p["frac"], p["last_mark"], exit_haircut_of(p)) for p in b["open"].values())
+
+def _refill_already(s):
+    prior = s.get("refills")
+    if not isinstance(prior, list):
+        return False
+    return any(isinstance(r, dict) and r.get("id") == REFILL_ID for r in prior)
+
+def _logged_refill_books(d):
+    """Books that already have this refill row. A crashed run must not append it twice."""
+    found = set()
+    for row in read_trades(d):
+        if row.get("action") == "refill" and row.get("why") == REFILL_REASON and row.get("book") in set("FRS"):
+            found.add(row["book"])
+    return found
+
+def _refill_row(d, now, book, added):
+    ledger.trade(d, dict(time=int(now), book=book, agent="REFILL", mint="", symbol="",
+                         action="refill", frac="", sol=round(added, 9), quote_px="",
+                         impact_pct="", fee_sol="", haircut_pct="", why=REFILL_REASON,
+                         pnl="", check_delay_s="", stale="",
+                         gross_pnl="", net_pnl="", entry_haircut_pct="", exit_haircut_pct="",
+                         verified_impact_bps="", cost_model="", cost_model_started_at=""))
+
+def apply_cash_refill(d, s, now):
+    """Top F, R, and S available cash to REFILL_CASH, once.
+
+    Fires only when this id is not already stored and every book is flat with cash
+    below one ticket (the stall the owner approved on Nov 4 2026). Cash is added.
+    realized_pnl, open lots, closed lots, and existing trades.csv rows stay put.
+    One action=refill row per book carries the timestamp, the amount, and the reason.
+    Blank pnl keeps per-trade returns on the 0.5 SOL ticket.
+    """
+    if _refill_already(s):
+        return None
+    books = s.get("books") or {}
+    if any(name not in books for name in "FRS"):
+        return None
+    for name in "FRS":
+        b = books[name]
+        if b.get("open"):
+            return None
+        try:
+            cash = float(b.get("cash"))
+        except (TypeError, ValueError):
+            return None
+        if cash >= C.TICKET_SOL:
+            return None
+    logged = _logged_refill_books(d)
+    detail = {}
+    for name in "FRS":
+        b = books[name]
+        before = float(b["cash"])
+        added = REFILL_CASH - before
+        b["cash"] = REFILL_CASH
+        detail[name] = dict(cash_before=before, added=added, cash_after=REFILL_CASH)
+        if name not in logged:
+            _refill_row(d, now, name, added)
+    event = dict(id=REFILL_ID, at=iso(now), reason=REFILL_REASON,
+                 target_cash=REFILL_CASH, ticket_sol=C.TICKET_SOL, books=detail)
+    if not isinstance(s.get("refills"), list):
+        s["refills"] = []
+    s["refills"].append(event)
+    return event
+
+def _refill_notes(s):
+    notes = []
+    for r in s.get("refills") or []:
+        if not isinstance(r, dict):
+            continue
+        bits = []
+        booked = r.get("books") or {}
+        for name in "FRS":
+            info = booked.get(name) or {}
+            if "added" not in info:
+                continue
+            bits.append(f"{name} +{round(float(info['added']), 9)}")
+        note = r.get("reason") or ""
+        if bits:
+            note = f"{note}: {', '.join(bits)}"
+        notes.append(dict(at=r.get("at") or "", type="refill", note=note))
+    return notes
 
 def ensure_model(s, now):
     """First new fill fixes the model's start time. Later fills copy it. Past rows are not touched."""
@@ -414,6 +503,10 @@ def paper_json(d, s, now):
                       dict(id="costs", rule=C.COST_NOTE)],
                summaries=[dict(at=v["ts"], type="void", note=", ".join(v["why"])) for v in s["voids"][-10:]] +
                          [dict(at=w["ts"], type="would_halt", note=f"{w['book']} drawdown {w['drawdown']*100:.1f}%") for n in "FRS" for w in s["books"][n]["would_halt"][-3:]])
+    notes = _refill_notes(s)
+    if notes:
+        out["refills"] = [r for r in (s.get("refills") or []) if isinstance(r, dict)]
+        out["summaries"] = notes + out["summaries"]
     with open(os.path.join(d, "paper.json"), "w") as f: json.dump(out, f, indent=1)
     return out
 
@@ -423,6 +516,7 @@ def step(d, now, run_id, seed, leads, st, sell_quote, liquidity, sleep=lambda s:
     """
     day = time.strftime("%Y-%m-%d", time.gmtime(now))
     s = load(d)
+    apply_cash_refill(d, s, now)
     manage(d, s, now, sell_quote, liquidity, sleep, log=log)
     v = void_reasons(s, st, now)
     opened = 0
