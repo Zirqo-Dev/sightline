@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-11-05T14:30:31Z",
+ "generated_at": "2026-11-05T15:00:36Z",
  "cfg_version": "v1-v6.5",
  "open": [
   {
@@ -25,11 +25,11 @@
     "px": 0.001982121408621819
    },
    "frac": 0.333333,
-   "last_mark": 0.0044326181100827885,
+   "last_mark": 0.013970131288832769,
    "thesis": "random_match",
    "result": {
     "pnl": 0.288693546,
-    "pct": 123.63,
+    "pct": 604.81,
     "unit": "SOL",
     "net_pnl": 0.288693546,
     "gross_pnl": 0.294931726
@@ -39,9 +39,9 @@
    "entry_token_reserve": 96361509.0,
    "entry_k": 16526875683.2319,
    "entry_reserve_error": null,
-   "last_sol_reserve": 267.876,
-   "last_token_reserve": 65378287.0,
-   "last_k": 17513274008.412,
+   "last_sol_reserve": 510.2727,
+   "last_token_reserve": 36181532.0,
+   "last_k": 18462448023.776398,
    "last_reserve_error": null,
    "reserve_snaps": [
     {
@@ -204,6 +204,13 @@
      "token": 65378287.0,
      "k": 17513274008.412,
      "pool": "8WCdJcaFDx9MQK2VP9sZLZmvKbtfaFuRTpvBEAesoVdw"
+    },
+    {
+     "t": "2026-11-05T15:00:36Z",
+     "sol": 510.2727,
+     "token": 36181532.0,
+     "k": 18462448023.776398,
+     "pool": "8WCdJcaFDx9MQK2VP9sZLZmvKbtfaFuRTpvBEAesoVdw"
     }
    ],
    "entry_pool": "8WCdJcaFDx9MQK2VP9sZLZmvKbtfaFuRTpvBEAesoVdw",
@@ -215,66 +222,10 @@
    "entry_quote_px": 0.001982121408621819,
    "entry_quote_impact": 0.01148450278898646,
    "entry_quote_error": null,
-   "max_price_held": 0.0044326181100827885,
+   "max_price_held": 0.013970131288832769,
    "min_price_held": 0.0017691844802750242,
-   "max_price_held_pct": 123.63,
+   "max_price_held_pct": 604.807,
    "min_price_held_pct": -10.7429
-  },
-  {
-   "id": "S-20261105T1430-4nQqpump",
-   "ticker": "LION",
-   "mint": "4nQqYeHziRZaiYLodVt56q9AyubY693oGnSPXYcNpump",
-   "book": "S",
-   "status": "open",
-   "size": 0.5,
-   "cost_model": "v3-exit-aware",
-   "cost_model_started_at": "2026-10-29T00:30:25Z",
-   "opened_at": "2026-11-05T14:30:31Z",
-   "window_ends_at": "2026-11-05T16:30:31Z",
-   "entry": {
-    "px": 0.00018518612213800527
-   },
-   "frac": 1.0,
-   "last_mark": 0.00018518612213800527,
-   "thesis": "safety:too_fresh",
-   "result": {
-    "pnl": 0.0,
-    "pct": 0.0,
-    "unit": "SOL",
-    "net_pnl": 0.0,
-    "gross_pnl": 0.0
-   },
-   "obs_v": 1,
-   "entry_sol_reserve": 35.6326,
-   "entry_token_reserve": 335652581.0,
-   "entry_k": 11960174157.740599,
-   "entry_reserve_error": null,
-   "last_sol_reserve": 35.6326,
-   "last_token_reserve": 335652581.0,
-   "last_k": 11960174157.740599,
-   "last_reserve_error": null,
-   "reserve_snaps": [
-    {
-     "t": "2026-11-05T14:30:31Z",
-     "sol": 35.6326,
-     "token": 335652581.0,
-     "k": 11960174157.740599,
-     "pool": "3tsouf6ZMuzWwMdoFefVJxhpjCjzmJgpGgz7yzd13CFj"
-    }
-   ],
-   "entry_pool": "3tsouf6ZMuzWwMdoFefVJxhpjCjzmJgpGgz7yzd13CFj",
-   "pool_created_at": "2026-11-05T14:17:52Z",
-   "pool_age_at_entry_s": 759.0,
-   "graduated_pump": true,
-   "boost_window": false,
-   "entry_quote_out": 2699986339297,
-   "entry_quote_px": 0.00018518612213800527,
-   "entry_quote_impact": 0.015922909171528003,
-   "entry_quote_error": null,
-   "max_price_held": 0.00018518612213800527,
-   "min_price_held": 0.00018518612213800527,
-   "max_price_held_pct": 0.0,
-   "min_price_held_pct": 0.0
   }
  ],
  "closed": [
@@ -15321,6 +15272,83 @@
    "min_price_held": 0.0001663375395623741,
    "max_price_held_pct": 0.0,
    "min_price_held_pct": -42.1737
+  },
+  {
+   "id": "S-20261105T1430-4nQqpump",
+   "ticker": "LION",
+   "mint": "4nQqYeHziRZaiYLodVt56q9AyubY693oGnSPXYcNpump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-11-05T14:30:31Z",
+   "closed_at": "2026-11-05T15:00:36Z",
+   "entry": {
+    "px": 0.00018518612213800527
+   },
+   "exit": {
+    "px": 9.902208730049076e-05
+   },
+   "exit_reason": "hard_stop",
+   "result": {
+    "pnl": -0.243735303,
+    "pct": -48.29,
+    "unit": "SOL",
+    "net_pnl": -0.243735303,
+    "net_pct": -48.29,
+    "gross_pnl": -0.232641717,
+    "gross_pct": -46.53
+   },
+   "thesis": "safety:too_fresh",
+   "obs_v": 1,
+   "entry_sol_reserve": 35.6326,
+   "entry_token_reserve": 335652581.0,
+   "entry_k": 11960174157.740599,
+   "entry_reserve_error": null,
+   "exit_sol_reserve": 24.235,
+   "exit_token_reserve": 422741786.0,
+   "exit_k": 10245147183.71,
+   "exit_reserve_error": null,
+   "last_sol_reserve": 24.235,
+   "last_token_reserve": 422741786.0,
+   "last_k": 10245147183.71,
+   "last_reserve_error": null,
+   "reserve_snaps": [
+    {
+     "t": "2026-11-05T14:30:31Z",
+     "sol": 35.6326,
+     "token": 335652581.0,
+     "k": 11960174157.740599,
+     "pool": "3tsouf6ZMuzWwMdoFefVJxhpjCjzmJgpGgz7yzd13CFj"
+    },
+    {
+     "t": "2026-11-05T15:00:36Z",
+     "sol": 24.235,
+     "token": 422741786.0,
+     "k": 10245147183.71,
+     "pool": "3tsouf6ZMuzWwMdoFefVJxhpjCjzmJgpGgz7yzd13CFj"
+    }
+   ],
+   "entry_pool": "3tsouf6ZMuzWwMdoFefVJxhpjCjzmJgpGgz7yzd13CFj",
+   "exit_pool": "3tsouf6ZMuzWwMdoFefVJxhpjCjzmJgpGgz7yzd13CFj",
+   "same_pool": true,
+   "pool_created_at": "2026-11-05T14:17:52Z",
+   "pool_age_at_entry_s": 759.0,
+   "graduated_pump": true,
+   "boost_window": false,
+   "entry_quote_out": 2699986339297,
+   "entry_quote_px": 0.00018518612213800527,
+   "entry_quote_impact": 0.015922909171528003,
+   "entry_quote_error": null,
+   "exit_quote_out": 267358283,
+   "exit_quote_px": 9.902208730049076e-05,
+   "exit_quote_impact": 0.008199591608965722,
+   "exit_quote_error": null,
+   "max_price_held": 0.00018518612213800527,
+   "min_price_held": 9.902208730049076e-05,
+   "max_price_held_pct": 0.0,
+   "min_price_held_pct": -46.5283
   }
  ],
  "books": {
@@ -15336,7 +15364,7 @@
   },
   "R": {
    "cash": 5.561334601,
-   "equity": 5.9316755,
+   "equity": 6.728280443,
    "realized_pnl": -9.071543455,
    "open": 1,
    "closed": 76,
@@ -15345,11 +15373,11 @@
    "realized_gross_pnl": -6.778400403
   },
   "S": {
-   "cash": 0.446343146,
-   "equity": 0.941603407,
-   "realized_pnl": -13.646747414,
-   "open": 1,
-   "closed": 72,
+   "cash": 0.707347583,
+   "equity": 0.707347583,
+   "realized_pnl": -13.890482717,
+   "open": 0,
+   "closed": 73,
    "fills_today": 14,
    "would_halt": [
     {
@@ -15359,7 +15387,7 @@
      "drawdown": 0.331
     }
    ],
-   "realized_gross_pnl": -12.855274168
+   "realized_gross_pnl": -13.087915885
   }
  },
  "costs": {
@@ -15386,16 +15414,16 @@
   "started_at": "2026-10-29T00:30:25Z",
   "windows": {
    "7": {
-    "counted_closes": 213,
-    "net_pnl": -23.351655837,
+    "counted_closes": 214,
+    "net_pnl": -23.59539114,
     "wins": 80,
     "older_closes": 0,
     "older_net_pnl": 0,
     "older_labels": {}
    },
    "28": {
-    "counted_closes": 259,
-    "net_pnl": -27.365372448,
+    "counted_closes": 260,
+    "net_pnl": -27.609107751,
     "wins": 100,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
