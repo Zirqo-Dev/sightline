@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-11-05T09:30:27Z",
+ "generated_at": "2026-11-05T10:00:34Z",
  "cfg_version": "v1-v6.5",
  "open": [
   {
@@ -25,11 +25,11 @@
     "px": 0.001982121408621819
    },
    "frac": 0.333333,
-   "last_mark": 0.0037702542401575356,
+   "last_mark": 0.004264047235150591,
    "thesis": "random_match",
    "result": {
     "pnl": 0.288693546,
-    "pct": 90.21,
+    "pct": 115.13,
     "unit": "SOL",
     "net_pnl": 0.288693546,
     "gross_pnl": 0.294931726
@@ -39,9 +39,9 @@
    "entry_token_reserve": 96361509.0,
    "entry_k": 16526875683.2319,
    "entry_reserve_error": null,
-   "last_sol_reserve": 248.3168,
-   "last_token_reserve": 69751382.0,
-   "last_k": 17320439973.8176,
+   "last_sol_reserve": 265.1515,
+   "last_token_reserve": 65630161.0,
+   "last_k": 17401935634.3915,
    "last_reserve_error": null,
    "reserve_snaps": [
     {
@@ -134,6 +134,13 @@
      "token": 69751382.0,
      "k": 17320439973.8176,
      "pool": "8WCdJcaFDx9MQK2VP9sZLZmvKbtfaFuRTpvBEAesoVdw"
+    },
+    {
+     "t": "2026-11-05T10:00:34Z",
+     "sol": 265.1515,
+     "token": 65630161.0,
+     "k": 17401935634.3915,
+     "pool": "8WCdJcaFDx9MQK2VP9sZLZmvKbtfaFuRTpvBEAesoVdw"
     }
    ],
    "entry_pool": "8WCdJcaFDx9MQK2VP9sZLZmvKbtfaFuRTpvBEAesoVdw",
@@ -145,66 +152,10 @@
    "entry_quote_px": 0.001982121408621819,
    "entry_quote_impact": 0.01148450278898646,
    "entry_quote_error": null,
-   "max_price_held": 0.004017019971158372,
+   "max_price_held": 0.004264047235150591,
    "min_price_held": 0.0017691844802750242,
-   "max_price_held_pct": 102.6627,
+   "max_price_held_pct": 115.1254,
    "min_price_held_pct": -10.7429
-  },
-  {
-   "id": "S-20261105T0930-2CG7pump",
-   "ticker": "Mei",
-   "mint": "2CG7SCxXcZgkKoqmzGDPtMCwAfQooaUzNhfG7DVDpump",
-   "book": "S",
-   "status": "open",
-   "size": 0.5,
-   "cost_model": "v3-exit-aware",
-   "cost_model_started_at": "2026-10-29T00:30:25Z",
-   "opened_at": "2026-11-05T09:30:27Z",
-   "window_ends_at": "2026-11-05T11:30:27Z",
-   "entry": {
-    "px": 0.00039977305393838335
-   },
-   "frac": 1.0,
-   "last_mark": 0.00039977305393838335,
-   "thesis": "safety:too_fresh",
-   "result": {
-    "pnl": 0.0,
-    "pct": 0.0,
-    "unit": "SOL",
-    "net_pnl": 0.0,
-    "gross_pnl": 0.0
-   },
-   "obs_v": 1,
-   "entry_sol_reserve": 51.3017,
-   "entry_token_reserve": 264184144.0,
-   "entry_k": 13553095700.244799,
-   "entry_reserve_error": null,
-   "last_sol_reserve": 51.3017,
-   "last_token_reserve": 264184144.0,
-   "last_k": 13553095700.244799,
-   "last_reserve_error": null,
-   "reserve_snaps": [
-    {
-     "t": "2026-11-05T09:30:27Z",
-     "sol": 51.3017,
-     "token": 264184144.0,
-     "k": 13553095700.244799,
-     "pool": "ELDoFNa6WpjBMH99A3sLBkw32t7WuDyxjQkwMJ7qN8X"
-    }
-   ],
-   "entry_pool": "ELDoFNa6WpjBMH99A3sLBkw32t7WuDyxjQkwMJ7qN8X",
-   "pool_created_at": "2026-11-05T09:23:50Z",
-   "pool_age_at_entry_s": 397.0,
-   "graduated_pump": true,
-   "boost_window": false,
-   "entry_quote_out": 1250709609050,
-   "entry_quote_px": 0.00039977305393838335,
-   "entry_quote_impact": 0.0,
-   "entry_quote_error": null,
-   "max_price_held": 0.00039977305393838335,
-   "min_price_held": 0.00039977305393838335,
-   "max_price_held_pct": 0.0,
-   "min_price_held_pct": 0.0
   }
  ],
  "closed": [
@@ -14943,6 +14894,83 @@
    "min_price_held": 2.0576239035410803e-05,
    "max_price_held_pct": 0.0,
    "min_price_held_pct": -97.6456
+  },
+  {
+   "id": "S-20261105T0930-2CG7pump",
+   "ticker": "Mei",
+   "mint": "2CG7SCxXcZgkKoqmzGDPtMCwAfQooaUzNhfG7DVDpump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-11-05T09:30:27Z",
+   "closed_at": "2026-11-05T10:00:34Z",
+   "entry": {
+    "px": 0.00039977305393838335
+   },
+   "exit": {
+    "px": 3.292177392902233e-05
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": -0.463979737,
+    "pct": -92.02,
+    "unit": "SOL",
+    "net_pnl": -0.463979737,
+    "net_pct": -92.02,
+    "gross_pnl": -0.458824421,
+    "gross_pct": -91.76
+   },
+   "thesis": "safety:too_fresh",
+   "obs_v": 1,
+   "entry_sol_reserve": 51.3017,
+   "entry_token_reserve": 264184144.0,
+   "entry_k": 13553095700.244799,
+   "entry_reserve_error": null,
+   "exit_sol_reserve": 6.5708,
+   "exit_token_reserve": 731273528.0,
+   "exit_k": 4805052097.7824,
+   "exit_reserve_error": null,
+   "last_sol_reserve": 6.5708,
+   "last_token_reserve": 731273528.0,
+   "last_k": 4805052097.7824,
+   "last_reserve_error": null,
+   "reserve_snaps": [
+    {
+     "t": "2026-11-05T09:30:27Z",
+     "sol": 51.3017,
+     "token": 264184144.0,
+     "k": 13553095700.244799,
+     "pool": "ELDoFNa6WpjBMH99A3sLBkw32t7WuDyxjQkwMJ7qN8X"
+    },
+    {
+     "t": "2026-11-05T10:00:34Z",
+     "sol": 6.5708,
+     "token": 731273528.0,
+     "k": 4805052097.7824,
+     "pool": "ELDoFNa6WpjBMH99A3sLBkw32t7WuDyxjQkwMJ7qN8X"
+    }
+   ],
+   "entry_pool": "ELDoFNa6WpjBMH99A3sLBkw32t7WuDyxjQkwMJ7qN8X",
+   "exit_pool": "ELDoFNa6WpjBMH99A3sLBkw32t7WuDyxjQkwMJ7qN8X",
+   "same_pool": true,
+   "pool_created_at": "2026-11-05T09:23:50Z",
+   "pool_age_at_entry_s": 397.0,
+   "graduated_pump": true,
+   "boost_window": false,
+   "entry_quote_out": 1250709609050,
+   "entry_quote_px": 0.00039977305393838335,
+   "entry_quote_impact": 0.0,
+   "entry_quote_error": null,
+   "exit_quote_out": 41175579,
+   "exit_quote_px": 3.292177392902233e-05,
+   "exit_quote_impact": 0.0,
+   "exit_quote_error": null,
+   "max_price_held": 0.00039977305393838335,
+   "min_price_held": 3.292177392902233e-05,
+   "max_price_held_pct": 0.0,
+   "min_price_held_pct": -91.7649
   }
  ],
  "books": {
@@ -14958,7 +14986,7 @@
   },
   "R": {
    "cash": 5.561334601,
-   "equity": 5.87634322,
+   "equity": 5.917594689,
    "realized_pnl": -9.071543455,
    "open": 1,
    "closed": 76,
@@ -14967,11 +14995,11 @@
    "realized_gross_pnl": -6.778400403
   },
   "S": {
-   "cash": 1.771455323,
-   "equity": 2.267238799,
-   "realized_pnl": -12.322158452,
-   "open": 1,
-   "closed": 68,
+   "cash": 1.811692111,
+   "equity": 1.811692111,
+   "realized_pnl": -12.786138189,
+   "open": 0,
+   "closed": 69,
    "fills_today": 10,
    "would_halt": [
     {
@@ -14981,7 +15009,7 @@
      "drawdown": 0.331
     }
    ],
-   "realized_gross_pnl": -11.561450144
+   "realized_gross_pnl": -12.020274565
   }
  },
  "costs": {
@@ -15009,15 +15037,15 @@
   "windows": {
    "7": {
     "counted_closes": 213,
-    "net_pnl": -21.43847252,
+    "net_pnl": -21.587935381,
     "wins": 82,
     "older_closes": 0,
     "older_net_pnl": 0,
     "older_labels": {}
    },
    "28": {
-    "counted_closes": 255,
-    "net_pnl": -26.040783487,
+    "counted_closes": 256,
+    "net_pnl": -26.504763224,
     "wins": 100,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
