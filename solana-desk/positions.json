@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1793903431,
+ "last_run_ts": 1793905236,
  "voids": [
   {
    "ts": "2026-10-31T02:00:29Z",
@@ -10080,66 +10080,11 @@
    "realized_gross": -6.03179405512939
   },
   "S": {
-   "cash": 0.2291111147779752,
-   "open": {
-    "S-20261105T1830-141XAYgK": {
-     "entry": 0.00010581647374392884,
-     "peak": 0.00010581647374392884,
-     "steps": 0,
-     "liq0": 33.7016,
-     "opened": 1793903431,
-     "frac": 1.0,
-     "last_mark": 0.00010581647374392884,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "141XGGGB1RZ9YTxmgMm92tavRwjH19YndJtB3aEwAYgK",
-     "symbol": "BURNIT",
-     "tokens": 4725162182308,
-     "run_id": "20261105T1830",
-     "why": "safety:too_fresh",
-     "book": "S",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
-     "entry_haircut": 0.009654799775449103,
-     "entry_cost": 0.5048373998877245,
-     "cost_model": "v3-exit-aware",
-     "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "obs_v": 1,
-     "entry_sol_reserve": 33.7016,
-     "entry_token_reserve": 347196716.0,
-     "entry_k": 11701084843.9456,
-     "entry_reserve_error": null,
-     "last_sol_reserve": 33.7016,
-     "last_token_reserve": 347196716.0,
-     "last_k": 11701084843.9456,
-     "last_reserve_error": null,
-     "reserve_snaps": [
-      {
-       "t": "2026-11-05T18:30:31Z",
-       "sol": 33.7016,
-       "token": 347196716.0,
-       "k": 11701084843.9456,
-       "pool": "9bbt6hrU5sGw6o7hRiUsiCM4uvLvS1HpFiywmJqciFBa"
-      }
-     ],
-     "entry_pool": "9bbt6hrU5sGw6o7hRiUsiCM4uvLvS1HpFiywmJqciFBa",
-     "pool_created_at": "2026-11-05T18:15:45Z",
-     "pool_age_at_entry_s": 886.0,
-     "graduated_pump": true,
-     "boost_window": false,
-     "entry_quote_out": 4725162182308,
-     "entry_quote_px": 0.00010581647374392884,
-     "entry_quote_impact": 0.0,
-     "entry_quote_error": null,
-     "max_price_held": 0.00010581647374392884,
-     "min_price_held": 0.00010581647374392884,
-     "max_price_held_pct": 0.0,
-     "min_price_held_pct": 0.0
-    }
-   },
+   "cash": 0.36262868670275306,
+   "open": {},
    "fills_day": "2026-11-05",
    "fills_today": 16,
-   "realized_pnl": -13.863881785171797,
+   "realized_pnl": -14.235201613134743,
    "closed": [
     {
      "id": "S-20261028T1330-5Zjdpump",
@@ -13203,6 +13148,71 @@
      "min_price_held": 0.007457721801822689,
      "max_price_held_pct": 13.7021,
      "min_price_held_pct": -18.0576
+    },
+    {
+     "id": "S-20261105T1830-141XAYgK",
+     "mint": "141XGGGB1RZ9YTxmgMm92tavRwjH19YndJtB3aEwAYgK",
+     "symbol": "BURNIT",
+     "opened": 1793903431,
+     "closed": 1793905236,
+     "entry": 0.00010581647374392884,
+     "exit_px": 2.9050961364663757e-05,
+     "why": "liquidity_pulled",
+     "pnl": -0.371319828,
+     "gross_pnl": -0.362729496,
+     "pct": -73.55,
+     "gross_pct": -72.55,
+     "why_entered": "safety:too_fresh",
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z",
+     "obs_v": 1,
+     "entry_sol_reserve": 33.7016,
+     "entry_token_reserve": 347196716.0,
+     "entry_k": 11701084843.9456,
+     "entry_reserve_error": null,
+     "exit_sol_reserve": 5.3388,
+     "exit_token_reserve": 774462253.0,
+     "exit_k": 4134699076.3164,
+     "exit_reserve_error": null,
+     "last_sol_reserve": 5.3388,
+     "last_token_reserve": 774462253.0,
+     "last_k": 4134699076.3164,
+     "last_reserve_error": null,
+     "reserve_snaps": [
+      {
+       "t": "2026-11-05T18:30:31Z",
+       "sol": 33.7016,
+       "token": 347196716.0,
+       "k": 11701084843.9456,
+       "pool": "9bbt6hrU5sGw6o7hRiUsiCM4uvLvS1HpFiywmJqciFBa"
+      },
+      {
+       "t": "2026-11-05T19:00:36Z",
+       "sol": 5.3388,
+       "token": 774462253.0,
+       "k": 4134699076.3164,
+       "pool": "9bbt6hrU5sGw6o7hRiUsiCM4uvLvS1HpFiywmJqciFBa"
+      }
+     ],
+     "entry_pool": "9bbt6hrU5sGw6o7hRiUsiCM4uvLvS1HpFiywmJqciFBa",
+     "exit_pool": "9bbt6hrU5sGw6o7hRiUsiCM4uvLvS1HpFiywmJqciFBa",
+     "same_pool": true,
+     "pool_created_at": "2026-11-05T18:15:45Z",
+     "pool_age_at_entry_s": 886.0,
+     "graduated_pump": true,
+     "boost_window": false,
+     "entry_quote_out": 4725162182308,
+     "entry_quote_px": 0.00010581647374392884,
+     "entry_quote_impact": 0.0,
+     "entry_quote_error": null,
+     "exit_quote_out": 137270504,
+     "exit_quote_px": 2.9050961364663757e-05,
+     "exit_quote_impact": 0.009536069181961364,
+     "exit_quote_error": null,
+     "max_price_held": 0.00010581647374392884,
+     "min_price_held": 2.9050961364663757e-05,
+     "max_price_held_pct": 0.0,
+     "min_price_held_pct": -72.5459
     }
    ],
    "would_halt": [
@@ -13214,7 +13224,7 @@
     }
    ],
    "peak_equity": 5.0,
-   "realized_gross": -13.054770949137591
+   "realized_gross": -13.417500445137591
   }
  },
  "cost_model_started_at": "2026-10-29T00:30:25Z",
