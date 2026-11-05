@@ -1702,7 +1702,7 @@
         },
         {
           "ticker": "TECHMAGE",
-          "status": "pending_gate",
+          "status": "failed_gate",
           "swarm_flagged_at": "2026-11-03T03:11:47Z",
           "first_seen": "2026-11-02T22:16:00-05:00",
           "flags": [
@@ -1712,7 +1712,14 @@
           "entry_curve_price_ada": null,
           "entry_note": "curve price not readable this run (no DEX pool found)",
           "gate_check_due": "launch+24h",
-          "gate_result": "failed: no DEX pool at launch+24h (checked 2026-11-03 10:12 PM ET)"
+          "gate_result": "failed: not bonded (no DEX pool) at launch+24h",
+          "gate_checks": [
+            {
+              "at": "2026-11-05T16:15:00-05:00",
+              "bonded": false,
+              "note": "still no DEX pool on recheck 4:15 PM ET Nov 5; prior gate_result already failed"
+            }
+          ]
         },
         {
           "ticker": "CITY",
@@ -1826,7 +1833,7 @@
         },
         {
           "ticker": "WED",
-          "status": "pending_gate",
+          "status": "failed_gate",
           "swarm_flagged_at": "2026-11-04T21:11:25Z",
           "first_seen": "2026-11-04T16:12:00-05:00",
           "flags": [
@@ -1836,7 +1843,15 @@
           "bonded": false,
           "entry_curve_price_ada": null,
           "entry_note": "curve price not readable this run (no DEX pool found)",
-          "gate_check_due": "launch+24h"
+          "gate_check_due": "launch+24h",
+          "gate_checks": [
+            {
+              "at": "2026-11-05T16:15:00-05:00",
+              "bonded": false,
+              "note": "launch+24h passed (~4:12 PM ET Nov 5); no DEX pool found; 48h return due ~4:12 PM Nov 6"
+            }
+          ],
+          "gate_result": "failed: not bonded (no DEX pool) at launch+24h"
         },
         {
           "ticker": "5STAR",
@@ -2035,6 +2050,20 @@
             "coordinated_buys (15 wallets, 120s)",
             "pool pre-seeder and first-block sniper tags early",
             "repeat early buyers"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "CHRLS",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-05T21:10:58Z",
+          "first_seen": "2026-11-05T16:15:00-05:00",
+          "flags": [
+            "repeat early buyer w-6a08c4e3",
+            "sniper_full_exit w-6a08c4e3"
           ],
           "bonded": false,
           "entry_curve_price_ada": null,
