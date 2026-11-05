@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-11-04T23:30:25Z",
+ "generated_at": "2026-11-05T00:00:37Z",
  "cfg_version": "v1-v6.5",
  "open": [],
  "closed": [
@@ -12578,14 +12578,8 @@
    "realized_pnl": -9.528189695,
    "open": 0,
    "closed": 62,
-   "fills_today": 7,
+   "fills_today": 0,
    "would_halt": [
-    {
-     "day": "2026-10-31",
-     "ts": "2026-10-31T00:00:28Z",
-     "book": "F",
-     "drawdown": 0.4789
-    },
     {
      "day": "2026-11-01",
      "ts": "2026-11-01T00:00:30Z",
@@ -12609,6 +12603,12 @@
      "ts": "2026-11-04T00:00:32Z",
      "book": "F",
      "drawdown": 0.6633
+    },
+    {
+     "day": "2026-11-05",
+     "ts": "2026-11-05T00:00:37Z",
+     "book": "F",
+     "drawdown": 0.9528
     }
    ],
    "realized_gross_pnl": -6.402618696
@@ -12619,7 +12619,7 @@
    "realized_pnl": -9.800669174,
    "open": 0,
    "closed": 68,
-   "fills_today": 15,
+   "fills_today": 0,
    "would_halt": [
     {
      "day": "2026-10-31",
@@ -12644,6 +12644,12 @@
      "ts": "2026-11-04T00:00:32Z",
      "book": "R",
      "drawdown": 0.4646
+    },
+    {
+     "day": "2026-11-05",
+     "ts": "2026-11-05T00:00:37Z",
+     "book": "R",
+     "drawdown": 0.9801
     }
    ],
    "realized_gross_pnl": -7.615671319
@@ -12656,12 +12662,6 @@
    "closed": 59,
    "fills_today": 0,
    "would_halt": [
-    {
-     "day": "2026-10-31",
-     "ts": "2026-10-31T00:00:28Z",
-     "book": "S",
-     "drawdown": 0.6249
-    },
     {
      "day": "2026-11-01",
      "ts": "2026-11-01T00:00:30Z",
@@ -12683,6 +12683,12 @@
     {
      "day": "2026-11-04",
      "ts": "2026-11-04T00:00:32Z",
+     "book": "S",
+     "drawdown": 0.9598
+    },
+    {
+     "day": "2026-11-05",
+     "ts": "2026-11-05T00:00:37Z",
      "book": "S",
      "drawdown": 0.9598
     }
@@ -12717,11 +12723,9 @@
     "counted_closes": 220,
     "net_pnl": -24.112251733,
     "wins": 85,
-    "older_closes": 1,
-    "older_net_pnl": -0.320404667,
-    "older_labels": {
-     "pre-v3": 1
-    }
+    "older_closes": 0,
+    "older_net_pnl": 0,
+    "older_labels": {}
    },
    "28": {
     "counted_closes": 220,
@@ -12805,11 +12809,6 @@
    "note": "data_failures_over_10pct"
   },
   {
-   "at": "2026-11-02T00:00:31Z",
-   "type": "would_halt",
-   "note": "F drawdown 30.8%"
-  },
-  {
    "at": "2026-11-03T00:00:31Z",
    "type": "would_halt",
    "note": "F drawdown 47.6%"
@@ -12820,9 +12819,9 @@
    "note": "F drawdown 66.3%"
   },
   {
-   "at": "2026-11-01T00:00:30Z",
+   "at": "2026-11-05T00:00:37Z",
    "type": "would_halt",
-   "note": "R drawdown 38.4%"
+   "note": "F drawdown 95.3%"
   },
   {
    "at": "2026-11-03T02:00:42Z",
@@ -12835,9 +12834,9 @@
    "note": "R drawdown 46.5%"
   },
   {
-   "at": "2026-11-02T00:00:31Z",
+   "at": "2026-11-05T00:00:37Z",
    "type": "would_halt",
-   "note": "S drawdown 96.0%"
+   "note": "R drawdown 98.0%"
   },
   {
    "at": "2026-11-03T00:00:31Z",
@@ -12846,6 +12845,11 @@
   },
   {
    "at": "2026-11-04T00:00:32Z",
+   "type": "would_halt",
+   "note": "S drawdown 96.0%"
+  },
+  {
+   "at": "2026-11-05T00:00:37Z",
    "type": "would_halt",
    "note": "S drawdown 96.0%"
   }
