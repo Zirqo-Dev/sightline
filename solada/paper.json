@@ -1318,7 +1318,7 @@
       "comparison_group": [
         {
           "ticker": "ANAKIN",
-          "status": "pending_gate",
+          "status": "failed_gate",
           "swarm_flagged_at": "2026-11-01T21:11:03Z",
           "first_seen": "2026-11-01T16:15:00-05:00",
           "flags": [
@@ -1344,14 +1344,19 @@
               "at": "2026-11-03T19:00:00-05:00",
               "bonded": false,
               "note": "48h reached; no DEX pool; return logged as no price"
+            },
+            {
+              "at": "2026-11-05T18:15:00-05:00",
+              "bonded": false,
+              "note": "launch+24h overdue; no DEX pool; failed_gate"
             }
           ],
           "return_48h": "no price",
-          "return_48h_note": "48h reached Nov 3; never bonded and no curve price read at first flag, so return unmeasurable"
+          "return_48h_note": "launch+24h passed by 2026-11-05T18:15:00-05:00; never bonded (no DEX pool on GeckoTerminal) and no curve price at first flag"
         },
         {
           "ticker": "MOGE",
-          "status": "pending_gate",
+          "status": "failed_gate",
           "swarm_flagged_at": "2026-11-01T23:11:21Z",
           "first_seen": "2026-11-01T18:15:00-05:00",
           "flags": [
@@ -1380,14 +1385,19 @@
               "at": "2026-11-03T19:00:00-05:00",
               "bonded": false,
               "note": "48h reached; no DEX pool; return logged as no price"
+            },
+            {
+              "at": "2026-11-05T18:15:00-05:00",
+              "bonded": false,
+              "note": "launch+24h overdue; no DEX pool; failed_gate"
             }
           ],
           "return_48h": "no price",
-          "return_48h_note": "48h reached Nov 3; never bonded and no curve price read at first flag, so return unmeasurable"
+          "return_48h_note": "launch+24h passed by 2026-11-05T18:15:00-05:00; never bonded (no DEX pool on GeckoTerminal) and no curve price at first flag"
         },
         {
           "ticker": "AIDA",
-          "status": "pending_gate",
+          "status": "failed_gate",
           "swarm_flagged_at": "2026-11-02T01:11:34Z",
           "first_seen": "2026-11-01T20:15:00-05:00",
           "flags": [
@@ -1404,13 +1414,19 @@
               "at": "2026-11-02T20:17:00-05:00",
               "bonded": false,
               "note": "past launch+24h; no DEX pool on GeckoTerminal; gate not met, stays in comparison group (pending_gate) for its 48h return"
+            },
+            {
+              "at": "2026-11-05T18:15:00-05:00",
+              "bonded": false,
+              "note": "launch+24h overdue; no DEX pool; failed_gate"
             }
           ],
-          "return_48h": "no price"
+          "return_48h": "no price",
+          "return_48h_note": "launch+24h passed by 2026-11-05T18:15:00-05:00; never bonded (no DEX pool on GeckoTerminal) and no curve price at first flag"
         },
         {
           "ticker": "SNEKG",
-          "status": "pending_gate",
+          "status": "failed_gate",
           "swarm_flagged_at": "2026-11-02T01:11:34Z",
           "first_seen": "2026-11-01T20:15:00-05:00",
           "flags": [
@@ -1427,9 +1443,15 @@
               "at": "2026-11-02T20:17:00-05:00",
               "bonded": false,
               "note": "past launch+24h; no DEX pool on GeckoTerminal; gate not met, stays in comparison group (pending_gate) for its 48h return"
+            },
+            {
+              "at": "2026-11-05T18:15:00-05:00",
+              "bonded": false,
+              "note": "launch+24h overdue; no DEX pool; failed_gate"
             }
           ],
-          "return_48h": "no price"
+          "return_48h": "no price",
+          "return_48h_note": "launch+24h passed by 2026-11-05T18:15:00-05:00; never bonded (no DEX pool on GeckoTerminal) and no curve price at first flag"
         },
         {
           "ticker": "GATO",
@@ -2064,6 +2086,91 @@
           "flags": [
             "repeat early buyer w-6a08c4e3",
             "sniper_full_exit w-6a08c4e3"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "ATLAS",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-05T23:11:40Z",
+          "first_seen": "2026-11-05T18:15:00-05:00",
+          "flags": [
+            "coordinated_buys (5 wallets, 120s)",
+            "repeat early buyers w-6a08c4e3, w-e18ae92d"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool for this new launch; Jun 2026 OG ATLAS pool ignored)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "BCG",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-05T23:11:40Z",
+          "first_seen": "2026-11-05T18:15:00-05:00",
+          "flags": [
+            "coordinated_buys (4 wallets, 120s)",
+            "sniper_full_exit w-805b7c78",
+            "repeat early buyer"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "RUGG",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-05T23:11:40Z",
+          "first_seen": "2026-11-05T18:15:00-05:00",
+          "flags": [
+            "sniper_full_exit w-805b7c78",
+            "repeat early buyer"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "SAA",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-05T23:11:40Z",
+          "first_seen": "2026-11-05T18:15:00-05:00",
+          "flags": [
+            "sniper_full_exit w-805b7c78",
+            "repeat early buyer"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "TEST",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-05T23:11:40Z",
+          "first_seen": "2026-11-05T18:15:00-05:00",
+          "flags": [
+            "sniper_full_exit w-805b7c78",
+            "repeat early buyer"
+          ],
+          "bonded": false,
+          "entry_curve_price_ada": null,
+          "entry_note": "curve price not readable this run (no DEX pool found)",
+          "gate_check_due": "launch+24h"
+        },
+        {
+          "ticker": "TPS",
+          "status": "pending_gate",
+          "swarm_flagged_at": "2026-11-05T23:11:40Z",
+          "first_seen": "2026-11-05T18:15:00-05:00",
+          "flags": [
+            "sniper_full_exit w-805b7c78",
+            "repeat early buyer"
           ],
           "bonded": false,
           "entry_curve_price_ada": null,
