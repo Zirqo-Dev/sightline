@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-11-05T15:00:36Z",
+ "generated_at": "2026-11-05T15:30:34Z",
  "cfg_version": "v1-v6.5",
  "open": [
   {
@@ -25,11 +25,11 @@
     "px": 0.001982121408621819
    },
    "frac": 0.333333,
-   "last_mark": 0.013970131288832769,
+   "last_mark": 0.014500140329718119,
    "thesis": "random_match",
    "result": {
     "pnl": 0.288693546,
-    "pct": 604.81,
+    "pct": 631.55,
     "unit": "SOL",
     "net_pnl": 0.288693546,
     "gross_pnl": 0.294931726
@@ -39,9 +39,9 @@
    "entry_token_reserve": 96361509.0,
    "entry_k": 16526875683.2319,
    "entry_reserve_error": null,
-   "last_sol_reserve": 510.2727,
-   "last_token_reserve": 36181532.0,
-   "last_k": 18462448023.776398,
+   "last_sol_reserve": 514.8237,
+   "last_token_reserve": 36415573.0,
+   "last_k": 18747600029.480103,
    "last_reserve_error": null,
    "reserve_snaps": [
     {
@@ -211,6 +211,13 @@
      "token": 36181532.0,
      "k": 18462448023.776398,
      "pool": "8WCdJcaFDx9MQK2VP9sZLZmvKbtfaFuRTpvBEAesoVdw"
+    },
+    {
+     "t": "2026-11-05T15:30:34Z",
+     "sol": 514.8237,
+     "token": 36415573.0,
+     "k": 18747600029.480103,
+     "pool": "8WCdJcaFDx9MQK2VP9sZLZmvKbtfaFuRTpvBEAesoVdw"
     }
    ],
    "entry_pool": "8WCdJcaFDx9MQK2VP9sZLZmvKbtfaFuRTpvBEAesoVdw",
@@ -222,10 +229,66 @@
    "entry_quote_px": 0.001982121408621819,
    "entry_quote_impact": 0.01148450278898646,
    "entry_quote_error": null,
-   "max_price_held": 0.013970131288832769,
+   "max_price_held": 0.014500140329718119,
    "min_price_held": 0.0017691844802750242,
-   "max_price_held_pct": 604.807,
+   "max_price_held_pct": 631.5465,
    "min_price_held_pct": -10.7429
+  },
+  {
+   "id": "S-20261105T1530-ECNQpump",
+   "ticker": "PAWKET",
+   "mint": "ECNQSQA7Y5bnXzbotgv6XcG15c6jpJ6V2BFbYzJrpump",
+   "book": "S",
+   "status": "open",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-11-05T15:30:34Z",
+   "window_ends_at": "2026-11-05T17:30:34Z",
+   "entry": {
+    "px": 0.0091011793713778
+   },
+   "frac": 1.0,
+   "last_mark": 0.0091011793713778,
+   "thesis": "safety:top10_heavy",
+   "result": {
+    "pnl": 0.0,
+    "pct": 0.0,
+    "unit": "SOL",
+    "net_pnl": 0.0,
+    "gross_pnl": 0.0
+   },
+   "obs_v": 1,
+   "entry_sol_reserve": 398.1044,
+   "entry_token_reserve": 45714356.0,
+   "entry_k": 18199086266.7664,
+   "entry_reserve_error": null,
+   "last_sol_reserve": 398.1044,
+   "last_token_reserve": 45714356.0,
+   "last_k": 18199086266.7664,
+   "last_reserve_error": null,
+   "reserve_snaps": [
+    {
+     "t": "2026-11-05T15:30:34Z",
+     "sol": 398.1044,
+     "token": 45714356.0,
+     "k": 18199086266.7664,
+     "pool": "9icJRrZeVFLonFyC5XJ9CJekdyirt2KvLSzQ9GMtahFD"
+    }
+   ],
+   "entry_pool": "9icJRrZeVFLonFyC5XJ9CJekdyirt2KvLSzQ9GMtahFD",
+   "pool_created_at": "2026-11-05T15:09:09Z",
+   "pool_age_at_entry_s": 1285.0,
+   "graduated_pump": true,
+   "boost_window": false,
+   "entry_quote_out": 54937934920,
+   "entry_quote_px": 0.0091011793713778,
+   "entry_quote_impact": 0.0200361127004244,
+   "entry_quote_error": null,
+   "max_price_held": 0.0091011793713778,
+   "min_price_held": 0.0091011793713778,
+   "max_price_held_pct": 0.0,
+   "min_price_held_pct": 0.0
   }
  ],
  "closed": [
@@ -15364,7 +15427,7 @@
   },
   "R": {
    "cash": 5.561334601,
-   "equity": 6.728280443,
+   "equity": 6.772533176,
    "realized_pnl": -9.071543455,
    "open": 1,
    "closed": 76,
@@ -15373,12 +15436,12 @@
    "realized_gross_pnl": -6.778400403
   },
   "S": {
-   "cash": 0.707347583,
-   "equity": 0.707347583,
+   "cash": 0.204180786,
+   "equity": 0.701013989,
    "realized_pnl": -13.890482717,
-   "open": 0,
+   "open": 1,
    "closed": 73,
-   "fills_today": 14,
+   "fills_today": 15,
    "would_halt": [
     {
      "day": "2026-11-05",
