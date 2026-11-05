@@ -932,7 +932,7 @@ class Desk:
             if not self.trades_present:
                 return None
             tid = event.get("token_id")
-            return any(t.get("why") == "liquidity_pulled" and tid and t.get("mint") == tid for t in self.trades)
+            return any(t.get("action") != "refill" and t.get("why") == "liquidity_pulled" and tid and t.get("mint") == tid for t in self.trades)
         if not self.moves_present:
             return None
         for move in self.moves:
@@ -999,6 +999,8 @@ class Desk:
                 return None
             tid = event.get("token_id")
             for trade in self.trades:
+                if trade.get("action") == "refill":
+                    continue
                 if trade.get("why") != "liquidity_pulled" or trade.get("mint") != tid:
                     continue
                 when = _record_time(trade.get("time"), "trade")

@@ -1,5 +1,6 @@
 """One-time paper cash refill. Does not rewrite trades or per-trade returns."""
 import csv, importlib.util, json, os, tempfile, unittest
+from decimal import Decimal
 from desk import config as C, fills, ledger
 
 from tests.test_fills import Market, T0, lead, trades
@@ -79,11 +80,15 @@ class Refill(unittest.TestCase):
             self.assertEqual(b["realized_pnl"], pnl)
             self.assertEqual(b["open"], {})
             self.assertEqual(b["closed"], [])
-            self.assertEqual(b["peak_equity"], C.START_BALANCE_SOL)
+            self.assertEqual(b["peak_equity"], 5.0)
+            self.assertEqual(b["would_halt"], [])
             info = event["books"][name]
             self.assertEqual(info["cash_before"], cash)
             self.assertAlmostEqual(info["added"], 5.0 - cash)
             self.assertEqual(info["cash_after"], 5.0)
+            self.assertEqual(info["peak_before"], C.START_BALANCE_SOL)
+            self.assertEqual(info["peak_after"], 5.0)
+            self.assertEqual(info["halt_cleared"], [])
         rows = trades(self.d)
         old = [r for r in rows if r["symbol"] == "OLD"]
         self.assertEqual(len(old), 1)
@@ -149,6 +154,51 @@ class Refill(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(len(closes), 1)
         self.assertAlmostEqual(closes[0]["pnl"], -0.11)
+
+    def test_stall_clears_halts_and_s_opens(self):
+        """One step refills, S buys, and the first later mark does not log a new halt."""
+        books = {name: _book(cash, pnl) for name, (cash, pnl) in STALL.items()}
+        books["F"]["would_halt"] = [dict(day="2026-11-05", ts="2026-11-05T00:00:37Z", book="F", drawdown=0.9528)]
+        books["R"]["would_halt"] = [dict(day="2026-11-05", ts="2026-11-05T00:00:37Z", book="R", drawdown=0.9801)]
+        books["S"]["peak_equity"] = 10.89800187930826
+        books["S"]["would_halt"] = [dict(day="2026-11-05", ts="2026-11-05T00:00:37Z", book="S", drawdown=0.9598)]
+        _write(self.d, books)
+        now = T0 + 60
+        # S only gets a slot when F fills, so the step needs a pass lead and a safety lead.
+        self.step(now, [lead(1), lead(2, "safety", "risk_score")])
+        state = json.load(open(os.path.join(self.d, "positions.json")))
+        event = state["refills"][0]
+        for name in "FRS":
+            self.assertEqual(state["books"][name]["would_halt"], [], name)
+        self.assertEqual(len(state["books"]["S"]["open"]), 1)
+        self.assertAlmostEqual(event["books"]["S"]["peak_before"], 10.89800187930826)
+        self.assertEqual(event["books"]["S"]["peak_after"], 5.0)
+        self.assertEqual(event["books"]["S"]["halt_cleared"], books["S"]["would_halt"])
+        self.assertEqual(len(event["books"]["F"]["halt_cleared"]), 1)
+        self.mk.ratio[lead(1)["mint"]] = 1.0
+        self.mk.ratio[lead(2)["mint"]] = 1.0
+        self.step(now + 600, [], run_id="mark")
+        marked = json.load(open(os.path.join(self.d, "positions.json")))
+        for name in "FRS":
+            self.assertEqual(marked["books"][name]["would_halt"], [], name)
+        self.assertEqual(len(marked["books"]["S"]["open"]), 1)
+        self.assertEqual(len(marked["refills"]), 1)
+
+    def test_readers_ignore_refill_rows(self):
+        status = _load("scripts/status/daily_status.py")
+        rows = [
+            dict(book="F", action="buy", mint="M", time=str(T0), frac="1", pnl="", sol="0.5", cost_model=""),
+            dict(book="F", action="sell", mint="M", time=str(T0 + 10), frac="1", pnl="-0.11", sol="0.2", cost_model=""),
+            dict(book="F", action="refill", mint="", time=str(T0 + 20), frac="", pnl="", sol="4.528189695", cost_model=""),
+        ]
+        closed, incomplete = status.book_closes(rows, "F")
+        self.assertEqual(incomplete, 0)
+        self.assertEqual(len(closed), 1)
+        self.assertEqual(closed[0]["pnl"], Decimal("-0.11"))
+        stats = fills.window_stats(rows, T0 + 30)
+        self.assertEqual(stats["windows"]["7"]["counted_closes"], 0)
+        self.assertAlmostEqual(stats["windows"]["7"]["older_net_pnl"], -0.11)
+        self.assertNotAlmostEqual(stats["windows"]["7"]["older_net_pnl"], -0.11 + 4.528189695)
 
     def test_skips_when_any_book_can_still_buy_or_is_open(self):
         books = {name: _book(0.2, -1) for name in "FRS"}

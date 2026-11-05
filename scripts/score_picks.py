@@ -691,7 +691,7 @@ def solana_section(data_dir, buzz, buzz_live):
         with open(path, newline="", encoding="utf-8") as fh:
             for rec in csv.DictReader(fh):
                 if rec.get("action") != "sell":
-                    continue
+                    continue  # refill is a cash top-up; its sol is not P&L
                 nsell += 1
                 try:
                     pnl = float(rec["pnl"]) if rec.get("pnl") not in ("", None) else None

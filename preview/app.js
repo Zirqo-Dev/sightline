@@ -563,7 +563,23 @@
     const netSeries = [netEq], grossSeries = [grossEq];
     const byBook = { F: [10], R: [10], S: [10] };
     const bookEq = { F: 10, R: 10, S: 10 };
-    sells.forEach(t => {
+    const refillRows = rows.filter(t => t.action === "refill" && num(t.sol) != null);
+    const curve = sells.concat(refillRows).sort((a, b) => (num(a.time) || 0) - (num(b.time) || 0));
+    const refillMarks = [];
+    curve.forEach(t => {
+      if (t.action === "refill") {
+        const add = num(t.sol) || 0;
+        netEq += add;
+        netSeries.push(netEq);
+        grossSeries.push(grossEq);
+        const b = t.book;
+        if (bookEq[b] != null) {
+          bookEq[b] += add;
+          byBook[b].push(bookEq[b]);
+          refillMarks.push({ book: b, added: add, at: timeOf(t.time), reason: String(t.why || "") });
+        }
+        return;
+      }
       const g = tradeGross(t, rows) || 0;
       const n = tradeNet(t) || 0;
       netEq += n; grossEq += g;
@@ -591,7 +607,7 @@
     activity.sort((a, b) => String(b.time || "").localeCompare(String(a.time || "")));
     const verdict = day14Report(positions, rows);
     const bookRows = verdict.books;
-    return { net, gross, openCount: opens.length, winRate, netSeries, grossSeries, books, opens, activity: activity.slice(0, 24), closed: sells.length, windows: solanaWindows(rows, nowMs), bookRows, gap: verdict.gap, day14: verdict.line, day14Verdict: verdict.verdict, day14Rule: verdict.rule };
+    return { net, gross, openCount: opens.length, winRate, netSeries, grossSeries, books, refills: refillMarks, opens, activity: activity.slice(0, 24), closed: sells.length, windows: solanaWindows(rows, nowMs), bookRows, gap: verdict.gap, day14: verdict.line, day14Verdict: verdict.verdict, day14Rule: verdict.rule };
   }
   function solSigned(n, d) {
     if (n == null || !isFinite(n)) return `<span class="sl-flat">–</span>`;
@@ -617,9 +633,14 @@
     </tr>`).join("");
     const gap = m.gap == null ? "–" : ((m.gap > 0 ? "+" : m.gap < 0 ? "−" : "") + fmt(Math.abs(m.gap), 1) + " pp");
     const gapCls = m.gap > 0 ? "sl-up" : m.gap < 0 ? "sl-down" : "sl-flat";
+    const refillBits = (m.refills || []).map(r => esc(r.book) + " +" + fmt(r.added, 3) + " SOL");
+    const refillWhy = (m.refills && m.refills[0] && m.refills[0].reason) || "";
+    const refillLine = refillBits.length ? `<p class="sl-note sl-left">Cash refill, not a trade: ${refillBits.join(", ")}. ${esc(refillWhy)}. The equity line jumps by the cash added. P&amp;L does not.</p>` : "";
+    const curves = (m.books || []).map(b => `<div class="sl-kv"><span class="sl-k">${esc(b.id)} equity</span><b>${spark(b.series) || "–"}</b></div>`).join("");
     const books = `<section class="sl-box"><header class="sl-box-h"><span class="sl-box-title">Books <em>F / R / S</em></span></header>
       <table class="sl-table"><thead><tr><th>Book</th><th class="num">P&amp;L</th><th class="num">Exp/tr</th><th class="num">N</th></tr></thead><tbody>${rows}</tbody></table>
       <p class="sl-note sl-left">F vs R <b class="${gapCls}">${esc(gap)}</b> · F exp ${solPct(m.bookRows && m.bookRows[0] && m.bookRows[0].exp)} · ${esc(m.day14 || "Too early")} · ${esc(String((m.bookRows && m.bookRows[0] && m.bookRows[0].n) || 0))} F closes</p>
+      ${curves ? `<div class="sl-kvs">${curves}</div>` : ""}${refillLine}
     </section>`;
     const h = health || {};
     const gateBits = [

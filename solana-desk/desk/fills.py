@@ -18,7 +18,11 @@ v3-exit-aware and the time that model started. Older rows are not rewritten.
 A one-time cash refill (id 2026-11-04-cash-5) tops books F, R, and S to 5 SOL of
 available cash when all three are flat and each is short of a 0.5 SOL ticket.
 It appends action=refill rows with a blank pnl and does not rewrite past trades.
-The ticket, the start balance, and the v6.5 rules stay as they are.
+It rebases each book's peak to the post-refill equity and clears the would_halt
+log. would_halt is a daily log only: enter() never reads it, and a book skips a
+ticket only when cash is below the ticket cost. After this refill the 30% check
+uses the rebased peak, not the original 10 SOL start. The ticket and the
+v6.5 rules stay as they are.
 desk.observe adds reserve, migration, quote, and held-price fields. Those fields are
 logs. They are not read by exits, books, or the fill price. log=False skips them.
 """
@@ -181,6 +185,8 @@ def apply_cash_refill(d, s, now):
     realized_pnl, open lots, closed lots, and existing trades.csv rows stay put.
     One action=refill row per book carries the timestamp, the amount, and the reason.
     Blank pnl keeps per-trade returns on the 0.5 SOL ticket.
+    peak_equity becomes the post-refill equity. The old peak and the cleared
+    would_halt rows are stored on the event. Drawdown after that uses the new peak.
     """
     if _refill_already(s):
         return None
@@ -202,9 +208,19 @@ def apply_cash_refill(d, s, now):
     for name in "FRS":
         b = books[name]
         before = float(b["cash"])
+        try:
+            peak_before = float(b.get("peak_equity"))
+        except (TypeError, ValueError):
+            peak_before = C.START_BALANCE_SOL
         added = REFILL_CASH - before
         b["cash"] = REFILL_CASH
-        detail[name] = dict(cash_before=before, added=added, cash_after=REFILL_CASH)
+        peak_after = equity(b)
+        b["peak_equity"] = peak_after
+        raw_halt = b.get("would_halt")
+        halt_cleared = [dict(w) for w in raw_halt if isinstance(w, dict)] if isinstance(raw_halt, list) else []
+        b["would_halt"] = []
+        detail[name] = dict(cash_before=before, added=added, cash_after=float(b["cash"]),
+                            peak_before=peak_before, peak_after=peak_after, halt_cleared=halt_cleared)
         if name not in logged:
             _refill_row(d, now, name, added)
     event = dict(id=REFILL_ID, at=iso(now), reason=REFILL_REASON,
@@ -403,12 +419,42 @@ def enter(d, s, now, run_id, seed, leads, day, log=True):
                    model=model, verified=v_entry)
     return opened
 
+def _drawdown_base(s, name, b):
+    """30% versus the 10 SOL start. After the refill, versus the rebased peak.
+
+    enter() does not read would_halt. A book misses a ticket only when cash is
+    below the ticket cost. The refill clears the log and moves the base so a
+    top-up from about 0.4 SOL to 5 SOL is not a new 50% drawdown.
+    """
+    for r in s.get("refills") or []:
+        if not isinstance(r, dict) or r.get("id") != REFILL_ID:
+            continue
+        info = (r.get("books") or {}).get(name)
+        if isinstance(info, dict) and info.get("peak_after") is not None:
+            try:
+                peak = float(b.get("peak_equity") or info.get("peak_after") or 0)
+            except (TypeError, ValueError):
+                peak = 0.0
+            return peak if peak > 0 else C.START_BALANCE_SOL
+    return C.START_BALANCE_SOL
+
 def would_halt(s, now, day):
     for name in "FRS":
-        b = s["books"][name]; eq = equity(b); dd = 1 - eq / C.START_BALANCE_SOL
-        b["peak_equity"] = max(b["peak_equity"], eq)
-        if dd >= C.SESSION_LOSS_HALT_PCT and not any(w["day"] == day for w in b["would_halt"]):
-            b["would_halt"].append(dict(day=day, ts=iso(now), book=name, drawdown=round(dd, 4)))  # logged only, never blocks
+        b = s["books"][name]
+        eq = equity(b)
+        try:
+            peak = float(b.get("peak_equity") or 0)
+        except (TypeError, ValueError):
+            peak = 0.0
+        b["peak_equity"] = max(peak, eq)
+        base = _drawdown_base(s, name, b)
+        dd = 1 - eq / base if base else 0
+        halts = b.get("would_halt")
+        if not isinstance(halts, list):
+            halts = []
+            b["would_halt"] = halts
+        if dd >= C.SESSION_LOSS_HALT_PCT and not any(isinstance(w, dict) and w.get("day") == day for w in halts):
+            halts.append(dict(day=day, ts=iso(now), book=name, drawdown=round(dd, 4)))  # logged only, never blocks
 
 PRE_MODEL = "pre-v3"
 
@@ -430,7 +476,7 @@ def window_stats(rows, now, started_at=""):
         cut = float(now) - days * 86400
         sells = []
         for r in rows or []:
-            if str(r.get("action") or "") != "sell": continue
+            if str(r.get("action") or "") != "sell": continue  # refill is cash, not a close
             if r.get("pnl") in ("", None): continue
             try: ts = float(r.get("time") or "")
             except (TypeError, ValueError): continue

@@ -668,6 +668,14 @@ for (const f of ["intel-boot.js", "watchlist-boot.js", "desk-guards.js"]) {
   assert(model.openCount === 3, "open paper positions, got " + model.openCount);
   assert(model.closed === 3 && Math.round(model.winRate * 100) === 33, "win rate uses closed fills");
   closeTo(model.net, -0.26215, "net pnl");
+  const withRefill = trades.concat([{ book: "F", action: "refill", time: "1793600000", sol: "4.528189695", pnl: "", why: "owner-approved refill Nov 4 2026, rule change", mint: "", symbol: "" }]);
+  const jumped = P.solanaModel(paper, withRefill, null);
+  assert(jumped.net === model.net && jumped.closed === model.closed && jumped.winRate === model.winRate, "a refill row is not P&L and not a close");
+  const fSeries = jumped.books.find(b => b.id === "F").series;
+  const fPlain = model.books.find(b => b.id === "F").series;
+  assert(fSeries[fSeries.length - 1] - fPlain[fPlain.length - 1] > 4, "the F equity curve includes the refill cash");
+  const labeled = P.solanaHtml(jumped);
+  assert(labeled.includes("Cash refill, not a trade") && labeled.includes("F +4.528 SOL") && labeled.includes("not a trade"), "the book equity chart labels the refill");
   const desk = P.solanaHtml(model);
   assert(!desk.includes("Mint01") && desk.includes("T1"), "positions show tickers, not mints");
   assert(desk.includes("hard stop") && (desk.includes("take profit") || desk.includes("pass")), "trade reasons render");
