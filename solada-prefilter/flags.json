@@ -1,184 +1,45 @@
 {
- "at": "2026-11-06T01:11:33Z",
+ "at": "2026-11-06T03:11:31Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
    "kind": "coordinated_buys",
-   "ticker": "CCC",
+   "ticker": "ATLAS",
    "wallets": [
-    "w-03569f1a",
     "w-44934a9a",
-    "w-56231b2e",
-    "w-58b5c933",
+    "w-7826faea",
     "w-9d7e7db5",
-    "w-f7844f67"
+    "w-fc478bfb"
    ],
    "window_s": 120,
-   "at": "2026-11-06T01:11:33Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "CCC",
-   "wallets": [
-    "w-03569f1a",
-    "w-44934a9a",
-    "w-56231b2e",
-    "w-58b5c933"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-06T01:11:33Z"
-  },
-  {
-   "kind": "coordinated_buys",
-   "ticker": "COGE",
-   "wallets": [
-    "w-340aa05f",
-    "w-44934a9a",
-    "w-47cdf98b",
-    "w-7e1fbfa4",
-    "w-9d7e7db5"
-   ],
-   "window_s": 120,
-   "at": "2026-11-06T01:11:33Z"
+   "at": "2026-11-06T03:11:31Z"
   },
   {
    "kind": "identical_size_buys",
-   "ticker": "COGE",
+   "ticker": "ATLAS",
    "wallets": [
     "w-44934a9a",
-    "w-47cdf98b",
+    "w-7826faea",
     "w-9d7e7db5"
    ],
-   "ada_each": 4.65,
+   "ada_each": 4.91,
    "window_s": 600,
-   "at": "2026-11-06T01:11:33Z"
+   "at": "2026-11-06T03:11:31Z"
   },
   {
    "kind": "repeat_early_buyer",
    "wallet": "w-44934a9a",
    "launches": [
+    "ATLAS",
     "CCC",
     "COGE"
    ],
-   "at": "2026-11-06T01:11:33Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-ac850ced",
-   "launches": [
-    "COGE",
-    "MEMECOIN",
-    "MEPA",
-    "PUP",
-    "SLANG"
-   ],
-   "at": "2026-11-06T01:11:33Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-f7844f67",
-   "launches": [
-    "DONKEY",
-    "GEORGE",
-    "LUMINEX",
-    "MSFT",
-    "PEAK",
-    "PRT",
-    "SA",
-    "SLANG",
-    "TRUMPDUL",
-    "WED"
-   ],
-   "at": "2026-11-06T01:11:33Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "ATLAS",
-   "wallet": "w-fc478bfb",
-   "tags": [],
-   "at": "2026-11-06T01:11:33Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "CCC",
-   "wallet": "w-56231b2e",
-   "tags": [],
-   "at": "2026-11-06T01:11:33Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "COGE",
-   "wallet": "w-7e1fbfa4",
-   "tags": [],
-   "at": "2026-11-06T01:11:33Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "CITY",
-   "tag": "w-f3186187",
-   "delta": 1457687859145,
-   "decimals": 6,
-   "qty": 1457687.8591,
-   "ada_equiv": 71,
-   "value_basis": "ada_leg",
-   "pct": 13.3,
-   "at": "2026-11-06T01:11:33Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "STRIKE",
-   "tag": "w-f3186187",
-   "delta": 531386,
-   "decimals": 6,
-   "qty": 0.5314,
-   "ada_equiv": 1,
-   "value_basis": "decimals_x_price",
-   "dust": true,
-   "at": "2026-11-06T01:11:33Z"
+   "at": "2026-11-06T03:11:31Z"
   }
  ],
  "recent": [
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "CITY",
-   "wallets": [
-    "w-2c1505e8",
-    "w-308ddf9e",
-    "w-731cebbd",
-    "w-79f3d99b",
-    "w-99651998"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-03T17:11:14Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-314559ec",
-   "launches": [
-    "CITY",
-    "DUSTER"
-   ],
-   "at": "2026-11-03T17:11:14Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-9d7e7db5",
-   "launches": [
-    "HACK",
-    "HACKSNEK",
-    "MANDO",
-    "POPU",
-    "SNEKG",
-    "TMC",
-    "VICECITY",
-    "VSO",
-    "WASTED",
-    "WEN"
-   ],
-   "at": "2026-11-03T17:11:14Z"
-  },
   {
    "kind": "repeat_early_buyer",
    "wallet": "w-b1c7f97d",
@@ -3777,11 +3638,45 @@
    "value_basis": "decimals_x_price",
    "dust": true,
    "at": "2026-11-06T01:11:33Z"
+  },
+  {
+   "kind": "coordinated_buys",
+   "ticker": "ATLAS",
+   "wallets": [
+    "w-44934a9a",
+    "w-7826faea",
+    "w-9d7e7db5",
+    "w-fc478bfb"
+   ],
+   "window_s": 120,
+   "at": "2026-11-06T03:11:31Z"
+  },
+  {
+   "kind": "identical_size_buys",
+   "ticker": "ATLAS",
+   "wallets": [
+    "w-44934a9a",
+    "w-7826faea",
+    "w-9d7e7db5"
+   ],
+   "ada_each": 4.91,
+   "window_s": 600,
+   "at": "2026-11-06T03:11:31Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-44934a9a",
+   "launches": [
+    "ATLAS",
+    "CCC",
+    "COGE"
+   ],
+   "at": "2026-11-06T03:11:31Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 3,
-  "koios": 12
+  "blockfrost": 1,
+  "koios": 3
  },
  "thresholds": {
   "enabled": true,
