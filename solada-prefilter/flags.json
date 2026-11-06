@@ -1,126 +1,18 @@
 {
- "at": "2026-11-06T21:10:41Z",
+ "at": "2026-11-06T23:10:38Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "coordinated_buys",
-   "ticker": "TMZ",
-   "wallets": [
-    "w-2ed31058",
-    "w-8de115a6",
-    "w-9033a740",
-    "w-9d7e7db5",
-    "w-e52f1e17",
-    "w-fc478bfb"
-   ],
-   "window_s": 120,
-   "at": "2026-11-06T21:10:41Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "TMZ",
-   "wallets": [
-    "w-2ed31058",
-    "w-8de115a6",
-    "w-9033a740",
-    "w-fc478bfb"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-06T21:10:41Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-9033a740",
-   "launches": [
-    "SOLTRACK",
-    "TMZ"
-   ],
-   "at": "2026-11-06T21:10:41Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-9d7e7db5",
-   "launches": [
-    "RHASH",
-    "RUGG",
-    "SAA",
-    "SOLTRACK",
-    "TEST",
-    "TMZ",
-    "TOM",
-    "TPS",
-    "TRUMPDUL",
-    "ZELDA"
-   ],
-   "at": "2026-11-06T21:10:41Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-e52f1e17",
-   "launches": [
-    "PLUG",
-    "PUG",
-    "PUP",
-    "RHASH",
-    "SLIP",
-    "SOLTRACK",
-    "TECHMAGE",
-    "TMZ",
-    "TOM",
-    "VOPI"
-   ],
-   "at": "2026-11-06T21:10:41Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-fc478bfb",
-   "launches": [
-    "ATLAS",
-    "TMZ"
-   ],
-   "at": "2026-11-06T21:10:41Z"
-  },
-  {
    "kind": "sniper_full_exit",
-   "ticker": "TECHMAGE",
-   "wallet": "w-e52f1e17",
+   "ticker": "DESSA",
+   "wallet": "w-3bf52fd8",
    "tags": [],
-   "at": "2026-11-06T21:10:41Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "RHASH",
-   "wallet": "w-e52f1e17",
-   "tags": [],
-   "at": "2026-11-06T21:10:41Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "401KAT",
-   "wallet": "w-e52f1e17",
-   "tags": [],
-   "at": "2026-11-06T21:10:41Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "TMZ",
-   "wallet": "w-fc478bfb",
-   "tags": [],
-   "at": "2026-11-06T21:10:41Z"
+   "at": "2026-11-06T23:10:38Z"
   }
  ],
  "recent": [
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-9188b3f2",
-   "launches": [
-    "FLUIDY",
-    "MIXI"
-   ],
-   "at": "2026-11-04T17:11:29Z"
-  },
   {
    "kind": "repeat_early_buyer",
    "wallet": "w-9d7e7db5",
@@ -3715,11 +3607,17 @@
    "wallet": "w-fc478bfb",
    "tags": [],
    "at": "2026-11-06T21:10:41Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "DESSA",
+   "wallet": "w-3bf52fd8",
+   "tags": [],
+   "at": "2026-11-06T23:10:38Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 1,
-  "koios": 5
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,
