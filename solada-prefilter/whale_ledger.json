@@ -1,11 +1,11 @@
 {
- "at": "2026-11-06T17:13:35Z",
+ "at": "2026-11-06T19:13:36Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14166343,
+ "height": 14166697,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 386.218404,
+ "ada_balance": 227.650754,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 320000610422,
@@ -102,8 +102,7 @@
   "TOOLS": 11173430291327,
   "TRUMP": 2094958,
   "USDCx": 798998,
-  "USDM": 290682,
-  "VAL": 87465831,
+  "VAL": 89708488,
   "VAMP": 65127836716455,
   "Viperions_2558": 1,
   "WJB": 110000000,
@@ -220,8 +219,7 @@
   "TOOLS": 11173430291327,
   "TRUMP": 2094958,
   "USDCx": 798998,
-  "USDM": 290682,
-  "VAL": 87465831,
+  "VAL": 89708488,
   "VAMP": 65127836716455,
   "Viperions_2558": 1,
   "WJB": 110000000,
@@ -719,14 +717,9 @@
    "qty": 798998
   },
   {
-   "token": "USDM",
-   "policy": "c48cbb3d",
-   "qty": 290682
-  },
-  {
    "token": "VAL",
    "policy": "74aee0dc",
-   "qty": 87465831
+   "qty": 89708488
   },
   {
    "token": "VAMP",
@@ -11358,6 +11351,16 @@
    "opened_at": "2026-11-06T16:23:36Z",
    "own_stake": true,
    "closed_at": "2026-11-06T17:13:35Z"
+  },
+  "123bf7def9#0": {
+   "ref_short": "123bf7def9#0",
+   "token": "USDM",
+   "qty_raw": 169147618,
+   "ada": 4.96,
+   "status": "closed_elsewhere",
+   "opened_tx": "123bf7def9",
+   "opened_at": "2026-11-06T18:30:16Z",
+   "closed_at": "2026-11-06T19:13:36Z"
   }
  },
  "rows": [
@@ -37300,6 +37303,135 @@
    "qty": null,
    "ada_leg": 600.169021,
    "counterparty_tag": "w-4e705f42"
+  },
+  {
+   "time": "2026-11-06T18:16:41Z",
+   "tx_short": "2e6700179d",
+   "kind": "transfer_in",
+   "token": "USDM",
+   "qty": 168856936,
+   "ada_leg": null,
+   "counterparty_tag": "w-49b2ffca"
+  },
+  {
+   "time": "2026-11-06T18:30:16Z",
+   "tx_short": "123bf7def9",
+   "kind": "order_open",
+   "token": "USDM",
+   "qty": 169147618,
+   "ada_leg": 4.96,
+   "counterparty_tag": null,
+   "order_ref_short": "123bf7def9#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-06T18:30:42Z",
+   "tx_short": "44d91508b9",
+   "kind": "order_fill",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 899.016064,
+   "counterparty_tag": null,
+   "order_status": "filled_untracked"
+  },
+  {
+   "time": "2026-11-06T18:32:17Z",
+   "tx_short": "d085c2e8de",
+   "kind": "transfer_out",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 800.167085,
+   "counterparty_tag": "w-4e705f42"
+  },
+  {
+   "time": "2026-11-06T18:37:05Z",
+   "tx_short": "8e43903b61",
+   "kind": "transfer_out",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 51.78177,
+   "counterparty_tag": "w-8733bb5a"
+  },
+  {
+   "time": "2026-11-06T18:37:27Z",
+   "tx_short": "869488f9ef",
+   "kind": "transfer_in",
+   "token": "VAL",
+   "qty": 460526,
+   "ada_leg": null,
+   "counterparty_tag": "w-8733bb5a"
+  },
+  {
+   "time": "2026-11-06T18:40:51Z",
+   "tx_short": "c6344c1406",
+   "kind": "transfer_out",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 51.781779,
+   "counterparty_tag": "w-8733bb5a"
+  },
+  {
+   "time": "2026-11-06T18:41:11Z",
+   "tx_short": "a7449ccc0f",
+   "kind": "transfer_in",
+   "token": "VAL",
+   "qty": 447178,
+   "ada_leg": null,
+   "counterparty_tag": "w-8733bb5a"
+  },
+  {
+   "time": "2026-11-06T18:43:39Z",
+   "tx_short": "bce0f4cb3b",
+   "kind": "transfer_out",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 51.781781,
+   "counterparty_tag": "w-8733bb5a"
+  },
+  {
+   "time": "2026-11-06T18:44:21Z",
+   "tx_short": "442fe99a10",
+   "kind": "transfer_in",
+   "token": "VAL",
+   "qty": 445963,
+   "ada_leg": null,
+   "counterparty_tag": "w-8733bb5a"
+  },
+  {
+   "time": "2026-11-06T18:45:38Z",
+   "tx_short": "5a4ba3eda3",
+   "kind": "transfer_out",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 51.781772,
+   "counterparty_tag": "w-8733bb5a"
+  },
+  {
+   "time": "2026-11-06T18:46:03Z",
+   "tx_short": "c725771e27",
+   "kind": "transfer_in",
+   "token": "VAL",
+   "qty": 444961,
+   "ada_leg": null,
+   "counterparty_tag": "w-8733bb5a"
+  },
+  {
+   "time": "2026-11-06T18:46:19Z",
+   "tx_short": "5851ba43f6",
+   "kind": "transfer_out",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 51.781766,
+   "counterparty_tag": "w-8733bb5a"
+  },
+  {
+   "time": "2026-11-06T18:46:31Z",
+   "tx_short": "89d0eaa1bd",
+   "kind": "transfer_in",
+   "token": "VAL",
+   "qty": 444029,
+   "ada_leg": null,
+   "counterparty_tag": "w-8733bb5a"
   }
  ],
  "capped": false,
@@ -37310,7 +37442,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 8,
+ "koios_calls": 9,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
