@@ -1,11 +1,11 @@
 {
- "at": "2026-11-06T11:12:49Z",
+ "at": "2026-11-06T13:12:52Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14163876,
+ "height": 14165692,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 152.469628,
+ "ada_balance": 162.588126,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 320000610422,
@@ -38,7 +38,7 @@
   "CITY": 12394977604208,
   "CLOVE-3": 20000000424693,
   "CNET": 31327824482276,
-  "COCK": 53293607,
+  "COCK": 53304578,
   "COCKLOCK": 50000000,
   "CORE-2": 7656000,
   "CSWAP": 394,
@@ -74,7 +74,7 @@
   "MISS": 28000000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1000716401490,
+  "NIGHT": 1000726051755,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -91,7 +91,7 @@
   "SHARKY": 27702843983946,
   "SNEK": 35000000,
   "SOLABLUE": 1438534570029,
-  "SOLADA": 35347562,
+  "SOLADA": 35364991,
   "STABLE": 40331687668046,
   "STRIKE": 1126615,
   "SUNDAE": 65,
@@ -156,7 +156,7 @@
   "CITY": 12394977604208,
   "CLOVE-3": 20000000424693,
   "CNET": 31327824482276,
-  "COCK": 53293607,
+  "COCK": 53304578,
   "COCKLOCK": 50000000,
   "CORE-2": 7656000,
   "CSWAP": 394,
@@ -192,7 +192,7 @@
   "MISS": 28000000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1000716401490,
+  "NIGHT": 1000726051755,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -209,7 +209,7 @@
   "SHARKY": 27702843983946,
   "SNEK": 35000000,
   "SOLABLUE": 1438534570029,
-  "SOLADA": 35347562,
+  "SOLADA": 35364991,
   "STABLE": 40331687668046,
   "STRIKE": 1126615,
   "SUNDAE": 65,
@@ -401,7 +401,7 @@
   {
    "token": "COCK",
    "policy": "49e42316",
-   "qty": 53293607
+   "qty": 53304578
   },
   {
    "token": "COCKLOCK",
@@ -581,7 +581,7 @@
   {
    "token": "NIGHT",
    "policy": "0691b2fe",
-   "qty": 1000716401490
+   "qty": 1000726051755
   },
   {
    "token": "NIKY",
@@ -666,7 +666,7 @@
   {
    "token": "SOLADA",
    "policy": "e7c77b27",
-   "qty": 35347562
+   "qty": 35364991
   },
   {
    "token": "STABLE",
@@ -37007,6 +37007,33 @@
    "counterparty_tag": null,
    "order_ref_short": "770ac85345#0",
    "order_status": "open"
+  },
+  {
+   "time": "2026-11-06T13:02:30Z",
+   "tx_short": "591500d6a4",
+   "kind": "transfer_in",
+   "token": "NIGHT",
+   "qty": 9650265,
+   "ada_leg": null,
+   "counterparty_tag": null
+  },
+  {
+   "time": "2026-11-06T13:02:30Z",
+   "tx_short": "591500d6a4",
+   "kind": "transfer_in",
+   "token": "COCK",
+   "qty": 10971,
+   "ada_leg": null,
+   "counterparty_tag": null
+  },
+  {
+   "time": "2026-11-06T13:02:30Z",
+   "tx_short": "591500d6a4",
+   "kind": "transfer_in",
+   "token": "SOLADA",
+   "qty": 17429,
+   "ada_leg": null,
+   "counterparty_tag": null
   }
  ],
  "capped": false,
@@ -37017,7 +37044,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 7,
+ "koios_calls": 8,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
