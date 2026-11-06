@@ -1,11 +1,11 @@
 {
- "at": "2026-11-06T13:12:52Z",
+ "at": "2026-11-06T15:12:49Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14165692,
+ "height": 14166017,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 162.588126,
+ "ada_balance": 155.824516,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 320000610422,
@@ -69,12 +69,12 @@
   "KRAKEN": 4536305955503,
   "Kat coin": 11616622,
   "MEAT": 10396970868299,
-  "MEPE": 27500000714437,
+  "MEPE": 27000000714437,
   "MEWH": 13801519353061,
   "MISS": 28000000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1000726051755,
+  "NIGHT": 1002383574527,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -187,12 +187,12 @@
   "KRAKEN": 4536305955503,
   "Kat coin": 11616622,
   "MEAT": 10396970868299,
-  "MEPE": 27500000714437,
+  "MEPE": 27000000714437,
   "MEWH": 13801519353061,
   "MISS": 28000000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1000726051755,
+  "NIGHT": 1002383574527,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -556,7 +556,7 @@
   {
    "token": "MEPE",
    "policy": "50741124",
-   "qty": 27500000714437
+   "qty": 27000000714437
   },
   {
    "token": "MEWH",
@@ -581,7 +581,7 @@
   {
    "token": "NIGHT",
    "policy": "0691b2fe",
-   "qty": 1000726051755
+   "qty": 1002383574527
   },
   {
    "token": "NIKY",
@@ -11281,6 +11281,31 @@
    "opened_tx": "770ac85345",
    "opened_at": "2026-11-06T02:56:01Z",
    "own_stake": true
+  },
+  "e5eb0c5e4a#0": {
+   "ref_short": "e5eb0c5e4a#0",
+   "token": "MEPE",
+   "qty_raw": 250000000000,
+   "ada": 4.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "e5eb0c5e4a",
+   "opened_at": "2026-11-06T14:23:07Z",
+   "own_stake": true,
+   "closed_at": "2026-11-06T15:12:49Z"
+  },
+  "1928b67733#0": {
+   "ref_short": "1928b67733#0",
+   "token": "MEPE",
+   "qty_raw": 250000000000,
+   "ada": 4.0,
+   "status": "filled",
+   "opened_tx": "1928b67733",
+   "opened_at": "2026-11-06T14:53:59Z",
+   "own_stake": true,
+   "closed_tx": "9d46446f35",
+   "closed_at": "2026-11-06T14:54:25Z",
+   "filled_token": "NIGHT",
+   "filled_qty": 824043196
   }
  },
  "rows": [
@@ -37034,6 +37059,78 @@
    "qty": 17429,
    "ada_leg": null,
    "counterparty_tag": null
+  },
+  {
+   "time": "2026-11-06T14:23:07Z",
+   "tx_short": "353bd1b2fa",
+   "kind": "swap",
+   "token": "MEPE",
+   "qty": 250000000000,
+   "ada_leg": null,
+   "counterparty_tag": null,
+   "direction": "sell"
+  },
+  {
+   "time": "2026-11-06T14:23:07Z",
+   "tx_short": "353bd1b2fa",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 833479576,
+   "ada_leg": null,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-06T14:23:07Z",
+   "tx_short": "e5eb0c5e4a",
+   "kind": "order_open",
+   "token": "MEPE",
+   "qty": 250000000000,
+   "ada_leg": 4.0,
+   "counterparty_tag": null,
+   "order_ref_short": "e5eb0c5e4a#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-06T14:23:07Z",
+   "tx_short": "e5eb0c5e4a",
+   "kind": "transfer_out",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 1.469101,
+   "counterparty_tag": "w-71447d92"
+  },
+  {
+   "time": "2026-11-06T14:53:59Z",
+   "tx_short": "1928b67733",
+   "kind": "order_open",
+   "token": "MEPE",
+   "qty": 250000000000,
+   "ada_leg": 4.0,
+   "counterparty_tag": null,
+   "order_ref_short": "1928b67733#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-06T14:53:59Z",
+   "tx_short": "1928b67733",
+   "kind": "transfer_out",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 1.294509,
+   "counterparty_tag": "w-71447d92"
+  },
+  {
+   "time": "2026-11-06T14:54:25Z",
+   "tx_short": "9d46446f35",
+   "kind": "order_fill",
+   "token": "NIGHT",
+   "qty": 824043196,
+   "ada_leg": null,
+   "counterparty_tag": null,
+   "order_ref_short": "1928b67733#0",
+   "order_status": "filled",
+   "sold": "MEPE"
   }
  ],
  "capped": false,
