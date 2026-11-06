@@ -1,44 +1,9 @@
 {
- "at": "2026-11-06T03:11:31Z",
+ "at": "2026-11-06T05:10:34Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
- "new": [
-  {
-   "kind": "coordinated_buys",
-   "ticker": "ATLAS",
-   "wallets": [
-    "w-44934a9a",
-    "w-7826faea",
-    "w-9d7e7db5",
-    "w-fc478bfb"
-   ],
-   "window_s": 120,
-   "at": "2026-11-06T03:11:31Z"
-  },
-  {
-   "kind": "identical_size_buys",
-   "ticker": "ATLAS",
-   "wallets": [
-    "w-44934a9a",
-    "w-7826faea",
-    "w-9d7e7db5"
-   ],
-   "ada_each": 4.91,
-   "window_s": 600,
-   "at": "2026-11-06T03:11:31Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-44934a9a",
-   "launches": [
-    "ATLAS",
-    "CCC",
-    "COGE"
-   ],
-   "at": "2026-11-06T03:11:31Z"
-  }
- ],
+ "new": [],
  "recent": [
   {
    "kind": "repeat_early_buyer",
@@ -3675,8 +3640,7 @@
   }
  ],
  "api_calls": {
-  "blockfrost": 1,
-  "koios": 3
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,
