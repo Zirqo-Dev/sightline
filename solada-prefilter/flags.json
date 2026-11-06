@@ -1,19 +1,20 @@
 {
- "at": "2026-11-06T05:10:34Z",
+ "at": "2026-11-06T07:10:33Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
- "new": [],
- "recent": [
+ "new": [
   {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-b1c7f97d",
-   "launches": [
-    "CITY",
-    "PLUG"
-   ],
-   "at": "2026-11-03T17:11:14Z"
-  },
+   "kind": "holder_concentration",
+   "ticker": "VAMP",
+   "top_addr_pct": 29.0,
+   "top_cluster_pct": 29.0,
+   "top_cluster": "w-f3186187",
+   "basis": "ex-fe819d",
+   "at": "2026-11-06T07:10:33Z"
+  }
+ ],
+ "recent": [
   {
    "kind": "repeat_early_buyer",
    "wallet": "w-b90abe62",
@@ -3637,6 +3638,15 @@
     "COGE"
    ],
    "at": "2026-11-06T03:11:31Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "VAMP",
+   "top_addr_pct": 29.0,
+   "top_cluster_pct": 29.0,
+   "top_cluster": "w-f3186187",
+   "basis": "ex-fe819d",
+   "at": "2026-11-06T07:10:33Z"
   }
  ],
  "api_calls": {
