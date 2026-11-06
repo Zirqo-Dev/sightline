@@ -1,11 +1,11 @@
 {
- "at": "2026-11-06T15:12:49Z",
+ "at": "2026-11-06T17:13:35Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14166017,
+ "height": 14166343,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 155.824516,
+ "ada_balance": 386.218404,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 320000610422,
@@ -38,7 +38,7 @@
   "CITY": 12394977604208,
   "CLOVE-3": 20000000424693,
   "CNET": 31327824482276,
-  "COCK": 53304578,
+  "COCK": 53320636,
   "COCKLOCK": 50000000,
   "CORE-2": 7656000,
   "CSWAP": 394,
@@ -51,7 +51,7 @@
   "FLOW": 313217312085,
   "GOLFY": 18045303659668,
   "GUINEA": 97507230351304,
-  "Guinea Pig": 35117343,
+  "Guinea Pig": 30000000,
   "HEN": 31304917420332,
   "HERO": 44000000796505,
   "HOSKITO": 3231757310682,
@@ -69,12 +69,12 @@
   "KRAKEN": 4536305955503,
   "Kat coin": 11616622,
   "MEAT": 10396970868299,
-  "MEPE": 27000000714437,
+  "MEPE": 26750000714437,
   "MEWH": 13801519353061,
   "MISS": 28000000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1002383574527,
+  "NIGHT": 1003577920543,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -91,7 +91,7 @@
   "SHARKY": 27702843983946,
   "SNEK": 35000000,
   "SOLABLUE": 1438534570029,
-  "SOLADA": 35364991,
+  "SOLADA": 35000000,
   "STABLE": 40331687668046,
   "STRIKE": 1126615,
   "SUNDAE": 65,
@@ -156,7 +156,7 @@
   "CITY": 12394977604208,
   "CLOVE-3": 20000000424693,
   "CNET": 31327824482276,
-  "COCK": 53304578,
+  "COCK": 53320636,
   "COCKLOCK": 50000000,
   "CORE-2": 7656000,
   "CSWAP": 394,
@@ -169,7 +169,7 @@
   "FLOW": 313217312085,
   "GOLFY": 18045303659668,
   "GUINEA": 97507230351304,
-  "Guinea Pig": 35117343,
+  "Guinea Pig": 30000000,
   "HEN": 31304917420332,
   "HERO": 44000000796505,
   "HOSKITO": 3231757310682,
@@ -187,12 +187,12 @@
   "KRAKEN": 4536305955503,
   "Kat coin": 11616622,
   "MEAT": 10396970868299,
-  "MEPE": 27000000714437,
+  "MEPE": 26750000714437,
   "MEWH": 13801519353061,
   "MISS": 28000000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1002383574527,
+  "NIGHT": 1003577920543,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -209,7 +209,7 @@
   "SHARKY": 27702843983946,
   "SNEK": 35000000,
   "SOLABLUE": 1438534570029,
-  "SOLADA": 35364991,
+  "SOLADA": 35000000,
   "STABLE": 40331687668046,
   "STRIKE": 1126615,
   "SUNDAE": 65,
@@ -401,7 +401,7 @@
   {
    "token": "COCK",
    "policy": "49e42316",
-   "qty": 53304578
+   "qty": 53320636
   },
   {
    "token": "COCKLOCK",
@@ -466,7 +466,7 @@
   {
    "token": "Guinea Pig",
    "policy": "ffc3c757",
-   "qty": 35117343
+   "qty": 30000000
   },
   {
    "token": "HEN",
@@ -556,7 +556,7 @@
   {
    "token": "MEPE",
    "policy": "50741124",
-   "qty": 27000000714437
+   "qty": 26750000714437
   },
   {
    "token": "MEWH",
@@ -581,7 +581,7 @@
   {
    "token": "NIGHT",
    "policy": "0691b2fe",
-   "qty": 1002383574527
+   "qty": 1003577920543
   },
   {
    "token": "NIKY",
@@ -666,7 +666,7 @@
   {
    "token": "SOLADA",
    "policy": "e7c77b27",
-   "qty": 35364991
+   "qty": 35000000
   },
   {
    "token": "STABLE",
@@ -11306,6 +11306,58 @@
    "closed_at": "2026-11-06T14:54:25Z",
    "filled_token": "NIGHT",
    "filled_qty": 824043196
+  },
+  "89d74aef6a#0": {
+   "ref_short": "89d74aef6a#0",
+   "token": "MEPE",
+   "qty_raw": 250000000000,
+   "ada": 4.0,
+   "status": "filled",
+   "opened_tx": "89d74aef6a",
+   "opened_at": "2026-11-06T15:47:35Z",
+   "own_stake": true,
+   "closed_tx": "0dfaef897b",
+   "closed_at": "2026-11-06T15:47:35Z",
+   "filled_token": "NIGHT",
+   "filled_qty": 861319320
+  },
+  "ece214f92f#0": {
+   "ref_short": "ece214f92f#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "filled",
+   "opened_tx": "ece214f92f",
+   "opened_at": "2026-11-06T16:20:40Z",
+   "own_stake": true,
+   "closed_tx": "91b20efab6",
+   "closed_at": "2026-11-06T16:20:40Z",
+   "filled_token": "COCK",
+   "filled_qty": 16058
+  },
+  "de3d854c31#0": {
+   "ref_short": "de3d854c31#0",
+   "token": "SOLADA",
+   "qty_raw": 364991,
+   "ada": 4.5,
+   "status": "filled",
+   "opened_tx": "de3d854c31",
+   "opened_at": "2026-11-06T16:22:53Z",
+   "own_stake": true,
+   "closed_tx": "a6d7595d1f",
+   "closed_at": "2026-11-06T16:22:53Z",
+   "filled_ada": 689.716178
+  },
+  "46519a703e#0": {
+   "ref_short": "46519a703e#0",
+   "token": "Guinea Pig",
+   "qty_raw": 5117343,
+   "ada": 4.5,
+   "status": "closed_elsewhere",
+   "opened_tx": "46519a703e",
+   "opened_at": "2026-11-06T16:23:36Z",
+   "own_stake": true,
+   "closed_at": "2026-11-06T17:13:35Z"
   }
  },
  "rows": [
@@ -37131,6 +37183,123 @@
    "order_ref_short": "1928b67733#0",
    "order_status": "filled",
    "sold": "MEPE"
+  },
+  {
+   "time": "2026-11-06T15:47:35Z",
+   "tx_short": "89d74aef6a",
+   "kind": "order_open",
+   "token": "MEPE",
+   "qty": 250000000000,
+   "ada_leg": 4.0,
+   "counterparty_tag": null,
+   "order_ref_short": "89d74aef6a#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-06T15:47:35Z",
+   "tx_short": "89d74aef6a",
+   "kind": "transfer_out",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 1.294509,
+   "counterparty_tag": "w-71447d92"
+  },
+  {
+   "time": "2026-11-06T15:47:35Z",
+   "tx_short": "0dfaef897b",
+   "kind": "order_fill",
+   "token": "NIGHT",
+   "qty": 861319320,
+   "ada_leg": null,
+   "counterparty_tag": null,
+   "order_ref_short": "89d74aef6a#0",
+   "order_status": "filled",
+   "sold": "MEPE"
+  },
+  {
+   "time": "2026-11-06T16:20:40Z",
+   "tx_short": "ece214f92f",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "ece214f92f#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-06T16:20:40Z",
+   "tx_short": "91b20efab6",
+   "kind": "order_fill",
+   "token": "COCK",
+   "qty": 16058,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "ece214f92f#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-06T16:22:53Z",
+   "tx_short": "de3d854c31",
+   "kind": "order_open",
+   "token": "SOLADA",
+   "qty": 364991,
+   "ada_leg": 4.5,
+   "counterparty_tag": null,
+   "order_ref_short": "de3d854c31#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-06T16:22:53Z",
+   "tx_short": "a6d7595d1f",
+   "kind": "order_fill",
+   "token": "SOLADA",
+   "qty": 364991,
+   "ada_leg": 689.716178,
+   "counterparty_tag": null,
+   "order_ref_short": "de3d854c31#0",
+   "order_status": "filled"
+  },
+  {
+   "time": "2026-11-06T16:23:36Z",
+   "tx_short": "58d9e73b86",
+   "kind": "swap",
+   "token": "Guinea Pig",
+   "qty": 5117343,
+   "ada_leg": 286.332436,
+   "counterparty_tag": null,
+   "direction": "sell"
+  },
+  {
+   "time": "2026-11-06T16:23:36Z",
+   "tx_short": "46519a703e",
+   "kind": "order_open",
+   "token": "Guinea Pig",
+   "qty": 5117343,
+   "ada_leg": 4.5,
+   "counterparty_tag": null,
+   "order_ref_short": "46519a703e#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-06T16:24:37Z",
+   "tx_short": "ba421fdf3f",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 333026696,
+   "ada_leg": 70.426601,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-06T16:49:31Z",
+   "tx_short": "6a5d5f41b6",
+   "kind": "transfer_out",
+   "token": "ADA",
+   "qty": null,
+   "ada_leg": 600.169021,
+   "counterparty_tag": "w-4e705f42"
   }
  ],
  "capped": false,
