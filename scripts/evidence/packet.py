@@ -226,12 +226,14 @@ def git_head(repo):
 
 
 def git_file_commit(repo, rel):
-    """Pinned snapshot SHA when that commit's blob matches the file bytes.
+    """Pinned snapshot SHA when that commit's blob matches the raw file bytes.
 
     ``git log -1`` is not used. A depth-1 checkout reports HEAD for every
     path, and a full history reports the last commit that touched the path.
     Those SHAs differ for one tree. The blob URL is the snapshot that was
     read, which is truthful only when the snapshot contains these bytes.
+    ``git hash-object --no-filters`` is required. Without it, a clean or
+    eol filter can hash a CRLF worktree as the committed LF blob.
     """
     if not rel or rel.startswith("-") or ".." in rel.split("/") or "\n" in rel or "\r" in rel:
         return None
@@ -250,7 +252,7 @@ def git_file_commit(repo, rel):
     parts = meta.split()
     if len(parts) != 3 or parts[1] != "blob" or not SHA_RE.fullmatch(parts[2]):
         return None
-    work = _git(repo, ["hash-object", "--", rel])
+    work = _git(repo, ["hash-object", "--no-filters", "--", rel])
     if work != parts[2]:
         return None
     return head

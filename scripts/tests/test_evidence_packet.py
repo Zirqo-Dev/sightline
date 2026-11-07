@@ -806,6 +806,40 @@ class EvidencePacketTest(unittest.TestCase):
         self.assertIsNone(packet.git_file_commit(self.data, "solana-desk/health.json"))
         self.assertEqual(packet.git_file_commit(shallow, "solana-desk/health.json"), head)
 
+    def test_crlf_eol_worktree_does_not_claim_lf_blob(self):
+        repo = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, repo, True)
+        env = os.environ.copy()
+        env["GIT_AUTHOR_NAME"] = "replay"
+        env["GIT_AUTHOR_EMAIL"] = "replay" + "@" + "example.com"
+        env["GIT_COMMITTER_NAME"] = "replay"
+        env["GIT_COMMITTER_EMAIL"] = "replay" + "@" + "example.com"
+        subprocess.check_call(["git", "init", "-q", "-b", "main"], cwd=repo, env=env)
+        with open(os.path.join(repo, ".gitattributes"), "wb") as fh:
+            fh.write(b"* text eol=crlf\n")
+        sample = os.path.join(repo, "sample.txt")
+        with open(sample, "wb") as fh:
+            fh.write(b"a\n")
+        subprocess.check_call(["git", "add", ".gitattributes", "sample.txt"], cwd=repo, env=env)
+        subprocess.check_call(["git", "commit", "-q", "-m", "lf"], cwd=repo, env=env)
+        os.remove(sample)
+        subprocess.check_call(["git", "checkout", "-q", "--", "sample.txt"], cwd=repo, env=env)
+        with open(sample, "rb") as fh:
+            raw = fh.read()
+        self.assertEqual(raw, b"a\r\n")
+        blob_bytes = subprocess.check_output(["git", "cat-file", "-p", "HEAD:sample.txt"], cwd=repo)
+        self.assertEqual(blob_bytes, b"a\n")
+        blob = subprocess.check_output(["git", "rev-parse", "HEAD:sample.txt"], cwd=repo, text=True).strip()
+        filtered = subprocess.check_output(["git", "hash-object", "--", "sample.txt"], cwd=repo, text=True).strip()
+        raw_hash = subprocess.check_output(
+            ["git", "hash-object", "--no-filters", "--", "sample.txt"], cwd=repo, text=True,
+        ).strip()
+        self.assertEqual(filtered, blob)
+        self.assertNotEqual(raw_hash, blob)
+        status = subprocess.check_output(["git", "status", "--porcelain=v1", "--", "sample.txt"], cwd=repo, text=True)
+        self.assertEqual(status, "")
+        self.assertIsNone(packet.git_file_commit(repo, "sample.txt"))
+
     def test_dirty_builder_rejects(self):
         self.plant()
         code, code_sha = self._pinned_code()
