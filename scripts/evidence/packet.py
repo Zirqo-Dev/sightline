@@ -2,7 +2,9 @@
 """Read-only evidence packet. No network, no wall clock, no pushes.
 
 Same --repo, --data, --as-of, previous packet, and Actions snapshot produce
-the same bytes. A missing input stays unknown. It is not treated as healthy.
+the same bytes. Checkout history depth is not an input. A file link uses the
+pinned snapshot SHA when that commit contains the file bytes. A missing input
+stays unknown. It is not treated as healthy.
 
   python3 scripts/evidence/packet.py --repo . --data /path/to/desk-data \\
       --as-of 2026-11-07T21:30:00Z --out /tmp/evidence
@@ -100,6 +102,7 @@ LIMITATIONS = (
     "This pilot does not estimate a token-saving percentage.",
     "Missing files, unreadable files, and a missing Actions snapshot are not treated as healthy.",
     "The packet does not read the wall clock. as-of is an input. The same inputs and as-of produce the same bytes.",
+    "A file commit and its blob URL are the pinned checkout SHA when that snapshot contains the file bytes. They are not the last commit that edited the path, and they do not depend on fetch depth.",
     "Existing alerts are unchanged. This packet does not close or replace them.",
     "Workflow health uses the newest schedule, push, or workflow_dispatch run in a 20-run snapshot page. A skipped pull request does not replace that run. If the page has no such run, the state is unknown, not healthy.",
 )
@@ -223,12 +226,36 @@ def git_head(repo):
 
 
 def git_file_commit(repo, rel):
-    if not rel or rel.startswith("-") or ".." in rel.split("/"):
+    """Pinned snapshot SHA when that commit's blob matches the raw file bytes.
+
+    ``git log -1`` is not used. A depth-1 checkout reports HEAD for every
+    path, and a full history reports the last commit that touched the path.
+    Those SHAs differ for one tree. The blob URL is the snapshot that was
+    read, which is truthful only when the snapshot contains these bytes.
+    ``git hash-object --no-filters`` is required. Without it, a clean or
+    eol filter can hash a CRLF worktree as the committed LF blob.
+    """
+    if not rel or rel.startswith("-") or ".." in rel.split("/") or "\n" in rel or "\r" in rel:
         return None
-    text = _git(repo, ["log", "-1", "--format=%H", "--", rel])
-    if text and SHA_RE.fullmatch(text):
-        return text
-    return None
+    head = git_head(repo)
+    if not head:
+        return None
+    listed = _git(repo, ["ls-tree", "-r", "HEAD", "--", rel])
+    if not listed:
+        return None
+    lines = [line for line in listed.splitlines() if line]
+    if len(lines) != 1 or "\t" not in lines[0]:
+        return None
+    meta, name = lines[0].split("\t", 1)
+    if name != rel:
+        return None
+    parts = meta.split()
+    if len(parts) != 3 or parts[1] != "blob" or not SHA_RE.fullmatch(parts[2]):
+        return None
+    work = _git(repo, ["hash-object", "--no-filters", "--", rel])
+    if work != parts[2]:
+        return None
+    return head
 
 
 def remote_slug(repo):
