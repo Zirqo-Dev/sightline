@@ -1,6 +1,6 @@
 """Claude re-review of #29: should-fixes, partials, nice-to-haves, and the 5 reverts the #29 tests missed.
 Offline, no secrets, no network. Fake ids from labels."""
-import json, os, re, shutil, subprocess, sys, tempfile, time, unittest
+import hashlib, json, os, re, shutil, subprocess, sys, tempfile, time, unittest
 from unittest import mock
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.dirname(HERE)
@@ -63,7 +63,14 @@ class Revert2WholeTokenMask(unittest.TestCase):
             cfg = json.load(open(os.path.join(SRC, "config.json")))
             cfg["_probe"] = "zz" + key  # a longer id that merely contains a stake key
             json.dump(cfg, open(os.path.join(d, "solada-prefilter", "config.json"), "w"))
-            env = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
+            env = dict(
+                os.environ,
+                PRIVACY_GUARD_PATTERNS="^zzOWNERzz$",
+                PRIVACY_IDENTITY_HASHES=hashlib.sha256(
+                    ("zzsynthetic" + "identityblocktoken").encode()
+                ).hexdigest(),
+            )
+            env.pop("SIGHTLINE_PRIVATE_TOKEN", None)
             r = subprocess.run(["bash", "scripts/privacy-guard.sh", "solada-prefilter/config.json"], cwd=d, env=env, capture_output=True)
             self.assertEqual(r.returncode, 1, r.stderr)
             self.assertNotIn(key.encode(), r.stderr + r.stdout)

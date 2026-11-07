@@ -43,6 +43,73 @@ class Digests(unittest.TestCase):
         self.assertEqual(PI.digest("alpha", key), hmac.new(key, b"alpha", hashlib.sha256).hexdigest())
 
 
+# Synthetic only. The preimage is not a real identity. Normalization is locked
+# to the gram that existing private digests already use: lower case, no extra
+# whitespace, no leading @, and no added salt.
+SYNTHETIC_GRAM = "zzsynthetic zzphrase"
+SYNTHETIC_SURFACE = "  @ZZSynthetic   ZZPhrase\n"
+
+
+def quiet_env():
+    env = dict(os.environ)
+    for key in (
+        "PRIVACY_IDENTITY_HASHES",
+        "SIGHTLINE_PRIVATE_TOKEN",
+        "PRIVACY_IDENTITY_REQUIRE",
+        "PRIVACY_IDENTITY_KEY",
+        "GITHUB_ACTIONS",
+        "SIGHTLINE_PRIVATE_REPO",
+    ):
+        env.pop(key, None)
+    return env
+
+
+class Normalization(unittest.TestCase):
+    def test_case_whitespace_and_at_prefix_hash_the_same_gram(self):
+        grams = PI.grams(SYNTHETIC_SURFACE)
+        self.assertIn(SYNTHETIC_GRAM, grams)
+        self.assertIn("zzsynthetic", grams)
+        self.assertNotIn("@zzsynthetic", grams)
+        self.assertNotIn("zzsynthetic  zzphrase", grams)
+        self.assertEqual(PI.grams("@ZZSynthetic"), PI.grams("zzsynthetic"))
+        self.assertEqual(PI.grams("ZZSynthetic\tZZPhrase"), PI.grams("zzsynthetic zzphrase"))
+
+    def test_no_extra_salt_and_only_a_long_key_changes_the_digest(self):
+        self.assertEqual(PI.digest(SYNTHETIC_GRAM), sha(SYNTHETIC_GRAM))
+        self.assertEqual(PI.digest(SYNTHETIC_GRAM, None), sha(SYNTHETIC_GRAM))
+        key = b"k" * 16
+        self.assertEqual(
+            PI.digest(SYNTHETIC_GRAM, key),
+            hmac.new(key, SYNTHETIC_GRAM.encode(), hashlib.sha256).hexdigest(),
+        )
+        self.assertNotEqual(PI.digest(SYNTHETIC_GRAM, key), sha(SYNTHETIC_GRAM))
+        # The surface form is not what gets hashed. The normalized gram is.
+        self.assertNotEqual(PI.digest(SYNTHETIC_SURFACE.strip()), sha(SYNTHETIC_GRAM))
+        old = os.environ.get("PRIVACY_IDENTITY_KEY")
+        try:
+            os.environ["PRIVACY_IDENTITY_KEY"] = "short-key"
+            self.assertIsNone(PI.identity_key())
+            os.environ["PRIVACY_IDENTITY_KEY"] = "  " + ("k" * 16) + "  "
+            self.assertEqual(PI.identity_key(), b"k" * 16)
+        finally:
+            if old is None:
+                os.environ.pop("PRIVACY_IDENTITY_KEY", None)
+            else:
+                os.environ["PRIVACY_IDENTITY_KEY"] = old
+
+    def test_uppercase_digest_lines_still_match_the_normalized_gram(self):
+        listed = sha(SYNTHETIC_GRAM).upper()
+        status, found = PI.classify_hash_text("\n  " + listed + "  \n")
+        self.assertEqual(status, "ok")
+        self.assertEqual(found, {sha(SYNTHETIC_GRAM)})
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "note.txt")
+            with open(path, "w") as fh:
+                fh.write(SYNTHETIC_SURFACE)
+            hits = PI.scan_paths([path], found, None)
+        self.assertIn(path, hits)
+
+
 class Scan(unittest.TestCase):
     def write(self, directory, name, text):
         path = os.path.join(directory, name)
@@ -105,46 +172,110 @@ class Scan(unittest.TestCase):
         self.assertNotIn(phrase, blocked.stderr.lower())
         self.assertIn("identity match", blocked.stderr)
 
-    def test_missing_hashes_warn_and_do_not_fail(self):
-        env = dict(os.environ)
-        env.pop("PRIVACY_IDENTITY_HASHES", None)
-        env.pop("SIGHTLINE_PRIVATE_TOKEN", None)
-        env.pop("PRIVACY_IDENTITY_REQUIRE", None)
-        env.pop("GITHUB_ACTIONS", None)
+    def _guard(self, root, env, *files):
+        return subprocess.run(
+            ["bash", os.path.join(ROOT, "scripts", "privacy-guard.sh"), "--root", root, *files],
+            cwd=ROOT, env=env, capture_output=True, text=True,
+        )
+
+    def test_absent_hashes_fail_closed_when_require_is_unset(self):
+        for require in (None, "", "0", "false", "no"):
+            env = quiet_env()
+            if require is not None:
+                env["PRIVACY_IDENTITY_REQUIRE"] = require
+            with tempfile.TemporaryDirectory() as d:
+                path = self.write(d, "plain.txt", "hello")
+                proc = self._guard(d, env, path)
+            self.assertNotEqual(proc.returncode, 0, proc.stderr)
+            self.assertIn("identity hashes were not loaded", proc.stderr)
+            self.assertNotIn("skipped", proc.stderr)
+
+    def test_empty_hash_list_fails_closed(self):
+        script = os.path.join(ROOT, "scripts", "privacy_identity.py")
+        for body in ("", "\n", "\n  \n"):
+            env = quiet_env()
+            with tempfile.TemporaryDirectory() as d:
+                with open(os.path.join(d, ".privacy-identity-hashes"), "w") as fh:
+                    fh.write(body)
+                path = self.write(d, "plain.txt", "hello")
+                proc = subprocess.run(
+                    [os.sys.executable, script, "--root", d, path],
+                    cwd=d, env=env, capture_output=True, text=True,
+                )
+                guarded = self._guard(d, env, "plain.txt")
+            self.assertNotEqual(proc.returncode, 0, proc.stderr)
+            self.assertIn("identity hash list is empty", proc.stderr)
+            self.assertNotEqual(guarded.returncode, 0, guarded.stderr)
+            self.assertIn("identity hash list is empty", guarded.stderr)
+
+    def test_malformed_hash_file_fails_closed(self):
+        script = os.path.join(ROOT, "scripts", "privacy_identity.py")
+        env = quiet_env()
+        bad = "not-a-digest\n" + ("f" * 63) + "\n"
         with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, ".privacy-identity-hashes"), "w") as fh:
+                fh.write(bad)
             path = self.write(d, "plain.txt", "hello")
             proc = subprocess.run(
-                ["bash", os.path.join(ROOT, "scripts", "privacy-guard.sh"), path],
-                cwd=ROOT, env=env, capture_output=True, text=True,
+                [os.sys.executable, script, "--root", d, path],
+                cwd=d, env=env, capture_output=True, text=True,
             )
-        self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertIn("identity hashes not loaded", proc.stderr)
+            guarded = self._guard(d, env, "plain.txt")
+        self.assertNotEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("identity hash list is malformed", proc.stderr)
+        self.assertNotIn("not-a-digest", proc.stderr)
+        self.assertNotEqual(guarded.returncode, 0, guarded.stderr)
+        self.assertIn("identity hash list is malformed", guarded.stderr)
+        self.assertNotIn("not-a-digest", guarded.stderr)
 
-    def test_a_missing_hash_file_warns_unless_required(self):
-        env = dict(os.environ)
-        env.pop("PRIVACY_IDENTITY_HASHES", None)
-        env.pop("PRIVACY_IDENTITY_REQUIRE", None)
+    def test_a_mixed_valid_and_bad_line_is_malformed_and_unused(self):
+        good = sha("zzsyntheticidentityblocktoken")
+        env = quiet_env()
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, ".privacy-identity-hashes"), "w") as fh:
+                fh.write(good + "\nnot-a-digest\n")
+            path = self.write(d, "plain.txt", "hello")
+            proc = self._guard(d, env, "plain.txt")
+        self.assertNotEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("identity hash list is malformed", proc.stderr)
+        self.assertNotIn(good, proc.stderr)
+
+    def test_synthetic_phrase_is_blocked_with_exit_nonzero(self):
+        env = quiet_env()
+        env["PRIVACY_IDENTITY_HASHES"] = sha(SYNTHETIC_GRAM) + "\n"
+        with tempfile.TemporaryDirectory() as d:
+            planted = self.write(d, "planted.txt", SYNTHETIC_SURFACE)
+            clean = self.write(d, "clean.txt", "codename only")
+            blocked = self._guard(d, env, planted)
+            ok = self._guard(d, env, clean)
+        self.assertNotEqual(blocked.returncode, 0, blocked.stderr)
+        self.assertIn("identity match", blocked.stderr)
+        self.assertNotIn(SYNTHETIC_GRAM, blocked.stderr.lower())
+        self.assertNotIn("zzsynthetic", blocked.stderr.lower())
+        self.assertEqual(ok.returncode, 0, ok.stderr)
+
+    def test_a_missing_private_hash_file_fails_closed_without_printing_the_token(self):
+        env = quiet_env()
         env["SIGHTLINE_PRIVATE_TOKEN"] = "t" * 20
-        env["GITHUB_ACTIONS"] = "true"
         env["SIGHTLINE_PRIVATE_REPO"] = "not a repo"
         script = os.path.join(ROOT, "scripts", "privacy_identity.py")
         with tempfile.TemporaryDirectory() as d:
             path = self.write(d, "plain.txt", "hello")
-            warned = subprocess.run(
+            failed = subprocess.run(
                 [os.sys.executable, script, "--root", d, path],
                 cwd=d, env=env, capture_output=True, text=True,
             )
-            env["PRIVACY_IDENTITY_REQUIRE"] = "1"
-            required = subprocess.run(
+            env["PRIVACY_IDENTITY_REQUIRE"] = "0"
+            still = subprocess.run(
                 [os.sys.executable, script, "--root", d, path],
                 cwd=d, env=env, capture_output=True, text=True,
             )
-        self.assertEqual(warned.returncode, 0, warned.stderr)
-        self.assertIn("identity hash file unavailable", warned.stderr)
-        self.assertNotIn("t" * 20, warned.stderr)
-        self.assertNotEqual(required.returncode, 0)
-        self.assertIn("identity hashes were not loaded", required.stderr)
-        self.assertNotIn("t" * 20, required.stderr)
+        self.assertNotEqual(failed.returncode, 0, failed.stderr)
+        self.assertIn("identity hash file unavailable", failed.stderr)
+        self.assertNotIn("t" * 20, failed.stderr)
+        self.assertNotIn("skipped", failed.stderr)
+        self.assertNotEqual(still.returncode, 0, still.stderr)
+        self.assertNotIn("t" * 20, still.stderr)
 
     def test_the_guard_source_does_not_list_blocked_phrases(self):
         with open(os.path.join(ROOT, "scripts", "privacy-guard.sh"), errors="replace") as fh:

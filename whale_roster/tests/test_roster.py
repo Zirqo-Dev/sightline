@@ -1,4 +1,5 @@
 """Offline whale roster tests. No network and no secrets."""
+import hashlib
 import json
 import os
 import shutil
@@ -331,6 +332,12 @@ class GuardTests(unittest.TestCase):
                 json.dump(doc, fh)
             env = dict(os.environ)
             env.pop("PRIVACY_GUARD_PATTERNS", None)
+            env.pop("SIGHTLINE_PRIVATE_TOKEN", None)
+            # A well-formed digest so a clean file still passes. The preimage is
+            # split so this file does not contain that token.
+            env["PRIVACY_IDENTITY_HASHES"] = hashlib.sha256(
+                ("zzsynthetic" + "identityblocktoken").encode()
+            ).hexdigest()
             return subprocess.run(
                 ["bash", os.path.join(ROOT, "scripts", "privacy-guard.sh"), "--root", tmp, rel],
                 cwd=ROOT, env=env, capture_output=True, text=True,

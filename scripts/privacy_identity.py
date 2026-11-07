@@ -14,6 +14,19 @@ Hash source, first hit wins for each digest (they are unioned):
 When PRIVACY_IDENTITY_KEY is set (at least 16 characters), digests are
 HMAC-SHA256 with that key. Otherwise they are plain SHA-256. The stored
 digests must use the same mode. Nothing matched is printed.
+
+Normalization and keying are fixed. Existing private digests depend on them:
+  Case: the text is lowercased before tokens are taken.
+  Whitespace: any character outside [a-z0-9_] is a separator. A 2-word or
+  3-word gram joins those tokens with one ASCII space.
+  @ prefix: @ is a separator, so a leading @ is not part of the hashed token.
+  Salt: none is added. The hashed payload is the gram as UTF-8. The only
+  keying material is PRIVACY_IDENTITY_KEY, and only when it is at least 16
+  characters. A shorter key is ignored.
+
+An absent, empty, or malformed digest list fails the process. Unset
+PRIVACY_IDENTITY_REQUIRE does not turn that into a pass, and setting the
+variable does not either. Wallet checks in the shell guard still run.
 """
 from __future__ import annotations
 
@@ -58,6 +71,10 @@ def grams(text):
     two-word phrase it would be if the underscore were a space. A prefix of a
     longer token (length 8 or more) is included so a short handle fragment
     still matches the full token.
+
+    The hashed string is this gram, not the raw span. Case is folded, extra
+    whitespace is not kept, and a leading @ is dropped because it is not a
+    token character. No salt is added.
     """
     if not isinstance(text, str) or not text:
         return []
@@ -89,6 +106,7 @@ def grams(text):
 
 
 def parse_hashes(text):
+    """Valid digests only. Loaders still fail closed on an empty or bad source."""
     out = set()
     if not isinstance(text, str):
         return out
@@ -97,6 +115,33 @@ def parse_hashes(text):
         if _HEX.fullmatch(item):
             out.add(item)
     return out
+
+
+def classify_hash_text(text):
+    """Return (status, hashes): ok, empty, or malformed.
+
+    Blank lines are ignored. Every other line must be 64 hex digits.
+    Surrounding whitespace is ignored and case is folded, which is how a
+    stored digest is recognized. A source that mixes valid digests with
+    anything else is malformed, and its digests are not used.
+    """
+    if not isinstance(text, str):
+        return "malformed", set()
+    found = set()
+    bad = False
+    for line in text.splitlines():
+        item = line.strip().lower()
+        if not item:
+            continue
+        if _HEX.fullmatch(item):
+            found.add(item)
+        else:
+            bad = True
+    if bad:
+        return "malformed", set()
+    if not found:
+        return "empty", set()
+    return "ok", found
 
 
 def _private_repo():
@@ -123,24 +168,23 @@ def _github_json(url, token):
 
 
 def fetch_private_hashes(token, repo=None):
-    """Hex digests from identities/blocked.sha256, or None when unavailable.
+    """(status, hashes) from identities/blocked.sha256.
 
-    Refuses a repo the API does not mark private. Does not print the token,
-    the URL, or the file body.
+    status is ok, empty, malformed, or unavailable. Refuses a repo the API
+    does not mark private. Does not print the token, the URL, or the file body.
     """
     token = (token or "").strip()
     if not token:
-        return None
+        return "unavailable", set()
     repo = repo or _private_repo()
     if not repo:
-        return None
+        return "unavailable", set()
     try:
         meta = _github_json("https://api.github.com/repos/" + repo, token)
     except Exception:
         meta = None
     if not isinstance(meta, dict) or meta.get("private") is not True:
-        print("::warning::privacy-guard: private repo refused; identity hashes not loaded", file=sys.stderr)
-        return None
+        return "unavailable", set()
     url = "https://api.github.com/repos/%s/contents/identities/blocked.sha256" % repo
     req = urllib.request.Request(
         url,
@@ -154,33 +198,67 @@ def fetch_private_hashes(token, repo=None):
         with urllib.request.urlopen(req, timeout=20) as resp:
             body = resp.read(1_000_000).decode()
     except Exception:
-        print("::warning::privacy-guard: identity hash file unavailable", file=sys.stderr)
-        return None
-    return parse_hashes(body)
+        return "unavailable", set()
+    return classify_hash_text(body)
+
+
+def _problem(status, source):
+    if status == "empty":
+        return "identity hash list is empty (%s)" % source
+    if status == "malformed":
+        return "identity hash list is malformed (%s)" % source
+    return "identity hash file unavailable (%s)" % source
 
 
 def load_hashes(root=".", fetch=None):
-    """Union of env, gitignored file, and the private repo. The key is separate."""
+    """Well-formed digests, plus fail-closed problems. The key is separate.
+
+    Each configured source must be a non-empty list of 64-hex digests.
+    A bad source contributes a problem and no digests. No source at all is
+    an absent list.
+    """
     found = set()
-    found |= parse_hashes(os.environ.get("PRIVACY_IDENTITY_HASHES", ""))
+    problems = []
+    configured = False
+
+    if "PRIVACY_IDENTITY_HASHES" in os.environ:
+        configured = True
+        status, hashes = classify_hash_text(os.environ.get("PRIVACY_IDENTITY_HASHES") or "")
+        if status == "ok":
+            found |= hashes
+        else:
+            problems.append(_problem(status, "PRIVACY_IDENTITY_HASHES"))
+
     path = os.path.join(root, ".privacy-identity-hashes")
     if os.path.isfile(path):
+        configured = True
         try:
-            found |= parse_hashes(open(path, errors="replace").read())
+            with open(path, errors="replace") as fh:
+                text = fh.read()
         except OSError:
-            pass
+            problems.append(_problem("unavailable", ".privacy-identity-hashes"))
+        else:
+            status, hashes = classify_hash_text(text)
+            if status == "ok":
+                found |= hashes
+            else:
+                problems.append(_problem(status, ".privacy-identity-hashes"))
+
     token = os.environ.get("SIGHTLINE_PRIVATE_TOKEN", "")
     token = token.strip() if isinstance(token, str) else ""
-    remote = None
     if token:
+        configured = True
         remote = fetch(token) if fetch is not None else fetch_private_hashes(token)
-        if remote:
-            found |= remote
-    return found, token, remote
+        status, hashes = remote if isinstance(remote, tuple) and len(remote) == 2 else ("unavailable", set())
+        if status == "ok" and isinstance(hashes, set):
+            found |= hashes
+        else:
+            kind = status if status in ("empty", "malformed", "unavailable") else "unavailable"
+            problems.append(_problem(kind, "private repo"))
 
-
-def hashes_required():
-    return os.environ.get("PRIVACY_IDENTITY_REQUIRE", "").strip() in ("1", "true", "yes")
+    if not configured:
+        problems.append("identity hashes were not loaded")
+    return found, problems
 
 
 def scan_paths(paths, hashes, key):
@@ -213,24 +291,18 @@ def main(argv=None):
     paths = list(args.paths)
     if not paths and not sys.stdin.isatty():
         paths.extend(ln.strip("\n") for ln in sys.stdin if ln.strip())
-    hashes, token, remote = load_hashes(args.root)
-    if not hashes:
-        # A missing list must not stop the desks. Set PRIVACY_IDENTITY_REQUIRE=1
-        # (or pass hashes) when the check has to fail closed.
-        if hashes_required():
-            print("PRIVACY GUARD FAILED: identity hashes were not loaded", file=sys.stderr)
-            return 1
-        if token and remote is None:
-            print("::warning::privacy-guard: identity hash file unavailable; name and handle checks skipped", file=sys.stderr)
-        else:
-            print("::warning::privacy-guard: identity hashes not loaded; name and handle checks skipped", file=sys.stderr)
-        return 0
+    hashes, problems = load_hashes(args.root)
+    # A bad list fails closed. PRIVACY_IDENTITY_REQUIRE is not consulted: unset,
+    # 0, or false must not turn this back into a warning.
     key = identity_key()
-    hits = scan_paths(paths, hashes, key)
+    hits = scan_paths(paths, hashes, key) if hashes else {}
+    for msg in problems:
+        print("PRIVACY GUARD FAILED: %s" % msg, file=sys.stderr)
     if hits:
         for path, n in hits.items():
             print("PRIVACY GUARD: %s: %d identity match(es)" % (path, n), file=sys.stderr)
         print("PRIVACY GUARD FAILED: identity wording must not be committed. See PRIVACY.md.", file=sys.stderr)
+    if problems or hits:
         return 1
     return 0
 
