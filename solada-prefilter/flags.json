@@ -1,162 +1,59 @@
 {
- "at": "2026-11-07T17:11:26Z",
+ "at": "2026-11-07T19:11:13Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "coordinated_buys",
-   "ticker": "TMZ",
-   "wallets": [
-    "w-58df7500",
-    "w-5b4bb651",
-    "w-77947bb7",
-    "w-805b7c78",
-    "w-a49db809"
-   ],
-   "window_s": 120,
-   "at": "2026-11-07T17:11:26Z"
-  },
-  {
-   "kind": "coordinated_buys",
-   "ticker": "WAR",
-   "wallets": [
-    "w-05ca7732",
-    "w-14c08a2a",
-    "w-5386a683",
-    "w-5b4bb651",
-    "w-728f6fb8",
-    "w-74e8e174",
-    "w-925c6cfd",
-    "w-c2d55ee4",
-    "w-d17561bb"
-   ],
-   "window_s": 120,
-   "at": "2026-11-07T17:11:26Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "WAR",
-   "wallets": [
-    "w-14c08a2a",
-    "w-5386a683",
-    "w-5b4bb651",
-    "w-728f6fb8",
-    "w-74e8e174",
-    "w-925c6cfd",
-    "w-c2d55ee4",
-    "w-d17561bb"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-07T17:11:26Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-5b4bb651",
-   "launches": [
-    "TMZ",
-    "WAR"
-   ],
-   "at": "2026-11-07T17:11:26Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-805b7c78",
-   "launches": [
-    "MAGE",
-    "MIXI",
-    "RUGG",
-    "SAA",
-    "SLIP",
-    "TEST",
-    "TMZ",
-    "TPS",
-    "VOPI",
-    "WED"
-   ],
-   "at": "2026-11-07T17:11:26Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-a49db809",
-   "launches": [
-    "KING",
-    "MEOW",
-    "MEPE",
-    "TMZ"
-   ],
-   "at": "2026-11-07T17:11:26Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-c2d55ee4",
-   "launches": [
-    "PARI",
-    "WAR"
-   ],
-   "at": "2026-11-07T17:11:26Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-d17561bb",
-   "launches": [
-    "PARI",
-    "WAR"
-   ],
-   "at": "2026-11-07T17:11:26Z"
+   "kind": "whale_move",
+   "ticker": "NIGHT",
+   "tag": "w-f3186187",
+   "delta": 53691394223,
+   "decimals": 6,
+   "qty": 53691.3942,
+   "ada_equiv": 13213,
+   "value_basis": "ada_leg_rate",
+   "pct": 5.3,
+   "at": "2026-11-07T19:11:13Z"
   },
   {
    "kind": "whale_move",
-   "ticker": "CITY",
+   "ticker": "SNEK",
    "tag": "w-f3186187",
-   "delta": 2415398874016,
+   "delta": -3000000,
+   "decimals": 0,
+   "qty": -3000000.0,
+   "ada_equiv": 8060,
+   "value_basis": "ada_leg_rate",
+   "pct": 7.9,
+   "at": "2026-11-07T19:11:13Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "MEPE",
+   "tag": "w-f3186187",
+   "delta": -3068086000000,
    "decimals": 6,
-   "qty": 2415398.874,
-   "ada_equiv": 202,
+   "qty": -3068086.0,
+   "ada_equiv": 1916,
+   "value_basis": "decimals_x_price",
+   "pct": 11.9,
+   "at": "2026-11-07T19:11:13Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": -3000000000,
+   "decimals": 6,
+   "qty": -3000.0,
+   "ada_equiv": 3221,
    "value_basis": "ada_leg",
-   "pct": 39.0,
-   "at": "2026-11-07T17:11:26Z"
+   "pct": 1.0,
+   "at": "2026-11-07T19:11:13Z"
   }
  ],
  "recent": [
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-b0f4a1a5",
-   "launches": [
-    "GG",
-    "MIXI",
-    "SLANG"
-   ],
-   "at": "2026-11-04T23:11:29Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-cc579dcb",
-   "launches": [
-    "BUOY",
-    "HACK",
-    "SLANG"
-   ],
-   "at": "2026-11-04T23:11:29Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-ceff3671",
-   "launches": [
-    "PLUG",
-    "SLANG"
-   ],
-   "at": "2026-11-04T23:11:29Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-d5e0c5a6",
-   "launches": [
-    "MIXI",
-    "SLANG"
-   ],
-   "at": "2026-11-04T23:11:29Z"
-  },
   {
    "kind": "repeat_early_buyer",
    "wallet": "w-db1f4ab3",
@@ -3641,11 +3538,58 @@
    "value_basis": "ada_leg",
    "pct": 39.0,
    "at": "2026-11-07T17:11:26Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "NIGHT",
+   "tag": "w-f3186187",
+   "delta": 53691394223,
+   "decimals": 6,
+   "qty": 53691.3942,
+   "ada_equiv": 13213,
+   "value_basis": "ada_leg_rate",
+   "pct": 5.3,
+   "at": "2026-11-07T19:11:13Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "SNEK",
+   "tag": "w-f3186187",
+   "delta": -3000000,
+   "decimals": 0,
+   "qty": -3000000.0,
+   "ada_equiv": 8060,
+   "value_basis": "ada_leg_rate",
+   "pct": 7.9,
+   "at": "2026-11-07T19:11:13Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "MEPE",
+   "tag": "w-f3186187",
+   "delta": -3068086000000,
+   "decimals": 6,
+   "qty": -3068086.0,
+   "ada_equiv": 1916,
+   "value_basis": "decimals_x_price",
+   "pct": 11.9,
+   "at": "2026-11-07T19:11:13Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": -3000000000,
+   "decimals": 6,
+   "qty": -3000.0,
+   "ada_equiv": 3221,
+   "value_basis": "ada_leg",
+   "pct": 1.0,
+   "at": "2026-11-07T19:11:13Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 2,
-  "koios": 13
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,
