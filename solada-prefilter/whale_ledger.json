@@ -1,11 +1,11 @@
 {
- "at": "2026-11-07T07:12:50Z",
+ "at": "2026-11-07T09:12:44Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14168567,
+ "height": 14169025,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 2243.140142,
+ "ada_balance": 2245.140142,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 308001841712,
@@ -38,7 +38,7 @@
   "CITY": 6197488802104,
   "CLOVE-3": 20000000424693,
   "CNET": 31327824482276,
-  "COCK": 53011395,
+  "COCK": 53028905,
   "COCKLOCK": 50000000,
   "CORE-2": 7656000,
   "CSWAP": 394,
@@ -151,7 +151,7 @@
   "CITY": 6197488802104,
   "CLOVE-3": 20000000424693,
   "CNET": 31327824482276,
-  "COCK": 53011395,
+  "COCK": 53028905,
   "COCKLOCK": 50000000,
   "CORE-2": 7656000,
   "CSWAP": 394,
@@ -391,7 +391,7 @@
   {
    "token": "COCK",
    "policy": "49e42316",
-   "qty": 53011395
+   "qty": 53028905
   },
   {
    "token": "COCKLOCK",
@@ -11423,9 +11423,13 @@
    "token": "ADA",
    "qty_raw": 71690000,
    "ada": 71.69,
-   "status": "open",
+   "status": "filled",
    "opened_tx": "c69330462c",
-   "opened_at": "2026-11-07T03:25:09Z"
+   "opened_at": "2026-11-07T03:25:09Z",
+   "closed_tx": "744265495d",
+   "closed_at": "2026-11-07T08:12:19Z",
+   "filled_token": "COCK",
+   "filled_qty": 17510
   },
   "3c06d8561c#0": {
    "ref_short": "3c06d8561c#0",
@@ -40023,6 +40027,18 @@
    "qty": null,
    "ada_leg": 1000.167085,
    "counterparty_tag": "w-4e705f42"
+  },
+  {
+   "time": "2026-11-07T08:12:19Z",
+   "tx_short": "744265495d",
+   "kind": "order_fill",
+   "token": "COCK",
+   "qty": 17510,
+   "ada_leg": 71.69,
+   "counterparty_tag": null,
+   "order_ref_short": "c69330462c#0",
+   "order_status": "filled",
+   "sold": "ADA"
   }
  ],
  "capped": false,
@@ -40033,7 +40049,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 12,
+ "koios_calls": 8,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
