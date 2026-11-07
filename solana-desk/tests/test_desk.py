@@ -119,8 +119,9 @@ class Runner(unittest.TestCase):
     def fake(self, fail_rug=False):
         pair = dict(PAIRS["DUxnHr"]); q = L("jup_lite_quote.json"); rc = L("rugcheck_full_DUxnHr.json")
         def get(url, headers=None):
-            if "token-profiles" in url: return [{"chainId": "solana", "tokenAddress": "MINT1"}, {"chainId": "base", "tokenAddress": "X"}]
-            if "token-boosts" in url: return [{"chainId": "solana", "tokenAddress": "MINT1"}]
+            lead = "So11111111111111111111111111111111111111112"
+            if "token-profiles" in url: return [{"chainId": "solana", "tokenAddress": lead}, {"chainId": "base", "tokenAddress": "X"}]
+            if "token-boosts" in url: return [{"chainId": "solana", "tokenAddress": lead}]
             if "/latest/dex/tokens/" in url: return {"pairs": [pair]}
             if "rugcheck" in url:
                 if fail_rug: raise OSError("down")

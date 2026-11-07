@@ -25,9 +25,29 @@ MARKET = {"pumpswap": "pump_fun_amm", "raydium": "raydium", "meteora": "meteoraD
 CREATED_MS = (T0 - 7200) * 1000
 
 
+def _b58_32(raw):
+    """Base58 of a 32-byte address. Fixture ids only."""
+    alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+    if len(raw) != 32:
+        raise ValueError("address length")
+    n = int.from_bytes(raw, "big")
+    chars = []
+    while n:
+        n, rem = divmod(n, 58)
+        chars.append(alphabet[rem])
+    pad = len(raw) - len(raw.lstrip(b"\x00"))
+    return ("1" * pad) + ("".join(reversed(chars)) or "1")
+
+
+def address_n(n):
+    """Stable 32-byte fixture address for a small integer."""
+    hi, lo = divmod(int(n), 256)
+    return _b58_32(bytes([hi % 256, lo]) + bytes([0x3A]) * 30)
+
+
 def mint_of(name):
-    i = NAMES.index(name)
-    return f"Mint{i:02d}" + "x" * 28 + f"{i:02d}gd"
+    """32-byte address. The old Mint00 placeholder contained 0, which is not base58."""
+    return address_n(NAMES.index(name) + 1)
 
 
 NAME_OF = {mint_of(n): n for n in NAMES}

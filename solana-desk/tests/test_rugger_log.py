@@ -15,12 +15,13 @@ if ROOT not in sys.path:
 from desk import config as C  # noqa: E402
 from desk import run, skips  # noqa: E402
 import rugger_blacklist as RB  # noqa: E402
+from tests.decision_market import address_n  # noqa: E402
 
 FX = os.path.join(os.path.dirname(__file__), "fixtures")
 NOW = 1793383000
 CREATOR = "REDACTEDaddr0547"
-MINT_A = "MintA" + "1" * 20
-MINT_B = "MintB" + "2" * 20
+MINT_A = address_n(3001)
+MINT_B = address_n(3002)
 
 
 def _pair():
