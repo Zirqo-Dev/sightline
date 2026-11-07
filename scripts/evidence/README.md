@@ -44,6 +44,8 @@ Workflow health is the newest `schedule`, `push`, or `workflow_dispatch` run in 
 
 Existing scan, prefilter, trading, forensics, guard, and alert workflows are not modified. Existing alerts stay in place.
 
+The artifact contract is: snapshot + manifest + pinned SHAs; replay requires checkouts at recorded SHAs. It does not contain desk-data. `replay/replay.json` records the as-of, both commit SHAs, the Python version, the requirements file hash, and a sha256 for each retained input. Replay rejects a missing SHA, a HEAD that differs, tracked edits in either checkout, a different Python version, or a hash that does not match. A source timestamp after the captured as-of stays unknown. The privacy guard still scans every uploaded file and fails closed. Artifact retention is 7 days.
+
 ```bash
 python3 scripts/evidence/packet.py --repo . --data /path/to/desk-data \
   --as-of 2026-11-07T21:30:00Z --repo-slug "<owner>/<repo>" --out /tmp/evidence

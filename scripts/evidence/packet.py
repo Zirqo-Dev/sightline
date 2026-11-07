@@ -11,10 +11,12 @@ import argparse
 import ast
 import calendar
 import csv
+import hashlib
 import importlib.util
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -1795,6 +1797,204 @@ def build(repo, data, as_of=None, previous=None, actions_path=None, repo_slug=No
     return json.loads(text)
 
 
+REPLAY_CONTRACT = "snapshot + manifest + pinned SHAs; replay requires checkouts at recorded SHAs"
+
+
+def _required_sha(value, label):
+    if not isinstance(value, str) or not SHA_RE.fullmatch(value):
+        raise PacketError(label + " is required")
+    return value
+
+
+def _file_sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 16), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+# Files replay reads. Other generated files are not part of this check.
+CODE_INPUTS = (
+    ".github/workflows/daily-status.yml",
+    "scripts/data_health_alert.py",
+    "scripts/evidence/freshness.json",
+    "scripts/evidence/packet.py",
+    "scripts/evidence/requirements.txt",
+    "scripts/status/daily_status.py",
+    "solana-desk/desk/__init__.py",
+    "solana-desk/desk/books.py",
+    "solana-desk/desk/config.py",
+    "solana-desk/desk/exits.py",
+    "solana-desk/desk/fills.py",
+    "solana-desk/desk/ledger.py",
+    "solana-desk/desk/observe.py",
+    "solana-desk/specs/day14_verdict.py",
+)
+DATA_INPUTS = (
+    "reports/status/daily_status_latest.json",
+    "solada-prefilter/last-run.json",
+    "solana-desk/health.json",
+    "solana-desk/positions.json",
+    "solana-desk/scan_timing.jsonl",
+    "solana-desk/tasks.csv",
+    "solana-desk/trades.csv",
+)
+
+
+def _input_status(repo, paths):
+    """Porcelain lines for replay inputs, including untracked and ignored files.
+
+    A failed or missing git status is not a clean tree.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "-C", repo, "status", "--porcelain=v1", "--ignored", "--untracked-files=all", "--", *paths],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise PacketError("git status failed") from exc
+    if proc.returncode != 0:
+        raise PacketError("git status failed")
+    return [line for line in (proc.stdout or "").splitlines() if line.strip()]
+
+
+def retain_replay(out_dir, as_of, snapshot_path, code_commit, data_commit, repo, previous_path=None, code_repo=None):
+    """Copy the snapshot and manifest. Desk-data bytes are not copied.
+
+    Replay is not offline. It needs checkouts whose HEAD matches the recorded SHAs.
+    """
+    if not isinstance(as_of, str) or not AS_OF_RE.fullmatch(as_of):
+        raise PacketError("as-of must be YYYY-MM-DDTHH:MM:SSZ")
+    if not snapshot_path or not os.path.isfile(snapshot_path):
+        raise PacketError("actions snapshot is missing")
+    if not code_repo or not os.path.isdir(code_repo):
+        raise PacketError("code checkout is missing")
+    code_sha = _required_sha(code_commit, "code commit")
+    data_sha = _required_sha(data_commit, "data commit")
+    slug = github_slug(repo) if repo else None
+    if not slug:
+        raise PacketError("repo slug")
+    req_path = os.path.join(code_repo, "scripts", "evidence", "requirements.txt")
+    if not os.path.isfile(req_path):
+        raise PacketError("requirements.txt is missing")
+    replay_dir = os.path.join(out_dir, "replay")
+    os.makedirs(replay_dir, exist_ok=True)
+    snap_dest = os.path.join(replay_dir, "actions-snapshot.json")
+    shutil.copyfile(snapshot_path, snap_dest)
+    inputs = {"actions-snapshot.json": _file_sha256(snap_dest)}
+    prev_rel = None
+    prev_dest = None
+    if previous_path:
+        if not os.path.isfile(previous_path):
+            raise PacketError("previous packet is missing")
+        prev_rel = "previous-packet.json"
+        prev_dest = os.path.join(replay_dir, prev_rel)
+        shutil.copyfile(previous_path, prev_dest)
+        inputs[prev_rel] = _file_sha256(prev_dest)
+    doc = {
+        "schema_version": 1,
+        "kind": "sightline_evidence_replay",
+        "contract": REPLAY_CONTRACT,
+        "as_of": as_of,
+        "code_commit": code_sha,
+        "data_commit": data_sha,
+        "repo": slug,
+        "python_version": sys.version.split()[0],
+        "requirements_sha256": _file_sha256(req_path),
+        "inputs": inputs,
+        "actions_snapshot": "actions-snapshot.json",
+        "previous_packet": prev_rel,
+    }
+    text = dumps(doc)
+    if SECRET_RE.search(text):
+        raise PacketError("replay metadata failed the secret check and was not written")
+    path = os.path.join(replay_dir, "replay.json")
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        fh.write(text)
+    os.replace(tmp, path)
+    return {"as_of": as_of, "snapshot": snap_dest, "previous": prev_dest, "replay": path}
+
+
+def _load_replay(bundle_dir):
+    path = os.path.join(bundle_dir, "replay", "replay.json")
+    raw, err = read_text(path)
+    if err or raw is None:
+        raise PacketError("replay.json is missing")
+    if SECRET_RE.search(raw):
+        raise PacketError("replay metadata failed the secret check")
+    try:
+        doc = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise PacketError("replay.json is not JSON") from exc
+    if not isinstance(doc, dict) or doc.get("kind") != "sightline_evidence_replay":
+        raise PacketError("replay.json is not a replay")
+    if doc.get("contract") != REPLAY_CONTRACT:
+        raise PacketError("replay contract")
+    return doc
+
+
+def _check_pinned(repo, expected, label, inputs):
+    _required_sha(expected, label)
+    head = git_head(repo)
+    if head != expected:
+        raise PacketError(label + " does not match checkout HEAD")
+    if _input_status(repo, inputs):
+        raise PacketError(label + " replay input is not a clean tracked file")
+
+
+def _check_inputs(bundle_dir, doc, code_repo):
+    inputs = doc.get("inputs")
+    if not isinstance(inputs, dict) or "actions-snapshot.json" not in inputs:
+        raise PacketError("replay inputs")
+    req_path = os.path.join(code_repo, "scripts", "evidence", "requirements.txt")
+    if not os.path.isfile(req_path) or _file_sha256(req_path) != doc.get("requirements_sha256"):
+        raise PacketError("requirements sha256 does not match")
+    if sys.version.split()[0] != doc.get("python_version"):
+        raise PacketError("python version does not match")
+    for name, digest in sorted(inputs.items()):
+        if name not in ("actions-snapshot.json", "previous-packet.json"):
+            raise PacketError("replay input name")
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise PacketError("replay input sha256")
+        path = os.path.join(bundle_dir, "replay", name)
+        if not os.path.isfile(path) or _file_sha256(path) != digest:
+            raise PacketError("retained input sha256 does not match")
+    if doc.get("previous_packet") and "previous-packet.json" not in inputs:
+        raise PacketError("replay previous hash")
+
+
+def rebuild_from_replay(bundle_dir, repo, data, out_dir):
+    """Rebuild only when checkouts match the recorded SHAs and retained hashes match.
+
+    Desk-data is not inside the bundle. The data checkout must already be the recorded commit.
+    """
+    doc = _load_replay(bundle_dir)
+    _check_inputs(bundle_dir, doc, repo)
+    _check_pinned(repo, doc.get("code_commit"), "code commit", CODE_INPUTS)
+    _check_pinned(data, doc.get("data_commit"), "data commit", DATA_INPUTS)
+    snap = os.path.join(bundle_dir, "replay", "actions-snapshot.json")
+    prev = None
+    if doc.get("previous_packet"):
+        prev = os.path.join(bundle_dir, "replay", "previous-packet.json")
+    built = build(repo, data, doc.get("as_of"), prev, snap, doc.get("repo"))
+    return write_packet(built, out_dir)
+
+
+def upload_blocked(paths, code_repo):
+    """True when any file that would be uploaded fails the public-text check."""
+    status = status_module(code_repo)
+    for path in paths:
+        raw, err = read_text(path)
+        if err or raw is None or text_fails(status, raw):
+            return True
+    return False
+
+
 def write_packet(doc, out_dir):
     text = dumps(doc)
     os.makedirs(out_dir, exist_ok=True)
@@ -1814,10 +2014,35 @@ def main(argv=None):
     parser.add_argument("--previous", default=None, help="Optional previous evidence packet.")
     parser.add_argument("--actions-snapshot", dest="actions", default=None)
     parser.add_argument("--repo-slug", dest="slug", default=None)
-    parser.add_argument("--out", required=True)
+    parser.add_argument("--code-commit", dest="code_commit", default=None)
+    parser.add_argument("--data-commit", dest="data_commit", default=None)
+    parser.add_argument("--retain-replay", action="store_true")
+    parser.add_argument("--check-upload", dest="check_upload", default=None)
+    parser.add_argument("--out", default=None)
     args = parser.parse_args(argv)
     try:
-        doc = build(args.repo, args.data, args.as_of, args.previous, args.actions, args.slug)
+        if args.check_upload:
+            files = []
+            for root, _dirs, names in os.walk(args.check_upload):
+                for name in sorted(names):
+                    files.append(os.path.join(root, name))
+            if not files or upload_blocked(files, args.repo):
+                raise PacketError("upload blocked by the public-text check")
+            return 0
+        if not args.out:
+            raise PacketError("--out is required")
+        as_of = args.as_of
+        previous = args.previous
+        actions = args.actions
+        if args.retain_replay:
+            kept = retain_replay(
+                args.out, args.as_of, args.actions, args.code_commit, args.data_commit,
+                args.slug, args.previous, args.repo,
+            )
+            as_of = kept["as_of"]
+            previous = kept["previous"]
+            actions = kept["snapshot"]
+        doc = build(args.repo, args.data, as_of, previous, actions, args.slug)
         path = write_packet(doc, args.out)
     except PacketError as exc:
         print("evidence packet: " + str(exc), file=sys.stderr)

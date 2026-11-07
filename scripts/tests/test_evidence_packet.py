@@ -586,6 +586,11 @@ class EvidencePacketTest(unittest.TestCase):
         self.assertNotIn("contents: write", text)
         self.assertLess(text.index("scripts/evidence/requirements.txt"), text.index("unittest discover"))
         self.assertIn('gh run download "$PREV" --repo "$GITHUB_REPOSITORY"', text)
+        self.assertIn("date -u +%Y-%m-%dT%H:%M:%SZ", text)
+        self.assertIn("--retain-replay", text)
+        self.assertIn("--check-upload", text)
+        self.assertIn("retention-days: 7", text)
+        self.assertIn('find "$GITHUB_WORKSPACE/packet" -type f', text)
         req_path = os.path.join(ROOT, "scripts", "evidence", "requirements.txt")
         with open(req_path, encoding="utf-8") as fh:
             requirements = fh.read()
@@ -631,6 +636,228 @@ class EvidencePacketTest(unittest.TestCase):
             second = json.load(fh)
         self.assertTrue(second["delta"]["previous_present"])
         self.assertEqual(second["delta"]["predicates"]["new_close_id"]["status"], "no_change")
+
+    def _commit_tree(self, path):
+        subprocess.check_call(["git", "init", "-q"], cwd=path)
+        subprocess.check_call(["git", "add", "-A"], cwd=path)
+        subprocess.check_call(
+            ["git", "-c", "user.email=" + "replay" + "@" + "example.com", "-c", "user.name=replay",
+             "commit", "-q", "-m", "pin"],
+            cwd=path,
+        )
+        return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=path, text=True).strip()
+
+    def _pinned_code(self):
+        parent = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, parent, True)
+        dest = os.path.join(parent, "code")
+        shutil.copytree(
+            ROOT, dest,
+            ignore=shutil.ignore_patterns(".git", "__pycache__", "dist"),
+        )
+        return dest, self._commit_tree(dest)
+
+    def test_pinned_replay_match_mismatch_and_tamper(self):
+        self.plant(health_run="20261102T1400", health_times=["2026-11-02T14:00:00Z"])
+        code, code_sha = self._pinned_code()
+        data_sha = self._commit_tree(self.data)
+        as_of = "2026-11-02T13:00:00Z"
+        snap_path = os.path.join(self.out, "snap.json")
+        with open(snap_path, "w", encoding="utf-8") as fh:
+            json.dump(snapshot(), fh)
+        bundle = tempfile.mkdtemp()
+        out = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, bundle, True)
+        self.addCleanup(shutil.rmtree, out, True)
+        with self.assertRaises(packet.PacketError):
+            packet.retain_replay(bundle, as_of, snap_path, None, data_sha, "example/sightline", code_repo=code)
+        cmd = [
+            sys.executable, os.path.join(ROOT, "scripts", "evidence", "packet.py"),
+            "--repo", code, "--data", self.data, "--as-of", as_of,
+            "--actions-snapshot", snap_path, "--repo-slug", "example/sightline",
+            "--code-commit", code_sha, "--data-commit", data_sha,
+            "--retain-replay", "--out", bundle,
+        ]
+        subprocess.check_call(cmd, stdout=subprocess.DEVNULL)
+        with open(os.path.join(bundle, "evidence-packet.json"), "rb") as fh:
+            original = fh.read()
+        doc = json.loads(original)
+        scan = self.source(doc, "solana_scan")
+        self.assertEqual(scan["state"], "unknown")
+        self.assertIn("after as-of", scan["reason"])
+        rebuilt = packet.rebuild_from_replay(bundle, code, self.data, out)
+        with open(rebuilt, "rb") as fh:
+            self.assertEqual(fh.read(), original)
+        replay_path = os.path.join(bundle, "replay", "replay.json")
+        with open(replay_path, encoding="utf-8") as fh:
+            replay = json.load(fh)
+        replay["code_commit"] = "c" * 40
+        with open(replay_path, "w", encoding="utf-8") as fh:
+            json.dump(replay, fh)
+        with self.assertRaises(packet.PacketError) as mismatch:
+            packet.rebuild_from_replay(bundle, code, self.data, out)
+        self.assertIn("does not match checkout HEAD", str(mismatch.exception))
+        replay["code_commit"] = code_sha
+        with open(replay_path, "w", encoding="utf-8") as fh:
+            fh.write(packet.dumps(replay))
+        snap_file = os.path.join(bundle, "replay", "actions-snapshot.json")
+        with open(snap_file, "ab") as fh:
+            fh.write(b"\n")
+        with self.assertRaises(packet.PacketError) as tamper:
+            packet.rebuild_from_replay(bundle, code, self.data, out)
+        self.assertIn("sha256 does not match", str(tamper.exception))
+        with open(os.path.join(code, "scripts", "evidence", "freshness.json"), "a", encoding="utf-8") as fh:
+            fh.write("\n")
+        with open(snap_path, "rb") as src, open(snap_file, "wb") as fh:
+            fh.write(src.read())
+        with self.assertRaises(packet.PacketError) as dirty:
+            packet.rebuild_from_replay(bundle, code, self.data, out)
+        self.assertIn("not a clean tracked file", str(dirty.exception))
+
+    def test_dirty_builder_rejects(self):
+        self.plant()
+        code, code_sha = self._pinned_code()
+        data_sha = self._commit_tree(self.data)
+        bundle = tempfile.mkdtemp()
+        out = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, bundle, True)
+        self.addCleanup(shutil.rmtree, out, True)
+        self._retain(code, code_sha, data_sha, bundle)
+        builder = os.path.join(code, "scripts", "evidence", "packet.py")
+        with open(builder, "a", encoding="utf-8") as fh:
+            fh.write("\n")
+        with self.assertRaises(packet.PacketError) as dirty:
+            packet.rebuild_from_replay(bundle, code, self.data, out)
+        self.assertIn("not a clean tracked file", str(dirty.exception))
+
+    def test_privacy_poison_blocks_each_uploaded_file(self):
+        self.plant()
+        code, code_sha = self._pinned_code()
+        data_sha = self._commit_tree(self.data)
+        snap_path = os.path.join(self.out, "snap.json")
+        with open(snap_path, "w", encoding="utf-8") as fh:
+            json.dump(snapshot(), fh)
+        first = tempfile.mkdtemp()
+        bundle = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, first, True)
+        self.addCleanup(shutil.rmtree, bundle, True)
+        subprocess.check_call([
+            sys.executable, os.path.join(ROOT, "scripts", "evidence", "packet.py"),
+            "--repo", code, "--data", self.data, "--as-of", AS_OF,
+            "--actions-snapshot", snap_path, "--repo-slug", "example/sightline",
+            "--code-commit", code_sha, "--data-commit", data_sha,
+            "--retain-replay", "--out", first,
+        ], stdout=subprocess.DEVNULL)
+        subprocess.check_call([
+            sys.executable, os.path.join(ROOT, "scripts", "evidence", "packet.py"),
+            "--repo", code, "--data", self.data, "--as-of", AS_OF,
+            "--actions-snapshot", snap_path, "--repo-slug", "example/sightline",
+            "--code-commit", code_sha, "--data-commit", data_sha,
+            "--previous", os.path.join(first, "evidence-packet.json"),
+            "--retain-replay", "--out", bundle,
+        ], stdout=subprocess.DEVNULL)
+        names = [
+            "evidence-packet.json",
+            os.path.join("replay", "replay.json"),
+            os.path.join("replay", "actions-snapshot.json"),
+            os.path.join("replay", "previous-packet.json"),
+        ]
+        clean = [os.path.join(bundle, name) for name in names]
+        self.assertFalse(packet.upload_blocked(clean, code))
+        poison = "stake1" + ("u" * 52)
+        for name in names:
+            path = os.path.join(bundle, name)
+            with open(path, "rb") as fh:
+                saved = fh.read()
+            with open(path, "ab") as fh:
+                fh.write(poison.encode("ascii"))
+            self.assertTrue(packet.upload_blocked([path], code), name)
+            blocked = subprocess.run(
+                [sys.executable, os.path.join(ROOT, "scripts", "evidence", "packet.py"),
+                 "--check-upload", bundle, "--repo", code],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(blocked.returncode, 2, name)
+            with open(path, "wb") as fh:
+                fh.write(saved)
+
+    def _retain(self, code, code_sha, data_sha, bundle, as_of=AS_OF):
+        snap_path = os.path.join(self.out, "snap.json")
+        if not os.path.isfile(snap_path):
+            with open(snap_path, "w", encoding="utf-8") as fh:
+                json.dump(snapshot(), fh)
+        subprocess.check_call([
+            sys.executable, os.path.join(ROOT, "scripts", "evidence", "packet.py"),
+            "--repo", code, "--data", self.data, "--as-of", as_of,
+            "--actions-snapshot", snap_path, "--repo-slug", "example/sightline",
+            "--code-commit", code_sha, "--data-commit", data_sha,
+            "--retain-replay", "--out", bundle,
+        ], stdout=subprocess.DEVNULL)
+        return bundle
+
+    def test_untracked_and_ignored_replay_inputs_reject(self):
+        self.plant()
+        code, code_sha = self._pinned_code()
+        data_sha = self._commit_tree(self.data)
+        bundle = tempfile.mkdtemp()
+        out = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, bundle, True)
+        self.addCleanup(shutil.rmtree, out, True)
+        self._retain(code, code_sha, data_sha, bundle)
+        timing = os.path.join(self.data, "solana-desk", "scan_timing.jsonl")
+        with open(timing, "w", encoding="utf-8") as fh:
+            fh.write("{}\n")
+        with self.assertRaises(packet.PacketError) as untracked:
+            packet.rebuild_from_replay(bundle, code, self.data, out)
+        self.assertIn("not a clean tracked file", str(untracked.exception))
+        os.remove(timing)
+        with open(os.path.join(self.data, "generated.tmp"), "w", encoding="utf-8") as fh:
+            fh.write("not an input\n")
+        packet.rebuild_from_replay(bundle, code, self.data, out)
+        os.remove(os.path.join(self.data, "generated.tmp"))
+        with open(os.path.join(self.data, ".gitignore"), "w", encoding="utf-8") as fh:
+            fh.write("generated.tmp\nsolana-desk/scan_timing.jsonl\n")
+        ignored_sha = self._commit_tree(self.data)
+        ignored_bundle = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, ignored_bundle, True)
+        self._retain(code, code_sha, ignored_sha, ignored_bundle)
+        with open(os.path.join(self.data, "generated.tmp"), "w", encoding="utf-8") as fh:
+            fh.write("ignored non-input\n")
+        packet.rebuild_from_replay(ignored_bundle, code, self.data, out)
+        with open(timing, "w", encoding="utf-8") as fh:
+            fh.write("{}\n")
+        with self.assertRaises(packet.PacketError) as ignored:
+            packet.rebuild_from_replay(ignored_bundle, code, self.data, out)
+        self.assertIn("not a clean tracked file", str(ignored.exception))
+
+    def test_git_status_failure_and_exception_reject(self):
+        self.plant()
+        code, code_sha = self._pinned_code()
+        data_sha = self._commit_tree(self.data)
+        bundle = tempfile.mkdtemp()
+        out = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, bundle, True)
+        self.addCleanup(shutil.rmtree, out, True)
+        self._retain(code, code_sha, data_sha, bundle)
+        with open(os.path.join(self.data, ".git", "index"), "wb") as fh:
+            fh.write(b"not-an-index")
+        with self.assertRaises(packet.PacketError) as failed:
+            packet.rebuild_from_replay(bundle, code, self.data, out)
+        self.assertIn("git status failed", str(failed.exception))
+        real = packet.subprocess.run
+
+        def boom(cmd, *args, **kwargs):
+            if isinstance(cmd, (list, tuple)) and "status" in cmd:
+                raise OSError("status unavailable")
+            return real(cmd, *args, **kwargs)
+
+        packet.subprocess.run = boom
+        try:
+            with self.assertRaises(packet.PacketError) as exc:
+                packet.rebuild_from_replay(bundle, code, self.data, out)
+            self.assertIn("git status failed", str(exc.exception))
+        finally:
+            packet.subprocess.run = real
 
     def test_slug_and_snapshot_drop_secrets(self):
         token = "ghs_" + "zzpacketpoison"
