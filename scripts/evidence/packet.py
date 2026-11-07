@@ -11,6 +11,7 @@ import argparse
 import ast
 import calendar
 import csv
+import hashlib
 import importlib.util
 import json
 import os
@@ -1796,34 +1797,52 @@ def build(repo, data, as_of=None, previous=None, actions_path=None, repo_slug=No
     return json.loads(text)
 
 
-def _sha_or_none(value, label):
-    if value is None or value == "":
-        return None
-    if isinstance(value, str) and SHA_RE.fullmatch(value):
-        return value
-    raise PacketError(label + " is not a commit sha")
+REPLAY_CONTRACT = "snapshot + manifest + pinned SHAs; replay requires checkouts at recorded SHAs"
 
 
-def retain_replay(out_dir, as_of, snapshot_path, code_commit, data_commit, repo, previous_path=None):
-    """Copy the exact snapshot and replay metadata used to build the packet.
+def _required_sha(value, label):
+    if not isinstance(value, str) or not SHA_RE.fullmatch(value):
+        raise PacketError(label + " is required")
+    return value
 
-    The snapshot bytes are not rewritten. A later rebuild reads these files.
+
+def _file_sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 16), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _tracked_changes(repo):
+    text = _git(repo, ["status", "--porcelain", "--untracked-files=no"])
+    return text or ""
+
+
+def retain_replay(out_dir, as_of, snapshot_path, code_commit, data_commit, repo, previous_path=None, code_repo=None):
+    """Copy the snapshot and manifest. Desk-data bytes are not copied.
+
+    Replay is not offline. It needs checkouts whose HEAD matches the recorded SHAs.
     """
     if not isinstance(as_of, str) or not AS_OF_RE.fullmatch(as_of):
         raise PacketError("as-of must be YYYY-MM-DDTHH:MM:SSZ")
     if not snapshot_path or not os.path.isfile(snapshot_path):
         raise PacketError("actions snapshot is missing")
-    code_sha = _sha_or_none(code_commit, "code commit")
-    data_sha = _sha_or_none(data_commit, "data commit")
-    slug = None
-    if repo:
-        slug = github_slug(repo)
-        if not slug:
-            raise PacketError("repo slug")
+    if not code_repo or not os.path.isdir(code_repo):
+        raise PacketError("code checkout is missing")
+    code_sha = _required_sha(code_commit, "code commit")
+    data_sha = _required_sha(data_commit, "data commit")
+    slug = github_slug(repo) if repo else None
+    if not slug:
+        raise PacketError("repo slug")
+    req_path = os.path.join(code_repo, "scripts", "evidence", "requirements.txt")
+    if not os.path.isfile(req_path):
+        raise PacketError("requirements.txt is missing")
     replay_dir = os.path.join(out_dir, "replay")
     os.makedirs(replay_dir, exist_ok=True)
     snap_dest = os.path.join(replay_dir, "actions-snapshot.json")
     shutil.copyfile(snapshot_path, snap_dest)
+    inputs = {"actions-snapshot.json": _file_sha256(snap_dest)}
     prev_rel = None
     prev_dest = None
     if previous_path:
@@ -1832,13 +1851,18 @@ def retain_replay(out_dir, as_of, snapshot_path, code_commit, data_commit, repo,
         prev_rel = "previous-packet.json"
         prev_dest = os.path.join(replay_dir, prev_rel)
         shutil.copyfile(previous_path, prev_dest)
+        inputs[prev_rel] = _file_sha256(prev_dest)
     doc = {
         "schema_version": 1,
         "kind": "sightline_evidence_replay",
+        "contract": REPLAY_CONTRACT,
         "as_of": as_of,
         "code_commit": code_sha,
         "data_commit": data_sha,
         "repo": slug,
+        "python_version": sys.version.split()[0],
+        "requirements_sha256": _file_sha256(req_path),
+        "inputs": inputs,
         "actions_snapshot": "actions-snapshot.json",
         "previous_packet": prev_rel,
     }
@@ -1853,8 +1877,7 @@ def retain_replay(out_dir, as_of, snapshot_path, code_commit, data_commit, repo,
     return {"as_of": as_of, "snapshot": snap_dest, "previous": prev_dest, "replay": path}
 
 
-def rebuild_from_replay(bundle_dir, repo, data, out_dir):
-    """Rebuild the packet from a retained replay directory and the recorded checkouts."""
+def _load_replay(bundle_dir):
     path = os.path.join(bundle_dir, "replay", "replay.json")
     raw, err = read_text(path)
     if err or raw is None:
@@ -1867,18 +1890,66 @@ def rebuild_from_replay(bundle_dir, repo, data, out_dir):
         raise PacketError("replay.json is not JSON") from exc
     if not isinstance(doc, dict) or doc.get("kind") != "sightline_evidence_replay":
         raise PacketError("replay.json is not a replay")
-    snap_name = doc.get("actions_snapshot")
-    if not isinstance(snap_name, str) or snap_name != "actions-snapshot.json":
-        raise PacketError("replay snapshot name")
-    snap = os.path.join(bundle_dir, "replay", snap_name)
+    if doc.get("contract") != REPLAY_CONTRACT:
+        raise PacketError("replay contract")
+    return doc
+
+
+def _check_pinned(repo, expected, label):
+    _required_sha(expected, label)
+    head = git_head(repo)
+    if head != expected:
+        raise PacketError(label + " does not match checkout HEAD")
+    if _tracked_changes(repo):
+        raise PacketError(label + " checkout has tracked changes")
+
+
+def _check_inputs(bundle_dir, doc, code_repo):
+    inputs = doc.get("inputs")
+    if not isinstance(inputs, dict) or "actions-snapshot.json" not in inputs:
+        raise PacketError("replay inputs")
+    req_path = os.path.join(code_repo, "scripts", "evidence", "requirements.txt")
+    if not os.path.isfile(req_path) or _file_sha256(req_path) != doc.get("requirements_sha256"):
+        raise PacketError("requirements sha256 does not match")
+    if sys.version.split()[0] != doc.get("python_version"):
+        raise PacketError("python version does not match")
+    for name, digest in sorted(inputs.items()):
+        if name not in ("actions-snapshot.json", "previous-packet.json"):
+            raise PacketError("replay input name")
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise PacketError("replay input sha256")
+        path = os.path.join(bundle_dir, "replay", name)
+        if not os.path.isfile(path) or _file_sha256(path) != digest:
+            raise PacketError("retained input sha256 does not match")
+    if doc.get("previous_packet") and "previous-packet.json" not in inputs:
+        raise PacketError("replay previous hash")
+
+
+def rebuild_from_replay(bundle_dir, repo, data, out_dir):
+    """Rebuild only when checkouts match the recorded SHAs and retained hashes match.
+
+    Desk-data is not inside the bundle. The data checkout must already be the recorded commit.
+    """
+    doc = _load_replay(bundle_dir)
+    _check_inputs(bundle_dir, doc, repo)
+    _check_pinned(repo, doc.get("code_commit"), "code commit")
+    _check_pinned(data, doc.get("data_commit"), "data commit")
+    snap = os.path.join(bundle_dir, "replay", "actions-snapshot.json")
     prev = None
-    prev_name = doc.get("previous_packet")
-    if prev_name:
-        if prev_name != "previous-packet.json":
-            raise PacketError("replay previous name")
-        prev = os.path.join(bundle_dir, "replay", prev_name)
+    if doc.get("previous_packet"):
+        prev = os.path.join(bundle_dir, "replay", "previous-packet.json")
     built = build(repo, data, doc.get("as_of"), prev, snap, doc.get("repo"))
     return write_packet(built, out_dir)
+
+
+def upload_blocked(paths, code_repo):
+    """True when any file that would be uploaded fails the public-text check."""
+    status = status_module(code_repo)
+    for path in paths:
+        raw, err = read_text(path)
+        if err or raw is None or text_fails(status, raw):
+            return True
+    return False
 
 
 def write_packet(doc, out_dir):
@@ -1903,15 +1974,27 @@ def main(argv=None):
     parser.add_argument("--code-commit", dest="code_commit", default=None)
     parser.add_argument("--data-commit", dest="data_commit", default=None)
     parser.add_argument("--retain-replay", action="store_true")
-    parser.add_argument("--out", required=True)
+    parser.add_argument("--check-upload", dest="check_upload", default=None)
+    parser.add_argument("--out", default=None)
     args = parser.parse_args(argv)
     try:
+        if args.check_upload:
+            files = []
+            for root, _dirs, names in os.walk(args.check_upload):
+                for name in sorted(names):
+                    files.append(os.path.join(root, name))
+            if not files or upload_blocked(files, args.repo):
+                raise PacketError("upload blocked by the public-text check")
+            return 0
+        if not args.out:
+            raise PacketError("--out is required")
         as_of = args.as_of
         previous = args.previous
         actions = args.actions
         if args.retain_replay:
             kept = retain_replay(
-                args.out, args.as_of, args.actions, args.code_commit, args.data_commit, args.slug, args.previous,
+                args.out, args.as_of, args.actions, args.code_commit, args.data_commit,
+                args.slug, args.previous, args.repo,
             )
             as_of = kept["as_of"]
             previous = kept["previous"]

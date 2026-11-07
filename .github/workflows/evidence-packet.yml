@@ -114,6 +114,7 @@ jobs:
         run: |
           mapfile -t files < <(find "$GITHUB_WORKSPACE/packet" -type f | sort)
           [ "${#files[@]}" -gt 0 ]
+          python3 scripts/evidence/packet.py --check-upload "$GITHUB_WORKSPACE/packet" --repo "$GITHUB_WORKSPACE/code"
           bash scripts/privacy-guard.sh "${files[@]}"
 
       - name: Upload packet
@@ -122,3 +123,4 @@ jobs:
           name: evidence-packet
           path: packet
           if-no-files-found: error
+          retention-days: 7
