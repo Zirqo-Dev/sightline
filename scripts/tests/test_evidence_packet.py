@@ -712,7 +712,7 @@ class EvidencePacketTest(unittest.TestCase):
             fh.write(src.read())
         with self.assertRaises(packet.PacketError) as dirty:
             packet.rebuild_from_replay(bundle, code, self.data, out)
-        self.assertIn("tracked changes", str(dirty.exception))
+        self.assertIn("not a clean tracked file", str(dirty.exception))
 
     def test_privacy_poison_blocks_each_uploaded_file(self):
         self.plant()
@@ -764,6 +764,84 @@ class EvidencePacketTest(unittest.TestCase):
             self.assertEqual(blocked.returncode, 2, name)
             with open(path, "wb") as fh:
                 fh.write(saved)
+
+    def _retain(self, code, code_sha, data_sha, bundle, as_of=AS_OF):
+        snap_path = os.path.join(self.out, "snap.json")
+        if not os.path.isfile(snap_path):
+            with open(snap_path, "w", encoding="utf-8") as fh:
+                json.dump(snapshot(), fh)
+        subprocess.check_call([
+            sys.executable, os.path.join(ROOT, "scripts", "evidence", "packet.py"),
+            "--repo", code, "--data", self.data, "--as-of", as_of,
+            "--actions-snapshot", snap_path, "--repo-slug", "example/sightline",
+            "--code-commit", code_sha, "--data-commit", data_sha,
+            "--retain-replay", "--out", bundle,
+        ], stdout=subprocess.DEVNULL)
+        return bundle
+
+    def test_untracked_and_ignored_replay_inputs_reject(self):
+        self.plant()
+        code, code_sha = self._pinned_code()
+        data_sha = self._commit_tree(self.data)
+        bundle = tempfile.mkdtemp()
+        out = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, bundle, True)
+        self.addCleanup(shutil.rmtree, out, True)
+        self._retain(code, code_sha, data_sha, bundle)
+        timing = os.path.join(self.data, "solana-desk", "scan_timing.jsonl")
+        with open(timing, "w", encoding="utf-8") as fh:
+            fh.write("{}\n")
+        with self.assertRaises(packet.PacketError) as untracked:
+            packet.rebuild_from_replay(bundle, code, self.data, out)
+        self.assertIn("not a clean tracked file", str(untracked.exception))
+        os.remove(timing)
+        with open(os.path.join(self.data, "generated.tmp"), "w", encoding="utf-8") as fh:
+            fh.write("not an input\n")
+        packet.rebuild_from_replay(bundle, code, self.data, out)
+        os.remove(os.path.join(self.data, "generated.tmp"))
+        with open(os.path.join(self.data, ".gitignore"), "w", encoding="utf-8") as fh:
+            fh.write("generated.tmp\nsolana-desk/scan_timing.jsonl\n")
+        ignored_sha = self._commit_tree(self.data)
+        ignored_bundle = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, ignored_bundle, True)
+        self._retain(code, code_sha, ignored_sha, ignored_bundle)
+        with open(os.path.join(self.data, "generated.tmp"), "w", encoding="utf-8") as fh:
+            fh.write("ignored non-input\n")
+        packet.rebuild_from_replay(ignored_bundle, code, self.data, out)
+        with open(timing, "w", encoding="utf-8") as fh:
+            fh.write("{}\n")
+        with self.assertRaises(packet.PacketError) as ignored:
+            packet.rebuild_from_replay(ignored_bundle, code, self.data, out)
+        self.assertIn("not a clean tracked file", str(ignored.exception))
+
+    def test_git_status_failure_and_exception_reject(self):
+        self.plant()
+        code, code_sha = self._pinned_code()
+        data_sha = self._commit_tree(self.data)
+        bundle = tempfile.mkdtemp()
+        out = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, bundle, True)
+        self.addCleanup(shutil.rmtree, out, True)
+        self._retain(code, code_sha, data_sha, bundle)
+        with open(os.path.join(self.data, ".git", "index"), "wb") as fh:
+            fh.write(b"not-an-index")
+        with self.assertRaises(packet.PacketError) as failed:
+            packet.rebuild_from_replay(bundle, code, self.data, out)
+        self.assertIn("git status failed", str(failed.exception))
+        real = packet.subprocess.run
+
+        def boom(cmd, *args, **kwargs):
+            if isinstance(cmd, (list, tuple)) and "status" in cmd:
+                raise OSError("status unavailable")
+            return real(cmd, *args, **kwargs)
+
+        packet.subprocess.run = boom
+        try:
+            with self.assertRaises(packet.PacketError) as exc:
+                packet.rebuild_from_replay(bundle, code, self.data, out)
+            self.assertIn("git status failed", str(exc.exception))
+        finally:
+            packet.subprocess.run = real
 
     def test_slug_and_snapshot_drop_secrets(self):
         token = "ghs_" + "zzpacketpoison"

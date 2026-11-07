@@ -1814,9 +1814,51 @@ def _file_sha256(path):
     return digest.hexdigest()
 
 
-def _tracked_changes(repo):
-    text = _git(repo, ["status", "--porcelain", "--untracked-files=no"])
-    return text or ""
+# Files replay reads. Other generated files are not part of this check.
+CODE_INPUTS = (
+    ".github/workflows/daily-status.yml",
+    "scripts/data_health_alert.py",
+    "scripts/evidence/freshness.json",
+    "scripts/evidence/requirements.txt",
+    "scripts/status/daily_status.py",
+    "solana-desk/desk/__init__.py",
+    "solana-desk/desk/books.py",
+    "solana-desk/desk/config.py",
+    "solana-desk/desk/exits.py",
+    "solana-desk/desk/fills.py",
+    "solana-desk/desk/ledger.py",
+    "solana-desk/desk/observe.py",
+    "solana-desk/specs/day14_verdict.py",
+)
+DATA_INPUTS = (
+    "reports/status/daily_status_latest.json",
+    "solada-prefilter/last-run.json",
+    "solana-desk/health.json",
+    "solana-desk/positions.json",
+    "solana-desk/scan_timing.jsonl",
+    "solana-desk/tasks.csv",
+    "solana-desk/trades.csv",
+)
+
+
+def _input_status(repo, paths):
+    """Porcelain lines for replay inputs, including untracked and ignored files.
+
+    A failed or missing git status is not a clean tree.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "-C", repo, "status", "--porcelain=v1", "--ignored", "--untracked-files=all", "--", *paths],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise PacketError("git status failed") from exc
+    if proc.returncode != 0:
+        raise PacketError("git status failed")
+    return [line for line in (proc.stdout or "").splitlines() if line.strip()]
 
 
 def retain_replay(out_dir, as_of, snapshot_path, code_commit, data_commit, repo, previous_path=None, code_repo=None):
@@ -1895,13 +1937,13 @@ def _load_replay(bundle_dir):
     return doc
 
 
-def _check_pinned(repo, expected, label):
+def _check_pinned(repo, expected, label, inputs):
     _required_sha(expected, label)
     head = git_head(repo)
     if head != expected:
         raise PacketError(label + " does not match checkout HEAD")
-    if _tracked_changes(repo):
-        raise PacketError(label + " checkout has tracked changes")
+    if _input_status(repo, inputs):
+        raise PacketError(label + " replay input is not a clean tracked file")
 
 
 def _check_inputs(bundle_dir, doc, code_repo):
@@ -1932,8 +1974,8 @@ def rebuild_from_replay(bundle_dir, repo, data, out_dir):
     """
     doc = _load_replay(bundle_dir)
     _check_inputs(bundle_dir, doc, repo)
-    _check_pinned(repo, doc.get("code_commit"), "code commit")
-    _check_pinned(data, doc.get("data_commit"), "data commit")
+    _check_pinned(repo, doc.get("code_commit"), "code commit", CODE_INPUTS)
+    _check_pinned(data, doc.get("data_commit"), "data commit", DATA_INPUTS)
     snap = os.path.join(bundle_dir, "replay", "actions-snapshot.json")
     prev = None
     if doc.get("previous_packet"):
