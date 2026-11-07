@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "kind": "sightline_evidence_freshness_provisional",
+  "provisional": true,
+  "approved_trading_rule": false,
+  "note": "Pilot freshness only. Not a desk rule. Not read by scan, prefilter, trading, forensics, guard, or alerts.",
+  "solana_scan": {
+    "max_age_seconds": 3600,
+    "label": "scan_60min"
+  },
+  "solada_prefilter": {
+    "max_age_seconds": 9000,
+    "label": "prefilter_150min"
+  },
+  "daily_status": {
+    "grace_after_slot_seconds": 7200,
+    "label": "daily_2h_after_scheduled_slot",
+    "schedule_file": ".github/workflows/daily-status.yml"
+  }
+}

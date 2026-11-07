@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zirqo-dev.github.io/sightline/scripts/evidence/packet.schema.json",
+  "title": "Sightline evidence packet",
+  "description": "Read-only pilot packet. schema_version 1. coverage.full is always false. Not a trading instruction.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "ai",
+    "coverage",
+    "provenance",
+    "as_of",
+    "sources",
+    "recompute",
+    "clocks",
+    "delta",
+    "actions_usage",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "sightline_evidence_packet"},
+    "ai": {"const": false},
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["full", "predicates"],
+      "properties": {
+        "full": {"const": false},
+        "deferred": {"type": "array", "items": {"type": "string"}},
+        "predicates": {"type": "object", "additionalProperties": {"enum": ["implemented", "not_implemented"]}}
+      }
+    },
+    "provenance": {"type": "object"},
+    "as_of": {"type": "object"},
+    "sources": {"type": "array", "items": {"type": "object"}},
+    "recompute": {"type": "object"},
+    "clocks": {"type": "object"},
+    "delta": {"type": "object"},
+    "actions_usage": {
+      "type": "object",
+      "required": ["equated_to_billed_minutes", "quota_remaining_known"],
+      "properties": {
+        "equated_to_billed_minutes": {"const": false},
+        "quota_remaining_known": {"const": false}
+      }
+    },
+    "limitations": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+  }
+}
