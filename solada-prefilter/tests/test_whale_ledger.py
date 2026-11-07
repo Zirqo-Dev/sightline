@@ -202,7 +202,9 @@ class Config(unittest.TestCase):
         allow = os.path.join(ROOT, "scripts", "privacy-public-keys.txt")
         curve = next(ln.strip() for ln in open(allow) if ln.strip() and not ln.startswith("#"))
         dummy = "^zzOWNERzz-not-a-real-pattern$"  # a loaded owner pattern (the real one is a secret)
-        env = dict(os.environ, PRIVACY_GUARD_PATTERNS=dummy)
+        loaded = hashlib.sha256(("zzsynthetic" + "identityblocktoken").encode()).hexdigest()
+        env = dict(os.environ, PRIVACY_GUARD_PATTERNS=dummy, PRIVACY_IDENTITY_HASHES=loaded)
+        env.pop("SIGHTLINE_PRIVATE_TOKEN", None)
         run = lambda f, e=env: subprocess.run(["bash", guard, f], env=e, capture_output=True, cwd=ROOT).returncode  # noqa: E731
         cfgp = "solada-prefilter/config.json"
         with tempfile.TemporaryDirectory() as d:
@@ -217,7 +219,8 @@ class Config(unittest.TestCase):
             self.assertEqual(run(platform), 0)
             self.assertEqual(run(longer), 1)
             # No owner patterns: platform addresses stay masked, a stake key still fails.
-            bare = dict(os.environ, PRIVACY_GUARD_PATTERNS="")
+            bare = dict(os.environ, PRIVACY_GUARD_PATTERNS="", PRIVACY_IDENTITY_HASHES=loaded)
+            bare.pop("SIGHTLINE_PRIVATE_TOKEN", None)
             self.assertEqual(run(cfgp, bare), 0)
             self.assertEqual(run(bad, bare), 1)
             self.assertEqual(run(platform, bare), 0)
@@ -231,6 +234,7 @@ class Config(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             os.makedirs(os.path.join(d, "scripts"))
             shutil.copy(os.path.join(src, "privacy-guard.sh"), os.path.join(d, "scripts"))
+            shutil.copy(os.path.join(src, "privacy_identity.py"), os.path.join(d, "scripts"))
             open(os.path.join(d, "scripts", "privacy-public-keys.txt"), "w").write("stake1u\n")  # prefix, not an address
             f = os.path.join(d, "x.txt")
             open(f, "w").write("hello\n")

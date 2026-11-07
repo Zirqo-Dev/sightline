@@ -1,6 +1,6 @@
 """Claude re-review of #29: should-fixes, partials, nice-to-haves, and the 5 reverts the #29 tests missed.
 Offline, no secrets, no network. Fake ids from labels."""
-import json, os, re, shutil, subprocess, sys, tempfile, time, unittest
+import hashlib, json, os, re, shutil, subprocess, sys, tempfile, time, unittest
 from unittest import mock
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.dirname(HERE)
@@ -63,7 +63,14 @@ class Revert2WholeTokenMask(unittest.TestCase):
             cfg = json.load(open(os.path.join(SRC, "config.json")))
             cfg["_probe"] = "zz" + key  # a longer id that merely contains a stake key
             json.dump(cfg, open(os.path.join(d, "solada-prefilter", "config.json"), "w"))
-            env = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
+            env = dict(
+                os.environ,
+                PRIVACY_GUARD_PATTERNS="^zzOWNERzz$",
+                PRIVACY_IDENTITY_HASHES=hashlib.sha256(
+                    ("zzsynthetic" + "identityblocktoken").encode()
+                ).hexdigest(),
+            )
+            env.pop("SIGHTLINE_PRIVATE_TOKEN", None)
             r = subprocess.run(["bash", "scripts/privacy-guard.sh", "solada-prefilter/config.json"], cwd=d, env=env, capture_output=True)
             self.assertEqual(r.returncode, 1, r.stderr)
             self.assertNotIn(key.encode(), r.stderr + r.stdout)
@@ -211,6 +218,7 @@ class RootModePublicKeys(unittest.TestCase):
             main = os.path.join(d, "main")
             os.makedirs(os.path.join(main, "scripts"))
             shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), os.path.join(main, "scripts"))
+            shutil.copy(os.path.join(ROOT, "scripts", "privacy_identity.py"), os.path.join(main, "scripts"))
             with open(os.path.join(main, "scripts", "privacy-public-keys.txt"), "w") as f:
                 f.write(key + "\n")
             shutil.copytree(SRC, os.path.join(main, "solada-prefilter"), ignore=shutil.ignore_patterns("tests", "__pycache__"))
@@ -220,7 +228,12 @@ class RootModePublicKeys(unittest.TestCase):
                 f.write("curve " + key + "\n")
             subprocess.run(["git", "init", "-q"], cwd=desk, check=True)
             subprocess.run(["git", "add", "solada/note.txt"], cwd=desk, check=True)
-            env = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
+            env = dict(
+                os.environ,
+                PRIVACY_GUARD_PATTERNS="^zzOWNERzz$",
+                PRIVACY_IDENTITY_HASHES=hashlib.sha256(("zzsynthetic" + "identityblocktoken").encode()).hexdigest(),
+            )
+            env.pop("SIGHTLINE_PRIVATE_TOKEN", None)
             r = subprocess.run(
                 ["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data"],
                 cwd=d, env=env, capture_output=True)
@@ -435,6 +448,7 @@ class DevChecksFileGuard(unittest.TestCase):
             main = os.path.join(d, "main")
             os.makedirs(os.path.join(main, "scripts"))
             shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), os.path.join(main, "scripts"))
+            shutil.copy(os.path.join(ROOT, "scripts", "privacy_identity.py"), os.path.join(main, "scripts"))
             shutil.copy(os.path.join(ROOT, "scripts", "privacy-public-keys.txt"), os.path.join(main, "scripts"))
             shutil.copytree(SRC, os.path.join(main, "solada-prefilter"),
                             ignore=shutil.ignore_patterns("tests", "__pycache__"))
@@ -449,7 +463,12 @@ class DevChecksFileGuard(unittest.TestCase):
             data = os.path.join(d, "desk-data")
             subprocess.run(["git", "init", "-q"], cwd=data, check=True)
             subprocess.run(["git", "add", "-A"], cwd=data, check=True)
-            env = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
+            env = dict(
+                os.environ,
+                PRIVACY_GUARD_PATTERNS="^zzOWNERzz$",
+                PRIVACY_IDENTITY_HASHES=hashlib.sha256(("zzsynthetic" + "identityblocktoken").encode()).hexdigest(),
+            )
+            env.pop("SIGHTLINE_PRIVATE_TOKEN", None)
             r = subprocess.run(["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data", *args],
                                cwd=d, env=env, capture_output=True)
             return r

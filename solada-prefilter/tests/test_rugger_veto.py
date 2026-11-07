@@ -1,4 +1,5 @@
 """SPD-77 Cardano hard veto. Offline. Synthetic wallets. No secrets."""
+import hashlib
 import json
 import os
 import shutil
@@ -21,6 +22,16 @@ import liquidity_moves as LM  # noqa: E402
 import rugger_blacklist as RB  # noqa: E402
 import vetoes as V  # noqa: E402
 from test_dev_checks import stake  # noqa: E402
+
+
+def _guard_env(patterns):
+    env = dict(
+        os.environ,
+        PRIVACY_GUARD_PATTERNS=patterns,
+        PRIVACY_IDENTITY_HASHES=hashlib.sha256(("zzsynthetic" + "identityblocktoken").encode()).hexdigest(),
+    )
+    env.pop("SIGHTLINE_PRIVATE_TOKEN", None)
+    return env
 
 CFG = json.load(open(os.path.join(SRC, "config.json")))
 OWNER = "^zzOWNER$"
@@ -325,6 +336,7 @@ class Guard(unittest.TestCase):
         main = os.path.join(d, "main")
         os.makedirs(os.path.join(main, "scripts"))
         shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), os.path.join(main, "scripts"))
+        shutil.copy(os.path.join(ROOT, "scripts", "privacy_identity.py"), os.path.join(main, "scripts"))
         shutil.copy(os.path.join(ROOT, "scripts", "privacy-public-keys.txt"), os.path.join(main, "scripts"))
         shutil.copytree(SRC, os.path.join(main, "solada-prefilter"),
                         ignore=shutil.ignore_patterns("tests", "__pycache__"))
@@ -336,7 +348,7 @@ class Guard(unittest.TestCase):
                 json.dump(doc, fh)
         subprocess.run(["git", "init", "-q"], cwd=data, check=True)
         subprocess.run(["git", "add", "-A"], cwd=data, check=True)
-        env = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
+        env = _guard_env("^zzOWNERzz$")
         return subprocess.run(["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data"],
                               cwd=d, env=env, capture_output=True)
 
@@ -402,6 +414,7 @@ class Guard(unittest.TestCase):
         main = os.path.join(d, "main")
         os.makedirs(os.path.join(main, "scripts"))
         shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), os.path.join(main, "scripts"))
+        shutil.copy(os.path.join(ROOT, "scripts", "privacy_identity.py"), os.path.join(main, "scripts"))
         shutil.copy(os.path.join(ROOT, "scripts", "privacy-public-keys.txt"), os.path.join(main, "scripts"))
         shutil.copytree(SRC, os.path.join(main, "solada-prefilter"),
                         ignore=shutil.ignore_patterns("tests", "__pycache__"))
@@ -411,7 +424,7 @@ class Guard(unittest.TestCase):
             json.dump(doc, fh)
         subprocess.run(["git", "init", "-q"], cwd=data, check=True)
         subprocess.run(["git", "add", "-A"], cwd=data, check=True)
-        env = dict(os.environ, PRIVACY_GUARD_PATTERNS=dev)
+        env = _guard_env(dev)
         r = subprocess.run(["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data"],
                            cwd=d, env=env, capture_output=True)
         self.assertNotEqual(r.returncode, 0)
@@ -431,6 +444,7 @@ class Guard(unittest.TestCase):
         main = os.path.join(d, "main")
         os.makedirs(os.path.join(main, "scripts"))
         shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), os.path.join(main, "scripts"))
+        shutil.copy(os.path.join(ROOT, "scripts", "privacy_identity.py"), os.path.join(main, "scripts"))
         shutil.copy(os.path.join(ROOT, "scripts", "privacy-public-keys.txt"), os.path.join(main, "scripts"))
         shutil.copytree(SRC, os.path.join(main, "solada-prefilter"),
                         ignore=shutil.ignore_patterns("tests", "__pycache__"))
@@ -440,7 +454,7 @@ class Guard(unittest.TestCase):
             json.dump(doc, fh)
         subprocess.run(["git", "init", "-q"], cwd=data, check=True)
         subprocess.run(["git", "add", "-A"], cwd=data, check=True)
-        env = dict(os.environ, PRIVACY_GUARD_PATTERNS=payment + "\n" + sol)
+        env = _guard_env(payment + "\n" + sol)
         r = subprocess.run(["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data"],
                            cwd=d, env=env, capture_output=True)
         self.assertNotEqual(r.returncode, 0)
@@ -452,7 +466,7 @@ class Guard(unittest.TestCase):
         with open(pulls, "w") as fh:
             fh.write("{}\n")
         subprocess.run(["git", "add", "-A"], cwd=data, check=True)
-        env2 = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
+        env2 = _guard_env("^zzOWNERzz$")
         r2 = subprocess.run(["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data"],
                             cwd=d, env=env2, capture_output=True)
         self.assertNotEqual(r2.returncode, 0)
@@ -465,19 +479,20 @@ class Guard(unittest.TestCase):
         main = os.path.join(d, "main", "scripts")
         os.makedirs(main)
         shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), main)
+        shutil.copy(os.path.join(ROOT, "scripts", "privacy_identity.py"), main)
         data = os.path.join(d, "desk-data")
         os.makedirs(data)
         with open(os.path.join(data, "note.json"), "w") as fh:
             fh.write("{}\n")
         subprocess.run(["git", "init", "-q"], cwd=data, check=True)
         subprocess.run(["git", "add", "-A"], cwd=data, check=True)
-        env = dict(os.environ, PRIVACY_GUARD_PATTERNS=payment)
+        env = _guard_env(payment)
         r = subprocess.run(["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data"],
                            cwd=d, env=env, capture_output=True)
         self.assertNotEqual(r.returncode, 0)
         self.assertIn(b"cannot derive stake keys", r.stderr)
         self.assertNotIn(payment.encode(), r.stdout + r.stderr)
-        env_ok = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
+        env_ok = _guard_env("^zzOWNERzz$")
         plain = subprocess.run(["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data"],
                                cwd=d, env=env_ok, capture_output=True)
         self.assertEqual(plain.returncode, 0, plain.stderr)
