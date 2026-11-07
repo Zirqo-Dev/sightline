@@ -17,6 +17,11 @@ on:
         description: "UTC as-of, YYYY-MM-DDTHH:MM:SSZ. Freshness is judged only against this input."
         required: true
         type: string
+      previous_run_id:
+        description: "Optional earlier evidence-packet run id. Empty means a first run; deltas stay unknown."
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -48,6 +53,10 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install packet test dependency
+        working-directory: code
+        run: python3 -m pip install --quiet -r scripts/evidence/requirements.txt
+
       - name: Evidence packet tests
         working-directory: code
         run: python3 -m unittest discover -s scripts/tests -p test_evidence_packet.py
@@ -59,18 +68,36 @@ jobs:
           REPO: ${{ github.repository }}
         run: python3 scripts/evidence/fetch_actions.py --repo "$REPO" --out "$RUNNER_TEMP/actions-snapshot.json"
 
+      - name: Previous packet
+        if: inputs.previous_run_id != ''
+        env:
+          PREV: ${{ inputs.previous_run_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          case "$PREV" in
+            ''|*[!0-9]*) echo "previous_run_id must be digits"; exit 2 ;;
+          esac
+          gh run download "$PREV" --name evidence-packet --dir "$RUNNER_TEMP/previous"
+
       - name: Build packet
         env:
           AS_OF: ${{ inputs.as_of }}
           REPO: ${{ github.repository }}
+          PREV: ${{ inputs.previous_run_id }}
         run: |
+          # No previous_run_id: this is a first run. Deltas stay unknown.
+          extra=()
+          if [ -n "$PREV" ]; then
+            extra+=(--previous "$RUNNER_TEMP/previous/evidence-packet.json")
+          fi
           python3 "$GITHUB_WORKSPACE/code/scripts/evidence/packet.py" \
             --repo "$GITHUB_WORKSPACE/code" \
             --data "$GITHUB_WORKSPACE/data" \
             --as-of "$AS_OF" \
             --actions-snapshot "$RUNNER_TEMP/actions-snapshot.json" \
             --repo-slug "$REPO" \
-            --out "$GITHUB_WORKSPACE/packet"
+            --out "$GITHUB_WORKSPACE/packet" \
+            "${extra[@]}"
 
       - name: Privacy guard on the packet
         working-directory: code

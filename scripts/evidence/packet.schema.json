@@ -29,6 +29,7 @@
       "required": ["full", "predicates"],
       "properties": {
         "full": {"const": false},
+        "deferred": {"type": "array", "items": {"type": "string"}},
         "predicates": {"type": "object", "additionalProperties": {"enum": ["implemented", "not_implemented"]}}
       }
     },

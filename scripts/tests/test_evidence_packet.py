@@ -5,6 +5,8 @@ import importlib.util
 import json
 import os
 import shutil
+import subprocess
+import sys
 import tempfile
 import time
 import unittest
@@ -82,23 +84,22 @@ def snapshot(conclusion="success", run_id=100, extra=None):
     }
     if extra:
         run.update(extra)
+    workflows = {}
+    for path in packet.WORKFLOW_PATHS:
+        workflows[path] = {
+            "error": None,
+            "health_resolved": True,
+            "run": dict(run),
+            "latest": dict(run),
+        }
     body = {
         "schema_version": 1,
         "kind": "sightline_actions_snapshot",
         "fetched": True,
         "error": None,
         "repo": "example/sightline",
-        "workflows": {
-            ".github/workflows/desk-data-guard.yml": {"error": None, "run": run},
-        },
-        "billing": {
-            "http_status": 404,
-            "endpoint": "users",
-            "total_minutes_used": None,
-            "total_paid_minutes_used": None,
-            "included_minutes": None,
-            "note": "The billing endpoint did not return usage. This is not a claim that the quota is zero.",
-        },
+        "workflows": workflows,
+        "billing": fetch.blank_billing(),
     }
     return body
 
@@ -221,7 +222,11 @@ class EvidencePacketTest(unittest.TestCase):
         self.assertFalse(first["ai"])
         self.assertFalse(first["actions_usage"]["equated_to_billed_minutes"])
         self.assertFalse(first["actions_usage"]["quota_remaining_known"])
-        self.assertEqual(first["actions_usage"]["billing_http_status"], 404)
+        self.assertIn("deferred", first["actions_usage"]["note"])
+        self.assertEqual(first["coverage"]["deferred"], ["forensics_detail", "billing_account"])
+        self.assertTrue(first["recompute"]["failed_runs"]["actions_known"])
+        self.assertFalse(first["delta"]["previous_present"])
+        self.assertEqual(first["delta"]["previous_reason"], "no previous packet")
         text = packet.dumps(first)
         self.assertNotIn(token, text)
         self.assertNotIn(self.data, text)
@@ -249,9 +254,7 @@ class EvidencePacketTest(unittest.TestCase):
         guard = self.source(first, "workflow:.github/workflows/desk-data-guard.yml")
         self.assertEqual(guard["state"], "ok")
         self.assertEqual(guard["links"][0]["url"], "https://github.com/example/sightline/actions/runs/100")
-        missing_flow = self.source(first, "workflow:.github/workflows/run-forensics.yml")
-        self.assertEqual(missing_flow["state"], "unknown")
-        self.assertEqual(missing_flow["completeness"]["required_missing"], [".github/workflows/run-forensics.yml"])
+        self.assertTrue(self.source(first, "forensics")["fields"]["deferred"])
         self.assertEqual(first["delta"]["predicates"]["prefilter_trading_verdict"]["status"], "not_implemented")
         self.assertEqual(first["delta"]["predicates"]["new_close_id"]["status"], "unknown")
         self.assertIsNone(first["delta"]["material"])
@@ -444,6 +447,128 @@ class EvidencePacketTest(unittest.TestCase):
         self.assertEqual(only_skip["id"], 99)
         self.assertIsNone(no_health)
         self.assertFalse(no_flag)
+
+    def test_unresolved_workflow_is_not_zero_failures(self):
+        self.plant()
+        snap = snapshot()
+        prev = self.save(self.build(snap=snap))
+        snap["workflows"][".github/workflows/run-forensics.yml"] = {
+            "error": "gh_exit_1",
+            "run": None,
+            "latest": None,
+            "health_resolved": False,
+        }
+        errored = self.build(previous=prev, snap=snap)
+        self.assertFalse(errored["recompute"]["failed_runs"]["actions_known"])
+        self.assertEqual(errored["delta"]["predicates"]["new_failed_run_id"]["status"], "unknown")
+        self.assertNotEqual(errored["delta"]["predicates"]["new_failed_run_id"]["status"], "no_change")
+        snap = snapshot()
+        snap["workflows"][".github/workflows/privacy-guard.yml"] = {
+            "error": None,
+            "health_resolved": False,
+            "run": None,
+            "latest": self._run(99, "pull_request", "skipped"),
+        }
+        unresolved = self.build(previous=prev, snap=snap)
+        self.assertEqual(self.source(unresolved, "workflow:.github/workflows/privacy-guard.yml")["state"], "unknown")
+        self.assertFalse(unresolved["recompute"]["failed_runs"]["actions_known"])
+        self.assertEqual(unresolved["delta"]["predicates"]["new_failed_run_id"]["status"], "unknown")
+
+    def test_null_threshold_is_unknown(self):
+        full = {
+            "f_closes_meet_minimum": False,
+            "f_expectancy_below_stop": False,
+            "f_rule_would_stop": False,
+            "data_failure_rate_above_void": False,
+        }
+        partial = dict(full)
+        partial["f_expectancy_below_stop"] = None
+        self.assertEqual(packet.compare_lines(full, full)["status"], "no_change")
+        self.assertEqual(packet.compare_lines(partial, partial)["status"], "unknown")
+        self.assertEqual(packet.compare_lines(full, partial)["status"], "unknown")
+
+    def test_duplicate_r_id_is_not_ok(self):
+        self.plant(n=1)
+        token_a = mint(8)
+        token_b = mint(9)
+        opened = epoch(AT) + 100
+        shared = "R-20261102T1300-22222222"
+        path = os.path.join(self.data, "solana-desk", "trades.csv")
+        with open(path, newline="", encoding="utf-8") as fh:
+            rows = list(csv.DictReader(fh))
+            fields = list(rows[0].keys())
+        rows.extend([
+            trade_row(opened, "R", "buy", 1, None, token_a, "AAA"),
+            trade_row(opened + 60, "R", "sell", 1, "-0.1", token_a, "AAA"),
+            trade_row(opened + 1, "R", "buy", 1, None, token_b, "BBB"),
+            trade_row(opened + 61, "R", "sell", 1, "-0.1", token_b, "BBB"),
+        ])
+        with open(path, "w", newline="", encoding="utf-8") as fh:
+            writer = csv.DictWriter(fh, fieldnames=fields)
+            writer.writeheader()
+            for row in rows:
+                writer.writerow(row)
+        with open(os.path.join(self.data, "solana-desk", "positions.json"), encoding="utf-8") as fh:
+            positions = json.load(fh)
+        positions["books"]["R"]["closed"] = [
+            {"id": shared, "mint": token_a, "opened": opened, "closed": opened + 60, "pnl": -0.1},
+            {"id": shared, "mint": token_b, "opened": opened + 1, "closed": opened + 61, "pnl": -0.1},
+        ]
+        self.write("solana-desk/positions.json", json.dumps(positions))
+        doc = self.build(snap=snapshot())
+        closes = doc["recompute"]["closes"]
+        self.assertFalse(closes["ok"])
+        self.assertIsNone(closes["n"])
+        self.assertEqual(closes["ids"].count(shared), 1)
+        self.assertNotEqual((closes["ok"], closes["n"], len(closes["ids"])), (True, 2, 1))
+
+    def test_headerless_tasks_are_not_zero_failures(self):
+        self.plant()
+        self.write("solana-desk/tasks.csv", "1790000000,not-a-header,scanner\n")
+        doc = self.build(snap=snapshot())
+        failed = doc["recompute"]["failed_runs"]
+        self.assertFalse(failed["ok"])
+        self.assertIsNone(failed["all_desk_run_n"])
+        self.assertEqual(failed["desk_ids"], [])
+        self.assertIn("header", failed["reason"])
+        self.write(
+            "solana-desk/tasks.csv",
+            "time,run_id,skip_type,fail_reason\n1,not-a-run,,\n",
+        )
+        bad_row = self.build(snap=snapshot())
+        failed = bad_row["recompute"]["failed_runs"]
+        self.assertFalse(failed["ok"])
+        self.assertIsNone(failed["all_desk_run_n"])
+        self.assertIn("unknown", failed["reason"])
+
+    def test_clean_env_workflow_installs_jsonschema(self):
+        workflow = os.path.join(ROOT, ".github", "workflows", "evidence-packet.yml")
+        with open(workflow, encoding="utf-8") as fh:
+            text = fh.read()
+        self.assertNotIn("\n  schedule:", text)
+        self.assertNotIn("contents: write", text)
+        self.assertLess(text.index("scripts/evidence/requirements.txt"), text.index("unittest discover"))
+        self.assertIn("previous_run_id", text)
+        self.assertIn("first run", text)
+        missing = subprocess.run(
+            [sys.executable, "-I", "-c", "import jsonschema"],
+            capture_output=True,
+        )
+        self.assertNotEqual(missing.returncode, 0)
+        dest = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, dest, True)
+        req = os.path.join(ROOT, "scripts", "evidence", "requirements.txt")
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "--quiet", "--target", dest, "-r", req],
+            stdout=subprocess.DEVNULL,
+        )
+        schema = os.path.join(ROOT, "scripts", "evidence", "packet.schema.json")
+        code = (
+            "import json, sys; sys.path.insert(0, %r); "
+            "from jsonschema import Draft202012Validator; "
+            "Draft202012Validator.check_schema(json.load(open(%r)))"
+        ) % (dest, schema)
+        subprocess.check_call([sys.executable, "-I", "-c", code])
 
     def test_slug_and_snapshot_drop_secrets(self):
         token = "ghs_" + "zzpacketpoison"

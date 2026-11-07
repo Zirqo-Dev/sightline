@@ -50,8 +50,6 @@ SCAN_FILES = (
 SCAN_OPTIONAL = ("solana-desk/scan_timing.jsonl",)
 PREFILTER_FILES = ("solada-prefilter/last-run.json",)
 DAILY_FILES = ("reports/status/daily_status_latest.json",)
-FORENSICS_FILES = ("solada/forensics/index.jsonl",)
-FORENSICS_OPTIONAL = ("solada/forensics/panel.json",)
 WORKFLOW_PATHS = (
     ".github/workflows/solana-desk-scan.yml",
     ".github/workflows/solada-prefilter.yml",
@@ -64,6 +62,14 @@ WORKFLOW_PATHS = (
 FAILED_CONCLUSIONS = {"failure", "timed_out", "startup_failure"}
 HEALTH_REQUIRED = ("loop_ran", "void_day", "ai")
 HEALTH_OPTIONAL = ("frozen",)
+REQUIRED_LINES = (
+    "f_closes_meet_minimum",
+    "f_expectancy_below_stop",
+    "f_rule_would_stop",
+    "data_failure_rate_above_void",
+)
+TRADE_NEED = ("time", "book", "action", "mint", "frac", "pnl")
+TASK_NEED = ("time", "run_id", "skip_type", "fail_reason")
 PREDICATES = (
     "new_close_id",
     "new_fill_id",
@@ -84,11 +90,11 @@ LIMITATIONS = (
     "coverage.full is false. A source or predicate that was not read is unknown or not_implemented, not healthy.",
     "Freshness limits scan_60min, prefilter_150min, and daily_2h_after_scheduled_slot are provisional pilot settings. They are not desk trading rules.",
     "Daily freshness uses the cron slot in .github/workflows/daily-status.yml plus that provisional grace. It does not use file modification time, and it is not the 19:00 America/Toronto rule in scripts/status/daily_status.py.",
-    "Forensics has no freshness limit in this pilot. Its freshness is unsupported.",
+    "Forensics detail and the Actions billing-account lookup are deferred. Their state is unknown, not healthy, and coverage.full stays false.",
     "Day-14 STOP and CONTINUE figures are recomputed inputs. This packet does not issue finality and it is not a trading instruction.",
-    "Prefilter output and forensics flags are not a trading verdict here. Those predicates are not_implemented.",
+    "A prefilter trading verdict is not implemented. Prefilter freshness still uses last-run.json at and dry_run.",
     "run-nft.yml and run-solada.yml are not queried.",
-    "Actions run_duration_ms and billable UBUNTU total_ms are copied from a snapshot of the timing API when that snapshot has them. They are not an invoice, not remaining quota, and not a promise that usage is zero.",
+    "Run duration is copied from the timing API when a snapshot has it. The billing-account lookup is deferred. Duration is not an invoice and not remaining quota.",
     "This pilot does not estimate a token-saving percentage.",
     "Missing files, unreadable files, and a missing Actions snapshot are not treated as healthy.",
     "The packet does not read the wall clock. as-of is an input. The same inputs and as-of produce the same bytes.",
@@ -282,14 +288,37 @@ def load_json(path):
         return None, "JSONDecodeError"
 
 
-def read_csv(path):
+def read_table(path, required):
+    """CSV with a real header. A headerless file is not an empty ledger."""
     text, err = read_text(path)
     if err:
         return None, err
+    lines = [line for line in text.splitlines() if line.strip()]
+    if not lines:
+        return None, "header"
     try:
-        return list(csv.DictReader(text.splitlines())), None
+        reader = csv.DictReader(lines)
+        fields = list(reader.fieldnames or [])
+        if any(name not in fields for name in required):
+            return None, "header"
+        return list(reader), None
     except csv.Error:
         return None, "csv.Error"
+
+
+def tasks_usable(rows):
+    """False when a row would be dropped and the failure count would look complete."""
+    for row in rows:
+        if not isinstance(row, dict):
+            return False
+        rid = (row.get("run_id") or "").strip()
+        if not DESK_RUN_RE.fullmatch(rid):
+            return False
+        try:
+            float(row.get("time") or "")
+        except (TypeError, ValueError):
+            return False
+    return True
 
 
 def sha256_file(status, path):
@@ -690,9 +719,15 @@ def recompute_books(trade_rows, positions):
         unmatched_ids.extend(unmatched)
         withheld += held + open_held
         unmatched_lots += max(0, len(built) - len(matched))
+    duplicate = len(close_ids) != len(set(close_ids)) or len(fill_ids) != len(set(fill_ids))
+    if duplicate:
+        ok = False
+        reason = "duplicate position id"
+    n_close = None if duplicate else len(close_ids)
+    n_fill = None if duplicate else len(set(fill_ids))
     closes = {
         "ok": ok,
-        "n": len(close_ids) if ok else len(close_ids),
+        "n": n_close,
         "ids": sorted(set(close_ids)),
         "by_book": by_book,
         "unmatched_lots": unmatched_lots,
@@ -704,7 +739,7 @@ def recompute_books(trade_rows, positions):
     # the count is not a complete ledger. Callers must not treat ok false as zero.
     fills = {
         "ok": ok,
-        "n": len(set(fill_ids)),
+        "n": n_fill,
         "ids": sorted(set(fill_ids)),
         "reason": None if ok else reason,
     }
@@ -880,13 +915,20 @@ def rate_above_void(health, void_value):
     return above, None
 
 
-def failed_runs(repo, task_rows):
+def failed_runs(repo, task_rows, task_err=None):
     if task_rows is None:
         return {
             "ok": False,
             "desk_ids": [],
             "all_desk_run_n": None,
-            "reason": "solana-desk/tasks.csv is missing or unreadable",
+            "reason": task_err or "solana-desk/tasks.csv is missing or unreadable",
+        }
+    if not tasks_usable(task_rows):
+        return {
+            "ok": False,
+            "desk_ids": [],
+            "all_desk_run_n": None,
+            "reason": "tasks.csv has a row without a run id or time; the failure count is unknown",
         }
     try:
         alert = alert_module(repo)
@@ -963,58 +1005,6 @@ def read_timing(path):
     return rows, None
 
 
-def forensics_summary(path, status):
-    text, err = read_text(path)
-    if err:
-        return None, err
-    n = partial = deep = bad = 0
-    latest = None
-    latest_epoch = None
-    flags = {}
-    symbols_ok = 0
-    symbols_withheld = 0
-    for line in text.splitlines():
-        if not line.strip():
-            continue
-        try:
-            row = json.loads(line)
-        except json.JSONDecodeError:
-            bad += 1
-            continue
-        if not isinstance(row, dict):
-            bad += 1
-            continue
-        n += 1
-        if row.get("partial") is True:
-            partial += 1
-        if row.get("history_too_deep") is True:
-            deep += 1
-        _text, got = stamp_from(status, row.get("run_at"))
-        if got is not None and (latest_epoch is None or got >= latest_epoch):
-            latest_epoch = got
-            latest = status.fmt_time(got)
-        raw_flags = row.get("flags")
-        if isinstance(raw_flags, list):
-            for flag in raw_flags:
-                if isinstance(flag, str) and re.fullmatch(r"[A-Z][A-Z0-9_]{0,31}", flag):
-                    flags[flag] = flags.get(flag, 0) + 1
-        symbol = row.get("symbol")
-        if isinstance(symbol, str) and status.public_symbol(symbol):
-            symbols_ok += 1
-        elif symbol:
-            symbols_withheld += 1
-    return {
-        "lines": n,
-        "unreadable_lines": bad,
-        "partial": partial,
-        "history_too_deep": deep,
-        "latest_run_at": latest,
-        "flag_counts": {key: flags[key] for key in sorted(flags)},
-        "symbol_rows_public": symbols_ok,
-        "symbol_rows_withheld": symbols_withheld,
-    }, None
-
-
 def int_field(doc, key):
     value = doc.get(key)
     if isinstance(value, bool) or not isinstance(value, int):
@@ -1055,25 +1045,8 @@ def prefilter_fields(doc, status):
             fields["data_failures_reason"] = "data_failures has a key or count that is not a short code and an integer"
     else:
         absent.append("data_failures")
-    thresholds = doc.get("thresholds")
-    recorded = {}
-    if isinstance(thresholds, dict):
-        for key in sorted(thresholds):
-            code = status.public_code(str(key))
-            value = thresholds[key]
-            if not code:
-                continue
-            if isinstance(value, bool):
-                recorded[code] = value
-            elif isinstance(value, int) and not isinstance(value, bool):
-                recorded[code] = value
-            elif isinstance(value, float):
-                recorded[code] = rate_text(value)
-    fields["recorded_thresholds"] = recorded
-    fields["recorded_thresholds_note"] = "copied from last-run.json thresholds; not a new trading rule and not a verdict predicate"
-    if isinstance(doc.get("vetoes"), dict) and isinstance(doc["vetoes"].get("buy_signal"), bool):
-        fields["vetoes_buy_signal"] = doc["vetoes"]["buy_signal"]
-    fields["absent"] = absent
+    if absent:
+        fields["absent"] = absent
     return fields, None
 
 
@@ -1195,36 +1168,17 @@ def workflow_sources(snapshot, snap_err, slug):
 
 
 def actions_usage(snapshot, snap_err):
+    """Timing only. The billing-account lookup is deferred and is not a quota."""
+    deferred = "billing account lookup is deferred. Remaining quota is unknown. This is not a claim that usage is zero."
     base = {
-        "source": "github_actions_timing_and_billing_api" if snap_err is None else None,
+        "source": "github_actions_timing_api" if snap_err is None else None,
         "equated_to_billed_minutes": False,
         "quota_remaining_known": False,
-        "billing_http_status": None,
-        "billing_endpoint": None,
-        "total_minutes_used": None,
-        "total_paid_minutes_used": None,
-        "included_minutes": None,
-        "note": "no actions snapshot" if snap_err else None,
+        "note": deferred if snap_err is None else (snap_err or "no actions snapshot"),
         "runs": [],
     }
     if not isinstance(snapshot, dict):
-        base["note"] = snap_err or "no actions snapshot"
         return base
-    billing = snapshot.get("billing") if isinstance(snapshot.get("billing"), dict) else {}
-    for key in ("http_status", "total_minutes_used", "total_paid_minutes_used", "included_minutes"):
-        value = billing.get("http_status" if key == "http_status" else key)
-        if key == "http_status":
-            base["billing_http_status"] = value if isinstance(value, int) else None
-        elif isinstance(value, int) and not isinstance(value, bool):
-            base[key] = value
-    endpoint = billing.get("endpoint")
-    if endpoint in ("orgs", "users"):
-        base["billing_endpoint"] = endpoint
-    note = billing.get("note")
-    if isinstance(note, str) and len(note) < 400 and SECRET_RE.search(note) is None:
-        base["note"] = note
-    elif snap_err:
-        base["note"] = "actions snapshot was not fetched"
     runs = []
     workflows = snapshot.get("workflows") if isinstance(snapshot.get("workflows"), dict) else {}
     for path in WORKFLOW_PATHS:
@@ -1239,11 +1193,6 @@ def actions_usage(snapshot, snap_err):
             "billable_ubuntu_total_ms": run.get("billable_ubuntu_total_ms") if isinstance(run.get("billable_ubuntu_total_ms"), int) else None,
         })
     base["runs"] = runs
-    if base["note"] is None:
-        base["note"] = (
-            "Timing figures are the Actions API values in the snapshot. "
-            "quota_remaining_known is false. equated_to_billed_minutes is false."
-        )
     return base
 
 
@@ -1366,21 +1315,15 @@ def compare_flags(prev, curr):
 
 
 def compare_lines(prev, curr):
+    """A null required line makes the predicate unknown, even if other lines match."""
     if not isinstance(prev, dict) or not isinstance(curr, dict):
         return predicate("unknown")
-    changed = []
-    saw = False
-    for key in sorted(set(prev) | set(curr)):
-        left, right = prev.get(key), curr.get(key)
-        if not isinstance(left, bool) or not isinstance(right, bool):
-            continue
-        saw = True
-        if left != right:
-            changed.append(key)
+    for key in REQUIRED_LINES:
+        if not isinstance(prev.get(key), bool) or not isinstance(curr.get(key), bool):
+            return predicate("unknown")
+    changed = [key for key in REQUIRED_LINES if prev[key] != curr[key]]
     if changed:
         return predicate("change", lines=changed)
-    if not saw:
-        return predicate("unknown")
     return predicate("no_change")
 
 
@@ -1574,7 +1517,6 @@ def build(repo, data, as_of=None, previous=None, actions_path=None, repo_slug=No
     scan_facts = facts(SCAN_FILES + SCAN_OPTIONAL)
     pre_facts = facts(PREFILTER_FILES)
     daily_facts = facts(DAILY_FILES)
-    fore_facts = facts(FORENSICS_FILES + FORENSICS_OPTIONAL)
 
     health_path = os.path.join(data, "solana-desk", "health.json")
     health_doc, health_err = (None, "missing")
@@ -1585,13 +1527,13 @@ def build(repo, data, as_of=None, previous=None, actions_path=None, repo_slug=No
     trades, trade_err = (None, "missing")
     trade_path = os.path.join(data, "solana-desk", "trades.csv")
     if os.path.isfile(trade_path):
-        trades, trade_err = read_csv(trade_path)
+        trades, trade_err = read_table(trade_path, TRADE_NEED)
         if trade_err:
             trades = None
     tasks, task_err = (None, "missing")
     task_path = os.path.join(data, "solana-desk", "tasks.csv")
     if os.path.isfile(task_path):
-        tasks, task_err = read_csv(task_path)
+        tasks, task_err = read_table(task_path, TASK_NEED)
         if task_err:
             tasks = None
     positions, pos_err = (None, "missing")
@@ -1639,7 +1581,7 @@ def build(repo, data, as_of=None, previous=None, actions_path=None, repo_slug=No
     scan_state = file_state(scan_complete, scan_fresh)
     flags = health_flags(health_doc, status) if health_doc else None
     closes, fills = recompute_books(trades, positions)
-    failed = failed_runs(repo, tasks)
+    failed = failed_runs(repo, tasks, None if task_err == "missing" else task_err)
     verdict = verdict_inputs(repo, positions, trades, status)
     void_value = verdict.get("data_fail_void")
     above, above_reason = rate_above_void(health_doc, void_value)
@@ -1737,31 +1679,19 @@ def build(repo, data, as_of=None, previous=None, actions_path=None, repo_slug=No
         {"schema_version": 1 if daily_kind_ok else None, "date": report_date, "evidence_as_of": daily_as_of},
     )
 
-    fore_path = os.path.join(data, "solada", "forensics", "index.jsonl")
-    fore_summary, fore_err = (None, "missing")
-    if os.path.isfile(fore_path):
-        fore_summary, fore_err = forensics_summary(fore_path, status)
-        if fore_err:
-            fore_summary = None
-    fore_complete = completeness_for(fore_facts, FORENSICS_FILES, FORENSICS_OPTIONAL)
-    if fore_err and fore_err != "missing":
-        fore_complete["unreadable"] = ["solada/forensics/index.jsonl"]
-        fore_complete["required_present"] = []
-    fore_fresh = unsupported_freshness("no provisional or approved freshness limit for forensics")
-    if fore_summary and fore_summary["unreadable_lines"] and not fore_summary["lines"]:
-        fore_state = "failed"
-    elif fore_summary and fore_summary["unreadable_lines"]:
-        fore_state = "partial"
-    elif fore_summary and fore_summary["lines"] == 0:
-        fore_state = "unknown"
-    else:
-        fore_state = file_state(fore_complete, fore_fresh)
+    fore_fresh = unsupported_freshness("forensics detail is deferred; no freshness limit is applied")
     fore_source = source_shell(
-        "forensics", fore_state, fore_fresh.get("reason"),
-        fore_summary.get("latest_run_at") if fore_summary else None,
-        "solada/forensics/index.jsonl run_at", None, None, data_commit,
-        fore_complete, links_for(slug, fore_facts), fore_fresh, fore_facts,
-        fore_summary or {"reason": fore_err},
+        "forensics", "unknown",
+        "forensics detail is deferred in this pilot and is not treated as healthy",
+        None, None, None, None, None,
+        {
+            "required_present": [],
+            "required_missing": [],
+            "unreadable": [],
+            "optional_missing": [],
+            "deferred": ["solada/forensics/index.jsonl"],
+        },
+        [], fore_fresh, [], {"deferred": True},
     )
 
     snapshot, snap_err = actions_snapshot(actions_path)
@@ -1776,7 +1706,13 @@ def build(repo, data, as_of=None, previous=None, actions_path=None, repo_slug=No
     usage = actions_usage(snapshot if isinstance(snapshot, dict) else None, snap_state_err)
 
     action_failed = []
-    action_known = snap_state_err is None
+    # A fetched snapshot is not coverage. An errored workflow or a page with no
+    # schedule, push, or workflow_dispatch run leaves the failure list unknown.
+    action_known = (
+        snap_state_err is None
+        and len(workflow) == len(WORKFLOW_PATHS)
+        and all(source["state"] in ("ok", "failed") for source in workflow)
+    )
     if action_known:
         for source in workflow:
             if source["fields"].get("conclusion") in FAILED_CONCLUSIONS and isinstance(source["actions_run_id"], int):
@@ -1789,7 +1725,7 @@ def build(repo, data, as_of=None, previous=None, actions_path=None, repo_slug=No
         "solana_scan": scan_text,
         "solada_prefilter": pre_text,
         "daily_status_date": report_date,
-        "forensics": fore_summary.get("latest_run_at") if fore_summary else None,
+        "forensics": None,
         "health_last_run_utc": desk_run,
     }
     prev_doc, prev_err = load_previous(previous, status)
@@ -1805,7 +1741,7 @@ def build(repo, data, as_of=None, previous=None, actions_path=None, repo_slug=No
             "all_desk_run_n": failed.get("all_desk_run_n"),
             "actions_ids": failed.get("actions_ids") if action_known else [],
             "actions_known": action_known,
-            "reason": failed.get("reason") if failed.get("ok") is not True else snap_state_err,
+            "reason": None,
         },
         "health_flags": flags,
         "threshold_lines": lines,
@@ -1813,10 +1749,12 @@ def build(repo, data, as_of=None, previous=None, actions_path=None, repo_slug=No
         "verdict_inputs": verdict.get("inputs"),
         "verdict_reason": verdict.get("reason"),
     }
-    # failed_runs.ok means both desk tasks and the actions snapshot were read.
-    # The desk id list can still be used when actions are unknown; delta handles that.
-    if failed.get("ok") is True and not action_known:
-        recompute["failed_runs"]["reason"] = snap_state_err
+    reasons = []
+    if failed.get("ok") is not True and failed.get("reason"):
+        reasons.append(failed["reason"])
+    if not action_known:
+        reasons.append(snap_state_err or "actions workflow coverage is unresolved")
+    recompute["failed_runs"]["reason"] = "; ".join(reasons) if reasons else None
 
     sources = [scan_source, pre_source, daily_source, fore_source] + workflow
     doc = {
@@ -1825,6 +1763,7 @@ def build(repo, data, as_of=None, previous=None, actions_path=None, repo_slug=No
         "ai": False,
         "coverage": {
             "full": False,
+            "deferred": ["forensics_detail", "billing_account"],
             "predicates": {name: "implemented" for name in PREDICATES},
         },
         "provenance": {

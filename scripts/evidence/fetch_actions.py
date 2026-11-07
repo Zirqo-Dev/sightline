@@ -32,7 +32,6 @@ CONCLUSIONS = {
     "startup_failure", "neutral", "action_required", "stale",
 }
 STATUSES = {"completed", "in_progress", "queued", "requested", "waiting", "pending"}
-BILLING_INTS = ("total_minutes_used", "total_paid_minutes_used", "included_minutes")
 FAILED = {"failure", "timed_out", "startup_failure"}
 # A skipped pull request is not the health of the workflow. These events are
 # the runs that actually execute the job. The list is newest-first, as the
@@ -125,28 +124,8 @@ def blank_billing():
         "total_minutes_used": None,
         "total_paid_minutes_used": None,
         "included_minutes": None,
-        "note": "billing endpoint was not called",
+        "note": "billing account lookup is deferred. Remaining quota is unknown. This is not a claim that usage is zero.",
     }
-
-
-def billing_from_body(status, endpoint, body):
-    """Copy three integer fields. Anything else in the body is dropped."""
-    out = blank_billing()
-    out["http_status"] = status
-    out["endpoint"] = endpoint
-    if status != 200 or not isinstance(body, dict):
-        out["note"] = (
-            "The billing endpoint did not return usage. "
-            "This is not a claim that the quota is zero."
-        )
-        return out
-    for key in BILLING_INTS:
-        out[key] = _int(body.get(key))
-    out["note"] = (
-        "Integers copied from the Actions billing API. "
-        "They are not a dollar figure and not a remaining-quota promise."
-    )
-    return out
 
 
 def pick_runs(raw_runs, slug):
@@ -220,34 +199,6 @@ def _gh_json(path):
         return None, "JSONDecodeError"
 
 
-def _gh_status(path):
-    """Return (status, body). Body is parsed only for a 200 JSON object."""
-    proc = subprocess.run(
-        ["gh", "api", "-i", path],
-        capture_output=True,
-        text=True,
-        timeout=45,
-        check=False,
-    )
-    status = None
-    for line in (proc.stdout or "").splitlines():
-        match = re.match(r"HTTP/\d(?:\.\d)?\s+(\d{3})\b", line)
-        if match:
-            status = int(match.group(1))
-    body = None
-    if status == 200:
-        parts = (proc.stdout or "").split("\r\n\r\n", 1)
-        raw = parts[1] if len(parts) == 2 else ""
-        if not raw.strip():
-            parts = (proc.stdout or "").split("\n\n", 1)
-            raw = parts[1] if len(parts) == 2 else ""
-        try:
-            body = json.loads(raw) if raw.strip() else None
-        except json.JSONDecodeError:
-            body = None
-    return status, body
-
-
 def fetch(slug):
     rows = {}
     for filename, path in WORKFLOWS:
@@ -268,17 +219,7 @@ def fetch(slug):
             "latest": latest,
             "health_resolved": resolved,
         }
-    owner = slug.split("/", 1)[0]
-    billing = blank_billing()
-    for endpoint, path in (
-        ("orgs", "orgs/%s/settings/billing/actions" % owner),
-        ("users", "users/%s/settings/billing/actions" % owner),
-    ):
-        status, body = _gh_status(path)
-        billing = billing_from_body(status, endpoint, body if status == 200 else None)
-        if status == 200 and isinstance(body, dict):
-            break
-    return build_snapshot(slug, rows, billing, True, None)
+    return build_snapshot(slug, rows, blank_billing(), True, None)
 
 
 def main(argv=None):
