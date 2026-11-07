@@ -1,0 +1,89 @@
+name: Evidence packet
+
+# Manual evidence pilot. Read-only.
+# workflow_dispatch only: no schedule, no push, no repository_dispatch.
+# GitHub will not list this file for dispatch until it is on the default branch.
+# Do not merge this branch just to make the button appear.
+# Permissions are contents read and actions read. The job checks out desk-data
+# and uploads an artifact. It does not commit, push, scan, trade, or alert.
+# upload-artifact authenticates with its own internal token. If a post-merge
+# run cannot upload, that is an acceptance failure to fix after approval.
+# It is not a reason to merge early or to widen contents to write.
+
+on:
+  workflow_dispatch:
+    inputs:
+      as_of:
+        description: "UTC as-of, YYYY-MM-DDTHH:MM:SSZ. Freshness is judged only against this input."
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: evidence-packet-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  packet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out this ref (builder)
+        uses: actions/checkout@v4
+        with:
+          path: code
+          persist-credentials: false
+
+      - name: Check out desk-data (read only)
+        uses: actions/checkout@v4
+        with:
+          ref: desk-data
+          path: data
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Evidence packet tests
+        working-directory: code
+        run: python3 -m unittest discover -s scripts/tests -p test_evidence_packet.py
+
+      - name: Actions snapshot
+        working-directory: code
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: python3 scripts/evidence/fetch_actions.py --repo "$REPO" --out "$RUNNER_TEMP/actions-snapshot.json"
+
+      - name: Build packet
+        env:
+          AS_OF: ${{ inputs.as_of }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 "$GITHUB_WORKSPACE/code/scripts/evidence/packet.py" \
+            --repo "$GITHUB_WORKSPACE/code" \
+            --data "$GITHUB_WORKSPACE/data" \
+            --as-of "$AS_OF" \
+            --actions-snapshot "$RUNNER_TEMP/actions-snapshot.json" \
+            --repo-slug "$REPO" \
+            --out "$GITHUB_WORKSPACE/packet"
+
+      - name: Privacy guard on the packet
+        working-directory: code
+        env:
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          PRIVACY_IDENTITY_HASHES: ${{ secrets.PRIVACY_IDENTITY_HASHES }}
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
+        run: bash scripts/privacy-guard.sh "$GITHUB_WORKSPACE/packet/evidence-packet.json"
+
+      - name: Upload packet
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-packet
+          path: packet/evidence-packet.json
+          if-no-files-found: error
