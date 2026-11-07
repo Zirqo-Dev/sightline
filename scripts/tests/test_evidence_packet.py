@@ -714,6 +714,22 @@ class EvidencePacketTest(unittest.TestCase):
             packet.rebuild_from_replay(bundle, code, self.data, out)
         self.assertIn("not a clean tracked file", str(dirty.exception))
 
+    def test_dirty_builder_rejects(self):
+        self.plant()
+        code, code_sha = self._pinned_code()
+        data_sha = self._commit_tree(self.data)
+        bundle = tempfile.mkdtemp()
+        out = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, bundle, True)
+        self.addCleanup(shutil.rmtree, out, True)
+        self._retain(code, code_sha, data_sha, bundle)
+        builder = os.path.join(code, "scripts", "evidence", "packet.py")
+        with open(builder, "a", encoding="utf-8") as fh:
+            fh.write("\n")
+        with self.assertRaises(packet.PacketError) as dirty:
+            packet.rebuild_from_replay(bundle, code, self.data, out)
+        self.assertIn("not a clean tracked file", str(dirty.exception))
+
     def test_privacy_poison_blocks_each_uploaded_file(self):
         self.plant()
         code, code_sha = self._pinned_code()

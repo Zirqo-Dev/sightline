@@ -1819,6 +1819,7 @@ CODE_INPUTS = (
     ".github/workflows/daily-status.yml",
     "scripts/data_health_alert.py",
     "scripts/evidence/freshness.json",
+    "scripts/evidence/packet.py",
     "scripts/evidence/requirements.txt",
     "scripts/status/daily_status.py",
     "solana-desk/desk/__init__.py",
