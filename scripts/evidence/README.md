@@ -14,7 +14,7 @@ Schema version: **1**. Kind: `sightline_evidence_packet`. The shape is `packet.s
 | Forensics | Deferred. The source is present and unknown. Flag and panel detail is not copied. | none. Unknown is not healthy |
 | Workflows | Optional Actions snapshot from `fetch_actions.py` | latest run `run_started_at` and `conclusion` |
 
-The builder does not call the network and does not read the wall clock. `--as-of` is `YYYY-MM-DDTHH:MM:SSZ`. The same repo, data checkout, as-of, previous packet, and snapshot produce the same bytes.
+The builder does not call the network and does not read the wall clock. `--as-of` is `YYYY-MM-DDTHH:MM:SSZ`. The same repo, data checkout, as-of, previous packet, and snapshot produce the same bytes. Fetch depth is not an input. A file commit and its blob URL are the pinned checkout SHA when that snapshot contains the file bytes, not the last commit `git log` would name for the path.
 
 Closes and fills are recomputed from `trades.csv` on every build and matched to `positions.json` ids. A previous packet is only a diff. A prior id that the new recompute does not contain is a dropped record. A missing file is `missing`, `failed`, or `unknown`. It is not healthy.
 
@@ -44,7 +44,7 @@ Workflow health is the newest `schedule`, `push`, or `workflow_dispatch` run in 
 
 Existing scan, prefilter, trading, forensics, guard, and alert workflows are not modified. Existing alerts stay in place.
 
-The artifact contract is: snapshot + manifest + pinned SHAs; replay requires checkouts at recorded SHAs. It does not contain desk-data. `replay/replay.json` records the as-of, both commit SHAs, the Python version, the requirements file hash, and a sha256 for each retained input. Replay rejects a missing SHA, a HEAD that differs, tracked edits in either checkout, a different Python version, or a hash that does not match. A source timestamp after the captured as-of stays unknown. The privacy guard still scans every uploaded file and fails closed. Artifact retention is 7 days.
+The artifact contract is: snapshot + manifest + pinned SHAs; replay requires checkouts at recorded SHAs. It does not contain desk-data. `replay/replay.json` records the as-of, both commit SHAs, the Python version, the requirements file hash, and a sha256 for each retained input. Replay rejects a missing SHA, a HEAD that differs, tracked edits in either checkout, a different Python version, or a hash that does not match. A clean depth-1 checkout and a clean full history of the same SHA produce the same packet, because file links use that SHA when the blob matches the file. A source timestamp after the captured as-of stays unknown. The privacy guard still scans every uploaded file and fails closed. Artifact retention is 7 days.
 
 ```bash
 python3 scripts/evidence/packet.py --repo . --data /path/to/desk-data \

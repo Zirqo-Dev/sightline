@@ -714,6 +714,98 @@ class EvidencePacketTest(unittest.TestCase):
             packet.rebuild_from_replay(bundle, code, self.data, out)
         self.assertIn("not a clean tracked file", str(dirty.exception))
 
+    def test_same_commit_shallow_and_full_history_match(self):
+        self.plant()
+        code, code_sha = self._pinned_code()
+        env = os.environ.copy()
+        env["GIT_AUTHOR_NAME"] = "replay"
+        env["GIT_AUTHOR_EMAIL"] = "replay" + "@" + "example.com"
+        env["GIT_COMMITTER_NAME"] = "replay"
+        env["GIT_COMMITTER_EMAIL"] = "replay" + "@" + "example.com"
+        subprocess.check_call(["git", "init", "-q", "-b", "main"], cwd=self.data, env=env)
+        subprocess.check_call(["git", "add", "-A"], cwd=self.data, env=env)
+        subprocess.check_call(["git", "commit", "-q", "-m", "first"], cwd=self.data, env=env)
+        trades = os.path.join(self.data, "solana-desk", "trades.csv")
+        with open(trades, "ab") as fh:
+            fh.write(b"\n")
+        subprocess.check_call(["git", "add", "-A"], cwd=self.data, env=env)
+        subprocess.check_call(["git", "commit", "-q", "-m", "second"], cwd=self.data, env=env)
+        head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=self.data, text=True).strip()
+        health_log = subprocess.check_output(
+            ["git", "log", "-1", "--format=%H", "--", "solana-desk/health.json"],
+            cwd=self.data, text=True,
+        ).strip()
+        self.assertNotEqual(health_log, head)
+        self.assertEqual(
+            subprocess.check_output(["git", "rev-list", "--count", "HEAD"], cwd=self.data, text=True).strip(),
+            "2",
+        )
+        shallow_parent = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, shallow_parent, True)
+        shallow = os.path.join(shallow_parent, "data")
+        subprocess.check_call(
+            ["git", "-c", "protocol.file.allow=always", "clone", "-q", "--depth", "1", "--no-local", "file://" + self.data, shallow],
+            env=env,
+        )
+        self.assertEqual(subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=shallow, text=True).strip(), head)
+        self.assertEqual(
+            subprocess.check_output(["git", "rev-list", "--count", "HEAD"], cwd=shallow, text=True).strip(),
+            "1",
+        )
+        shallow_log = subprocess.check_output(
+            ["git", "log", "-1", "--format=%H", "--", "solana-desk/health.json"],
+            cwd=shallow, text=True,
+        ).strip()
+        self.assertEqual(shallow_log, head)
+        self.assertEqual(packet.git_file_commit(self.data, "solana-desk/health.json"), head)
+        self.assertEqual(packet.git_file_commit(shallow, "solana-desk/health.json"), head)
+        snap_path = os.path.join(self.out, "snap.json")
+        with open(snap_path, "w", encoding="utf-8") as fh:
+            json.dump(snapshot(), fh)
+
+        def packet_bytes(data, dest):
+            subprocess.check_call([
+                sys.executable, os.path.join(ROOT, "scripts", "evidence", "packet.py"),
+                "--repo", code, "--data", data, "--as-of", AS_OF,
+                "--actions-snapshot", snap_path, "--repo-slug", "example/sightline",
+                "--code-commit", code_sha, "--data-commit", head,
+                "--retain-replay", "--out", dest,
+            ], stdout=subprocess.DEVNULL)
+            with open(os.path.join(dest, "evidence-packet.json"), "rb") as fh:
+                return fh.read()
+
+        full_dir = tempfile.mkdtemp()
+        shallow_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, full_dir, True)
+        self.addCleanup(shutil.rmtree, shallow_dir, True)
+        full_bytes = packet_bytes(self.data, full_dir)
+        shallow_bytes = packet_bytes(shallow, shallow_dir)
+        self.assertEqual(full_bytes, shallow_bytes)
+        doc = json.loads(full_bytes)
+        self.assertTrue(any("do not depend on fetch depth" in line for line in doc["limitations"]))
+        for source in doc["sources"]:
+            for fact in source.get("files") or []:
+                if fact.get("present"):
+                    self.assertEqual(fact["commit"], head, fact["path"])
+            for link in source.get("links") or []:
+                if "/blob/" in link["url"]:
+                    self.assertIn("/blob/" + head + "/", link["url"])
+                    self.assertNotIn(health_log, link["url"])
+        rebuilt = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, rebuilt, True)
+        rebuilt_path = packet.rebuild_from_replay(full_dir, code, shallow, rebuilt)
+        with open(rebuilt_path, "rb") as fh:
+            self.assertEqual(fh.read(), full_bytes)
+        other = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, other, True)
+        other_path = packet.rebuild_from_replay(shallow_dir, code, self.data, other)
+        with open(other_path, "rb") as fh:
+            self.assertEqual(fh.read(), shallow_bytes)
+        with open(os.path.join(self.data, "solana-desk", "health.json"), "ab") as fh:
+            fh.write(b"\n")
+        self.assertIsNone(packet.git_file_commit(self.data, "solana-desk/health.json"))
+        self.assertEqual(packet.git_file_commit(shallow, "solana-desk/health.json"), head)
+
     def test_dirty_builder_rejects(self):
         self.plant()
         code, code_sha = self._pinned_code()
