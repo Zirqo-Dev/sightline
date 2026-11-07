@@ -7,7 +7,9 @@
 # n-grams and compares them to digests from PRIVACY_IDENTITY_HASHES, .privacy-identity-hashes,
 # or identities/blocked.sha256 in the private repo (SIGHTLINE_PRIVATE_TOKEN).
 # An absent, empty, or malformed digest list fails this guard. PRIVACY_IDENTITY_REQUIRE
-# cannot turn that failure into a pass. Wallet checks above still run.
+# cannot turn that failure into a pass. A blank hash env is ignored when another
+# source yields digests. Non-digest lines do not drop digest lines. Wallet checks
+# above still run.
 set -u
 # Resolve this script's directory before any cd. In --root mode the workflow
 # runs `bash main/scripts/privacy-guard.sh --root desk-data`; cd "$2" first

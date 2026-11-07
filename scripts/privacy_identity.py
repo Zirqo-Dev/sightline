@@ -26,7 +26,9 @@ Normalization and keying are fixed. Existing private digests depend on them:
 
 An absent, empty, or malformed digest list fails the process. Unset
 PRIVACY_IDENTITY_REQUIRE does not turn that into a pass, and setting the
-variable does not either. Wallet checks in the shell guard still run.
+variable does not either. A blank PRIVACY_IDENTITY_HASHES value is ignored
+when another source yields digests. Non-digest lines are ignored and do not
+drop digest lines. Wallet checks in the shell guard still run.
 """
 from __future__ import annotations
 
@@ -120,10 +122,12 @@ def parse_hashes(text):
 def classify_hash_text(text):
     """Return (status, hashes): ok, empty, or malformed.
 
-    Blank lines are ignored. Every other line must be 64 hex digits.
-    Surrounding whitespace is ignored and case is folded, which is how a
-    stored digest is recognized. A source that mixes valid digests with
-    anything else is malformed, and its digests are not used.
+    A digest line is 64 hex digits. Surrounding whitespace is ignored and
+    case is folded, which is how an existing stored digest is recognized.
+    Blank lines are ignored. Any other line is ignored too, and it does not
+    remove digest lines: those digests stay comparable with the private list.
+    Status is malformed only when the text has a non-digest line and no
+    digest line remains. Status is empty when nothing but blank lines remains.
     """
     if not isinstance(text, str):
         return "malformed", set()
@@ -137,11 +141,11 @@ def classify_hash_text(text):
             found.add(item)
         else:
             bad = True
+    if found:
+        return "ok", found
     if bad:
         return "malformed", set()
-    if not found:
-        return "empty", set()
-    return "ok", found
+    return "empty", set()
 
 
 def _private_repo():
@@ -213,21 +217,28 @@ def _problem(status, source):
 def load_hashes(root=".", fetch=None):
     """Well-formed digests, plus fail-closed problems. The key is separate.
 
-    Each configured source must be a non-empty list of 64-hex digests.
-    A bad source contributes a problem and no digests. No source at all is
-    an absent list.
+    A source that yields digest lines contributes those digests. A source
+    that yields none contributes a problem. A blank PRIVACY_IDENTITY_HASHES
+    value is not a source when another source yields digests: CI leaves that
+    secret empty and loads the private file. It is an empty list when it is
+    the only source. No source at all is an absent list.
     """
     found = set()
     problems = []
     configured = False
+    blank_env = False
 
     if "PRIVACY_IDENTITY_HASHES" in os.environ:
-        configured = True
-        status, hashes = classify_hash_text(os.environ.get("PRIVACY_IDENTITY_HASHES") or "")
-        if status == "ok":
-            found |= hashes
+        raw = os.environ.get("PRIVACY_IDENTITY_HASHES") or ""
+        if raw.strip():
+            configured = True
+            status, hashes = classify_hash_text(raw)
+            if status == "ok":
+                found |= hashes
+            else:
+                problems.append(_problem(status, "PRIVACY_IDENTITY_HASHES"))
         else:
-            problems.append(_problem(status, "PRIVACY_IDENTITY_HASHES"))
+            blank_env = True
 
     path = os.path.join(root, ".privacy-identity-hashes")
     if os.path.isfile(path):
@@ -257,7 +268,10 @@ def load_hashes(root=".", fetch=None):
             problems.append(_problem(kind, "private repo"))
 
     if not configured:
-        problems.append("identity hashes were not loaded")
+        if blank_env:
+            problems.append(_problem("empty", "PRIVACY_IDENTITY_HASHES"))
+        else:
+            problems.append("identity hashes were not loaded")
     return found, problems
 
 

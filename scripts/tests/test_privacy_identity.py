@@ -228,17 +228,46 @@ class Scan(unittest.TestCase):
         self.assertIn("identity hash list is malformed", guarded.stderr)
         self.assertNotIn("not-a-digest", guarded.stderr)
 
-    def test_a_mixed_valid_and_bad_line_is_malformed_and_unused(self):
-        good = sha("zzsyntheticidentityblocktoken")
+    def test_a_non_digest_line_does_not_drop_a_real_digest(self):
+        # Historical loader behavior: skip lines that are not digests.
+        # Dropping the digest line would stop matching lists that already exist.
+        good = sha(SYNTHETIC_GRAM)
         env = quiet_env()
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, ".privacy-identity-hashes"), "w") as fh:
                 fh.write(good + "\nnot-a-digest\n")
+            self.write(d, "plain.txt", "hello")
+            self.write(d, "planted.txt", SYNTHETIC_SURFACE)
+            clean = self._guard(d, env, "plain.txt")
+            blocked = self._guard(d, env, "planted.txt")
+        self.assertEqual(clean.returncode, 0, clean.stderr)
+        self.assertNotEqual(blocked.returncode, 0, blocked.stderr)
+        self.assertIn("identity match", blocked.stderr)
+        self.assertNotIn("not-a-digest", clean.stderr + blocked.stderr)
+        self.assertNotIn(good, clean.stderr + blocked.stderr)
+
+    def test_a_blank_env_list_does_not_erase_a_well_formed_file(self):
+        env = quiet_env()
+        env["PRIVACY_IDENTITY_HASHES"] = "\n"
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, ".privacy-identity-hashes"), "w") as fh:
+                fh.write(sha(SYNTHETIC_GRAM) + "\n")
+            self.write(d, "plain.txt", "hello")
+            self.write(d, "planted.txt", SYNTHETIC_SURFACE)
+            clean = self._guard(d, env, "plain.txt")
+            blocked = self._guard(d, env, "planted.txt")
+        self.assertEqual(clean.returncode, 0, clean.stderr)
+        self.assertNotEqual(blocked.returncode, 0, blocked.stderr)
+        self.assertNotIn("identity hash list is empty", clean.stderr)
+
+    def test_a_blank_env_list_alone_fails_closed(self):
+        env = quiet_env()
+        env["PRIVACY_IDENTITY_HASHES"] = " \n"
+        with tempfile.TemporaryDirectory() as d:
             path = self.write(d, "plain.txt", "hello")
-            proc = self._guard(d, env, "plain.txt")
+            proc = self._guard(d, env, path)
         self.assertNotEqual(proc.returncode, 0, proc.stderr)
-        self.assertIn("identity hash list is malformed", proc.stderr)
-        self.assertNotIn(good, proc.stderr)
+        self.assertIn("identity hash list is empty", proc.stderr)
 
     def test_synthetic_phrase_is_blocked_with_exit_nonzero(self):
         env = quiet_env()
