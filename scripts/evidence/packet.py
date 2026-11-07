@@ -15,6 +15,7 @@ import importlib.util
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -1795,6 +1796,91 @@ def build(repo, data, as_of=None, previous=None, actions_path=None, repo_slug=No
     return json.loads(text)
 
 
+def _sha_or_none(value, label):
+    if value is None or value == "":
+        return None
+    if isinstance(value, str) and SHA_RE.fullmatch(value):
+        return value
+    raise PacketError(label + " is not a commit sha")
+
+
+def retain_replay(out_dir, as_of, snapshot_path, code_commit, data_commit, repo, previous_path=None):
+    """Copy the exact snapshot and replay metadata used to build the packet.
+
+    The snapshot bytes are not rewritten. A later rebuild reads these files.
+    """
+    if not isinstance(as_of, str) or not AS_OF_RE.fullmatch(as_of):
+        raise PacketError("as-of must be YYYY-MM-DDTHH:MM:SSZ")
+    if not snapshot_path or not os.path.isfile(snapshot_path):
+        raise PacketError("actions snapshot is missing")
+    code_sha = _sha_or_none(code_commit, "code commit")
+    data_sha = _sha_or_none(data_commit, "data commit")
+    slug = None
+    if repo:
+        slug = github_slug(repo)
+        if not slug:
+            raise PacketError("repo slug")
+    replay_dir = os.path.join(out_dir, "replay")
+    os.makedirs(replay_dir, exist_ok=True)
+    snap_dest = os.path.join(replay_dir, "actions-snapshot.json")
+    shutil.copyfile(snapshot_path, snap_dest)
+    prev_rel = None
+    prev_dest = None
+    if previous_path:
+        if not os.path.isfile(previous_path):
+            raise PacketError("previous packet is missing")
+        prev_rel = "previous-packet.json"
+        prev_dest = os.path.join(replay_dir, prev_rel)
+        shutil.copyfile(previous_path, prev_dest)
+    doc = {
+        "schema_version": 1,
+        "kind": "sightline_evidence_replay",
+        "as_of": as_of,
+        "code_commit": code_sha,
+        "data_commit": data_sha,
+        "repo": slug,
+        "actions_snapshot": "actions-snapshot.json",
+        "previous_packet": prev_rel,
+    }
+    text = dumps(doc)
+    if SECRET_RE.search(text):
+        raise PacketError("replay metadata failed the secret check and was not written")
+    path = os.path.join(replay_dir, "replay.json")
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        fh.write(text)
+    os.replace(tmp, path)
+    return {"as_of": as_of, "snapshot": snap_dest, "previous": prev_dest, "replay": path}
+
+
+def rebuild_from_replay(bundle_dir, repo, data, out_dir):
+    """Rebuild the packet from a retained replay directory and the recorded checkouts."""
+    path = os.path.join(bundle_dir, "replay", "replay.json")
+    raw, err = read_text(path)
+    if err or raw is None:
+        raise PacketError("replay.json is missing")
+    if SECRET_RE.search(raw):
+        raise PacketError("replay metadata failed the secret check")
+    try:
+        doc = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise PacketError("replay.json is not JSON") from exc
+    if not isinstance(doc, dict) or doc.get("kind") != "sightline_evidence_replay":
+        raise PacketError("replay.json is not a replay")
+    snap_name = doc.get("actions_snapshot")
+    if not isinstance(snap_name, str) or snap_name != "actions-snapshot.json":
+        raise PacketError("replay snapshot name")
+    snap = os.path.join(bundle_dir, "replay", snap_name)
+    prev = None
+    prev_name = doc.get("previous_packet")
+    if prev_name:
+        if prev_name != "previous-packet.json":
+            raise PacketError("replay previous name")
+        prev = os.path.join(bundle_dir, "replay", prev_name)
+    built = build(repo, data, doc.get("as_of"), prev, snap, doc.get("repo"))
+    return write_packet(built, out_dir)
+
+
 def write_packet(doc, out_dir):
     text = dumps(doc)
     os.makedirs(out_dir, exist_ok=True)
@@ -1814,10 +1900,23 @@ def main(argv=None):
     parser.add_argument("--previous", default=None, help="Optional previous evidence packet.")
     parser.add_argument("--actions-snapshot", dest="actions", default=None)
     parser.add_argument("--repo-slug", dest="slug", default=None)
+    parser.add_argument("--code-commit", dest="code_commit", default=None)
+    parser.add_argument("--data-commit", dest="data_commit", default=None)
+    parser.add_argument("--retain-replay", action="store_true")
     parser.add_argument("--out", required=True)
     args = parser.parse_args(argv)
     try:
-        doc = build(args.repo, args.data, args.as_of, args.previous, args.actions, args.slug)
+        as_of = args.as_of
+        previous = args.previous
+        actions = args.actions
+        if args.retain_replay:
+            kept = retain_replay(
+                args.out, args.as_of, args.actions, args.code_commit, args.data_commit, args.slug, args.previous,
+            )
+            as_of = kept["as_of"]
+            previous = kept["previous"]
+            actions = kept["snapshot"]
+        doc = build(args.repo, args.data, as_of, previous, actions, args.slug)
         path = write_packet(doc, args.out)
     except PacketError as exc:
         print("evidence packet: " + str(exc), file=sys.stderr)

@@ -13,10 +13,6 @@ name: Evidence packet
 on:
   workflow_dispatch:
     inputs:
-      as_of:
-        description: "UTC as-of, YYYY-MM-DDTHH:MM:SSZ. Freshness is judged only against this input."
-        required: true
-        type: string
       previous_run_id:
         description: "Optional earlier evidence-packet run id. Empty means a first run; deltas stay unknown."
         required: false
@@ -81,12 +77,16 @@ jobs:
           # so gh cannot infer the repository unless it is passed.
           gh run download "$PREV" --repo "$GITHUB_REPOSITORY" --name evidence-packet --dir "$RUNNER_TEMP/previous"
 
-      - name: Build packet
+      - name: Build packet and retain replay inputs
         env:
-          AS_OF: ${{ inputs.as_of }}
           REPO: ${{ github.repository }}
           PREV: ${{ inputs.previous_run_id }}
         run: |
+          set -euo pipefail
+          # Captured after the checkouts and the snapshot fetch, not typed in advance.
+          AS_OF=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          CODE_COMMIT=$(git -C "$GITHUB_WORKSPACE/code" rev-parse HEAD)
+          DATA_COMMIT=$(git -C "$GITHUB_WORKSPACE/data" rev-parse HEAD)
           # No previous_run_id: this is a first run. Deltas stay unknown.
           extra=()
           if [ -n "$PREV" ]; then
@@ -98,21 +98,27 @@ jobs:
             --as-of "$AS_OF" \
             --actions-snapshot "$RUNNER_TEMP/actions-snapshot.json" \
             --repo-slug "$REPO" \
+            --code-commit "$CODE_COMMIT" \
+            --data-commit "$DATA_COMMIT" \
+            --retain-replay \
             --out "$GITHUB_WORKSPACE/packet" \
             "${extra[@]}"
 
-      - name: Privacy guard on the packet
+      - name: Privacy guard on every uploaded file
         working-directory: code
         env:
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
           PRIVACY_IDENTITY_HASHES: ${{ secrets.PRIVACY_IDENTITY_HASHES }}
           SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
           RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
-        run: bash scripts/privacy-guard.sh "$GITHUB_WORKSPACE/packet/evidence-packet.json"
+        run: |
+          mapfile -t files < <(find "$GITHUB_WORKSPACE/packet" -type f | sort)
+          [ "${#files[@]}" -gt 0 ]
+          bash scripts/privacy-guard.sh "${files[@]}"
 
       - name: Upload packet
         uses: actions/upload-artifact@v4
         with:
           name: evidence-packet
-          path: packet/evidence-packet.json
+          path: packet
           if-no-files-found: error
