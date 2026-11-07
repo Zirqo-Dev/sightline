@@ -77,7 +77,9 @@ jobs:
           case "$PREV" in
             ''|*[!0-9]*) echo "previous_run_id must be digits"; exit 2 ;;
           esac
-          gh run download "$PREV" --name evidence-packet --dir "$RUNNER_TEMP/previous"
+          # The job workspace is not a checkout. code/ and data/ are subdirectories,
+          # so gh cannot infer the repository unless it is passed.
+          gh run download "$PREV" --repo "$GITHUB_REPOSITORY" --name evidence-packet --dir "$RUNNER_TEMP/previous"
 
       - name: Build packet
         env:

@@ -520,7 +520,44 @@ class EvidencePacketTest(unittest.TestCase):
         self.assertFalse(closes["ok"])
         self.assertIsNone(closes["n"])
         self.assertEqual(closes["ids"].count(shared), 1)
+        self.assertEqual(closes["reason"], "duplicate position id")
         self.assertNotEqual((closes["ok"], closes["n"], len(closes["ids"])), (True, 2, 1))
+
+    def test_duplicate_s_id_is_not_ok(self):
+        self.plant(n=1)
+        token_a = mint(10)
+        token_b = mint(11)
+        opened = epoch(AT) + 200
+        shared = "S-20261102T1300-33333333"
+        path = os.path.join(self.data, "solana-desk", "trades.csv")
+        with open(path, newline="", encoding="utf-8") as fh:
+            rows = list(csv.DictReader(fh))
+            fields = list(rows[0].keys())
+        rows.extend([
+            trade_row(opened, "S", "buy", 1, None, token_a, "AAA"),
+            trade_row(opened + 60, "S", "sell", 1, "-0.1", token_a, "AAA"),
+            trade_row(opened + 1, "S", "buy", 1, None, token_b, "BBB"),
+            trade_row(opened + 61, "S", "sell", 1, "-0.1", token_b, "BBB"),
+        ])
+        with open(path, "w", newline="", encoding="utf-8") as fh:
+            writer = csv.DictWriter(fh, fieldnames=fields)
+            writer.writeheader()
+            for row in rows:
+                writer.writerow(row)
+        with open(os.path.join(self.data, "solana-desk", "positions.json"), encoding="utf-8") as fh:
+            positions = json.load(fh)
+        positions["books"]["S"]["closed"] = [
+            {"id": shared, "mint": token_a, "opened": opened, "closed": opened + 60, "pnl": -0.1},
+            {"id": shared, "mint": token_b, "opened": opened + 1, "closed": opened + 61, "pnl": -0.1},
+        ]
+        self.write("solana-desk/positions.json", json.dumps(positions))
+        doc = self.build(snap=snapshot())
+        closes = doc["recompute"]["closes"]
+        self.assertFalse(closes["ok"])
+        self.assertIsNone(closes["n"])
+        self.assertEqual(closes["by_book"]["S"], 2)
+        self.assertEqual(closes["ids"].count(shared), 1)
+        self.assertEqual(closes["reason"], "duplicate position id")
 
     def test_headerless_tasks_are_not_zero_failures(self):
         self.plant()
@@ -541,34 +578,59 @@ class EvidencePacketTest(unittest.TestCase):
         self.assertIsNone(failed["all_desk_run_n"])
         self.assertIn("unknown", failed["reason"])
 
-    def test_clean_env_workflow_installs_jsonschema(self):
-        workflow = os.path.join(ROOT, ".github", "workflows", "evidence-packet.yml")
-        with open(workflow, encoding="utf-8") as fh:
+    def test_requirements_install_and_previous_packet_path(self):
+        workflow_path = os.path.join(ROOT, ".github", "workflows", "evidence-packet.yml")
+        with open(workflow_path, encoding="utf-8") as fh:
             text = fh.read()
         self.assertNotIn("\n  schedule:", text)
         self.assertNotIn("contents: write", text)
         self.assertLess(text.index("scripts/evidence/requirements.txt"), text.index("unittest discover"))
-        self.assertIn("previous_run_id", text)
-        self.assertIn("first run", text)
-        missing = subprocess.run(
-            [sys.executable, "-I", "-c", "import jsonschema"],
-            capture_output=True,
-        )
-        self.assertNotEqual(missing.returncode, 0)
+        self.assertIn('gh run download "$PREV" --repo "$GITHUB_REPOSITORY"', text)
+        req_path = os.path.join(ROOT, "scripts", "evidence", "requirements.txt")
+        with open(req_path, encoding="utf-8") as fh:
+            requirements = fh.read()
+        self.assertIn("jsonschema", requirements)
         dest = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, dest, True)
-        req = os.path.join(ROOT, "scripts", "evidence", "requirements.txt")
         subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", "--quiet", "--target", dest, "-r", req],
+            [sys.executable, "-m", "pip", "install", "--quiet", "--target", dest, "-r", req_path],
             stdout=subprocess.DEVNULL,
         )
         schema = os.path.join(ROOT, "scripts", "evidence", "packet.schema.json")
         code = (
             "import json, sys; sys.path.insert(0, %r); "
+            "import jsonschema; "
+            "assert jsonschema.__file__.startswith(%r); "
             "from jsonschema import Draft202012Validator; "
             "Draft202012Validator.check_schema(json.load(open(%r)))"
-        ) % (dest, schema)
+        ) % (dest, dest, schema)
         subprocess.check_call([sys.executable, "-I", "-c", code])
+        self.plant()
+        snap_path = os.path.join(self.out, "snap.json")
+        with open(snap_path, "w", encoding="utf-8") as fh:
+            json.dump(snapshot(), fh)
+        first_dir = tempfile.mkdtemp()
+        second_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, first_dir, True)
+        self.addCleanup(shutil.rmtree, second_dir, True)
+        cmd = [
+            sys.executable, os.path.join(ROOT, "scripts", "evidence", "packet.py"),
+            "--repo", ROOT, "--data", self.data, "--as-of", AS_OF,
+            "--actions-snapshot", snap_path, "--repo-slug", "example/sightline",
+        ]
+        subprocess.check_call(cmd + ["--out", first_dir])
+        with open(os.path.join(first_dir, "evidence-packet.json"), encoding="utf-8") as fh:
+            first = json.load(fh)
+        self.assertFalse(first["delta"]["previous_present"])
+        self.assertEqual(first["delta"]["previous_reason"], "no previous packet")
+        subprocess.check_call(cmd + [
+            "--previous", os.path.join(first_dir, "evidence-packet.json"),
+            "--out", second_dir,
+        ])
+        with open(os.path.join(second_dir, "evidence-packet.json"), encoding="utf-8") as fh:
+            second = json.load(fh)
+        self.assertTrue(second["delta"]["previous_present"])
+        self.assertEqual(second["delta"]["predicates"]["new_close_id"]["status"], "no_change")
 
     def test_slug_and_snapshot_drop_secrets(self):
         token = "ghs_" + "zzpacketpoison"
