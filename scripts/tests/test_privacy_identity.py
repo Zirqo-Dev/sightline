@@ -2,6 +2,7 @@
 import hashlib
 import hmac
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -99,9 +100,10 @@ class Normalization(unittest.TestCase):
 
     def test_uppercase_digest_lines_still_match_the_normalized_gram(self):
         listed = sha(SYNTHETIC_GRAM).upper()
-        status, found = PI.classify_hash_text("\n  " + listed + "  \n")
+        status, found, ignored = PI.classify_hash_text("\n  " + listed + "  \n")
         self.assertEqual(status, "ok")
         self.assertEqual(found, {sha(SYNTHETIC_GRAM)})
+        self.assertEqual(ignored, 0)
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "note.txt")
             with open(path, "w") as fh:
@@ -235,7 +237,7 @@ class Scan(unittest.TestCase):
         env = quiet_env()
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, ".privacy-identity-hashes"), "w") as fh:
-                fh.write(good + "\nnot-a-digest\n")
+                fh.write(good + "\nnot-a-digest\nalso-bad\n")
             self.write(d, "plain.txt", "hello")
             self.write(d, "planted.txt", SYNTHETIC_SURFACE)
             clean = self._guard(d, env, "plain.txt")
@@ -243,8 +245,13 @@ class Scan(unittest.TestCase):
         self.assertEqual(clean.returncode, 0, clean.stderr)
         self.assertNotEqual(blocked.returncode, 0, blocked.stderr)
         self.assertIn("identity match", blocked.stderr)
+        warning = "2 non-digest line(s) ignored (.privacy-identity-hashes)"
+        self.assertIn(warning, clean.stderr)
+        self.assertIn(warning, blocked.stderr)
         self.assertNotIn("not-a-digest", clean.stderr + blocked.stderr)
+        self.assertNotIn("also-bad", clean.stderr + blocked.stderr)
         self.assertNotIn(good, clean.stderr + blocked.stderr)
+        self.assertNotIn(d, clean.stderr + blocked.stderr)
 
     def test_a_blank_env_list_does_not_erase_a_well_formed_file(self):
         env = quiet_env()
@@ -305,6 +312,56 @@ class Scan(unittest.TestCase):
         self.assertNotIn("skipped", failed.stderr)
         self.assertNotEqual(still.returncode, 0, still.stderr)
         self.assertNotIn("t" * 20, still.stderr)
+
+    def _copied_guard(self, directory, helper_text=None):
+        script_dir = os.path.join(directory, "scripts")
+        os.makedirs(script_dir)
+        shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), script_dir)
+        if helper_text is not None:
+            with open(os.path.join(script_dir, "privacy_identity.py"), "w") as fh:
+                fh.write(helper_text)
+        env = quiet_env()
+        for key in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"):
+            env.pop(key, None)
+        env["PRIVACY_IDENTITY_HASHES"] = sha("zzsynthetic" + "identityblocktoken")
+        subprocess.run(["git", "init", "-q"], cwd=directory, check=True, env=env)
+        return env
+
+    def test_missing_helper_fails_when_a_file_is_scanned(self):
+        with tempfile.TemporaryDirectory() as d:
+            env = self._copied_guard(d)
+            self.write(d, "note.txt", "hello\n")
+            proc = subprocess.run(
+                ["bash", "scripts/privacy-guard.sh", "note.txt"],
+                cwd=d, env=env, capture_output=True, text=True,
+            )
+        self.assertNotEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("identity helper is missing", proc.stderr)
+        self.assertNotIn("privacy-guard: OK", proc.stdout)
+
+    def test_broken_helper_invocation_fails(self):
+        with tempfile.TemporaryDirectory() as d:
+            env = self._copied_guard(d, "def =\n")
+            self.write(d, "note.txt", "hello\n")
+            proc = subprocess.run(
+                ["bash", "scripts/privacy-guard.sh", "note.txt"],
+                cwd=d, env=env, capture_output=True, text=True,
+            )
+        self.assertNotEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("SyntaxError", proc.stderr)
+        self.assertNotIn("privacy-guard: OK", proc.stdout)
+        self.assertNotIn("identity helper is missing", proc.stderr)
+
+    def test_empty_file_list_may_skip_a_missing_helper(self):
+        with tempfile.TemporaryDirectory() as d:
+            env = self._copied_guard(d)
+            proc = subprocess.run(
+                ["bash", "scripts/privacy-guard.sh"],
+                cwd=d, env=env, capture_output=True, text=True,
+            )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("0 file(s) checked", proc.stdout)
+        self.assertNotIn("identity helper is missing", proc.stderr)
 
     def test_the_guard_source_does_not_list_blocked_phrases(self):
         with open(os.path.join(ROOT, "scripts", "privacy-guard.sh"), errors="replace") as fh:

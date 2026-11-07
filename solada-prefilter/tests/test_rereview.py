@@ -218,6 +218,7 @@ class RootModePublicKeys(unittest.TestCase):
             main = os.path.join(d, "main")
             os.makedirs(os.path.join(main, "scripts"))
             shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), os.path.join(main, "scripts"))
+            shutil.copy(os.path.join(ROOT, "scripts", "privacy_identity.py"), os.path.join(main, "scripts"))
             with open(os.path.join(main, "scripts", "privacy-public-keys.txt"), "w") as f:
                 f.write(key + "\n")
             shutil.copytree(SRC, os.path.join(main, "solada-prefilter"), ignore=shutil.ignore_patterns("tests", "__pycache__"))
@@ -227,7 +228,12 @@ class RootModePublicKeys(unittest.TestCase):
                 f.write("curve " + key + "\n")
             subprocess.run(["git", "init", "-q"], cwd=desk, check=True)
             subprocess.run(["git", "add", "solada/note.txt"], cwd=desk, check=True)
-            env = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
+            env = dict(
+                os.environ,
+                PRIVACY_GUARD_PATTERNS="^zzOWNERzz$",
+                PRIVACY_IDENTITY_HASHES=hashlib.sha256(("zzsynthetic" + "identityblocktoken").encode()).hexdigest(),
+            )
+            env.pop("SIGHTLINE_PRIVATE_TOKEN", None)
             r = subprocess.run(
                 ["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data"],
                 cwd=d, env=env, capture_output=True)
@@ -442,6 +448,7 @@ class DevChecksFileGuard(unittest.TestCase):
             main = os.path.join(d, "main")
             os.makedirs(os.path.join(main, "scripts"))
             shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), os.path.join(main, "scripts"))
+            shutil.copy(os.path.join(ROOT, "scripts", "privacy_identity.py"), os.path.join(main, "scripts"))
             shutil.copy(os.path.join(ROOT, "scripts", "privacy-public-keys.txt"), os.path.join(main, "scripts"))
             shutil.copytree(SRC, os.path.join(main, "solada-prefilter"),
                             ignore=shutil.ignore_patterns("tests", "__pycache__"))
@@ -456,7 +463,12 @@ class DevChecksFileGuard(unittest.TestCase):
             data = os.path.join(d, "desk-data")
             subprocess.run(["git", "init", "-q"], cwd=data, check=True)
             subprocess.run(["git", "add", "-A"], cwd=data, check=True)
-            env = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
+            env = dict(
+                os.environ,
+                PRIVACY_GUARD_PATTERNS="^zzOWNERzz$",
+                PRIVACY_IDENTITY_HASHES=hashlib.sha256(("zzsynthetic" + "identityblocktoken").encode()).hexdigest(),
+            )
+            env.pop("SIGHTLINE_PRIVATE_TOKEN", None)
             r = subprocess.run(["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data", *args],
                                cwd=d, env=env, capture_output=True)
             return r

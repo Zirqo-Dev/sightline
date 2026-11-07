@@ -8,8 +8,9 @@
 # or identities/blocked.sha256 in the private repo (SIGHTLINE_PRIVATE_TOKEN).
 # An absent, empty, or malformed digest list fails this guard. PRIVACY_IDENTITY_REQUIRE
 # cannot turn that failure into a pass. A blank hash env is ignored when another
-# source yields digests. Non-digest lines do not drop digest lines. Wallet checks
-# above still run.
+# source yields digests. Non-digest lines do not drop digest lines. When the file
+# list is non-empty, a missing or unrunnable identity helper fails this guard.
+# Wallet checks above still run.
 set -u
 # Resolve this script's directory before any cd. In --root mode the workflow
 # runs `bash main/scripts/privacy-guard.sh --root desk-data`; cd "$2" first
@@ -525,9 +526,14 @@ if [ "$owner_hits" -gt 0 ]; then
   fail=1
 fi
 # Names and handles are not listed above. Digests live in a secret or the private repo.
+# An empty file list has nothing to scan, so the helper is not required.
+# Any other list requires the helper. Missing or broken means the check did not run.
 ident_py="$script_dir/privacy_identity.py"
-if [ -f "$ident_py" ] && [ ${#files[@]} -gt 0 ]; then
-  if ! printf '%s\n' "${files[@]}" | python3 "$ident_py" --root "$(pwd)"; then
+if [ ${#files[@]} -gt 0 ]; then
+  if [ ! -f "$ident_py" ] || [ ! -r "$ident_py" ]; then
+    echo "PRIVACY GUARD FAILED: identity helper is missing" >&2
+    fail=1
+  elif ! printf '%s\n' "${files[@]}" | python3 "$ident_py" --root "$(pwd)"; then
     fail=1
   fi
 fi

@@ -2,7 +2,7 @@
 
 Offline. No secrets, no network. Wallet tags in this file are synthetic.
 """
-import json, os, shutil, subprocess, sys, tempfile, time, unittest
+import hashlib, json, os, shutil, subprocess, sys, tempfile, time, unittest
 from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -436,6 +436,7 @@ class FileGuard(unittest.TestCase):
             main = os.path.join(d, "main")
             os.makedirs(os.path.join(main, "scripts"))
             shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), os.path.join(main, "scripts"))
+            shutil.copy(os.path.join(ROOT, "scripts", "privacy_identity.py"), os.path.join(main, "scripts"))
             shutil.copy(os.path.join(ROOT, "scripts", "privacy-public-keys.txt"), os.path.join(main, "scripts"))
             shutil.copytree(SRC, os.path.join(main, "solada-prefilter"),
                             ignore=shutil.ignore_patterns("tests", "__pycache__"))
@@ -448,7 +449,12 @@ class FileGuard(unittest.TestCase):
             data = os.path.join(d, "desk-data")
             subprocess.run(["git", "init", "-q"], cwd=data, check=True)
             subprocess.run(["git", "add", "-A"], cwd=data, check=True)
-            env = dict(os.environ, PRIVACY_GUARD_PATTERNS="^zzOWNERzz$")
+            env = dict(
+                os.environ,
+                PRIVACY_GUARD_PATTERNS="^zzOWNERzz$",
+                PRIVACY_IDENTITY_HASHES=hashlib.sha256(("zzsynthetic" + "identityblocktoken").encode()).hexdigest(),
+            )
+            env.pop("SIGHTLINE_PRIVATE_TOKEN", None)
             return subprocess.run(["bash", "main/scripts/privacy-guard.sh", "--root", "desk-data", *args],
                                   cwd=d, env=env, capture_output=True)
 

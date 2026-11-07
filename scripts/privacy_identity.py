@@ -120,19 +120,20 @@ def parse_hashes(text):
 
 
 def classify_hash_text(text):
-    """Return (status, hashes): ok, empty, or malformed.
+    """Return (status, hashes, ignored).
 
-    A digest line is 64 hex digits. Surrounding whitespace is ignored and
-    case is folded, which is how an existing stored digest is recognized.
-    Blank lines are ignored. Any other line is ignored too, and it does not
-    remove digest lines: those digests stay comparable with the private list.
-    Status is malformed only when the text has a non-digest line and no
-    digest line remains. Status is empty when nothing but blank lines remains.
+    status is ok, empty, or malformed. ignored is how many non-digest lines
+    were skipped. A digest line is 64 hex digits. Surrounding whitespace is
+    ignored and case is folded, which is how an existing stored digest is
+    recognized. Blank lines are ignored and not counted. Any other line is
+    ignored too, and it does not remove digest lines. Status is malformed
+    only when a non-digest line is present and no digest line remains.
+    Status is empty when nothing but blank lines remains.
     """
     if not isinstance(text, str):
-        return "malformed", set()
+        return "malformed", set(), 0
     found = set()
-    bad = False
+    ignored = 0
     for line in text.splitlines():
         item = line.strip().lower()
         if not item:
@@ -140,12 +141,21 @@ def classify_hash_text(text):
         if _HEX.fullmatch(item):
             found.add(item)
         else:
-            bad = True
+            ignored += 1
     if found:
-        return "ok", found
-    if bad:
-        return "malformed", set()
-    return "empty", set()
+        return "ok", found, ignored
+    if ignored:
+        return "malformed", set(), ignored
+    return "empty", set(), 0
+
+
+def _warn_ignored(count, source):
+    """Count only. source is a fixed label, never file text or a private path."""
+    if count:
+        print(
+            "::warning::privacy-guard: %d non-digest line(s) ignored (%s)" % (count, source),
+            file=sys.stderr,
+        )
 
 
 def _private_repo():
@@ -172,7 +182,7 @@ def _github_json(url, token):
 
 
 def fetch_private_hashes(token, repo=None):
-    """(status, hashes) from identities/blocked.sha256.
+    """(status, hashes, ignored) from identities/blocked.sha256.
 
     status is ok, empty, malformed, or unavailable. Refuses a repo the API
     does not mark private. Does not print the token, the URL, or the file body.
@@ -232,9 +242,10 @@ def load_hashes(root=".", fetch=None):
         raw = os.environ.get("PRIVACY_IDENTITY_HASHES") or ""
         if raw.strip():
             configured = True
-            status, hashes = classify_hash_text(raw)
+            status, hashes, ignored = classify_hash_text(raw)
             if status == "ok":
                 found |= hashes
+                _warn_ignored(ignored, "PRIVACY_IDENTITY_HASHES")
             else:
                 problems.append(_problem(status, "PRIVACY_IDENTITY_HASHES"))
         else:
@@ -249,9 +260,10 @@ def load_hashes(root=".", fetch=None):
         except OSError:
             problems.append(_problem("unavailable", ".privacy-identity-hashes"))
         else:
-            status, hashes = classify_hash_text(text)
+            status, hashes, ignored = classify_hash_text(text)
             if status == "ok":
                 found |= hashes
+                _warn_ignored(ignored, ".privacy-identity-hashes")
             else:
                 problems.append(_problem(status, ".privacy-identity-hashes"))
 
@@ -260,9 +272,13 @@ def load_hashes(root=".", fetch=None):
     if token:
         configured = True
         remote = fetch(token) if fetch is not None else fetch_private_hashes(token)
-        status, hashes = remote if isinstance(remote, tuple) and len(remote) == 2 else ("unavailable", set())
+        if isinstance(remote, tuple) and len(remote) == 3:
+            status, hashes, ignored = remote
+        else:
+            status, hashes, ignored = "unavailable", set(), 0
         if status == "ok" and isinstance(hashes, set):
             found |= hashes
+            _warn_ignored(ignored, "private repo")
         else:
             kind = status if status in ("empty", "malformed", "unavailable") else "unavailable"
             problems.append(_problem(kind, "private repo"))
