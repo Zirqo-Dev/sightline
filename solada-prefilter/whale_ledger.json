@@ -1,11 +1,11 @@
 {
- "at": "2026-11-08T07:13:12Z",
+ "at": "2026-11-08T09:12:49Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14173029,
+ "height": 14173243,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 588.615484,
+ "ada_balance": 517.615484,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 303002339234,
@@ -14,7 +14,7 @@
   "BANK": 500000000,
   "BEAST": 24207218267752,
   "BESSTIVE": 26596411321470,
-  "BHOLE": 5957152952854,
+  "BHOLE": 8797725361939,
   "BLUE BULL": 200000000,
   "BMEPE": 69420000000,
   "BOLT": 20000000581477,
@@ -126,7 +126,7 @@
   "BANK": 500000000,
   "BEAST": 24207218267752,
   "BESSTIVE": 26596411321470,
-  "BHOLE": 5957152952854,
+  "BHOLE": 8797725361939,
   "BLUE BULL": 200000000,
   "BMEPE": 69420000000,
   "BOLT": 20000000581477,
@@ -269,7 +269,7 @@
   {
    "token": "BHOLE",
    "policy": "5ac66204",
-   "qty": 5957152952854
+   "qty": 8797725361939
   },
   {
    "token": "BLUE BULL",
@@ -13117,10 +13117,14 @@
    "token": "ADA",
    "qty_raw": 73000000,
    "ada": 73.0,
-   "status": "open",
+   "status": "filled",
    "opened_tx": "e5aa784bbb",
    "opened_at": "2026-11-08T05:03:06Z",
-   "own_stake": true
+   "own_stake": true,
+   "closed_tx": "f4b3894a0f",
+   "closed_at": "2026-11-08T07:58:30Z",
+   "filled_token": "BHOLE",
+   "filled_qty": 2840572409085
   },
   "46669c5286#0": {
    "ref_short": "46669c5286#0",
@@ -43730,6 +43734,18 @@
    "ada_leg": 253.28,
    "counterparty_tag": null,
    "order_ref_short": "c536485640#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-08T07:58:30Z",
+   "tx_short": "f4b3894a0f",
+   "kind": "order_fill",
+   "token": "BHOLE",
+   "qty": 2840572409085,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "e5aa784bbb#0",
    "order_status": "filled",
    "sold": "ADA"
   }
