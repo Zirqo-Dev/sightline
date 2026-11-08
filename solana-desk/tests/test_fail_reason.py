@@ -4,7 +4,7 @@ from desk import ledger, run, skips
 
 FX = os.path.join(os.path.dirname(__file__), "fixtures")
 NOW = 1793383000  # 2026-10-30T17:56:40Z; +1800 stays on that UTC day
-MINT = "MintFail1111111111111111111111111111111111"
+MINT = "So11111111111111111111111111111111111111112"
 DECISION = ("result", "skip_type", "reason", "error_src", "mint", "source", "task")
 
 

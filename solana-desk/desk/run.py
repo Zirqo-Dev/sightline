@@ -12,6 +12,31 @@ SOL = "So11111111111111111111111111111111111111112"
 DEX = "https://api.dexscreener.com"
 RUG = "https://api.rugcheck.xyz/v1/tokens/{}/report"
 JUP_KEYED, JUP_LITE = "https://api.jup.ag/swap/v1/quote", "https://lite-api.jup.ag/swap/v1/quote"
+# Bitcoin base58 alphabet. 0, O, I, and l are absent.
+_B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+_B58_INDEX = {c: i for i, c in enumerate(_B58)}
+
+
+def solana_address(text):
+    """True when text is base58 for exactly 32 bytes.
+
+    A Solana account address is 32 bytes. The alphabet and a 32-44 character
+    shape are not enough: a string of 44 ones is base58 and decodes to 44
+    zero bytes. This does not check that the point is on the ed25519 curve.
+    Off-curve program addresses are still addresses.
+    """
+    if not isinstance(text, str) or not text or any(c not in _B58_INDEX for c in text):
+        return False
+    n = 0
+    for c in text:
+        n = n * 58 + _B58_INDEX[c]
+    pad = 0
+    for c in text:
+        if c != "1":
+            break
+        pad += 1
+    body = b"" if n == 0 else n.to_bytes((n.bit_length() + 7) // 8, "big")
+    return len(b"\x00" * pad + body) == 32
 RUNS_PER_DAY = 48  # every 30 min on GitHub Actions
 SLOT_S = 1800
 
@@ -512,6 +537,18 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
     v2_errors = 0
     for i, mint in enumerate(m for m, _ in ls):
         src = ls[i][1]
+        # Fail closed before DexScreener, RugCheck, or Jupiter. An address that
+        # is not 32 bytes is unknown, not a pass, and not an HTTP status.
+        if not solana_address(mint):
+            st["checks"] += 1
+            st["data_failures"] += 1
+            run_leads.append(dict(mint=mint, stype="data", reason="invalid_mint", quote=None, pair=None))
+            ledger.task(data_dir, dict(
+                time=int(now), run_id=run_id, agent="scanner", task="scan", mint=mint, book="",
+                result="skip", skip_type="data", reason="invalid_mint", source=src,
+                check_delay_s=0, cfg_version=C.CFG_VERSION, seed=seed, error_src="", fail_reason="",
+            ))
+            continue
         if i: sleep(QUOTE_GAP_S)  # pace Jupiter (and RugCheck) instead of bursting 12 calls
         t0 = time.time(); errs = set(); reasons = []
         try: pair = best_pair(get, mint)

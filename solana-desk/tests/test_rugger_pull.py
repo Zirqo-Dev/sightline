@@ -38,12 +38,13 @@ if ROOT not in sys.path:
 
 from desk import run  # noqa: E402
 import rugger_blacklist as RB  # noqa: E402
+from tests.decision_market import address_n  # noqa: E402
 
 # Synthetic. Not a real wallet. Already the shape used by the rugger log tests.
 CREATOR = "REDACTEDaddr0547"
-MINT = "MintPull" + "1" * 24
-OTHER = "MintRugged" + "2" * 22
-LATER = "MintLater" + "3" * 23
+MINT = address_n(4001)
+OTHER = address_n(4002)
+LATER = address_n(4003)
 SOL = run.SOL
 T0 = 1_800_000_000  # on a 30-minute slot boundary
 TOK = 1_000_000_000

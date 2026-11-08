@@ -1,10 +1,11 @@
 import csv, json, os, tempfile, unittest
 from desk import config as C, fills, run
+from tests.decision_market import address_n
 
 T0 = 1793500000  # fixed test time
 TOK = 1_000_000_000  # raw tokens bought for 0.5 SOL -> entry px 0.5 lamports/unit
 
-def M(i): return f"Mint{i:02d}" + "x" * 30 + f"{i:02d}pp"
+def M(i): return address_n(1000 + i)
 def lead(i, stype=None, reason=None, out=TOK, liq=100.0):
     return dict(mint=M(i), stype=stype, reason=reason, quote={"outAmount": str(out), "priceImpactPct": "0.01", "routePlan": [1]},
                 pair={"liquidity": {"quote": liq}, "baseToken": {"symbol": f"T{i}"}})
