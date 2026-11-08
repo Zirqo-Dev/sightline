@@ -1,6 +1,7 @@
 """Logging-only pool snapshots. Decisions match a run with the log switched off."""
 import csv, json, os, tempfile, time, unittest
 from desk import config as C, exits, fills, observe, run
+from tests.decision_market import address_n
 
 T0 = 1793500000  # after 2026-07-21, so a fresh PumpSwap pool can sit in the boost window
 TOK = 1_000_000_000
@@ -13,7 +14,7 @@ DECISION_POS = (
 
 
 def M(i):
-    return f"Mint{i:02d}" + "x" * 30 + f"{i:02d}pp"
+    return address_n(2000 + i)
 
 
 def lead(i, sol=100.0, token=1_000_000.0, dex="pumpswap", created_s=None, out=TOK):

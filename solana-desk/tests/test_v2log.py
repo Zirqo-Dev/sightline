@@ -1,23 +1,22 @@
 """v2 prerequisite logs. Decisions and trades stay byte-identical with the log on or off."""
 import io, json, os, tempfile, time, unittest, urllib.error
 from desk import config as C, observe, run, skips, v2log
-from tests.decision_market import snapshot
+from tests.decision_market import address_n, snapshot
 
 T0 = 1_800_000_000
 POOL = "1" * 32
 CREATOR = "CreatorWalletMustNotBeWritten0000000000"
-MINT_A = "Mint" + "1" * 28 + "pump"
-MINT_B = "Mint" + "2" * 28 + "pump"
-MINT_C = "Mint" + "3" * 28 + "pump"
-MINT_D = "Mint" + "4" * 28 + "pump"
 
 
 def _mint(n):
-    """Distinct base58 mints. 0, O, I, and l are not base58 and must not appear."""
-    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-    tag = alphabet[n % len(alphabet)]
-    tag2 = alphabet[(n // len(alphabet)) % len(alphabet)]
-    return "Mint" + tag + tag2 + ("1" * 26) + "pump"
+    """32-byte address. 0, O, I, and l are not base58 and must not appear."""
+    return address_n(5000 + n)
+
+
+MINT_A = _mint(1)
+MINT_B = _mint(2)
+MINT_C = _mint(3)
+MINT_D = _mint(4)
 
 
 def lines(path):
