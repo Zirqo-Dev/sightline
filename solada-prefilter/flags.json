@@ -1,86 +1,9 @@
 {
- "at": "2026-11-08T11:11:18Z",
+ "at": "2026-11-08T13:11:01Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
- "new": [
-  {
-   "kind": "coordinated_buys",
-   "ticker": "GOON",
-   "wallets": [
-    "w-1fb11a87",
-    "w-423d6241",
-    "w-58df7500",
-    "w-5b4bb651",
-    "w-79620ea4",
-    "w-b8dcbe0f",
-    "w-d9126307"
-   ],
-   "window_s": 120,
-   "at": "2026-11-08T11:11:18Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "GOON",
-   "wallets": [
-    "w-1fb11a87",
-    "w-20abd628",
-    "w-423d6241",
-    "w-5b4bb651",
-    "w-79620ea4",
-    "w-b8dcbe0f",
-    "w-d9126307"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-08T11:11:18Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-20abd628",
-   "launches": [
-    "GOON",
-    "PARI"
-   ],
-   "at": "2026-11-08T11:11:18Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-58df7500",
-   "launches": [
-    "GOON",
-    "TMZ"
-   ],
-   "at": "2026-11-08T11:11:18Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-5b4bb651",
-   "launches": [
-    "BABYCH",
-    "GOON",
-    "TMZ",
-    "WAR"
-   ],
-   "at": "2026-11-08T11:11:18Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-cdebdf68",
-   "launches": [
-    "GOON",
-    "TIPR",
-    "VOPI"
-   ],
-   "at": "2026-11-08T11:11:18Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "GOON",
-   "wallet": "w-d9126307",
-   "tags": [],
-   "at": "2026-11-08T11:11:18Z"
-  }
- ],
+ "new": [],
  "recent": [
   {
    "kind": "repeat_early_buyer",
@@ -3603,8 +3526,7 @@
   }
  ],
  "api_calls": {
-  "blockfrost": 1,
-  "koios": 8
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,
