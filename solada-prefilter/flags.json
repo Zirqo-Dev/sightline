@@ -1,98 +1,54 @@
 {
- "at": "2026-11-08T03:10:56Z",
+ "at": "2026-11-08T05:11:34Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "sniper_full_exit",
-   "ticker": "WAR",
-   "wallet": "w-05ca7732",
-   "tags": [],
-   "at": "2026-11-08T03:10:56Z"
+   "kind": "ada_side_drop",
+   "ticker": "BHOLE",
+   "from": 10152,
+   "to": 7463,
+   "at": "2026-11-08T05:11:34Z"
   },
   {
-   "kind": "holders_down_mcap_up",
-   "ticker": "SHARKY",
-   "holders": [
-    62,
-    61
-   ],
-   "mcap_ada": [
-    60051,
-    64416
-   ],
-   "at": "2026-11-08T03:10:56Z"
+   "kind": "whale_move",
+   "ticker": "NIGHT",
+   "tag": "w-f3186187",
+   "delta": 29454913047,
+   "decimals": 6,
+   "qty": 29454.913,
+   "ada_equiv": 12565,
+   "value_basis": "ada_leg_rate",
+   "pct": 2.7,
+   "at": "2026-11-08T05:11:34Z"
   },
   {
    "kind": "whale_move",
    "ticker": "BHOLE",
    "tag": "w-f3186187",
-   "delta": 5000190428289,
+   "delta": -33549730357743,
    "decimals": 6,
-   "qty": 5000190.4283,
-   "ada_equiv": 203,
+   "qty": -33549730.3577,
+   "ada_equiv": 968,
    "value_basis": "ada_leg_rate",
-   "pct": 14.5,
-   "at": "2026-11-08T03:10:56Z"
+   "pct": 84.9,
+   "at": "2026-11-08T05:11:34Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ATLAS",
+   "tag": "w-f3186187",
+   "delta": -132543787,
+   "decimals": 6,
+   "qty": -132.5438,
+   "ada_equiv": 62,
+   "value_basis": "decimals_x_price",
+   "pct": 100.0,
+   "at": "2026-11-08T05:11:34Z"
   }
  ],
  "recent": [
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "CAPY",
-   "wallets": [
-    "w-11841397",
-    "w-35a8fb6e",
-    "w-6139bb7d",
-    "w-babe0a60",
-    "w-c00578fe"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-05T01:12:28Z"
-  },
-  {
-   "kind": "coordinated_buys",
-   "ticker": "CHANCOIN",
-   "wallets": [
-    "w-1cd2f420",
-    "w-60de8d8c",
-    "w-805bfc37",
-    "w-9d7e7db5",
-    "w-ad495480",
-    "w-f7844f67",
-    "w-ffbfd3df"
-   ],
-   "window_s": 120,
-   "at": "2026-11-05T01:12:28Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "CHANCOIN",
-   "wallets": [
-    "w-1cd2f420",
-    "w-60de8d8c",
-    "w-805bfc37",
-    "w-ad495480",
-    "w-ffbfd3df"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-05T01:12:28Z"
-  },
-  {
-   "kind": "coordinated_buys",
-   "ticker": "MAGE",
-   "wallets": [
-    "w-6a08c4e3",
-    "w-805b7c78",
-    "w-9188b3f2",
-    "w-9d7e7db5",
-    "w-c06521c0",
-    "w-c4c57a6b"
-   ],
-   "window_s": 120,
-   "at": "2026-11-05T01:12:28Z"
-  },
   {
    "kind": "coordinated_buys",
    "ticker": "PEAK",
@@ -3592,11 +3548,53 @@
    "value_basis": "ada_leg_rate",
    "pct": 14.5,
    "at": "2026-11-08T03:10:56Z"
+  },
+  {
+   "kind": "ada_side_drop",
+   "ticker": "BHOLE",
+   "from": 10152,
+   "to": 7463,
+   "at": "2026-11-08T05:11:34Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "NIGHT",
+   "tag": "w-f3186187",
+   "delta": 29454913047,
+   "decimals": 6,
+   "qty": 29454.913,
+   "ada_equiv": 12565,
+   "value_basis": "ada_leg_rate",
+   "pct": 2.7,
+   "at": "2026-11-08T05:11:34Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "BHOLE",
+   "tag": "w-f3186187",
+   "delta": -33549730357743,
+   "decimals": 6,
+   "qty": -33549730.3577,
+   "ada_equiv": 968,
+   "value_basis": "ada_leg_rate",
+   "pct": 84.9,
+   "at": "2026-11-08T05:11:34Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ATLAS",
+   "tag": "w-f3186187",
+   "delta": -132543787,
+   "decimals": 6,
+   "qty": -132.5438,
+   "ada_equiv": 62,
+   "value_basis": "decimals_x_price",
+   "pct": 100.0,
+   "at": "2026-11-08T05:11:34Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 1,
-  "koios": 2
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,

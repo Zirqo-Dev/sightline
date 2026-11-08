@@ -1,5 +1,5 @@
 {
- "at": "2026-11-08T03:16:09Z",
+ "at": "2026-11-08T05:18:40Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -256,10 +256,9 @@
    "policy_short": "279c909f",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~3cd5f064",
-   "reserve_ada": 2003468.93,
-   "reserve_qty": 740301901,
-   "asof": "2026-11-07T15:34:00Z",
-   "stale": true
+   "reserve_ada": 2065511.33,
+   "reserve_qty": 719480357,
+   "asof": "2026-11-05T12:33:36Z"
   },
   {
    "ticker": "SOLADA",
@@ -280,7 +279,8 @@
    "pool_key": "minswap_v2~b4f379d0",
    "reserve_ada": 1152124.86,
    "reserve_qty": 577560684659,
-   "asof": "2026-11-05T08:22:47Z"
+   "asof": "2026-11-05T08:22:47Z",
+   "stale": true
   },
   {
    "ticker": "STRIKE",
@@ -290,7 +290,8 @@
    "pool_key": "sundaeswap_v3~968b2e79",
    "reserve_ada": 651229.68,
    "reserve_qty": 308569290364,
-   "asof": "2026-11-08T02:07:50Z"
+   "asof": "2026-11-08T02:07:50Z",
+   "stale": true
   }
  ],
  "tokens": [
@@ -327,7 +328,7 @@
    "policy_short": "279c909f",
    "rank": 5,
    "unit_source": "cache",
-   "last_checked": "2026-11-07T19:12:38Z"
+   "last_checked": "2026-11-08T05:18:40Z"
   },
   {
    "ticker": "IAG",
@@ -341,7 +342,7 @@
    "policy_short": "49e42316",
    "rank": 8,
    "unit_source": "listed",
-   "last_checked": "2026-11-07T21:16:51Z"
+   "last_checked": "2026-11-08T05:18:40Z"
   },
   {
    "ticker": "SOLADA",
@@ -365,25 +366,15 @@
   }
  ],
  "coverage": {
-  "STRIKE": {
-   "read": 30,
-   "complete": false,
-   "pools": 2
-  },
-  "MIN": {
-   "read": 0,
-   "complete": false,
-   "pools": 0
-  },
   "SNEK": {
-   "read": 0,
+   "read": 15,
    "complete": false,
-   "skipped": "budget"
+   "pools": 1
   },
   "COCK": {
    "read": 0,
    "complete": false,
-   "skipped": "budget"
+   "pools": 0
   },
   "ASCEND": {
    "read": 0,
@@ -409,20 +400,30 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "STRIKE": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
+  },
+  "MIN": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "STRIKE",
-  "MIN",
   "SNEK",
   "COCK",
   "ASCEND",
   "SOLADA",
   "CLOVE",
   "NIGHT",
-  "IAG"
+  "IAG",
+  "STRIKE",
+  "MIN"
  ],
- "koios_calls": 8,
+ "koios_calls": 6,
  "blockfrost_calls": 0,
  "blockfrost_fallbacks": 0,
  "blockfrost_available": true,
