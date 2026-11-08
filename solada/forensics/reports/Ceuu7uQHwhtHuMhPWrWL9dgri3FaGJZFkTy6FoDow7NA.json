@@ -8,8 +8,8 @@
   "mint": "Ceuu7uQHwhtHuMhPWrWL9dgri3FaGJZFkTy6FoDow7NA",
   "symbol": "QBITS",
   "symbol_source": "dexscreener",
-  "run_at": "2026-11-07T14:58:54Z",
-  "run_at_unix": 1794063534,
+  "run_at": "2026-11-08T15:27:00Z",
+  "run_at_unix": 1794151620,
   "creation_slot": 458581711,
   "creation_time": 1792358369,
   "creation_time_iso": "2026-10-18T21:19:29Z",
@@ -804,6 +804,33 @@
       }
     },
     {
+      "token_account": "w-83fff104",
+      "owner": "w-49006a97",
+      "amount_raw": "2372506000000",
+      "pct_supply": 0.2373,
+      "label": null,
+      "source": "holder",
+      "funding": {
+        "status": "traced",
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "w-49006a97",
+            "status": "traced",
+            "funder": "w-687cfcb2",
+            "asset": "SOL",
+            "amount_raw": "830240",
+            "kind": "system.transfer",
+            "funded_at": 1792575557,
+            "signature": "5u6z3X5pe4XppvNrJUM2FhpQMYb5CrVBsHyg2yJZ4sp2uPR4GtQJXHAzs8K4ffU8H8XWnumpk6SwiGTUM1zLAXRc",
+            "label": "INFRA:Solada deployer",
+            "reached_oldest": true,
+            "wallet_age_seconds": -217188
+          }
+        ]
+      }
+    },
+    {
       "token_account": "w-4e257c13",
       "owner": "w-3d5d399f",
       "amount_raw": "252176808598",
@@ -1014,12 +1041,12 @@
     "calls_used": {
       "getTokenSupply": 1,
       "getSignaturesForAddress": 72,
-      "getTransaction": 37,
-      "getTokenAccountsByOwner": 21,
+      "getTransaction": 38,
+      "getTokenAccountsByOwner": 23,
       "getTokenLargestAccounts": 1,
-      "getAccountInfo": 16
+      "getAccountInfo": 18
     },
-    "calls_total": 148,
+    "calls_total": 153,
     "budget": 5000,
     "wallets_skipped_old": 4,
     "wallets_unresolved_busy": 8,
