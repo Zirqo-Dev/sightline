@@ -5,7 +5,7 @@ Mode "fill" = scan + paper fill step (desk/fills.py); allowed only when config.F
 Mode "auto" (workflow default) = fill when allowed, else scan.
 Free public APIs only: DexScreener, RugCheck, Jupiter quote (optional free key in JUPITER_API_KEY).
 """
-import argparse, json, os, sys, time, urllib.request, urllib.error
+import argparse, json, os, re, sys, time, urllib.request, urllib.error
 from . import config as C, skips, ledger, fills, observe, v2log
 
 SOL = "So11111111111111111111111111111111111111112"
@@ -132,16 +132,88 @@ def quote(get, mint, key, sleep=time.sleep, input_mint=SOL, amount=None):
         try:
             return get(url, hdr) if hdr else get(url)
         except urllib.error.HTTPError as e:
-            body = ""
-            try: body = e.read().decode(errors="ignore")
-            except Exception: pass
-            if e.code == 400 and ("NO_ROUTE" in body.upper() or "COULD_NOT_FIND" in body.upper()):
+            raw = _read_error_bytes(e)
+            lossy = raw.decode("utf-8", errors="ignore") if raw else ""
+            if e.code == 400 and ("NO_ROUTE" in lossy.upper() or "COULD_NOT_FIND" in lossy.upper()):
                 return {}  # real "no route" -> execution skip, not a data failure
+            e.sightline_body = _utf8_or_none(raw)
             if attempt == 0 and (e.code == 429 or e.code >= 500):
                 sleep(RETRY_WAIT_S); continue
             raise
 
 ERR_NAMES = {"dex": "dexscreener", "rug": "rugcheck", "jup": "jupiter"}
+
+_BODY_MAX = 65536
+_DETAIL_MAX = 300
+_HOSTILE = re.compile(
+    r"(https?://|www\.|authorization|x-api-key|\bbearer\b|ghp_|ghs_|github_pat_|stake1|addr1|BEGIN |@)",
+    re.I,
+)
+_B58_RUN = re.compile(r"(?<![1-9A-HJ-NP-Za-km-z])[1-9A-HJ-NP-Za-km-z]{32,44}(?![1-9A-HJ-NP-Za-km-z])")
+_SKIP_REASON = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
+_BODY_KEYS = ("errorCode", "code", "error", "message", "msg")
+_CODE_VALUE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,63}$")
+_TEXT_VALUE = re.compile(r"^[A-Za-z0-9_ ]{1,2000}$")
+_ENDPOINTS = {"rug": "rugcheck_report", "jup": "jupiter_quote"}
+
+
+def _read_error_bytes(exc):
+    """Read an HTTP error body once. Longer than the cap is discarded."""
+    try:
+        raw = exc.read(_BODY_MAX + 1)
+    except Exception:
+        return b""
+    if not isinstance(raw, (bytes, bytearray)) or len(raw) > _BODY_MAX:
+        return b""
+    return bytes(raw)
+
+
+def _utf8_or_none(raw):
+    if not raw:
+        return ""
+    try:
+        return raw.decode("utf-8")
+    except UnicodeError:
+        return None
+
+
+def sanitize_error_body(text):
+    """Allowlisted error fields, or empty when the body is not safe to keep.
+
+    The whole text is judged before any truncation. A hit anywhere discards
+    the body. Only a few JSON string fields are kept, and the kept text is
+    then cut to 300 characters.
+    """
+    if not isinstance(text, str) or not text:
+        return ""
+    if any(ord(c) > 126 for c in text):
+        return ""
+    if _HOSTILE.search(text) or _B58_RUN.search(text):
+        return ""
+    try:
+        doc = json.loads(text)
+    except json.JSONDecodeError:
+        return ""
+    if not isinstance(doc, dict):
+        return ""
+    parts = []
+    for key in _BODY_KEYS:
+        if key not in doc:
+            continue
+        val = doc[key]
+        if not isinstance(val, str):
+            return ""
+        pat = _TEXT_VALUE if key in ("message", "msg") else _CODE_VALUE
+        if not pat.fullmatch(val):
+            return ""
+        parts.append(key + "=" + val)
+    if not parts:
+        return ""
+    out = ",".join(parts)
+    if _HOSTILE.search(out) or _B58_RUN.search(out) or ";" in out or ":" in out:
+        return ""
+    return out[:_DETAIL_MAX]
+
 
 def fetch_fail_code(exc):
     """Short token for one failed fetch. Log only: skips.classify does not read it.
@@ -170,8 +242,31 @@ def fetch_fail_code(exc):
         return "conn"
     return "error"
 
+def _error_text(exc):
+    if not isinstance(exc, urllib.error.HTTPError) or getattr(exc, "code", None) == 200:
+        return None
+    if hasattr(exc, "sightline_body"):
+        return exc.sightline_body
+    return _utf8_or_none(_read_error_bytes(exc))
+
+
 def _fail_reason(label, exc):
-    return f"{ERR_NAMES[label]}:{fetch_fail_code(exc)}"
+    base = ERR_NAMES[label] + ":" + fetch_fail_code(exc)
+    endpoint = _ENDPOINTS.get(label)
+    if not endpoint or not isinstance(exc, urllib.error.HTTPError):
+        return base
+    detail = sanitize_error_body(_error_text(exc))
+    out = base + ";endpoint:" + endpoint
+    if detail:
+        out += ";detail:" + detail
+    return out
+
+
+def _skip_fail_reason(reason):
+    """Non-empty log for a skip that was not a fetch error. Not a source token."""
+    if _SKIP_REASON.fullmatch(reason or ""):
+        return "skip:" + reason
+    return "skip:unknown"
 
 
 WOULD_NAME = "rugger_would_veto.json"
@@ -432,11 +527,14 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
         st["checks"] += 1; st["errors"] += int(err); st["data_failures"] += int(stype == "data")
         st["eligibility_skips"] += int(stype == "eligibility")
         run_leads.append(dict(mint=mint, stype=stype, reason=reason, quote=q, pair=pair))
+        fail_cell = ";".join(sorted(reasons))
+        if stype and not fail_cell:
+            fail_cell = _skip_fail_reason(reason)
         ledger.task(data_dir, dict(time=int(now), run_id=run_id, agent="scanner", task="scan", mint=mint, book="",
                     result="pass" if stype is None else "skip", skip_type=stype or "", reason=reason or "",
                     source=src, check_delay_s=round(time.time() - t0, 2), cfg_version=C.CFG_VERSION, seed=seed,
                     error_src=";".join(sorted(ERR_NAMES[e] for e in errs)),
-                    fail_reason=";".join(sorted(reasons))))
+                    fail_reason=fail_cell))
         # Log-only. stype, reason, and run_leads are already fixed. Fills do not read this.
         # The 5s budget is time inside this hook only. Quote pacing and HTTP are not counted.
         hook_t0 = time.monotonic()
