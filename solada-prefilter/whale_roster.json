@@ -5,7 +5,7 @@
   "measured_factor": true,
   "min_sample": 8,
   "dormant_count": 11,
-  "asof": "2026-11-08T01:16:03Z",
+  "asof": "2026-11-08T03:17:01Z",
   "note": "Research tally. A hit is an observed checkpoint where every measured series (price and liquidity) moves the whale's way at +1h, +6h, or +24h. A wrong-way observation is a miss. No observation is unobserved and is not a miss. n_observed is hits plus misses. Rates stay blank under 8 observed checkpoints on that horizon in that tally. scores.live is the forward quote path, or the lead's published private-cache tally. scores.backfill is approximate: nearest desk-data ADA/qty within 20 minutes at 1h, 60 minutes at 6h, and 3 hours at 24h, plus pool ADA when a snapshot is in that window. Backfill never replaces live. eligible_for_active needs at least 25 live observed checkpoints and a live hit rate above 55% at both 6h and 24h. promising_backfill means the approximate tally alone would clear that bar. Nothing is promoted automatically. Not a buy signal.",
   "whales": [
     {
@@ -13,28 +13,28 @@
       "role": "lead",
       "status": "active",
       "eligible_for_active": false,
-      "eligible_reason": "not eligible: live 6h observed 244, rate 0.361 (need > 0.55); live 24h observed 195, rate 0.251 (need > 0.55); promotion is a manual owner decision",
+      "eligible_reason": "not eligible: live 6h observed 247, rate 0.368 (need > 0.55); live 24h observed 196, rate 0.255 (need > 0.55); promotion is a manual owner decision",
       "promising_backfill": false,
       "scores": {
-        "events": 1317,
-        "accumulate": 1303,
+        "events": 1324,
+        "accumulate": 1310,
         "trim": 0,
         "exit": 14,
         "live": {
           "h1": {
-            "n_observed": 246,
-            "hits": 94,
-            "hit_rate": 0.382
+            "n_observed": 251,
+            "hits": 97,
+            "hit_rate": 0.386
           },
           "h6": {
-            "n_observed": 244,
-            "hits": 88,
-            "hit_rate": 0.361
+            "n_observed": 247,
+            "hits": 91,
+            "hit_rate": 0.368
           },
           "h24": {
-            "n_observed": 195,
-            "hits": 49,
-            "hit_rate": 0.251
+            "n_observed": 196,
+            "hits": 50,
+            "hit_rate": 0.255
           }
         },
         "backfill": {
@@ -44,30 +44,30 @@
             "hit_rate": 0.412
           },
           "h6": {
-            "n_observed": 128,
+            "n_observed": 129,
             "hits": 43,
-            "hit_rate": 0.336
+            "hit_rate": 0.333
           },
           "h24": {
-            "n_observed": 110,
-            "hits": 48,
-            "hit_rate": 0.436
+            "n_observed": 115,
+            "hits": 53,
+            "hit_rate": 0.461
           },
           "approximate": true,
           "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
         },
-        "n_observed_h1": 246,
-        "priced_h1": 246,
-        "hits_h1": 94,
-        "hit_rate_h1": 0.382,
-        "n_observed_h6": 244,
-        "priced_h6": 244,
-        "hits_h6": 88,
-        "hit_rate_h6": 0.361,
-        "n_observed_h24": 195,
-        "priced_h24": 195,
-        "hits_h24": 49,
-        "hit_rate_h24": 0.251,
+        "n_observed_h1": 251,
+        "priced_h1": 251,
+        "hits_h1": 97,
+        "hit_rate_h1": 0.386,
+        "n_observed_h6": 247,
+        "priced_h6": 247,
+        "hits_h6": 91,
+        "hit_rate_h6": 0.368,
+        "n_observed_h24": 196,
+        "priced_h24": 196,
+        "hits_h24": 50,
+        "hit_rate_h24": 0.255,
         "small_sample": false,
         "social_moves_matched": null
       }
@@ -201,70 +201,6 @@
       }
     },
     {
-      "codename": "Dusty Ferret",
-      "role": "watch",
-      "status": "candidate",
-      "eligible_for_active": false,
-      "eligible_reason": "not eligible: live 6h observed 2 (need 25), rate blank (need > 0.55); live 24h observed 0 (need 25), rate blank (need > 0.55); promotion is a manual owner decision",
-      "promising_backfill": false,
-      "scores": {
-        "events": 16,
-        "accumulate": 8,
-        "trim": 8,
-        "exit": 0,
-        "live": {
-          "h1": {
-            "n_observed": 0,
-            "hits": 0,
-            "hit_rate": null
-          },
-          "h6": {
-            "n_observed": 2,
-            "hits": 1,
-            "hit_rate": null
-          },
-          "h24": {
-            "n_observed": 0,
-            "hits": 0,
-            "hit_rate": null
-          }
-        },
-        "backfill": {
-          "h1": {
-            "n_observed": 7,
-            "hits": 3,
-            "hit_rate": null
-          },
-          "h6": {
-            "n_observed": 10,
-            "hits": 7,
-            "hit_rate": 0.7
-          },
-          "h24": {
-            "n_observed": 13,
-            "hits": 7,
-            "hit_rate": 0.538
-          },
-          "approximate": true,
-          "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
-        },
-        "n_observed_h1": 0,
-        "priced_h1": 0,
-        "hits_h1": 0,
-        "hit_rate_h1": null,
-        "n_observed_h6": 2,
-        "priced_h6": 2,
-        "hits_h6": 1,
-        "hit_rate_h6": null,
-        "n_observed_h24": 0,
-        "priced_h24": 0,
-        "hits_h24": 0,
-        "hit_rate_h24": null,
-        "small_sample": true,
-        "social_moves_matched": null
-      }
-    },
-    {
       "codename": "Sandy Ibis",
       "role": "watch",
       "status": "candidate",
@@ -305,9 +241,9 @@
             "hit_rate": 0.405
           },
           "h24": {
-            "n_observed": 29,
+            "n_observed": 31,
             "hits": 18,
-            "hit_rate": 0.621
+            "hit_rate": 0.581
           },
           "approximate": true,
           "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
@@ -318,6 +254,70 @@
         "hit_rate_h1": null,
         "n_observed_h6": 0,
         "priced_h6": 0,
+        "hits_h6": 0,
+        "hit_rate_h6": null,
+        "n_observed_h24": 0,
+        "priced_h24": 0,
+        "hits_h24": 0,
+        "hit_rate_h24": null,
+        "small_sample": true,
+        "social_moves_matched": null
+      }
+    },
+    {
+      "codename": "Wry Stoat",
+      "role": "watch",
+      "status": "candidate",
+      "eligible_for_active": false,
+      "eligible_reason": "not eligible: live 6h observed 2 (need 25), rate blank (need > 0.55); live 24h observed 0 (need 25), rate blank (need > 0.55); promotion is a manual owner decision",
+      "promising_backfill": false,
+      "scores": {
+        "events": 27,
+        "accumulate": 10,
+        "trim": 17,
+        "exit": 0,
+        "live": {
+          "h1": {
+            "n_observed": 2,
+            "hits": 0,
+            "hit_rate": null
+          },
+          "h6": {
+            "n_observed": 2,
+            "hits": 0,
+            "hit_rate": null
+          },
+          "h24": {
+            "n_observed": 0,
+            "hits": 0,
+            "hit_rate": null
+          }
+        },
+        "backfill": {
+          "h1": {
+            "n_observed": 16,
+            "hits": 11,
+            "hit_rate": 0.688
+          },
+          "h6": {
+            "n_observed": 21,
+            "hits": 10,
+            "hit_rate": 0.476
+          },
+          "h24": {
+            "n_observed": 23,
+            "hits": 8,
+            "hit_rate": 0.348
+          },
+          "approximate": true,
+          "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
+        },
+        "n_observed_h1": 2,
+        "priced_h1": 2,
+        "hits_h1": 0,
+        "hit_rate_h1": null,
+        "n_observed_h6": 2,
+        "priced_h6": 2,
         "hits_h6": 0,
         "hit_rate_h6": null,
         "n_observed_h24": 0,
@@ -521,80 +521,16 @@
       }
     },
     {
-      "codename": "Quiet Quail",
-      "role": "watch",
-      "status": "candidate",
-      "eligible_for_active": false,
-      "eligible_reason": "not eligible: live 6h observed 1 (need 25), rate blank (need > 0.55); live 24h observed 0 (need 25), rate blank (need > 0.55); promotion is a manual owner decision",
-      "promising_backfill": false,
-      "scores": {
-        "events": 49,
-        "accumulate": 33,
-        "trim": 16,
-        "exit": 0,
-        "live": {
-          "h1": {
-            "n_observed": 0,
-            "hits": 0,
-            "hit_rate": null
-          },
-          "h6": {
-            "n_observed": 1,
-            "hits": 1,
-            "hit_rate": null
-          },
-          "h24": {
-            "n_observed": 0,
-            "hits": 0,
-            "hit_rate": null
-          }
-        },
-        "backfill": {
-          "h1": {
-            "n_observed": 37,
-            "hits": 15,
-            "hit_rate": 0.405
-          },
-          "h6": {
-            "n_observed": 42,
-            "hits": 13,
-            "hit_rate": 0.31
-          },
-          "h24": {
-            "n_observed": 34,
-            "hits": 12,
-            "hit_rate": 0.353
-          },
-          "approximate": true,
-          "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
-        },
-        "n_observed_h1": 0,
-        "priced_h1": 0,
-        "hits_h1": 0,
-        "hit_rate_h1": null,
-        "n_observed_h6": 1,
-        "priced_h6": 1,
-        "hits_h6": 1,
-        "hit_rate_h6": null,
-        "n_observed_h24": 0,
-        "priced_h24": 0,
-        "hits_h24": 0,
-        "hit_rate_h24": null,
-        "small_sample": true,
-        "social_moves_matched": null
-      }
-    },
-    {
       "codename": "Calm Marlin",
       "role": "watch",
       "status": "candidate",
       "eligible_for_active": false,
-      "eligible_reason": "not eligible: live 6h observed 1 (need 25), rate blank (need > 0.55); live 24h observed 7 (need 25), rate blank (need > 0.55); promotion is a manual owner decision",
+      "eligible_reason": "not eligible: live 6h observed 2 (need 25), rate blank (need > 0.55); live 24h observed 7 (need 25), rate blank (need > 0.55); promotion is a manual owner decision",
       "promising_backfill": false,
       "scores": {
-        "events": 28,
-        "accumulate": 3,
-        "trim": 25,
+        "events": 30,
+        "accumulate": 4,
+        "trim": 26,
         "exit": 0,
         "live": {
           "h1": {
@@ -603,8 +539,8 @@
             "hit_rate": null
           },
           "h6": {
-            "n_observed": 1,
-            "hits": 1,
+            "n_observed": 2,
+            "hits": 2,
             "hit_rate": null
           },
           "h24": {
@@ -620,9 +556,9 @@
             "hit_rate": 0.2
           },
           "h6": {
-            "n_observed": 10,
-            "hits": 1,
-            "hit_rate": 0.1
+            "n_observed": 11,
+            "hits": 2,
+            "hit_rate": 0.182
           },
           "h24": {
             "n_observed": 12,
@@ -636,9 +572,9 @@
         "priced_h1": 2,
         "hits_h1": 1,
         "hit_rate_h1": null,
-        "n_observed_h6": 1,
-        "priced_h6": 1,
-        "hits_h6": 1,
+        "n_observed_h6": 2,
+        "priced_h6": 2,
+        "hits_h6": 2,
         "hit_rate_h6": null,
         "n_observed_h24": 7,
         "priced_h24": 7,
@@ -770,6 +706,70 @@
         "hit_rate_h6": null,
         "n_observed_h24": 1,
         "priced_h24": 1,
+        "hits_h24": 0,
+        "hit_rate_h24": null,
+        "small_sample": true,
+        "social_moves_matched": null
+      }
+    },
+    {
+      "codename": "Sleepy Newt",
+      "role": "watch",
+      "status": "candidate",
+      "eligible_for_active": false,
+      "eligible_reason": "not eligible: live 6h observed 0 (need 25), rate blank (need > 0.55); live 24h observed 0 (need 25), rate blank (need > 0.55); promotion is a manual owner decision",
+      "promising_backfill": false,
+      "scores": {
+        "events": 28,
+        "accumulate": 15,
+        "trim": 13,
+        "exit": 0,
+        "live": {
+          "h1": {
+            "n_observed": 0,
+            "hits": 0,
+            "hit_rate": null
+          },
+          "h6": {
+            "n_observed": 0,
+            "hits": 0,
+            "hit_rate": null
+          },
+          "h24": {
+            "n_observed": 0,
+            "hits": 0,
+            "hit_rate": null
+          }
+        },
+        "backfill": {
+          "h1": {
+            "n_observed": 11,
+            "hits": 8,
+            "hit_rate": 0.727
+          },
+          "h6": {
+            "n_observed": 14,
+            "hits": 5,
+            "hit_rate": 0.357
+          },
+          "h24": {
+            "n_observed": 15,
+            "hits": 5,
+            "hit_rate": 0.333
+          },
+          "approximate": true,
+          "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
+        },
+        "n_observed_h1": 0,
+        "priced_h1": 0,
+        "hits_h1": 0,
+        "hit_rate_h1": null,
+        "n_observed_h6": 0,
+        "priced_h6": 0,
+        "hits_h6": 0,
+        "hit_rate_h6": null,
+        "n_observed_h24": 0,
+        "priced_h24": 0,
         "hits_h24": 0,
         "hit_rate_h24": null,
         "small_sample": true,

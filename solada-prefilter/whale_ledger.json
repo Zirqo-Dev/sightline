@@ -1,11 +1,11 @@
 {
- "at": "2026-11-08T01:13:24Z",
+ "at": "2026-11-08T03:13:07Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14171985,
+ "height": 14172129,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 2370.169737,
+ "ada_balance": 846.261305,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 305002339234,
@@ -15,7 +15,7 @@
   "BANK": 500000000,
   "BEAST": 24207218267752,
   "BESSTIVE": 26596411321470,
-  "BHOLE": 34506692882308,
+  "BHOLE": 39506883310597,
   "BLUE BULL": 200000000,
   "BMEPE": 69420000000,
   "BOLT": 20000000581477,
@@ -74,7 +74,7 @@
   "MISS": 20000000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1074225668376,
+  "NIGHT": 1079907879773,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -129,7 +129,7 @@
   "BANK": 500000000,
   "BEAST": 24207218267752,
   "BESSTIVE": 26596411321470,
-  "BHOLE": 34506692882308,
+  "BHOLE": 39506883310597,
   "BLUE BULL": 200000000,
   "BMEPE": 69420000000,
   "BOLT": 20000000581477,
@@ -188,7 +188,7 @@
   "MISS": 20000000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1074225668376,
+  "NIGHT": 1079907879773,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -278,7 +278,7 @@
   {
    "token": "BHOLE",
    "policy": "5ac66204",
-   "qty": 34506692882308
+   "qty": 39506883310597
   },
   {
    "token": "BLUE BULL",
@@ -573,7 +573,7 @@
   {
    "token": "NIGHT",
    "policy": "0691b2fe",
-   "qty": 1074225668376
+   "qty": 1079907879773
   },
   {
    "token": "NIKY",
@@ -12819,6 +12819,74 @@
    "closed_tx": "e16686d435",
    "closed_at": "2026-11-08T00:41:58Z",
    "filled_ada": 625.172951
+  },
+  "4b4c93a92a#0": {
+   "ref_short": "4b4c93a92a#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "4b4c93a92a",
+   "opened_at": "2026-11-08T01:17:39Z",
+   "own_stake": true,
+   "closed_at": "2026-11-08T03:13:07Z"
+  },
+  "8d8357f9b5#0": {
+   "ref_short": "8d8357f9b5#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "8d8357f9b5",
+   "opened_at": "2026-11-08T01:20:20Z",
+   "own_stake": true,
+   "closed_at": "2026-11-08T03:13:07Z"
+  },
+  "852ec33a2b#0": {
+   "ref_short": "852ec33a2b#0",
+   "token": "ADA",
+   "qty_raw": 503280000,
+   "ada": 503.28,
+   "status": "filled",
+   "opened_tx": "852ec33a2b",
+   "opened_at": "2026-11-08T01:22:04Z",
+   "closed_tx": "a6dc9a957b",
+   "closed_at": "2026-11-08T01:22:04Z",
+   "filled_token": "NIGHT",
+   "filled_qty": 2238870968
+  },
+  "0d8bd2d97b#0": {
+   "ref_short": "0d8bd2d97b#0",
+   "token": "ADA",
+   "qty_raw": 104000000,
+   "ada": 104.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "0d8bd2d97b",
+   "opened_at": "2026-11-08T01:26:12Z",
+   "own_stake": true,
+   "closed_at": "2026-11-08T03:13:07Z"
+  },
+  "f3c4217520#0": {
+   "ref_short": "f3c4217520#0",
+   "token": "ADA",
+   "qty_raw": 323280000,
+   "ada": 323.28,
+   "status": "filled",
+   "opened_tx": "f3c4217520",
+   "opened_at": "2026-11-08T01:46:32Z",
+   "closed_tx": "ce0d5054c3",
+   "closed_at": "2026-11-08T01:46:32Z",
+   "filled_token": "NIGHT",
+   "filled_qty": 1434801545
+  },
+  "5689b7d1c3#0": {
+   "ref_short": "5689b7d1c3#0",
+   "token": "BHOLE",
+   "qty_raw": 1000000000000,
+   "ada": 1.07319,
+   "status": "open",
+   "opened_tx": "5689b7d1c3",
+   "opened_at": "2026-11-08T01:51:23Z"
   }
  },
  "rows": [
@@ -42449,6 +42517,146 @@
    "qty": null,
    "ada_leg": 70.769285,
    "counterparty_tag": "w-8733bb5a"
+  },
+  {
+   "time": "2026-11-08T01:17:39Z",
+   "tx_short": "d90cc6397f",
+   "kind": "swap",
+   "token": "BHOLE",
+   "qty": 1690791786031,
+   "ada_leg": 71.0,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-08T01:17:39Z",
+   "tx_short": "4b4c93a92a",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "4b4c93a92a#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-08T01:20:20Z",
+   "tx_short": "15d1271705",
+   "kind": "swap",
+   "token": "BHOLE",
+   "qty": 1697211090531,
+   "ada_leg": 71.0,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-08T01:20:20Z",
+   "tx_short": "8d8357f9b5",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "8d8357f9b5#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-08T01:22:04Z",
+   "tx_short": "852ec33a2b",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 503280000,
+   "ada_leg": 503.28,
+   "counterparty_tag": null,
+   "order_ref_short": "852ec33a2b#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-08T01:22:04Z",
+   "tx_short": "a6dc9a957b",
+   "kind": "order_fill",
+   "token": "NIGHT",
+   "qty": 2238870968,
+   "ada_leg": 503.28,
+   "counterparty_tag": null,
+   "order_ref_short": "852ec33a2b#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-08T01:26:12Z",
+   "tx_short": "03684ad832",
+   "kind": "swap",
+   "token": "BHOLE",
+   "qty": 2612187551727,
+   "ada_leg": 102.0,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-08T01:26:12Z",
+   "tx_short": "0d8bd2d97b",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 104000000,
+   "ada_leg": 104.0,
+   "counterparty_tag": null,
+   "order_ref_short": "0d8bd2d97b#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-08T01:26:56Z",
+   "tx_short": "a9aad32fd4",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 1115701364,
+   "ada_leg": 251.664046,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-08T01:46:32Z",
+   "tx_short": "f3c4217520",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 323280000,
+   "ada_leg": 323.28,
+   "counterparty_tag": null,
+   "order_ref_short": "f3c4217520#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-08T01:46:32Z",
+   "tx_short": "ce0d5054c3",
+   "kind": "order_fill",
+   "token": "NIGHT",
+   "qty": 1434801545,
+   "ada_leg": 323.28,
+   "counterparty_tag": null,
+   "order_ref_short": "f3c4217520#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-08T01:51:23Z",
+   "tx_short": "5689b7d1c3",
+   "kind": "order_open",
+   "token": "BHOLE",
+   "qty": 1000000000000,
+   "ada_leg": 1.07319,
+   "counterparty_tag": null,
+   "order_ref_short": "5689b7d1c3#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-08T01:53:18Z",
+   "tx_short": "5616e1b008",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 892837520,
+   "ada_leg": 201.666246,
+   "counterparty_tag": null,
+   "direction": "buy"
   }
  ],
  "capped": false,
@@ -42459,7 +42667,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 12,
+ "koios_calls": 9,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true

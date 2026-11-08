@@ -1,66 +1,43 @@
 {
- "at": "2026-11-08T01:11:17Z",
+ "at": "2026-11-08T03:10:56Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
+   "kind": "sniper_full_exit",
+   "ticker": "WAR",
+   "wallet": "w-05ca7732",
+   "tags": [],
+   "at": "2026-11-08T03:10:56Z"
+  },
+  {
+   "kind": "holders_down_mcap_up",
+   "ticker": "SHARKY",
+   "holders": [
+    62,
+    61
+   ],
+   "mcap_ada": [
+    60051,
+    64416
+   ],
+   "at": "2026-11-08T03:10:56Z"
+  },
+  {
    "kind": "whale_move",
    "ticker": "BHOLE",
    "tag": "w-f3186187",
-   "delta": 31958644877094,
-   "curve_pct": 94.3,
+   "delta": 5000190428289,
    "decimals": 6,
-   "qty": 31958644.8771,
-   "pct": 1254.2,
-   "at": "2026-11-08T01:11:17Z"
+   "qty": 5000190.4283,
+   "ada_equiv": 203,
+   "value_basis": "ada_leg_rate",
+   "pct": 14.5,
+   "at": "2026-11-08T03:10:56Z"
   }
  ],
  "recent": [
-  {
-   "kind": "coordinated_buys",
-   "ticker": "BREAK",
-   "wallets": [
-    "w-399e339a",
-    "w-52022d69",
-    "w-5db66427",
-    "w-9d7e7db5",
-    "w-aaa2ce16",
-    "w-df91c5f7",
-    "w-ec71c05d",
-    "w-f7844f67"
-   ],
-   "window_s": 120,
-   "at": "2026-11-05T01:12:28Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "BREAK",
-   "wallets": [
-    "w-52022d69",
-    "w-aaa2ce16",
-    "w-df91c5f7",
-    "w-ec71c05d"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-05T01:12:28Z"
-  },
-  {
-   "kind": "coordinated_buys",
-   "ticker": "CAPY",
-   "wallets": [
-    "w-11841397",
-    "w-1951f36c",
-    "w-35a8fb6e",
-    "w-6139bb7d",
-    "w-9d7e7db5",
-    "w-babe0a60",
-    "w-c00578fe",
-    "w-f7844f67"
-   ],
-   "window_s": 120,
-   "at": "2026-11-05T01:12:28Z"
-  },
   {
    "kind": "fresh_wallet_swarm",
    "ticker": "CAPY",
@@ -3583,11 +3560,43 @@
    "qty": 31958644.8771,
    "pct": 1254.2,
    "at": "2026-11-08T01:11:17Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "WAR",
+   "wallet": "w-05ca7732",
+   "tags": [],
+   "at": "2026-11-08T03:10:56Z"
+  },
+  {
+   "kind": "holders_down_mcap_up",
+   "ticker": "SHARKY",
+   "holders": [
+    62,
+    61
+   ],
+   "mcap_ada": [
+    60051,
+    64416
+   ],
+   "at": "2026-11-08T03:10:56Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "BHOLE",
+   "tag": "w-f3186187",
+   "delta": 5000190428289,
+   "decimals": 6,
+   "qty": 5000190.4283,
+   "ada_equiv": 203,
+   "value_basis": "ada_leg_rate",
+   "pct": 14.5,
+   "at": "2026-11-08T03:10:56Z"
   }
  ],
  "api_calls": {
   "blockfrost": 1,
-  "koios": 3
+  "koios": 2
  },
  "thresholds": {
   "enabled": true,
