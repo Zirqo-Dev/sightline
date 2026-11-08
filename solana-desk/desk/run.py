@@ -5,7 +5,7 @@ Mode "fill" = scan + paper fill step (desk/fills.py); allowed only when config.F
 Mode "auto" (workflow default) = fill when allowed, else scan.
 Free public APIs only: DexScreener, RugCheck, Jupiter quote (optional free key in JUPITER_API_KEY).
 """
-import argparse, json, os, sys, time, urllib.request, urllib.error
+import argparse, json, os, re, sys, time, urllib.request, urllib.error
 from . import config as C, skips, ledger, fills, observe, v2log
 
 SOL = "So11111111111111111111111111111111111111112"
@@ -157,16 +157,119 @@ def quote(get, mint, key, sleep=time.sleep, input_mint=SOL, amount=None):
         try:
             return get(url, hdr) if hdr else get(url)
         except urllib.error.HTTPError as e:
-            body = ""
-            try: body = e.read().decode(errors="ignore")
-            except Exception: pass
-            if e.code == 400 and ("NO_ROUTE" in body.upper() or "COULD_NOT_FIND" in body.upper()):
+            route, text = _consume_http_error(e)
+            if e.code == 400 and route:
                 return {}  # real "no route" -> execution skip, not a data failure
+            e.sightline_body = text
             if attempt == 0 and (e.code == 429 or e.code >= 500):
                 sleep(RETRY_WAIT_S); continue
             raise
 
 ERR_NAMES = {"dex": "dexscreener", "rug": "rugcheck", "jup": "jupiter"}
+
+_BODY_MAX = 65536
+_DETAIL_MAX = 300
+_ROUTE_MARKERS = (b"NO_ROUTE", b"COULD_NOT_FIND")
+# Machine codes only. Free-text messages are never stored.
+_ERROR_ENUM = {
+    "TOKEN_NOT_TRADABLE": "token_not_tradable",
+    "NO_ROUTES_FOUND": "no_routes_found",
+    "COULD_NOT_FIND_ANY_ROUTE": "could_not_find_any_route",
+}
+_STRUCT_KEYS = frozenset(("errorCode", "code", "error", "message", "msg"))
+_HOSTILE = re.compile(
+    r"(https?://|www\.|authorization|x-api-key|\bbearer\b|ghp_|ghs_|github_pat_|stake1|addr1|BEGIN |PRIVATE KEY|@|0x[0-9A-Fa-f])",
+    re.I,
+)
+_LONG_SECRET = re.compile(
+    r"[1-9A-HJ-NP-Za-km-z]{32,}|[0-9A-Fa-f]{32,}"
+)
+_SKIP_REASON = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
+_ENDPOINTS = {"rug": "rugcheck_report", "jup": "jupiter_quote"}
+
+
+def _consume_http_error(exc):
+    """Return (no_route, log_text).
+
+    The no-route markers are detected across the whole body, including past
+    the logging cap. log_text is the UTF-8 body only when it fits the cap.
+    A larger or non-UTF-8 body is not returned.
+    """
+    marker = False
+    buf = bytearray()
+    total = 0
+    carry = b""
+    tail = len(b"COULD_NOT_FIND") - 1
+    try:
+        while True:
+            part = exc.read(8192)
+            if not part:
+                break
+            if not isinstance(part, (bytes, bytearray)):
+                return False, None
+            part = bytes(part)
+            window = carry + part
+            upper = window.upper()
+            if any(needle in upper for needle in _ROUTE_MARKERS):
+                marker = True
+            total += len(part)
+            if buf is not None and total <= _BODY_MAX:
+                buf.extend(part)
+            else:
+                buf = None
+            carry = window[-tail:]
+    except Exception:
+        return False, None
+    if buf is None:
+        return marker, None
+    try:
+        return marker, bytes(buf).decode("utf-8")
+    except UnicodeError:
+        return marker, None
+
+
+def _poison_text(text):
+    """True when a decoded string is not safe to treat as an error document."""
+    if any(ord(c) > 126 for c in text):
+        return True
+    if _HOSTILE.search(text) or _LONG_SECRET.search(text):
+        return True
+    return False
+
+
+def sanitize_error_body(text):
+    """Map a known error code, or return empty.
+
+    json.loads runs first, so unicode escapes are decoded before the check.
+    Unknown keys, nested values, and poison in any field reject the body.
+    Message text is never copied.
+    """
+    if not isinstance(text, str) or not text.strip():
+        return ""
+    try:
+        doc = json.loads(text)
+    except json.JSONDecodeError:
+        return ""
+    if not isinstance(doc, dict) or not doc:
+        return ""
+    decoded = []
+    for key, val in doc.items():
+        if not isinstance(key, str) or key not in _STRUCT_KEYS or not isinstance(val, str):
+            return ""
+        decoded.append(key)
+        decoded.append(val)
+    if any(_poison_text(item) for item in decoded):
+        return ""
+    code = None
+    for key in ("errorCode", "code", "error"):
+        if key in doc:
+            code = doc[key]
+            break
+    mapped = _ERROR_ENUM.get(code)
+    if not mapped or len(mapped) > _DETAIL_MAX:
+        return ""
+    return mapped
+
 
 def fetch_fail_code(exc):
     """Short token for one failed fetch. Log only: skips.classify does not read it.
@@ -195,8 +298,32 @@ def fetch_fail_code(exc):
         return "conn"
     return "error"
 
+def _error_text(exc):
+    if not isinstance(exc, urllib.error.HTTPError) or getattr(exc, "code", None) == 200:
+        return None
+    if hasattr(exc, "sightline_body"):
+        return exc.sightline_body
+    _route, text = _consume_http_error(exc)
+    return text
+
+
 def _fail_reason(label, exc):
-    return f"{ERR_NAMES[label]}:{fetch_fail_code(exc)}"
+    base = ERR_NAMES[label] + ":" + fetch_fail_code(exc)
+    endpoint = _ENDPOINTS.get(label)
+    if not endpoint or not isinstance(exc, urllib.error.HTTPError):
+        return base
+    detail = sanitize_error_body(_error_text(exc))
+    out = base + ";endpoint:" + endpoint
+    if detail:
+        out += ";detail:" + detail
+    return out
+
+
+def _skip_fail_reason(reason):
+    """Non-empty log for a skip that was not a fetch error. Not a source token."""
+    if _SKIP_REASON.fullmatch(reason or ""):
+        return "skip:" + reason
+    return "skip:unknown"
 
 
 WOULD_NAME = "rugger_would_veto.json"
@@ -451,7 +578,8 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
             ledger.task(data_dir, dict(
                 time=int(now), run_id=run_id, agent="scanner", task="scan", mint=mint, book="",
                 result="skip", skip_type="data", reason="invalid_mint", source=src,
-                check_delay_s=0, cfg_version=C.CFG_VERSION, seed=seed, error_src="", fail_reason="",
+                check_delay_s=0, cfg_version=C.CFG_VERSION, seed=seed, error_src="",
+                fail_reason=_skip_fail_reason("invalid_mint"),
             ))
             continue
         if i: sleep(QUOTE_GAP_S)  # pace Jupiter (and RugCheck) instead of bursting 12 calls
@@ -469,11 +597,14 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
         st["checks"] += 1; st["errors"] += int(err); st["data_failures"] += int(stype == "data")
         st["eligibility_skips"] += int(stype == "eligibility")
         run_leads.append(dict(mint=mint, stype=stype, reason=reason, quote=q, pair=pair))
+        fail_cell = ";".join(sorted(reasons))
+        if stype and not fail_cell:
+            fail_cell = _skip_fail_reason(reason)
         ledger.task(data_dir, dict(time=int(now), run_id=run_id, agent="scanner", task="scan", mint=mint, book="",
                     result="pass" if stype is None else "skip", skip_type=stype or "", reason=reason or "",
                     source=src, check_delay_s=round(time.time() - t0, 2), cfg_version=C.CFG_VERSION, seed=seed,
                     error_src=";".join(sorted(ERR_NAMES[e] for e in errs)),
-                    fail_reason=";".join(sorted(reasons))))
+                    fail_reason=fail_cell))
         # Log-only. stype, reason, and run_leads are already fixed. Fills do not read this.
         # The 5s budget is time inside this hook only. Quote pacing and HTTP are not counted.
         hook_t0 = time.monotonic()
