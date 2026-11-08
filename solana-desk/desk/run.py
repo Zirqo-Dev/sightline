@@ -157,11 +157,10 @@ def quote(get, mint, key, sleep=time.sleep, input_mint=SOL, amount=None):
         try:
             return get(url, hdr) if hdr else get(url)
         except urllib.error.HTTPError as e:
-            raw = _read_error_bytes(e)
-            lossy = raw.decode("utf-8", errors="ignore") if raw else ""
-            if e.code == 400 and ("NO_ROUTE" in lossy.upper() or "COULD_NOT_FIND" in lossy.upper()):
+            route, text = _consume_http_error(e)
+            if e.code == 400 and route:
                 return {}  # real "no route" -> execution skip, not a data failure
-            e.sightline_body = _utf8_or_none(raw)
+            e.sightline_body = text
             if attempt == 0 and (e.code == 429 or e.code >= 500):
                 sleep(RETRY_WAIT_S); continue
             raise
@@ -170,74 +169,106 @@ ERR_NAMES = {"dex": "dexscreener", "rug": "rugcheck", "jup": "jupiter"}
 
 _BODY_MAX = 65536
 _DETAIL_MAX = 300
+_ROUTE_MARKERS = (b"NO_ROUTE", b"COULD_NOT_FIND")
+# Machine codes only. Free-text messages are never stored.
+_ERROR_ENUM = {
+    "TOKEN_NOT_TRADABLE": "token_not_tradable",
+    "NO_ROUTES_FOUND": "no_routes_found",
+    "COULD_NOT_FIND_ANY_ROUTE": "could_not_find_any_route",
+}
+_STRUCT_KEYS = frozenset(("errorCode", "code", "error", "message", "msg"))
 _HOSTILE = re.compile(
-    r"(https?://|www\.|authorization|x-api-key|\bbearer\b|ghp_|ghs_|github_pat_|stake1|addr1|BEGIN |@)",
+    r"(https?://|www\.|authorization|x-api-key|\bbearer\b|ghp_|ghs_|github_pat_|stake1|addr1|BEGIN |PRIVATE KEY|@|0x[0-9A-Fa-f])",
     re.I,
 )
-_B58_RUN = re.compile(r"(?<![1-9A-HJ-NP-Za-km-z])[1-9A-HJ-NP-Za-km-z]{32,44}(?![1-9A-HJ-NP-Za-km-z])")
+_LONG_SECRET = re.compile(
+    r"[1-9A-HJ-NP-Za-km-z]{32,}|[0-9A-Fa-f]{32,}"
+)
 _SKIP_REASON = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
-_BODY_KEYS = ("errorCode", "code", "error", "message", "msg")
-_CODE_VALUE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,63}$")
-_TEXT_VALUE = re.compile(r"^[A-Za-z0-9_ ]{1,2000}$")
 _ENDPOINTS = {"rug": "rugcheck_report", "jup": "jupiter_quote"}
 
 
-def _read_error_bytes(exc):
-    """Read an HTTP error body once. Longer than the cap is discarded."""
+def _consume_http_error(exc):
+    """Return (no_route, log_text).
+
+    The no-route markers are detected across the whole body, including past
+    the logging cap. log_text is the UTF-8 body only when it fits the cap.
+    A larger or non-UTF-8 body is not returned.
+    """
+    marker = False
+    buf = bytearray()
+    total = 0
+    carry = b""
+    tail = len(b"COULD_NOT_FIND") - 1
     try:
-        raw = exc.read(_BODY_MAX + 1)
+        while True:
+            part = exc.read(8192)
+            if not part:
+                break
+            if not isinstance(part, (bytes, bytearray)):
+                return False, None
+            part = bytes(part)
+            window = carry + part
+            upper = window.upper()
+            if any(needle in upper for needle in _ROUTE_MARKERS):
+                marker = True
+            total += len(part)
+            if buf is not None and total <= _BODY_MAX:
+                buf.extend(part)
+            else:
+                buf = None
+            carry = window[-tail:]
     except Exception:
-        return b""
-    if not isinstance(raw, (bytes, bytearray)) or len(raw) > _BODY_MAX:
-        return b""
-    return bytes(raw)
-
-
-def _utf8_or_none(raw):
-    if not raw:
-        return ""
+        return False, None
+    if buf is None:
+        return marker, None
     try:
-        return raw.decode("utf-8")
+        return marker, bytes(buf).decode("utf-8")
     except UnicodeError:
-        return None
+        return marker, None
+
+
+def _poison_text(text):
+    """True when a decoded string is not safe to treat as an error document."""
+    if any(ord(c) > 126 for c in text):
+        return True
+    if _HOSTILE.search(text) or _LONG_SECRET.search(text):
+        return True
+    return False
 
 
 def sanitize_error_body(text):
-    """Allowlisted error fields, or empty when the body is not safe to keep.
+    """Map a known error code, or return empty.
 
-    The whole text is judged before any truncation. A hit anywhere discards
-    the body. Only a few JSON string fields are kept, and the kept text is
-    then cut to 300 characters.
+    json.loads runs first, so unicode escapes are decoded before the check.
+    Unknown keys, nested values, and poison in any field reject the body.
+    Message text is never copied.
     """
-    if not isinstance(text, str) or not text:
-        return ""
-    if any(ord(c) > 126 for c in text):
-        return ""
-    if _HOSTILE.search(text) or _B58_RUN.search(text):
+    if not isinstance(text, str) or not text.strip():
         return ""
     try:
         doc = json.loads(text)
     except json.JSONDecodeError:
         return ""
-    if not isinstance(doc, dict):
+    if not isinstance(doc, dict) or not doc:
         return ""
-    parts = []
-    for key in _BODY_KEYS:
-        if key not in doc:
-            continue
-        val = doc[key]
-        if not isinstance(val, str):
+    decoded = []
+    for key, val in doc.items():
+        if not isinstance(key, str) or key not in _STRUCT_KEYS or not isinstance(val, str):
             return ""
-        pat = _TEXT_VALUE if key in ("message", "msg") else _CODE_VALUE
-        if not pat.fullmatch(val):
-            return ""
-        parts.append(key + "=" + val)
-    if not parts:
+        decoded.append(key)
+        decoded.append(val)
+    if any(_poison_text(item) for item in decoded):
         return ""
-    out = ",".join(parts)
-    if _HOSTILE.search(out) or _B58_RUN.search(out) or ";" in out or ":" in out:
+    code = None
+    for key in ("errorCode", "code", "error"):
+        if key in doc:
+            code = doc[key]
+            break
+    mapped = _ERROR_ENUM.get(code)
+    if not mapped or len(mapped) > _DETAIL_MAX:
         return ""
-    return out[:_DETAIL_MAX]
+    return mapped
 
 
 def fetch_fail_code(exc):
@@ -272,7 +303,8 @@ def _error_text(exc):
         return None
     if hasattr(exc, "sightline_body"):
         return exc.sightline_body
-    return _utf8_or_none(_read_error_bytes(exc))
+    _route, text = _consume_http_error(exc)
+    return text
 
 
 def _fail_reason(label, exc):
@@ -546,7 +578,8 @@ def scan(data_dir, get=http_json, key=None, now=None, mode="scan", sleep=None, c
             ledger.task(data_dir, dict(
                 time=int(now), run_id=run_id, agent="scanner", task="scan", mint=mint, book="",
                 result="skip", skip_type="data", reason="invalid_mint", source=src,
-                check_delay_s=0, cfg_version=C.CFG_VERSION, seed=seed, error_src="", fail_reason="",
+                check_delay_s=0, cfg_version=C.CFG_VERSION, seed=seed, error_src="",
+                fail_reason=_skip_fail_reason("invalid_mint"),
             ))
             continue
         if i: sleep(QUOTE_GAP_S)  # pace Jupiter (and RugCheck) instead of bursting 12 calls

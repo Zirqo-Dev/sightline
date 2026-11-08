@@ -96,7 +96,8 @@ class SolanaAddress(unittest.TestCase):
         for row in invalid:
             self.assertEqual(row["result"], "skip")
             self.assertEqual(row["skip_type"], "data")
-            self.assertEqual(row["fail_reason"], "")
+            self.assertEqual(row["fail_reason"], "skip:invalid_mint")
+            self.assertFalse(row["fail_reason"].startswith(("rugcheck:", "jupiter:", "dexscreener:")))
         self.assertTrue(any(row["mint"] == VALID and row["result"] == "pass" for row in rows))
 
     def test_invalid_mint_is_not_paper_traded(self):

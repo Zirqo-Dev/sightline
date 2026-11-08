@@ -17,9 +17,10 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
 from desk import run  # noqa: E402
+from tests.decision_market import address_n  # noqa: E402
 import data_health_alert as alert  # noqa: E402
 
-MINT = "MintReply11111111111111111111111111111111"
+MINT = address_n(9101)
 NOW = 1793383000
 WALLET = "So11111111111111111111111111111111111111112"
 KEY = "super-secret-key-value"
@@ -82,9 +83,10 @@ def _degraded(rows):
 
 
 class SanitizeBody(unittest.TestCase):
-    def test_allowlisted_code_is_kept(self):
-        text = json.dumps({"errorCode": "TOKEN_NOT_TRADABLE", "ignored": "nope"})
-        self.assertEqual(run.sanitize_error_body(text), "errorCode=TOKEN_NOT_TRADABLE")
+    def test_known_code_is_kept_and_message_is_not(self):
+        text = json.dumps({"errorCode": "TOKEN_NOT_TRADABLE", "message": "rejected"})
+        self.assertEqual(run.sanitize_error_body(text), "token_not_tradable")
+        self.assertNotIn("rejected", run.sanitize_error_body(text))
 
     def test_hostile_body_is_discarded_before_truncation(self):
         pad = "AB_" * 150
@@ -109,14 +111,26 @@ class SanitizeBody(unittest.TestCase):
                 self.assertNotIn("https://", got)
                 self.assertNotIn("ghp_", got)
 
-    def test_long_safe_message_is_cut_after_the_check(self):
+    def test_long_message_is_not_stored(self):
         message = "AB_" * 400
-        text = json.dumps({"message": message})
+        text = json.dumps({"errorCode": "TOKEN_NOT_TRADABLE", "message": message})
         got = run.sanitize_error_body(text)
-        self.assertLessEqual(len(got), 300)
-        self.assertTrue(got.startswith("message=AB_"))
+        self.assertEqual(got, "token_not_tradable")
         self.assertNotIn(message, got)
-        self.assertNotIn(message[300:], got)
+        self.assertLessEqual(len(got), 300)
+
+    def test_hex_long_base58_private_key_nested_and_escaped_at(self):
+        samples = [
+            json.dumps({"errorCode": "TOKEN_NOT_TRADABLE", "message": "0x" + "ab" * 20}),
+            json.dumps({"errorCode": "TOKEN_NOT_TRADABLE", "message": "1" * 64}),
+            json.dumps({"errorCode": "TOKEN_NOT_TRADABLE", "message": "-----BEGIN PRIVATE KEY-----"}),
+            json.dumps({"errorCode": "TOKEN_NOT_TRADABLE", "extra": "fine"}),
+            json.dumps({"errorCode": "TOKEN_NOT_TRADABLE", "error": {"code": "TOKEN_NOT_TRADABLE"}}),
+            '{"errorCode":"TOKEN_NOT_TRADABLE","message":"\\u0040tracked"}',
+            json.dumps({"errorCode": "BAD_MINT"}),
+        ]
+        for text in samples:
+            self.assertEqual(run.sanitize_error_body(text), "", text[:80])
 
     def test_absent_and_non_json_and_nested_are_discarded(self):
         self.assertEqual(run.sanitize_error_body(None), "")
@@ -128,7 +142,7 @@ class SanitizeBody(unittest.TestCase):
 
 class LoggedReply(unittest.TestCase):
     def test_rugcheck_400_keeps_status_name_and_safe_body(self):
-        body = json.dumps({"errorCode": "BAD_MINT", "message": "rejected"})
+        body = json.dumps({"errorCode": "TOKEN_NOT_TRADABLE", "message": "rejected"})
 
         def leads(url, headers=None):
             if "/latest/dex/tokens/" in url:
@@ -143,7 +157,9 @@ class LoggedReply(unittest.TestCase):
         cell = rows[0]["fail_reason"]
         self.assertIn("rugcheck:400", cell)
         self.assertIn("endpoint:rugcheck_report", cell)
-        self.assertIn("detail:errorCode=BAD_MINT,message=rejected", cell)
+        self.assertIn("detail:token_not_tradable", cell)
+        self.assertNotIn("rejected", cell)
+        self.assertNotIn("TOKEN_NOT_TRADABLE", cell)
         self.assertNotIn("http://", cell)
         self.assertNotIn("https://", cell)
         self.assertNotIn(KEY, cell)
@@ -270,3 +286,63 @@ class LoggedReply(unittest.TestCase):
         self.assertEqual(runs[bad[0]]["sources"], {name: 0 for name in alert.SOURCES})
         self.assertNotIn("rugcheck:", miss_rows[0]["fail_reason"])
         self.assertNotIn("jupiter:", miss_rows[0]["fail_reason"])
+
+    def test_persisted_row_drops_poison_and_keeps_oversized_no_route(self):
+        wallet = "0x" + "ab" * 20
+        ones = "1" * 64
+        key = "-----BEGIN PRIVATE KEY-----"
+        cases = {
+            "hex": json.dumps({"errorCode": "TOKEN_NOT_TRADABLE", "message": wallet}).encode(),
+            "ones": json.dumps({"errorCode": "TOKEN_NOT_TRADABLE", "message": ones}).encode(),
+            "pem": json.dumps({"errorCode": "TOKEN_NOT_TRADABLE", "message": key}).encode(),
+            "nested": json.dumps({"errorCode": "TOKEN_NOT_TRADABLE", "error": {"code": "X"}}).encode(),
+            "escaped": b'{"errorCode":"TOKEN_NOT_TRADABLE","message":"\\u0040tracked"}',
+            "utf8": b'\xff\xfe{"errorCode":"TOKEN_NOT_TRADABLE"}',
+        }
+
+        def leads(kind):
+            def one(url, headers=None):
+                if "/latest/dex/tokens/" in url:
+                    return {"pairs": [_pair()]}
+                if "rugcheck" in url:
+                    raise _http(400, cases[kind])
+                if "jup.ag" in url:
+                    return QUOTE
+                raise AssertionError(url)
+            return one
+
+        for kind, raw in cases.items():
+            d, _h, rows, _calls = _scan(leads(kind))
+            with open(os.path.join(d, "tasks.csv"), "rb") as fh:
+                blob = fh.read()
+            cell = rows[0]["fail_reason"]
+            self.assertIn("rugcheck:400", cell, kind)
+            self.assertIn("endpoint:rugcheck_report", cell, kind)
+            self.assertNotIn("detail:", cell, kind)
+            self.assertNotIn(wallet.encode(), blob, kind)
+            self.assertNotIn(ones.encode(), blob, kind)
+            self.assertNotIn(b"PRIVATE KEY", blob, kind)
+            self.assertNotIn(b"\xff", blob, kind)
+            self.assertNotIn(b"@tracked", blob, kind)
+            self.assertNotIn(b"\\u0040", blob, kind)
+
+        pad = b"A" * 70000
+        huge = b'{"errorCode":"COULD_NOT_FIND_ANY_ROUTE","pad":"' + pad + b'"}'
+
+        def no_route(url, headers=None):
+            if "/latest/dex/tokens/" in url:
+                return {"pairs": [_pair()]}
+            if "rugcheck" in url:
+                return RC
+            if "jup.ag" in url:
+                raise _http(400, huge)
+            raise AssertionError(url)
+
+        d, _h, rows, _calls = _scan(no_route)
+        with open(os.path.join(d, "tasks.csv"), "rb") as fh:
+            blob = fh.read()
+        self.assertNotIn(b"jupiter:400", blob)
+        self.assertNotIn(pad[:100], blob)
+        self.assertEqual(rows[0]["fail_reason"], "skip:" + rows[0]["reason"])
+        self.assertEqual(alert.tokens(rows[0]["fail_reason"]), [])
+        self.assertNotEqual(rows[0]["skip_type"], "data")
