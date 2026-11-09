@@ -1,11 +1,11 @@
 {
- "at": "2026-11-09T17:13:38Z",
+ "at": "2026-11-09T19:12:44Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14179003,
+ "height": 14179446,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 1719.42164,
+ "ada_balance": 1417.049476,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 310346041399,
@@ -73,7 +73,7 @@
   "MISS": 17500000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1129786411090,
+  "NIGHT": 1131128830048,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -185,7 +185,7 @@
   "MISS": 17500000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1129786411090,
+  "NIGHT": 1131128830048,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -564,7 +564,7 @@
   {
    "token": "NIGHT",
    "policy": "0691b2fe",
-   "qty": 1129786411090
+   "qty": 1131128830048
   },
   {
    "token": "NIKY",
@@ -14472,17 +14472,6 @@
   }
  },
  "rows": [
-  {
-   "time": "2026-10-27T13:36:59Z",
-   "tx_short": "6348b72395",
-   "kind": "order_open",
-   "token": "ADA",
-   "qty": 158800000,
-   "ada_leg": 158.8,
-   "counterparty_tag": null,
-   "order_ref_short": "6348b72395#0",
-   "order_status": "open"
-  },
   {
    "time": "2026-10-27T13:36:59Z",
    "tx_short": "6348b72395",
@@ -45958,6 +45947,16 @@
    "qty": 1000000000000,
    "ada_leg": null,
    "counterparty_tag": "w-9eb5e296"
+  },
+  {
+   "time": "2026-11-09T19:00:00Z",
+   "tx_short": "1eb61f214c",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 1342418958,
+   "ada_leg": 302.162179,
+   "counterparty_tag": null,
+   "direction": "buy"
   }
  ],
  "capped": false,
