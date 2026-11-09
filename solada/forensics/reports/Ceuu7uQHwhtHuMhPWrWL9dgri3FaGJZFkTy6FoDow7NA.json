@@ -8,8 +8,8 @@
   "mint": "Ceuu7uQHwhtHuMhPWrWL9dgri3FaGJZFkTy6FoDow7NA",
   "symbol": "QBITS",
   "symbol_source": "dexscreener",
-  "run_at": "2026-11-08T15:27:00Z",
-  "run_at_unix": 1794151620,
+  "run_at": "2026-11-09T18:58:50Z",
+  "run_at_unix": 1794250730,
   "creation_slot": 458581711,
   "creation_time": 1792358369,
   "creation_time_iso": "2026-10-18T21:19:29Z",
@@ -736,6 +736,33 @@
       }
     },
     {
+      "token_account": "w-8ce2ecdd",
+      "owner": "w-27463f75",
+      "amount_raw": "11743523000000",
+      "pct_supply": 1.1744,
+      "label": null,
+      "source": "holder",
+      "funding": {
+        "status": "traced",
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "w-27463f75",
+            "status": "traced",
+            "funder": "w-687cfcb2",
+            "asset": "SOL",
+            "amount_raw": "830240",
+            "kind": "system.transfer",
+            "funded_at": 1792360060,
+            "signature": "29JFZDfZgasfWoHfrGHWP7sJCbRF9rr4izoa87gow3qEZBDa72TdnEjWGCxX1Z4k1h7uMiZjheJ1kjXCe4aR3GdD",
+            "label": "INFRA:Solada deployer",
+            "reached_oldest": true,
+            "wallet_age_seconds": -1691
+          }
+        ]
+      }
+    },
+    {
       "token_account": "w-a3aa00fe",
       "owner": "w-48d50173",
       "amount_raw": "10895255153627",
@@ -777,10 +804,10 @@
       }
     },
     {
-      "token_account": "w-8ce2ecdd",
-      "owner": "w-27463f75",
-      "amount_raw": "10039852000000",
-      "pct_supply": 1.004,
+      "token_account": "w-8131bf40",
+      "owner": "w-2681f755",
+      "amount_raw": "9263710000000",
+      "pct_supply": 0.9264,
       "label": null,
       "source": "holder",
       "funding": {
@@ -788,26 +815,26 @@
         "hops": [
           {
             "hop": 1,
-            "wallet": "w-27463f75",
+            "wallet": "w-2681f755",
             "status": "traced",
             "funder": "w-687cfcb2",
-            "asset": "SOL",
-            "amount_raw": "830240",
-            "kind": "system.transfer",
-            "funded_at": 1792360060,
-            "signature": "29JFZDfZgasfWoHfrGHWP7sJCbRF9rr4izoa87gow3qEZBDa72TdnEjWGCxX1Z4k1h7uMiZjheJ1kjXCe4aR3GdD",
+            "asset": "USDC",
+            "amount_raw": "110693574",
+            "kind": "spl-token.transferChecked",
+            "funded_at": 1791997008,
+            "signature": "3Hp5P9JrAyLGynBZTcfXae8TPVc5PuGmp7r1wjufZx3hMqBBiRn6QPupEC1xtnBEQvh9qRHLEGm25QYbZv3toSH1",
             "label": "INFRA:Solada deployer",
             "reached_oldest": true,
-            "wallet_age_seconds": -1691
+            "wallet_age_seconds": 361361
           }
         ]
       }
     },
     {
-      "token_account": "w-83fff104",
-      "owner": "w-49006a97",
-      "amount_raw": "2372506000000",
-      "pct_supply": 0.2373,
+      "token_account": "w-15a3c5d0",
+      "owner": "w-b4afab73",
+      "amount_raw": "1142953000000",
+      "pct_supply": 0.1143,
       "label": null,
       "source": "holder",
       "funding": {
@@ -815,17 +842,31 @@
         "hops": [
           {
             "hop": 1,
-            "wallet": "w-49006a97",
+            "wallet": "w-b4afab73",
             "status": "traced",
-            "funder": "w-687cfcb2",
+            "funder": "w-59731005",
             "asset": "SOL",
-            "amount_raw": "830240",
+            "amount_raw": "5000000",
             "kind": "system.transfer",
-            "funded_at": 1792575557,
-            "signature": "5u6z3X5pe4XppvNrJUM2FhpQMYb5CrVBsHyg2yJZ4sp2uPR4GtQJXHAzs8K4ffU8H8XWnumpk6SwiGTUM1zLAXRc",
-            "label": "INFRA:Solada deployer",
+            "funded_at": 1794249493,
+            "signature": "2dQZRQDEAV9aHqf4B1eD2YzgiAXcG4zq3LtscHcBjYp5BMjPvFn13iBHfG6ht6vWSx2C14P79MF1yqNHQoUpHUXb",
+            "label": null,
             "reached_oldest": true,
-            "wallet_age_seconds": -217188
+            "wallet_age_seconds": -1891124
+          },
+          {
+            "hop": 2,
+            "wallet": "w-59731005",
+            "status": "no_incoming",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "reached_oldest": true,
+            "wallet_age_seconds": -330910
           }
         ]
       }
@@ -1040,17 +1081,17 @@
     "history_too_deep": false,
     "calls_used": {
       "getTokenSupply": 1,
-      "getSignaturesForAddress": 72,
-      "getTransaction": 38,
+      "getSignaturesForAddress": 74,
+      "getTransaction": 39,
       "getTokenAccountsByOwner": 23,
       "getTokenLargestAccounts": 1,
-      "getAccountInfo": 18
+      "getAccountInfo": 20
     },
-    "calls_total": 153,
+    "calls_total": 158,
     "budget": 5000,
     "wallets_skipped_old": 4,
     "wallets_unresolved_busy": 8,
-    "cache_hits": 16,
+    "cache_hits": 17,
     "version_unsupported": 0,
     "probable_infra_hubs": [],
     "labels_dropped": [],
