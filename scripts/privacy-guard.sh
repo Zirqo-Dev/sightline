@@ -121,12 +121,15 @@ else
 fi
 
 # desk-data publishes solada-prefilter/dev_checks.json, liquidity_moves.json and vetoes.json.
-# In --root mode (desk-data-guard and the prefilter push) those files are always
+# nft-data publishes nft-pilot/status.json, units.jsonl and books.json.
+# Those three are skipped when the file is absent, so a desk-data --root scan
+# (which does not contain nft-pilot/) still checks the same files it checked before.
+# In --root mode (desk-data-guard, the prefilter push, and the nft snapshot push) those files are always
 # part of the scan, even if the caller passed a list that left them out. Pattern
 # and allowlist handling below is unchanged. A platform address is masked in these files too.
 # A stake key is not on the allowlist, so it still fails.
 if [ -n "${root_mode:-}" ]; then
-  for need in solada-prefilter/dev_checks.json solada-prefilter/liquidity_moves.json solada-prefilter/vetoes.json solana-desk/rugger_would_veto.json solada-prefilter/whale_roster.json; do
+  for need in solada-prefilter/dev_checks.json solada-prefilter/liquidity_moves.json solada-prefilter/vetoes.json solana-desk/rugger_would_veto.json solada-prefilter/whale_roster.json nft-pilot/status.json nft-pilot/units.jsonl nft-pilot/books.json; do
     [ -f "$need" ] || continue
     have=0
     for f in "${files[@]}"; do
