@@ -5,7 +5,7 @@
   "measured_factor": true,
   "min_sample": 8,
   "dormant_count": 11,
-  "asof": "2026-11-09T05:15:41Z",
+  "asof": "2026-11-09T07:16:23Z",
   "note": "Research tally. A hit is an observed checkpoint where every measured series (price and liquidity) moves the whale's way at +1h, +6h, or +24h. A wrong-way observation is a miss. No observation is unobserved and is not a miss. n_observed is hits plus misses. Rates stay blank under 8 observed checkpoints on that horizon in that tally. scores.live is the forward quote path, or the lead's published private-cache tally. scores.backfill is approximate: nearest desk-data ADA/qty within 20 minutes at 1h, 60 minutes at 6h, and 3 hours at 24h, plus pool ADA when a snapshot is in that window. Backfill never replaces live. eligible_for_active needs at least 25 live observed checkpoints and a live hit rate above 55% at both 6h and 24h. promising_backfill means the approximate tally alone would clear that bar. Nothing is promoted automatically. Not a buy signal.",
   "whales": [
     {
@@ -13,7 +13,7 @@
       "role": "lead",
       "status": "active",
       "eligible_for_active": false,
-      "eligible_reason": "not eligible: live 6h observed 283, rate 0.329 (need > 0.55); live 24h observed 250, rate 0.284 (need > 0.55); promotion is a manual owner decision",
+      "eligible_reason": "not eligible: live 6h observed 284, rate 0.327 (need > 0.55); live 24h observed 251, rate 0.283 (need > 0.55); promotion is a manual owner decision",
       "promising_backfill": false,
       "scores": {
         "events": 1453,
@@ -27,14 +27,14 @@
             "hit_rate": 0.374
           },
           "h6": {
-            "n_observed": 283,
+            "n_observed": 284,
             "hits": 93,
-            "hit_rate": 0.329
+            "hit_rate": 0.327
           },
           "h24": {
-            "n_observed": 250,
+            "n_observed": 251,
             "hits": 71,
-            "hit_rate": 0.284
+            "hit_rate": 0.283
           }
         },
         "backfill": {
@@ -60,14 +60,14 @@
         "priced_h1": 286,
         "hits_h1": 107,
         "hit_rate_h1": 0.374,
-        "n_observed_h6": 283,
-        "priced_h6": 283,
+        "n_observed_h6": 284,
+        "priced_h6": 284,
         "hits_h6": 93,
-        "hit_rate_h6": 0.329,
-        "n_observed_h24": 250,
-        "priced_h24": 250,
+        "hit_rate_h6": 0.327,
+        "n_observed_h24": 251,
+        "priced_h24": 251,
         "hits_h24": 71,
-        "hit_rate_h24": 0.284,
+        "hit_rate_h24": 0.283,
         "small_sample": false,
         "social_moves_matched": null
       }
