@@ -50,8 +50,9 @@
       "required": [
         "schema_version", "kind", "status", "measured", "partial", "ran_at", "commit_sha", "rule",
         "data_branch", "avoids_branch", "opensea_calls", "rate_limit", "floor_passing_this_run",
-        "pending", "units", "unsellable_share", "median_cost", "median_cost_seasoned", "pace_median",
-        "pace_ready", "nh04_ready", "eth_usd", "raw", "reason", "attribution"
+        "pending", "units", "unsellable_share", "median_cost", "median_cost_seasoned",
+        "null_cost_count", "null_cost_share", "null_cost_share_max", "pace_median",
+        "pace_ready", "nh04", "nh04_ready", "buyer_fee_eth", "eth_usd", "raw", "reason", "attribution"
       ],
       "properties": {
         "schema_version": { "const": 1 },
@@ -81,11 +82,16 @@
         "unsellable_share": { "type": ["number", "null"] },
         "median_cost": { "type": ["number", "null"] },
         "median_cost_seasoned": { "type": ["number", "null"] },
+        "null_cost_count": { "type": ["integer", "null"], "minimum": 0 },
+        "null_cost_share": { "type": ["number", "null"] },
+        "null_cost_share_max": { "const": 0.2 },
         "pace_median": { "type": ["number", "null"] },
         "pace_ready": { "type": "boolean" },
+        "nh04": { "enum": ["ready", "not_ready"] },
         "nh04_ready": { "type": "boolean" },
+        "buyer_fee_eth": { "const": 0 },
         "eth_usd": { "type": ["number", "null"] },
-        "raw": { "enum": ["skipped", "dropped", "pushed", "refused", "error"] },
+        "raw": { "const": "not_kept" },
         "reason": { "type": ["string", "null"] },
         "attribution": { "type": "string" }
       }

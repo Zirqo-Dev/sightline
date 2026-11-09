@@ -51,14 +51,21 @@ class NH04Tests(unittest.TestCase):
         urllib.request.urlopen = self._urlopen
 
     def test_cost_formula_and_fees_from_the_row(self):
-        gas = 0.01
-        got = P.round_trip(1.0, 0.0, 0.9, 0.01, 0.05, gas)
-        entry, exit_v = 1.01, 0.9 - 0.9 * 0.01 - 0.9 * 0.05 - gas
+        self.assertEqual(P.LEG_GAS_UNITS, 250_000)
+        self.assertEqual(P.ROUND_TRIP_GAS_UNITS, 500_000)
+        leg = P.leg_eth(10 ** 9)
+        self.assertAlmostEqual(leg, 250_000 / 1e9)
+        self.assertAlmostEqual(P.round_trip_eth(10 ** 9), leg * 2)
+        got = P.round_trip(1.0, 0.0, 0.9, 0.01, 0.05, leg)
+        entry = 1.0 + leg
+        exit_v = 0.9 - 0.9 * 0.01 - 0.9 * 0.05 - leg
         self.assertAlmostEqual(got["entry_eth"], entry)
         self.assertAlmostEqual(got["exit_eth"], exit_v)
+        self.assertAlmostEqual(got["entry_eth"] - 1.0, leg)
+        self.assertAlmostEqual(0.9 * 0.94 - got["exit_eth"], leg)
         self.assertAlmostEqual(got["cost"], (entry - exit_v) / entry)
         self.assertFalse(got["unsellable"])
-        with_buyer = P.round_trip(1.0, 0.02, 0.9, 0.01, 0.05, gas)
+        with_buyer = P.round_trip(1.0, 0.02, 0.9, 0.01, 0.05, leg)
         self.assertGreater(with_buyer["entry_eth"], got["entry_eth"])
         self.assertEqual(P.fee_rates([{"fee": 2.5, "required": True}, {"fee": 5, "required": False}]), (0.025, 0.05))
         self.assertIsNone(P.fee_rates(None))
@@ -115,16 +122,18 @@ class NH04Tests(unittest.TestCase):
         self.assertRaises(ValueError, P.asset_id, "solana", ADDR)
         self.assertTrue(P.mint_ok("2020-01-01", NOW))
         self.assertFalse(P.mint_ok("2026-11-01", NOW))
-        self.assertFalse(P.seasoned(["2026-11-0%d" % i for i in range(1, 7)], "2026-11-06"))
-        self.assertTrue(P.seasoned(["2026-11-%02d" % i for i in range(1, 8)], "2026-11-07"))
+        self.assertFalse(P.seasoned(["2026-11-%02d" % i for i in range(1, 8)], "2026-11-07"))
+        self.assertTrue(P.seasoned(["2026-11-%02d" % i for i in range(1, 9)], "2026-11-08"))
 
     def test_gas_uses_the_higher_of_now_and_median(self):
         sample = [{"t": NOW, "chain": "ethereum", "wei": 100}]
         self.assertEqual(P.gas_quote(200, sample, "ethereum", NOW), 200)
         self.assertEqual(P.gas_quote(10, sample, "ethereum", NOW), 55)
         self.assertIsNone(P.gas_quote(None, sample, "ethereum", NOW))
-        self.assertLess(P.upper_bound_calls(), P.MAX_CALLS)
+        self.assertLessEqual(P.upper_bound_calls(), P.MAX_CALLS)
         self.assertLess(P.MAX_CALLS, P.HOURLY_LIMIT)
+        self.assertEqual(P.FLOOR_TARGET, 40)
+        self.assertEqual(P.NULL_COST_MAX, 0.20)
         self.assertEqual(P.ORDER_BY, "num_owners")
         self.assertNotIn("volume", P.ORDER_BY)
         self.assertNotIn("trending", P.PAGE_ENDPOINT)
@@ -200,18 +209,20 @@ class NH04Tests(unittest.TestCase):
         data = tempfile.mkdtemp()
         gas = {"ethereum": 10 ** 9, "base": 10 ** 9}
         fake = Fake()
-        snapshot.run(data, fake, NOW, "sha-1", gas, token="", push=lambda *_a: "dropped")
+        snapshot.run(data, fake, NOW, "sha-1", gas)
         self.assertFalse(os.path.exists(os.path.join(data, "nft-pilot", "units.jsonl")))
         fake.listings_now, fake.offers_now = listings_t1, offers_t1
-        snapshot.run(data, fake, NOW + 3600, "sha-2", gas, token="")
+        snapshot.run(data, fake, NOW + 3600, "sha-2", gas)
         fake.offers_now = offers_new
-        snapshot.run(data, fake, NOW + 7200, "sha-3", gas, token="")
+        snapshot.run(data, fake, NOW + 7200, "sha-3", gas)
         units = [json.loads(line) for line in open(os.path.join(data, "nft-pilot", "units.jsonl"))]
         self.assertEqual(len(units), 2)
         priced, unsold = units
-        self.assertAlmostEqual(priced["entry_eth"], 0.15 + P.wei_to_eth(10 ** 9))
-        self.assertNotAlmostEqual(priced["entry_eth"], 0.10 + P.wei_to_eth(10 ** 9))
-        self.assertAlmostEqual(priced["exit_eth"], 0.09 * (1 - 0.01 - 0.05) - P.wei_to_eth(10 ** 9))
+        leg = P.leg_eth(10 ** 9)
+        self.assertAlmostEqual(priced["gas_eth"], leg)
+        self.assertAlmostEqual(priced["entry_eth"], 0.15 + leg)
+        self.assertNotAlmostEqual(priced["entry_eth"], 0.10 + leg)
+        self.assertAlmostEqual(priced["exit_eth"], 0.09 * (1 - 0.01 - 0.05) - leg)
         self.assertFalse(priced["unsellable"])
         self.assertTrue(priced["fill"])
         self.assertEqual(priced["marketplace_fee_rate"], 0.01)
@@ -230,6 +241,9 @@ class NH04Tests(unittest.TestCase):
         jsonschema.validate(status, schema)
         for unit in units:
             jsonschema.validate(unit, schema)
+        self.assertEqual(status["buyer_fee_eth"], 0.0)
+        self.assertEqual(status["raw"], "not_kept")
+        self.assertEqual(status["null_cost_share_max"], 0.2)
         self.assertEqual(status["data_branch"], "nft-data")
         self.assertEqual(status["avoids_branch"], "desk-data")
         self.assertGreater(status["opensea_calls"], 0)
@@ -250,10 +264,91 @@ class NH04Tests(unittest.TestCase):
         self.assertFalse(status["measured"])
         self.assertIsNone(status["median_cost"])
         self.assertIsNone(status["unsellable_share"])
+        self.assertEqual(status["buyer_fee_eth"], 0.0)
         self.assertFalse(os.path.exists(os.path.join(data, "nft-pilot", "units.jsonl")))
+        again = os.environ.pop("OPENSEA_API_KEY", None)
+        try:
+            first = open(os.path.join(data, "nft-pilot", "status.json")).read()
+            self.assertEqual(snapshot.main(["--data-dir", data, "--code-sha", "abc123"]), 0)
+            self.assertEqual(open(os.path.join(data, "nft-pilot", "status.json")).read(), first)
+        finally:
+            if again is not None:
+                os.environ["OPENSEA_API_KEY"] = again
         import jsonschema
         schema = json.load(open(os.path.join(ROOT, "schema", "nft-snapshot.schema.json")))
         jsonschema.validate(status, schema)
+
+    def test_null_cost_share_blocks_the_gate(self):
+        from datetime import date
+        start = date(2026, 11, 1)
+        row = lambda cost: {"cost": cost, "unsellable": cost == 1, "seasoned": False, "snapshot_t": "2026-11-14T00:00:00Z"}
+        within = [row(0.1), row(0.1), row(0.1), row(0.1), row(None)]
+        summary = P.summarize(within, {"2026-11-14": ["a"]}, start, ["2026-11-14"])
+        self.assertEqual(summary["null_cost_count"], 1)
+        self.assertAlmostEqual(summary["null_cost_share"], 0.2)
+        self.assertEqual(summary["null_cost_share_max"], 0.20)
+        self.assertAlmostEqual(summary["median_cost"], 0.1)
+        self.assertEqual(summary["nh04"], "ready")
+        over = within + [row(None)]
+        blocked = P.summarize(over, {"2026-11-14": ["a"]}, start, ["2026-11-14"])
+        self.assertGreater(blocked["null_cost_share"], 0.20)
+        self.assertEqual(blocked["nh04"], "not_ready")
+        self.assertFalse(blocked["nh04_ready"])
+
+    def test_partial_day_is_unknown_not_zero(self):
+        from datetime import date
+        start = date(2026, 11, 1)
+        days = ["2026-11-%02d" % d for d in range(8, 15)]
+        passes = {day: ["a"] for day in days}
+        known = P.summarize([], passes, start, days)
+        self.assertTrue(known["pace_ready"])
+        self.assertEqual(known["pace_median"], 1)
+        missing = days[:-1]
+        passes["2026-11-14"] = []
+        unknown = P.summarize([], passes, start, missing)
+        self.assertFalse(unknown["pace_ready"])
+        self.assertIsNone(unknown["pace_median"])
+
+    def test_pages_until_floor_target(self):
+        class Pager:
+            def __init__(self):
+                self.calls = 0
+                self.listed = []
+                self.listing_calls = 0
+            def list_collections(self, chain, cursor):
+                self.calls += 1
+                self.listed.append((chain, cursor))
+                if chain == "base":
+                    return [], None
+                page = 0 if not cursor else int(cursor)
+                if page == 0:
+                    return [{"collection": "blue", "contracts": [{"address": "0x" + "99" * 20, "chain": "ethereum"}]}], "1"
+                rows = []
+                for i in range(P.FLOOR_TARGET):
+                    rows.append({"collection": "c%d" % i, "contracts": [{"address": "0x%040x" % (i + 1), "chain": "ethereum"}]})
+                return rows, None
+            def listings(self, slug):
+                self.calls += 1
+                self.listing_calls += 1
+                price = 10.0 if slug == "blue" else 0.1
+                return [order(price + n * 0.01, NOW + 10_000, digest="%02x" % (n + (0 if slug == "blue" else 20))) for n in range(5)]
+            def collection(self, slug):
+                self.calls += 1
+                return {"pricing_currencies": {"listing_currency": {"symbol": "ETH", "usd_price": "2000"}}}
+            def contract(self, chain, address):
+                raise AssertionError("item type is on the listing")
+
+        pager = Pager()
+        def detail(slug):
+            detail.usd = 2000.0
+            return pager.collection(slug)
+        detail.usd = None
+        under, _cache, partial = snapshot._collect(pager, {"ethereum": 10 ** 9, "base": 10 ** 9}, detail, NOW)
+        self.assertFalse(partial)
+        self.assertEqual(len(under), P.FLOOR_TARGET)
+        self.assertNotIn("blue", [item["slug"] for item in under])
+        self.assertEqual(pager.listing_calls, P.FLOOR_TARGET + 1)
+        self.assertNotIn(("ethereum", "2"), [(chain, cursor) for chain, cursor in pager.listed])
 
     def test_rate_limit_backoff_is_one_retry(self):
         seen = {"n": 0}
@@ -271,8 +366,16 @@ class NH04Tests(unittest.TestCase):
     def test_workflow_is_isolated(self):
         text = open(os.path.join(ROOT, ".github", "workflows", "nft-snapshot.yml")).read()
         self.assertIn("group: nft-snapshot", text)
-        self.assertIn("HEAD:nft-data", text)
+        self.assertIn('dest=nft-data', text)
+        self.assertIn('if [ "$dest" != "nft-data" ]', text)
+        self.assertIn('HEAD:${dest}', text)
         self.assertNotIn("HEAD:desk-data", text)
+        snap = text.split("name: Snapshot", 1)[1].split("name: Privacy", 1)[0]
+        self.assertNotIn("SIGHTLINE_PRIVATE_TOKEN", snap)
+        src = open(os.path.join(ROOT, "nft", "loop", "snapshot.py")).read()
+        self.assertNotIn("SIGHTLINE_PRIVATE_TOKEN", src)
+        self.assertNotIn("sightline-private", src)
+        self.assertNotIn("push_raw", src)
         self.assertNotIn("group: solana-desk-scan", text)
         self.assertNotIn("group: desk-data", text)
         self.assertNotIn("upload-artifact", text)

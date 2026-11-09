@@ -10,7 +10,9 @@ from datetime import date, datetime, timezone
 PAGE_ENDPOINT = "/api/v2/collections"
 ORDER_BY = "num_owners"
 PAGE_LIMIT = 100
-PAGE_DEPTH = 1
+# Page until this many collections are under the $250 floor cap, or the call cap hits.
+FLOOR_TARGET = 40
+MAX_LIST_PAGES = 8
 CHAINS = ("ethereum", "base")
 CAIP = {"ethereum": "eip155:1", "base": "eip155:8453"}
 FLOOR_USD = 250
@@ -27,8 +29,13 @@ OFFER_PAGE_LIMIT = 200
 OFFER_MAX_PAGES = 3
 EVENT_PAGE_LIMIT = 100
 EVENT_MAX_PAGES = 2
-# Two Seaport basic-order fulfillments. The RPC supplies the wei price.
-ROUND_TRIP_GAS_UNITS = 500_000
+# One Seaport basic-order fulfillment per leg. Entry adds one leg; exit subtracts one leg.
+LEG_GAS_UNITS = 250_000
+ROUND_TRIP_GAS_UNITS = LEG_GAS_UNITS * 2
+# A window whose uncosted share is above this is not an NH-04 result.
+NULL_COST_MAX = 0.20
+# Seven full days: the earliest snapshot day is at least this many days before the latest.
+SEASON_DAYS = 7
 # OpenSea Shared Storefront. One contract, many collections, so it has no single id.
 SHARED_STOREFRONTS = frozenset({"0x495f947276749ce646f68ac8c248420045cb7b5e"})
 GAS_RPC = {
@@ -39,23 +46,18 @@ MAX_CALLS = 520
 HOURLY_LIMIT = 600
 DATA_BRANCH = "nft-data"
 AVOIDS_BRANCH = "desk-data"
-RULE = "GET /api/v2/collections order_by=num_owners limit=100 depth=1 chains=ethereum,base"
+RULE = (
+    "GET /api/v2/collections order_by=num_owners limit=100 "
+    "floor_target=40 max_calls=520 chains=ethereum,base"
+)
 ATTRIBUTION = "Market data from OpenSea (https://opensea.io). Derived metrics only."
 _ADDR = re.compile(r"0x[0-9a-fA-F]{40}")
 _HASH = re.compile(r"0x[0-9a-fA-F]{64}")
 
 
-def upper_bound_calls(passers=20, pending=20):
-    """Worst-case OpenSea reads for one hourly run at the frozen page depth.
-
-    List pages, one listings read per candidate, one detail read for ETH/USD,
-    then fee, offer, and sale pages for floor-capped passers, plus a fill read
-    for each still-open unit. Offer and event pages are the caps, not the usual case.
-    """
-    candidates = len(CHAINS) * PAGE_LIMIT * PAGE_DEPTH
-    return (len(CHAINS) * PAGE_DEPTH + 1 + candidates
-            + passers * (1 + OFFER_MAX_PAGES + EVENT_MAX_PAGES)
-            + pending * (1 + 1 + OFFER_MAX_PAGES))
+def upper_bound_calls():
+    """The run stops at MAX_CALLS, which stays under the free hourly key."""
+    return MAX_CALLS
 
 
 def asset_id(chain_slug, address):
@@ -192,15 +194,18 @@ def bidder_count(parsed):
     return len({p["offerer"] for p in live if p["offerer"] and p["price"] >= BID_BAND * top})
 
 
-def round_trip(listing, buyer_fee, bid, mp, creator, gas):
-    """Cost = (entry − exit) / entry. No held bid → 100%, and the unit stays."""
+def round_trip(listing, buyer_fee, bid, mp, creator, leg_gas):
+    """Cost = (entry − exit) / entry. `leg_gas` is one leg, added once and subtracted once.
+
+    No held bid → 100%, and the unit stays. A missing listing or fee leaves cost null.
+    """
     fill = listing is not None
     if bid is None:
         return {"cost": 1.0, "unsellable": True, "fill": fill, "entry_eth": None, "exit_eth": None}
-    if listing is None or mp is None or gas is None:
+    if listing is None or mp is None or leg_gas is None:
         return {"cost": None, "unsellable": False, "fill": fill, "entry_eth": None, "exit_eth": None}
-    entry = listing + buyer_fee + gas
-    exit_v = bid - bid * mp - bid * creator - gas
+    entry = listing + buyer_fee + leg_gas
+    exit_v = bid - bid * mp - bid * creator - leg_gas
     if entry <= 0:
         return {"cost": None, "unsellable": False, "fill": False, "entry_eth": None, "exit_eth": None}
     return {
@@ -285,25 +290,41 @@ def gas_quote(current_wei, samples, chain, now):
     return max(float(current_wei), float(statistics.median(window)))
 
 
-def wei_to_eth(wei):
+def _wei_to_eth(wei, units):
     if wei is None:
         return None
-    return ROUND_TRIP_GAS_UNITS * float(wei) / 1e18
+    return units * float(wei) / 1e18
+
+
+def leg_eth(wei):
+    """ETH cost of one buy or one sell at this wei gas price."""
+    return _wei_to_eth(wei, LEG_GAS_UNITS)
+
+
+def round_trip_eth(wei):
+    """ETH cost of one buy plus one sell. This is what the 2% floor filter uses."""
+    return _wei_to_eth(wei, ROUND_TRIP_GAS_UNITS)
 
 
 def seasoned(dates, snapshot_day=None):
-    """True once the collection has been snapshotted on 7 distinct UTC days."""
+    """True after 7 full days of snapshots: at least 7 distinct UTC days spanning 7 days."""
     days = {d if isinstance(d, date) else date.fromisoformat(d) for d in dates}
     if snapshot_day is not None:
-        days.add(snapshot_day if isinstance(snapshot_day, date) else date.fromisoformat(snapshot_day))
-    return len(days) >= 7
+        days.add(snapshot_day if isinstance(snapshot_day, date) else date.fromisoformat(str(snapshot_day)[:10]))
+    if len(days) < SEASON_DAYS:
+        return False
+    return (max(days) - min(days)).days >= SEASON_DAYS
 
 
 def _day_index(day, pilot_start):
     return (day - pilot_start).days + 1
 
 
-def summarize(units, passes, pilot_start):
+def summarize(units, passes, pilot_start, complete_days=None):
+    """Median over numeric costs. Null costs stay in the count and can block NH-04.
+
+    Pace uses only days that had a complete run. A day with none is absent, not zero.
+    """
     def day_of(unit):
         return date.fromisoformat(unit["snapshot_t"][:10])
 
@@ -317,28 +338,34 @@ def summarize(units, passes, pilot_start):
     seasoned_costs = [u["cost"] for u in window if u.get("seasoned") and isinstance(u.get("cost"), (int, float))]
     n = len(window)
     uns = sum(1 for u in window if u.get("unsellable"))
-    pace, ready = None, False
+    nulls = sum(1 for u in window if u.get("cost") is None)
+    null_share = (nulls / n) if n else None
+    by_day = {}
     if pilot_start is not None:
-        by_day = {}
-        for day_s, ids in (passes or {}).items():
+        for day_s in complete_days or []:
             num = _day_index(date.fromisoformat(day_s), pilot_start)
             if 8 <= num <= 14:
-                by_day[num] = len(set(ids))
-        if all(d in by_day for d in range(8, 15)):
-            ready = True
-            pace = statistics.median([by_day[d] for d in range(8, 15)])
+                by_day[num] = len(set((passes or {}).get(day_s) or []))
+    ready = all(d in by_day for d in range(8, 15))
+    pace = statistics.median([by_day[d] for d in range(8, 15)]) if ready else None
     last = None
-    if passes:
-        last = max(date.fromisoformat(d) for d in passes)
-    nh04 = bool(pilot_start and last and _day_index(last, pilot_start) >= 14)
+    if complete_days and pilot_start is not None:
+        last = max(date.fromisoformat(d) for d in complete_days)
+    window_ready = bool(pilot_start and last and _day_index(last, pilot_start) >= 14)
+    blocked = null_share is not None and null_share > NULL_COST_MAX
+    nh04_ready = window_ready and not blocked
     return {
         "median_cost": statistics.median(costs) if costs else None,
         "median_cost_seasoned": statistics.median(seasoned_costs) if seasoned_costs else None,
         "unsellable_share": (uns / n) if n else None,
+        "null_cost_count": nulls if n else 0,
+        "null_cost_share": null_share,
+        "null_cost_share_max": NULL_COST_MAX,
         "units": n,
         "pace_median": pace,
         "pace_ready": ready,
-        "nh04_ready": nh04,
+        "nh04": "ready" if nh04_ready else "not_ready",
+        "nh04_ready": nh04_ready,
     }
 
 

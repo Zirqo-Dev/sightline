@@ -1,13 +1,10 @@
-"""Hourly OpenSea snapshot. Derived rows on nft-data; raw bodies only in the private repo."""
+"""Hourly OpenSea snapshot. Derived rows on nft-data. Raw bodies are not kept."""
 from __future__ import annotations
 
 import argparse
 import json
 import os
-import shutil
-import subprocess
 import sys
-import tempfile
 import time
 import urllib.request
 from datetime import datetime, timezone
@@ -16,7 +13,6 @@ import opensea
 import pricing as P
 
 DIR = "nft-pilot"
-PRIVATE_REPO = "Zirqo-Dev/sightline-private"
 
 
 def _now_iso(now):
@@ -52,8 +48,10 @@ def _status(code_sha, now, **extra):
         "opensea_calls": 0, "rate_limit": {"limit": None, "remaining": None, "reset": None},
         "floor_passing_this_run": None, "pending": None, "units": None,
         "unsellable_share": None, "median_cost": None, "median_cost_seasoned": None,
-        "pace_median": None, "pace_ready": False, "nh04_ready": False,
-        "eth_usd": None, "raw": "skipped", "reason": None, "attribution": P.ATTRIBUTION,
+        "null_cost_count": None, "null_cost_share": None, "null_cost_share_max": P.NULL_COST_MAX,
+        "pace_median": None, "pace_ready": False, "nh04": "not_ready", "nh04_ready": False,
+        "buyer_fee_eth": 0.0, "eth_usd": None, "raw": "not_kept", "reason": None,
+        "attribution": P.ATTRIBUTION,
     }
     doc.update(extra)
     return doc
@@ -61,13 +59,14 @@ def _status(code_sha, now, **extra):
 
 def load_state(path):
     if not os.path.exists(path):
-        return {"pilot_start": None, "seen": {}, "passes": {}, "offers": {}, "pending": [], "gas": []}
+        return {"pilot_start": None, "seen": {}, "passes": {}, "complete_days": [], "offers": {}, "pending": [], "gas": []}
     with open(path) as fh:
         doc = json.load(fh)
     doc.setdefault("pending", [])
     doc.setdefault("gas", [])
     doc.setdefault("seen", {})
     doc.setdefault("passes", {})
+    doc.setdefault("complete_days", [])
     doc.setdefault("offers", {})
     return doc
 
@@ -181,11 +180,100 @@ def _unit(pending, listings, offers, prev, gas_eth, fees, now, code_sha):
     }
 
 
+def _call_cap(client):
+    return getattr(client, "max_calls", P.MAX_CALLS)
+
+
+def _collect(client, quotes, detail, now):
+    """Page num_owners until FLOOR_TARGET collections are under the $250 cap, or calls run out."""
+    cursors = {chain: "" for chain in P.CHAINS}
+    pages = {chain: 0 for chain in P.CHAINS}
+    seen, under, cache = {}, [], {}
+    partial = False
+    while len(under) < P.FLOOR_TARGET and any(cursors[c] is not None for c in P.CHAINS):
+        for chain in P.CHAINS:
+            if cursors[chain] is None or len(under) >= P.FLOOR_TARGET:
+                continue
+            if pages[chain] >= P.MAX_LIST_PAGES or client.calls >= _call_cap(client):
+                cursors[chain] = None
+                if client.calls >= _call_cap(client):
+                    partial = True
+                continue
+            try:
+                batch, nxt = client.list_collections(chain, cursors[chain] or None)
+            except opensea.Budget:
+                return under, cache, True
+            except opensea.OpenSeaError:
+                cursors[chain] = None
+                partial = True
+                continue
+            pages[chain] += 1
+            cursors[chain] = nxt or None
+            for row in batch:
+                if len(under) >= P.FLOOR_TARGET:
+                    break
+                addrs = _contracts(row, chain)
+                item = {
+                    "chain": chain, "slug": row.get("collection") or "", "addrs": addrs,
+                    "n_contracts": len(addrs),
+                    "shared": len(addrs) != 1 or bool(addrs and addrs[0] in P.SHARED_STOREFRONTS),
+                }
+                if len(addrs) == 1 and addrs[0] not in P.SHARED_STOREFRONTS:
+                    prev = seen.get(addrs[0])
+                    if prev is not None:
+                        item["shared"] = True
+                        prev["shared"] = True
+                        if prev in under:
+                            under.remove(prev)
+                    else:
+                        seen[addrs[0]] = item
+                if item["shared"] or not item["slug"]:
+                    continue
+                if client.calls >= _call_cap(client):
+                    partial = True
+                    return under, cache, partial
+                try:
+                    listings = client.listings(item["slug"])
+                except opensea.Budget:
+                    return under, cache, True
+                except opensea.OpenSeaError:
+                    continue
+                cache[item["slug"]] = listings
+                parsed = [P.parse_order(x, now, "listing") for x in listings]
+                floor, n_live = P.floor_and_counts(parsed)
+                standard = P.standard_of(parsed)
+                if standard is None and client.calls < _call_cap(client):
+                    try:
+                        standard = (client.contract(chain, addrs[0]) or "").lower()
+                    except opensea.Budget:
+                        return under, cache, True
+                    except opensea.OpenSeaError:
+                        standard = None
+                if detail.usd is None and floor is not None and client.calls < _call_cap(client):
+                    try:
+                        detail(item["slug"])
+                    except opensea.Budget:
+                        return under, cache, True
+                    except opensea.OpenSeaError:
+                        pass
+                floor_usd = floor * detail.usd if floor is not None and detail.usd else None
+                trip = P.round_trip_eth(quotes.get(chain))
+                if _under_cap(floor, floor_usd, trip, standard, n_live, item["shared"]):
+                    under.append(item)
+    return under, cache, partial
+
+
+def _under_cap(floor, floor_usd, trip, standard, n_live, shared):
+    return (not shared and floor is not None and floor_usd is not None and floor_usd <= P.FLOOR_USD
+            and trip is not None and trip < P.GAS_RATIO * floor and standard == "erc721"
+            and n_live >= P.MIN_LISTINGS)
+
+
 def _candidates(client):
     rows = []
     for chain in P.CHAINS:
         cursor = None
-        for _ in range(P.PAGE_DEPTH):
+        for _ in range(P.MAX_LIST_PAGES):
             batch, cursor = client.list_collections(chain, cursor)
             for row in batch:
                 rows.append((chain, row))
@@ -221,7 +309,7 @@ def _close_read_error(pending, now, code_sha):
     }
 
 
-def run(data_dir, client, now, code_sha, gas_wei, token="", push=None):
+def run(data_dir, client, now, code_sha, gas_wei):
     _, status_path, units_path, books_path = _paths(data_dir)
     state = load_state(books_path)
     day = _day(now)
@@ -234,15 +322,8 @@ def run(data_dir, client, now, code_sha, gas_wei, token="", push=None):
             state["gas"].append({"t": int(now), "chain": chain, "wei": int(wei)})
     state["gas"] = [s for s in state["gas"] if s.get("t", 0) >= now - 8 * 86400]
     if any(quotes.get(c) is None for c in P.CHAINS):
-        _dump(status_path, _status(code_sha, now, status="error", reason="gas", raw="skipped"))
+        _dump(status_path, _status(code_sha, now, status="error", reason="gas"))
         return
-    partial = False
-    try:
-        kept = _candidates(client)
-    except opensea.AuthError:
-        raise
-    except (opensea.Budget, opensea.OpenSeaError):
-        kept, partial = [], True
     details, eth_usd = {}, None
     new_units, still_pending, passing, done = [], [], [], set()
 
@@ -251,20 +332,23 @@ def run(data_dir, client, now, code_sha, gas_wei, token="", push=None):
         if slug not in details:
             details[slug] = client.collection(slug)
             eth_usd = eth_usd or _eth_usd(details[slug])
+        detail.usd = eth_usd
         return details[slug]
 
-    def gas_eth(chain):
-        return P.wei_to_eth(quotes.get(chain))
-
+    detail.usd = None
+    try:
+        under, listing_cache, partial = _collect(client, quotes, detail, now)
+    except opensea.AuthError:
+        raise
     pending_by_slug = {p["slug"]: p for p in state["pending"]}
     slugs = []
-    for item in kept:
+    for item in under:
         if item["slug"] and item["slug"] not in slugs:
             slugs.append(item["slug"])
     for slug in pending_by_slug:
         if slug not in slugs:
             slugs.append(slug)
-    by_slug = {item["slug"]: item for item in kept if item["slug"]}
+    by_slug = {item["slug"]: item for item in under if item["slug"]}
 
     def keep(pending, failed=False):
         done.add(pending["slug"])
@@ -284,19 +368,21 @@ def run(data_dir, client, now, code_sha, gas_wei, token="", push=None):
         pending = pending_by_slug.get(slug)
         if item.get("shared") and not pending:
             continue
-        try:
-            listings = client.listings(slug)
-        except opensea.Budget:
-            partial = True
-            if pending:
-                keep(pending)
-            break
-        except opensea.AuthError:
-            raise
-        except opensea.OpenSeaError:
-            if pending:
-                keep(pending, failed=True)
-            continue
+        listings = listing_cache.get(slug)
+        if listings is None:
+            try:
+                listings = client.listings(slug)
+            except opensea.Budget:
+                partial = True
+                if pending:
+                    keep(pending)
+                break
+            except opensea.AuthError:
+                raise
+            except opensea.OpenSeaError:
+                if pending:
+                    keep(pending, failed=True)
+                continue
         parsed = [P.parse_order(x, now, "listing") for x in listings]
         floor, n_live = P.floor_and_counts(parsed)
         standard = P.standard_of(parsed)
@@ -321,12 +407,9 @@ def run(data_dir, client, now, code_sha, gas_wei, token="", push=None):
             except opensea.OpenSeaError:
                 pass
         floor_usd = floor * eth_usd if floor is not None and eth_usd else None
-        gas = gas_eth(item["chain"])
-        cheap = (
-            floor_usd is not None and floor is not None and floor_usd <= P.FLOOR_USD
-            and gas is not None and gas < P.GAS_RATIO * floor and standard == "erc721"
-            and not item.get("shared") and n_live >= P.MIN_LISTINGS
-        )
+        leg = P.leg_eth(quotes.get(item["chain"]))
+        trip = P.round_trip_eth(quotes.get(item["chain"]))
+        cheap = _under_cap(floor, floor_usd, trip, standard, n_live, item.get("shared"))
         if not pending and not cheap:
             if item.get("addrs") and not item.get("shared"):
                 try:
@@ -367,13 +450,13 @@ def run(data_dir, client, now, code_sha, gas_wei, token="", push=None):
         if pending and asset:
             done.add(slug)
             new_units.append(_unit(
-                pending, listings, offers, pending.get("book") or [], gas, (info or {}).get("fees"), now, code_sha,
+                pending, listings, offers, pending.get("book") or [], leg, (info or {}).get("fees"), now, code_sha,
             ))
         obs = {
             "n_contracts": item.get("n_contracts"), "shared": item.get("shared"), "standard": standard,
             "mint_ok": P.mint_ok((info or {}).get("created_date"), now),
             "disabled": bool((info or {}).get("is_disabled")),
-            "floor_eth": floor, "floor_usd": floor_usd, "gas_eth": gas, "listings": n_live,
+            "floor_eth": floor, "floor_usd": floor_usd, "gas_eth": trip, "listings": n_live,
             "sales": sales, "buyers": buyers, "bidders": P.bidder_count(offer_parsed),
             "top_share": share, "sales_truncated": truncated,
         }
@@ -395,89 +478,31 @@ def run(data_dir, client, now, code_sha, gas_wei, token="", push=None):
         if pending["slug"] not in done:
             still_pending.append(pending)
     state["pending"] = still_pending
-    state["passes"].setdefault(day.isoformat(), [])
-    for asset in passing:
-        if asset not in state["passes"][day.isoformat()]:
-            state["passes"][day.isoformat()].append(asset)
+    # A partial run, including a budget hit while listing, does not record a zero day.
+    iso = day.isoformat()
+    if not partial:
+        if iso not in state["complete_days"]:
+            state["complete_days"].append(iso)
+        bucket = state["passes"].setdefault(iso, [])
+        for asset in passing:
+            if asset not in bucket:
+                bucket.append(asset)
     cutoff = day.toordinal() - 21
     state["passes"] = {k: v for k, v in state["passes"].items() if date_ok(k, cutoff)}
+    state["complete_days"] = [d for d in state["complete_days"] if date_ok(d, cutoff)]
     prior = load_units(units_path)
     _append_units(units_path, new_units, prior)
     pilot = datetime.fromisoformat(state["pilot_start"]).date() if state["pilot_start"] else None
-    summary = P.summarize(prior + new_units, state["passes"], pilot)
-    raw_status = "skipped"
-    if push is None:
-        push = push_raw
-    try:
-        raw_status = push({"ran_at": _now_iso(now), "responses": client.raw}, token)
-    except Exception:
-        raw_status = "error"
-    client.raw.clear()
+    summary = P.summarize(prior + new_units, state["passes"], pilot, state["complete_days"])
+    if getattr(client, "raw", None) is not None:
+        client.raw.clear()
     _dump(books_path, state)
     _dump(status_path, _status(
         code_sha, now, status="partial" if partial else "ok", measured=True, partial=partial,
         opensea_calls=client.calls, rate_limit=dict(client.rate),
-        floor_passing_this_run=len(set(passing)), pending=len(still_pending),
-        eth_usd=eth_usd, raw=raw_status, reason=None, **summary,
+        floor_passing_this_run=len(set(passing)) if not partial else None,
+        pending=len(still_pending), eth_usd=eth_usd, reason=None, **summary,
     ))
-
-
-def push_raw(doc, token):
-    token = (token or "").strip()
-    if not token or not doc or not doc.get("responses"):
-        return "dropped"
-    if not _repo_private(token):
-        return "refused"
-    tmp = tempfile.mkdtemp(prefix="nftraw-")
-    try:
-        env = _git_env(token)
-        url = f"https://github.com/{PRIVATE_REPO}.git"
-        if subprocess.run(["git", "clone", "--depth", "1", url, tmp], env=env, capture_output=True).returncode:
-            return "error"
-        rel = os.path.join("nft", "raw")
-        os.makedirs(os.path.join(tmp, rel), exist_ok=True)
-        name = doc["ran_at"].replace("-", "").replace(":", "") + ".json"
-        with open(os.path.join(tmp, rel, name), "w") as fh:
-            json.dump(doc, fh)
-            fh.write("\n")
-        git = ["git", "-C", tmp]
-        if subprocess.run(git + ["add", rel], env=env, capture_output=True).returncode:
-            return "error"
-        if subprocess.run(git + ["diff", "--cached", "--quiet"], env=env).returncode == 0:
-            return "pushed"
-        commit = git + ["-c", "user.email=nft-snapshot@users.noreply.github.com", "-c", "user.name=nft-snapshot",
-                        "commit", "-q", "-m", "nft raw snapshot"]
-        if subprocess.run(commit, env=env, capture_output=True).returncode:
-            return "error"
-        if subprocess.run(git + ["push", "origin", "HEAD"], env=env, capture_output=True).returncode == 0:
-            return "pushed"
-        subprocess.run(git + ["pull", "--rebase", "origin", "HEAD"], env=env, capture_output=True)
-        if subprocess.run(git + ["push", "origin", "HEAD"], env=env, capture_output=True).returncode == 0:
-            return "pushed"
-        return "error"
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
-
-
-def _repo_private(token):
-    req = urllib.request.Request(
-        f"https://api.github.com/repos/{PRIVATE_REPO}",
-        headers={"Authorization": "Bearer " + token, "Accept": "application/vnd.github+json", "User-Agent": "nft-snapshot"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=20) as res:
-            return bool(json.load(res).get("private"))
-    except Exception:
-        return False
-
-
-def _git_env(token):
-    env = os.environ.copy()
-    env["GIT_TERMINAL_PROMPT"] = "0"
-    env["GIT_CONFIG_COUNT"] = "1"
-    env["GIT_CONFIG_KEY_0"] = "http.extraheader"
-    env["GIT_CONFIG_VALUE_0"] = "AUTHORIZATION: bearer " + token
-    return env
 
 
 def fetch_gas(post=None):
@@ -495,6 +520,20 @@ def _rpc_post(url, payload):
         return json.load(res)
 
 
+def _no_key_unchanged(path, code_sha):
+    """True when the published status is already this code's no-key row."""
+    if not os.path.exists(path):
+        return False
+    try:
+        with open(path) as fh:
+            doc = json.load(fh)
+    except (OSError, ValueError):
+        return False
+    return (doc.get("status") == "no_key" and doc.get("reason") == "no key"
+            and doc.get("commit_sha") == code_sha and doc.get("measured") is False
+            and doc.get("buyer_fee_eth") == 0 and doc.get("raw") == "not_kept")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="NFT snapshot pilot")
     parser.add_argument("--data-dir", required=True)
@@ -504,19 +543,20 @@ def main(argv=None):
     key = os.environ.get("OPENSEA_API_KEY", "").strip()
     _, status_path, _, _ = _paths(args.data_dir)
     if not key:
-        _dump(status_path, _status(args.code_sha, now, status="no_key", reason="no key", raw="skipped"))
+        if not _no_key_unchanged(status_path, args.code_sha):
+            _dump(status_path, _status(args.code_sha, now, status="no_key", reason="no key"))
         print("no key")
         return 0
     try:
         client = opensea.OpenSea(key)
         gas = fetch_gas()
-        run(args.data_dir, client, now, args.code_sha, gas, os.environ.get("SIGHTLINE_PRIVATE_TOKEN", ""))
+        run(args.data_dir, client, now, args.code_sha, gas)
     except opensea.AuthError:
-        _dump(status_path, _status(args.code_sha, now, status="error", reason="auth", raw="dropped"))
+        _dump(status_path, _status(args.code_sha, now, status="error", reason="auth"))
         return 0
     except Exception:
         print("snapshot error: " + type(sys.exc_info()[1]).__name__, file=sys.stderr)
-        _dump(status_path, _status(args.code_sha, now, status="error", reason="error", raw="dropped"))
+        _dump(status_path, _status(args.code_sha, now, status="error", reason="error"))
         return 1
     return 0
 

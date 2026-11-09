@@ -3,8 +3,7 @@ name: NFT snapshot
 # Snapshot-only NH-04 pilot. touches no Solana file or rule; adds one workflow in a shared repo.
 # The Solana 30-minute loop uses concurrency group solana-desk-scan and pushes to desk-data.
 # This job uses its own group and pushes only to nft-data, so a failure here cannot fail or delay that loop.
-# Derived rows only. Raw OpenSea bodies go to the private repo when SIGHTLINE_PRIVATE_TOKEN is set, or are dropped.
-# No Actions artifacts. No key is minted here.
+# Derived rows only. Raw OpenSea bodies are not kept. No Actions artifacts. No key is minted here.
 
 on:
   schedule:
@@ -72,7 +71,6 @@ jobs:
       - name: Snapshot
         env:
           OPENSEA_API_KEY: ${{ secrets.OPENSEA_API_KEY }}
-          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
         run: python3 code/nft/loop/snapshot.py --data-dir "$GITHUB_WORKSPACE/data" --code-sha "${{ github.sha }}"
       - name: Privacy guard on nft-data
         if: success()
@@ -106,9 +104,18 @@ jobs:
           git config --local --unset-all http.extraheader || true
           git config --local --unset-all "http.https://github.com/.extraheader" || true
           git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          dest=nft-data
+          if [ "$dest" != "nft-data" ]; then
+            echo "refusing to push; only nft-data is allowed"
+            exit 1
+          fi
+          if [ "$(git rev-parse --abbrev-ref HEAD)" = "desk-data" ]; then
+            echo "refusing to push the Solana branch"
+            exit 1
+          fi
           authed() { git -c http.extraheader="AUTHORIZATION: bearer ${TOKEN}" "$@"; }
           for i in 1 2 3 4 5; do
-            authed push origin HEAD:nft-data && exit 0
+            authed push origin "HEAD:${dest}" && exit 0
             echo "push conflict, retry $i"
             sleep $((i * 5))
             authed pull --rebase origin nft-data || { git rebase --abort || true; exit 1; }
