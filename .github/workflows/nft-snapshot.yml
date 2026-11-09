@@ -1,0 +1,116 @@
+name: NFT snapshot
+
+# Snapshot-only NH-04 pilot. touches no Solana file or rule; adds one workflow in a shared repo.
+# The Solana 30-minute loop uses concurrency group solana-desk-scan and pushes to desk-data.
+# This job uses its own group and pushes only to nft-data, so a failure here cannot fail or delay that loop.
+# Derived rows only. Raw OpenSea bodies go to the private repo when SIGHTLINE_PRIVATE_TOKEN is set, or are dropped.
+# No Actions artifacts. No key is minted here.
+
+on:
+  schedule:
+    - cron: "27 * * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "nft/loop/**"
+      - "schema/nft-snapshot.schema.json"
+      - ".github/workflows/nft-snapshot.yml"
+      - "scripts/privacy-guard.sh"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nft-snapshot
+  cancel-in-progress: false
+
+jobs:
+  test:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: NH-04 pilot tests
+        run: |
+          pip install --quiet "jsonschema>=4.18"
+          python3 -m unittest discover -s nft/loop/tests -v
+
+  snapshot:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: code
+          persist-credentials: false
+      - name: Check out nft-data
+        id: data
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          ref: nft-data
+          path: data
+          fetch-depth: 1
+      - name: Start nft-data if this is the first run
+        if: steps.data.outcome != 'success'
+        run: |
+          rm -rf data
+          mkdir -p data
+          git -C data init -b nft-data
+          git -C data remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Snapshot
+        env:
+          OPENSEA_API_KEY: ${{ secrets.OPENSEA_API_KEY }}
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+        run: python3 code/nft/loop/snapshot.py --data-dir "$GITHUB_WORKSPACE/data" --code-sha "${{ github.sha }}"
+      - name: Privacy guard on nft-data
+        if: success()
+        env:
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          PRIVACY_IDENTITY_HASHES: ${{ secrets.PRIVACY_IDENTITY_HASHES }}
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
+        working-directory: data
+        run: |
+          git add -A nft-pilot
+          if git diff --cached --quiet; then
+            echo "no nft-data changes"
+            exit 0
+          fi
+          bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"
+      - name: Commit to nft-data
+        if: success()
+        working-directory: data
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "nft-snapshot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A nft-pilot
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+            exit 0
+          fi
+          git commit -q -m "nft snapshot $(date -u +%Y-%m-%dT%H:%MZ)"
+          git config --local --unset-all http.extraheader || true
+          git config --local --unset-all "http.https://github.com/.extraheader" || true
+          git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          authed() { git -c http.extraheader="AUTHORIZATION: bearer ${TOKEN}" "$@"; }
+          for i in 1 2 3 4 5; do
+            authed push origin HEAD:nft-data && exit 0
+            echo "push conflict, retry $i"
+            sleep $((i * 5))
+            authed pull --rebase origin nft-data || { git rebase --abort || true; exit 1; }
+          done
+          exit 1
