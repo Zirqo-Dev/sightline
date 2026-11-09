@@ -1,11 +1,11 @@
 {
- "at": "2026-11-09T11:12:33Z",
+ "at": "2026-11-09T13:12:40Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14176081,
+ "height": 14178349,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 877.094457,
+ "ada_balance": 674.928447,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 307210037781,
@@ -73,7 +73,7 @@
   "MISS": 17500000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1122919660918,
+  "NIGHT": 1123788932858,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -185,7 +185,7 @@
   "MISS": 17500000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1122919660918,
+  "NIGHT": 1123788932858,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -564,7 +564,7 @@
   {
    "token": "NIGHT",
    "policy": "0691b2fe",
-   "qty": 1122919660918
+   "qty": 1123788932858
   },
   {
    "token": "NIKY",
@@ -14395,18 +14395,6 @@
   }
  },
  "rows": [
-  {
-   "time": "2026-10-27T13:28:47Z",
-   "tx_short": "fcb4038f15",
-   "kind": "order_fill",
-   "token": "FLOW",
-   "qty": 332971990,
-   "ada_leg": 102.69,
-   "counterparty_tag": null,
-   "order_ref_short": "2e05d151bf#0",
-   "order_status": "filled",
-   "sold": "ADA"
-  },
   {
    "time": "2026-10-27T13:28:47Z",
    "tx_short": "d3379e299d",
@@ -45894,6 +45882,16 @@
    "order_ref_short": "e000ef9f54#0",
    "order_status": "filled",
    "sold": "ADA"
+  },
+  {
+   "time": "2026-11-09T12:57:03Z",
+   "tx_short": "381e92ab0a",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 869271940,
+   "ada_leg": 202.16601,
+   "counterparty_tag": null,
+   "direction": "buy"
   }
  ],
  "capped": false,
@@ -45904,7 +45902,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 7,
+ "koios_calls": 8,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
