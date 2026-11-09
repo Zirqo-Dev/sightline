@@ -1,5 +1,5 @@
 {
- "at": "2026-11-09T01:13:38Z",
+ "at": "2026-11-09T03:17:00Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -29,6 +29,72 @@
  "actor_tags": true,
  "moves": [
   {
+   "time": "2026-11-06T03:41:28Z",
+   "tx_short": "ec1ac145d4",
+   "kind": "swap",
+   "ticker": "STRIKE",
+   "token": "STRIKE",
+   "policy_short": "f13ac4d6",
+   "dex": "minswap_v2",
+   "pool_key": "minswap_v2~b4f379d0",
+   "direction": "sell",
+   "ada": 7026.19,
+   "ada_basis": "ada_leg",
+   "qty": 3204768490,
+   "qty_basis": "raw",
+   "reserve_ada_after": 1211292.96,
+   "lp": false,
+   "actor_tag": null,
+   "ahead_of_dump": false,
+   "dump_tx_short": null,
+   "dump_ada": null,
+   "level": "pool"
+  },
+  {
+   "time": "2026-11-06T04:11:51Z",
+   "tx_short": "4afdda50c4",
+   "kind": "swap",
+   "ticker": "STRIKE",
+   "token": "STRIKE",
+   "policy_short": "f13ac4d6",
+   "dex": "minswap_v2",
+   "pool_key": "minswap_v2~b4f379d0",
+   "direction": "sell",
+   "ada": 6806.93,
+   "ada_basis": "ada_leg",
+   "qty": 3140570114,
+   "qty_basis": "raw",
+   "reserve_ada_after": 1204486.03,
+   "lp": false,
+   "actor_tag": null,
+   "ahead_of_dump": false,
+   "dump_tx_short": null,
+   "dump_ada": null,
+   "level": "pool"
+  },
+  {
+   "time": "2026-11-06T10:51:15Z",
+   "tx_short": "2e0475eb08",
+   "kind": "swap",
+   "ticker": "STRIKE",
+   "token": "STRIKE",
+   "policy_short": "f13ac4d6",
+   "dex": "minswap_v2",
+   "pool_key": "minswap_v2~b4f379d0",
+   "direction": "sell",
+   "ada": 9609.65,
+   "ada_basis": "ada_leg",
+   "qty": 4491250050,
+   "qty_basis": "raw",
+   "reserve_ada_after": 1195386.57,
+   "lp": false,
+   "actor_tag": null,
+   "ahead_of_dump": false,
+   "dump_tx_short": null,
+   "dump_ada": null,
+   "level": "pool"
+  },
+  {
    "time": "2026-11-06T10:51:15Z",
    "tx_short": "6fa9aacfce",
    "kind": "swap",
@@ -43,6 +109,50 @@
    "qty": 2994166854,
    "qty_basis": "raw",
    "reserve_ada_after": 656898.77,
+   "lp": false,
+   "actor_tag": null,
+   "ahead_of_dump": false,
+   "dump_tx_short": null,
+   "dump_ada": null,
+   "level": "pool"
+  },
+  {
+   "time": "2026-11-06T11:23:32Z",
+   "tx_short": "02e883c7c6",
+   "kind": "swap",
+   "ticker": "STRIKE",
+   "token": "STRIKE",
+   "policy_short": "f13ac4d6",
+   "dex": "minswap_v2",
+   "pool_key": "minswap_v2~b4f379d0",
+   "direction": "sell",
+   "ada": 17678.04,
+   "ada_basis": "ada_leg",
+   "qty": 8484671461,
+   "qty_basis": "raw",
+   "reserve_ada_after": 1177708.53,
+   "lp": false,
+   "actor_tag": null,
+   "ahead_of_dump": false,
+   "dump_tx_short": null,
+   "dump_ada": null,
+   "level": "pool"
+  },
+  {
+   "time": "2026-11-06T12:16:13Z",
+   "tx_short": "e688433403",
+   "kind": "swap",
+   "ticker": "STRIKE",
+   "token": "STRIKE",
+   "policy_short": "f13ac4d6",
+   "dex": "minswap_v2",
+   "pool_key": "minswap_v2~b4f379d0",
+   "direction": "buy",
+   "ada": 19681.94,
+   "ada_basis": "ada_leg",
+   "qty": 9200709067,
+   "qty_basis": "raw",
+   "reserve_ada_after": 1198150.42,
    "lp": false,
    "actor_tag": null,
    "ahead_of_dump": false,
@@ -137,7 +247,8 @@
    "pool_key": "minswap_v2~76ec391d",
    "reserve_ada": 395199.87,
    "reserve_qty": 4225978513013,
-   "asof": "2026-11-08T22:25:52Z"
+   "asof": "2026-11-08T22:25:52Z",
+   "stale": true
   },
   {
    "ticker": "NIGHT",
@@ -189,10 +300,9 @@
    "policy_short": "f13ac4d6",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~b4f379d0",
-   "reserve_ada": 1181939.06,
-   "reserve_qty": 563641703172,
-   "asof": "2026-11-05T17:32:21Z",
-   "stale": true
+   "reserve_ada": 1198097.11,
+   "reserve_qty": 556485645099,
+   "asof": "2026-11-06T14:02:03Z"
   },
   {
    "ticker": "STRIKE",
@@ -200,10 +310,9 @@
    "policy_short": "f13ac4d6",
    "dex": "sundaeswap_v3",
    "pool_key": "sundaeswap_v3~968b2e79",
-   "reserve_ada": 664575.31,
-   "reserve_qty": 302448026390,
-   "asof": "2026-11-08T12:48:10Z",
-   "stale": true
+   "reserve_ada": 670656.92,
+   "reserve_qty": 299748302586,
+   "asof": "2026-11-08T23:24:04Z"
   }
  ],
  "tokens": [
@@ -226,14 +335,14 @@
    "policy_short": "f13ac4d6",
    "rank": 3,
    "unit_source": "cache",
-   "last_checked": "2026-11-08T13:16:03Z"
+   "last_checked": "2026-11-09T03:17:00Z"
   },
   {
    "ticker": "MIN",
    "policy_short": "29d222ce",
    "rank": 4,
    "unit_source": "cache",
-   "last_checked": "2026-11-08T13:16:03Z"
+   "last_checked": "2026-11-09T03:17:00Z"
   },
   {
    "ticker": "SNEK",
@@ -278,15 +387,10 @@
   }
  ],
  "coverage": {
-  "IAG": {
-   "read": 9,
-   "complete": false,
-   "pools": 1
-  },
   "STRIKE": {
-   "read": 0,
+   "read": 21,
    "complete": false,
-   "pools": 0
+   "pools": 2
   },
   "MIN": {
    "read": 0,
@@ -296,36 +400,40 @@
   "SNEK": {
    "read": 0,
    "complete": false,
-   "pools": 0
+   "skipped": "budget"
   },
   "COCK": {
    "read": 0,
    "complete": false,
-   "pools": 0
+   "skipped": "budget"
   },
   "ASCEND": {
    "read": 0,
    "complete": false,
-   "pools": 0
+   "skipped": "budget"
   },
   "NIGHT": {
    "read": 0,
    "complete": false,
-   "pools": 0
+   "skipped": "budget"
   },
   "SOLADA": {
    "read": 0,
    "complete": false,
-   "pools": 0
+   "skipped": "budget"
   },
   "CLOVE": {
    "read": 0,
    "complete": false,
-   "pools": 0
+   "skipped": "budget"
+  },
+  "IAG": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "IAG",
   "STRIKE",
   "MIN",
   "SNEK",
@@ -333,11 +441,12 @@
   "ASCEND",
   "NIGHT",
   "SOLADA",
-  "CLOVE"
+  "CLOVE",
+  "IAG"
  ],
- "koios_calls": 0,
- "blockfrost_calls": 12,
- "blockfrost_fallbacks": 12,
+ "koios_calls": 7,
+ "blockfrost_calls": 0,
+ "blockfrost_fallbacks": 0,
  "blockfrost_available": true,
- "basis": "blockfrost"
+ "basis": "koios"
 }
