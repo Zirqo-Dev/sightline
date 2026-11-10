@@ -4,6 +4,7 @@ name: NFT snapshot
 # The Solana 30-minute loop uses concurrency group solana-desk-scan and pushes to desk-data.
 # This job uses its own group and pushes only to nft-data, so a failure here cannot fail or delay that loop.
 # Derived rows only. Raw OpenSea bodies are not kept. No Actions artifacts. No key is minted here.
+# The first run creates nft-data. Later runs push to it. publish_nft_data.sh auths with the job token.
 
 on:
   schedule:
@@ -50,16 +51,40 @@ jobs:
           ref: ${{ github.sha }}
           path: code
           persist-credentials: false
+      - name: Look up nft-data
+        id: nft_branch
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          body=$(mktemp)
+          # The REST API takes Bearer. Git push does not; the publish script sends Basic.
+          if ! code=$(curl -sS -o "$body" -w '%{http_code}' \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/branches/nft-data"); then
+            rm -f "$body"
+            echo "nft-data lookup failed" >&2
+            exit 1
+          fi
+          rm -f "$body"
+          if [ "$code" = "200" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          elif [ "$code" = "404" ]; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "nft-data lookup failed: HTTP ${code}" >&2
+            exit 1
+          fi
       - name: Check out nft-data
-        id: data
-        continue-on-error: true
+        if: steps.nft_branch.outputs.exists == 'true'
         uses: actions/checkout@v4
         with:
           ref: nft-data
           path: data
           fetch-depth: 1
+          persist-credentials: false
       - name: Start nft-data if this is the first run
-        if: steps.data.outcome != 'success'
+        if: steps.nft_branch.outputs.exists != 'true'
         run: |
           rm -rf data
           mkdir -p data
@@ -92,32 +117,4 @@ jobs:
         working-directory: data
         env:
           TOKEN: ${{ github.token }}
-        run: |
-          git config user.name "nft-snapshot"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A nft-pilot
-          if git diff --cached --quiet; then
-            echo "nothing to commit"
-            exit 0
-          fi
-          git commit -q -m "nft snapshot $(date -u +%Y-%m-%dT%H:%MZ)"
-          git config --local --unset-all http.extraheader || true
-          git config --local --unset-all "http.https://github.com/.extraheader" || true
-          git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
-          dest=nft-data
-          if [ "$dest" != "nft-data" ]; then
-            echo "refusing to push; only nft-data is allowed"
-            exit 1
-          fi
-          if [ "$(git rev-parse --abbrev-ref HEAD)" = "desk-data" ]; then
-            echo "refusing to push the Solana branch"
-            exit 1
-          fi
-          authed() { git -c http.extraheader="AUTHORIZATION: bearer ${TOKEN}" "$@"; }
-          for i in 1 2 3 4 5; do
-            authed push origin "HEAD:${dest}" && exit 0
-            echo "push conflict, retry $i"
-            sleep $((i * 5))
-            authed pull --rebase origin nft-data || { git rebase --abort || true; exit 1; }
-          done
-          exit 1
+        run: bash "$GITHUB_WORKSPACE/code/nft/loop/publish_nft_data.sh"
