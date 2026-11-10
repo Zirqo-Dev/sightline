@@ -6,6 +6,7 @@ import json
 import os
 import sys
 import time
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
@@ -515,9 +516,31 @@ def fetch_gas(post=None):
 
 
 def _rpc_post(url, payload):
-    req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers={"content-type": "application/json"})
+    # Publicnode returns 403 for urllib's default Python-urllib agent.
+    req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers={
+        "content-type": "application/json",
+        "user-agent": "sightline-nft-snapshot",
+    })
     with urllib.request.urlopen(req, timeout=20) as res:
         return json.load(res)
+
+
+def _snapshot_error_line(exc):
+    """Type, HTTP status, and host. The URL, query, headers, and message stay out."""
+    parts = [type(exc).__name__]
+    code = getattr(exc, "code", None)
+    if not isinstance(code, int):
+        code = getattr(exc, "status", None)
+    if isinstance(code, int):
+        parts.append(str(code))
+    url = getattr(exc, "url", None)
+    if not isinstance(url, str) or not url:
+        url = getattr(exc, "filename", None)
+    if isinstance(url, str) and url:
+        host = urllib.parse.urlparse(url).hostname
+        if host:
+            parts.append(host)
+    return "snapshot error: " + " ".join(parts)
 
 
 def _no_key_unchanged(path, code_sha):
@@ -554,8 +577,8 @@ def main(argv=None):
     except opensea.AuthError:
         _dump(status_path, _status(args.code_sha, now, status="error", reason="auth"))
         return 0
-    except Exception:
-        print("snapshot error: " + type(sys.exc_info()[1]).__name__, file=sys.stderr)
+    except Exception as exc:
+        print(_snapshot_error_line(exc), file=sys.stderr)
         _dump(status_path, _status(args.code_sha, now, status="error", reason="error"))
         return 1
     return 0
