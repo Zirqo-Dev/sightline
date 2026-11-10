@@ -54,7 +54,11 @@ def _status(code_sha, now, **extra):
         "null_cost_count": None, "null_cost_share": None, "null_cost_share_max": P.NULL_COST_MAX,
         "pace_median": None, "pace_ready": False, "nh04": "not_ready", "nh04_ready": False,
         "buyer_fee_eth": 0.0, "eth_usd": None, "raw": "not_kept", "reason": None,
-        "rejections": _rejection_counts(None),
+        "rejections": _rejection_counts(None), "flags": _flag_counts(None),
+        "screened": None, "pending_served": None, "pending_deferred": None, "passers_footnoted": None,
+        "nh04_verdict": "not_ready", "verdict_footnote": None,
+        "distinct_collections": None, "distinct_per_day_median": None,
+        "early_kill": P.early_kill([], {}, None, None),
         "attribution": P.ATTRIBUTION,
     }
     doc.update(extra)
@@ -65,16 +69,16 @@ def _fresh_state():
     return {
         "state_version": P.STATE_VERSION,
         "pilot_start": None, "seen": {}, "passes": {}, "complete_days": [],
-        "offers": {}, "pending": [], "gas": [],
+        "offers": {}, "pending": [], "gas": [], "first_runs": [],
     }
 
 
 def load_state(path):
-    """books.json. A state_version other than v0.2 drops the pre-fix clock.
+    """books.json. A state_version other than v0.3 drops the earlier clock.
 
-    pilot_start, complete_days, and passes from the num_owners / basic-offer
-    runs are not a season. The next ok run starts day 1. Gas, seen, offers,
-    and pending stay.
+    v0.2 (and older) pilot_start, complete_days, passes, first_runs and pending
+    are not part of the v0.3 season: the next ok run starts day 1 with a fresh
+    14-day clock. Gas, seen, and offers stay.
     """
     if not os.path.exists(path):
         return _fresh_state()
@@ -86,10 +90,14 @@ def load_state(path):
     doc.setdefault("passes", {})
     doc.setdefault("complete_days", [])
     doc.setdefault("offers", {})
+    doc.setdefault("first_runs", [])
     if doc.get("state_version") != P.STATE_VERSION:
         doc["pilot_start"] = None
         doc["passes"] = {}
         doc["complete_days"] = []
+        doc["first_runs"] = []
+        # v0.2 passers were screened on the 24h rule; their units are not v0.3 units.
+        doc["pending"] = []
         doc["state_version"] = P.STATE_VERSION
     return doc
 
@@ -223,6 +231,11 @@ def _add_reasons(bucket, reasons):
         bucket[reason] = bucket.get(reason, 0) + 1
 
 
+def _flag_counts(bucket):
+    found = bucket or {}
+    return {name: int(found.get(name, 0)) for name in P.FLAG_NAMES}
+
+
 def _rejection_counts(bucket):
     """Reason hits, not collections. One collection can increment several reasons."""
     found = bucket or {}
@@ -246,27 +259,112 @@ def _cap_fail_reasons(item, floor, floor_usd, trip, standard, n_live):
     return reasons
 
 
-def _collect(client, quotes, detail, now, deadline=None, rejections=None, deadline_flag=None):
-    """Page by market cap until FLOOR_TARGET collections are under the $250 cap, or calls run out."""
+def _cap_hit(client):
+    return client.calls >= _call_cap(client)
+
+
+def _serve_pending(client, state, detail, now, code_sha, quotes, deadline, deadline_flag, caches, new_units, day):
+    """Pending re-checks are served before any new screening.
+
+    Each costs listings + collection + offers (1-3 pages): at most 5 reads. A pending
+    row the run cannot reach (call cap or wall clock) counts as a try; after 3 tries it
+    closes with reason "budget" so pending cannot grow without bound.
+    Returns (rows to keep, served count, deferred count, partial).
+    """
+    keep, served, deferred, partial = [], 0, 0, False
+    queue = list(state["pending"])
+    for idx, pending in enumerate(queue):
+        slug = pending["slug"]
+        if _cap_hit(client) or _past_deadline(deadline, deadline_flag):
+            partial = True
+            for rest in queue[idx:]:
+                deferred += 1
+                _retry(rest, keep, new_units, now, code_sha, "budget")
+            break
+        try:
+            listings = caches["listings"].get(slug)
+            if listings is None:
+                listings = client.listings(slug)
+                caches["listings"][slug] = listings
+            info = detail(slug)
+            offers = caches["offers"].get(slug)
+            if offers is None:
+                offers, pages = _page_offers(client, slug, now)
+                caches["offers"][slug] = offers
+                caches["offer_pages"][slug] = pages
+        except opensea.Budget:
+            partial = True
+            for rest in queue[idx:]:
+                deferred += 1
+                _retry(rest, keep, new_units, now, code_sha, "budget")
+            break
+        except opensea.AuthError:
+            raise
+        except opensea.OpenSeaError:
+            _retry(pending, keep, new_units, now, code_sha, "read_error")
+            continue
+        served += 1
+        leg = P.leg_eth(quotes.get(pending.get("chain")))
+        new_units.append(_unit(
+            pending, listings, offers, pending.get("book") or [], leg, (info or {}).get("fees"), now, code_sha,
+        ))
+        offer_parsed = [p for p in (P.parse_order(o, now, "offer") for o in offers) if p]
+        state["offers"][pending["asset_id"]] = [
+            {"hash": p["hash"], "price_eth": p["price"]} for p in offer_parsed if p.get("hash")
+        ]
+        _remember(state, pending["asset_id"], day)
+    return keep, served, deferred, partial
+
+
+def _retry(pending, keep, new_units, now, code_sha, reason):
+    pending["tries"] = pending.get("tries", 0) + 1
+    if pending["tries"] >= 3:
+        row = _close_read_error(pending, now, code_sha)
+        row["reason"] = reason
+        new_units.append(row)
+    else:
+        keep.append(pending)
+
+
+def _screen(client, quotes, detail, now, state, caches, day, deadline=None, rejections=None,
+            deadline_flag=None, flags=None):
+    """Page by market cap; screen each under-cap collection at once; stop at PASS_TARGET.
+
+    Complete (not partial) when PASS_TARGET passes are found or the frozen page depth /
+    cursors run out. Partial when the call cap, a budget error, a list error, or the wall
+    clock stops it first.
+    """
     cursors = {chain: "" for chain in P.CHAINS}
     pages = {chain: 0 for chain in P.CHAINS}
-    seen, under, cache = {}, [], {}
+    seen, passing, new_pending = {}, [], []
+    screened = 0
     partial = False
-    while len(under) < P.FLOOR_TARGET and any(cursors[c] is not None for c in P.CHAINS):
+    flags = flags if flags is not None else {}
+
+    def drop_shared(prev):
+        prev["shared"] = True
+        asset = prev.get("asset")
+        if asset and asset in passing:
+            passing.remove(asset)
+            new_pending[:] = [p for p in new_pending if p["asset_id"] != asset]
+        if prev.get("screened"):
+            _add_reasons(rejections, ["shared"])
+
+    while len(passing) < P.PASS_TARGET and any(cursors[c] is not None for c in P.CHAINS):
         if _past_deadline(deadline, deadline_flag):
-            return under, cache, True
+            return passing, new_pending, True, screened
         for chain in P.CHAINS:
-            if cursors[chain] is None or len(under) >= P.FLOOR_TARGET:
+            if cursors[chain] is None or len(passing) >= P.PASS_TARGET:
                 continue
-            if pages[chain] >= P.MAX_LIST_PAGES or client.calls >= _call_cap(client):
+            if pages[chain] >= P.MAX_LIST_PAGES:
                 cursors[chain] = None
-                if client.calls >= _call_cap(client):
-                    partial = True
                 continue
+            if _cap_hit(client):
+                return passing, new_pending, True, screened
             try:
                 batch, nxt = client.list_collections(chain, cursors[chain] or None)
             except opensea.Budget:
-                return under, cache, True
+                return passing, new_pending, True, screened
             except opensea.OpenSeaError as exc:
                 cursors[chain] = None
                 partial = True
@@ -275,7 +373,7 @@ def _collect(client, quotes, detail, now, deadline=None, rejections=None, deadli
             pages[chain] += 1
             cursors[chain] = nxt or None
             for row in batch:
-                if len(under) >= P.FLOOR_TARGET:
+                if len(passing) >= P.PASS_TARGET:
                     break
                 addrs = _contracts(row, chain)
                 item = {
@@ -287,10 +385,7 @@ def _collect(client, quotes, detail, now, deadline=None, rejections=None, deadli
                     prev = seen.get(addrs[0])
                     if prev is not None:
                         item["shared"] = True
-                        prev["shared"] = True
-                        if prev in under:
-                            under.remove(prev)
-                            _add_reasons(rejections, ["shared"])
+                        drop_shared(prev)
                     else:
                         seen[addrs[0]] = item
                 if item["shared"] or not item["slug"]:
@@ -300,42 +395,103 @@ def _collect(client, quotes, detail, now, deadline=None, rejections=None, deadli
                             reasons.insert(0, "contracts")
                         _add_reasons(rejections, reasons)
                     continue
-                if client.calls >= _call_cap(client) or _past_deadline(deadline, deadline_flag):
-                    partial = True
-                    return under, cache, partial
+                if _cap_hit(client) or _past_deadline(deadline, deadline_flag):
+                    return passing, new_pending, True, screened
                 try:
-                    listings = client.listings(item["slug"])
+                    out = _screen_one(client, item, quotes, detail, now, state, caches, day, rejections, flags)
                 except opensea.Budget:
-                    return under, cache, True
-                except opensea.OpenSeaError:
+                    return passing, new_pending, True, screened
+                if out is None:
                     continue
-                cache[item["slug"]] = listings
-                parsed = [P.parse_order(x, now, "listing") for x in listings]
-                floor, n_live = P.floor_and_counts(parsed)
-                standard = P.standard_of(parsed)
-                if standard is None and client.calls < _call_cap(client):
-                    try:
-                        standard = (client.contract(chain, addrs[0]) or "").lower()
-                    except opensea.Budget:
-                        return under, cache, True
-                    except opensea.OpenSeaError:
-                        standard = None
-                if detail.usd is None and floor is not None and client.calls < _call_cap(client):
-                    try:
-                        detail(item["slug"])
-                    except opensea.Budget:
-                        return under, cache, True
-                    except opensea.OpenSeaError:
-                        pass
-                floor_usd = floor * detail.usd if floor is not None and detail.usd else None
-                trip = P.round_trip_eth(quotes.get(chain))
-                if _under_cap(floor, floor_usd, trip, standard, n_live, item["shared"]):
-                    under.append(item)
-                else:
-                    _add_reasons(rejections, _cap_fail_reasons(
-                        item, floor, floor_usd, trip, standard, n_live,
-                    ))
-    return under, cache, partial
+                screened += 1
+                if out.get("pending"):
+                    passing.append(out["pending"]["asset_id"])
+                    new_pending.append(out["pending"])
+    return passing, new_pending, partial, screened
+
+
+def _screen_one(client, item, quotes, detail, now, state, caches, day, rejections, flags):
+    """One collection. None when it is not under the cap (or a read failed)."""
+    slug, chain = item["slug"], item["chain"]
+    try:
+        listings = caches["listings"].get(slug)
+        if listings is None:
+            listings = client.listings(slug)
+            caches["listings"][slug] = listings
+    except opensea.OpenSeaError:
+        return None
+    parsed = [P.parse_order(x, now, "listing") for x in listings]
+    floor, n_live = P.floor_and_counts(parsed)
+    standard = P.standard_of(parsed)
+    if standard is None and not _cap_hit(client):
+        try:
+            standard = (client.contract(chain, item["addrs"][0]) or "").lower()
+        except opensea.OpenSeaError:
+            standard = None
+    if detail.usd is None and floor is not None and not _cap_hit(client):
+        try:
+            detail(slug)
+        except opensea.OpenSeaError:
+            pass
+    floor_usd = floor * detail.usd if floor is not None and detail.usd else None
+    trip = P.round_trip_eth(quotes.get(chain))
+    asset = None
+    try:
+        asset = P.asset_id(chain, item["addrs"][0])
+    except ValueError:
+        return None
+    if not _under_cap(floor, floor_usd, trip, standard, n_live, item["shared"]):
+        _add_reasons(rejections, _cap_fail_reasons(item, floor, floor_usd, trip, standard, n_live))
+        _remember(state, asset, day)
+        return None
+    item["asset"] = asset
+    item["screened"] = True
+    try:
+        info = detail(slug)
+        offers = caches["offers"].get(slug)
+        offer_pages = caches["offer_pages"].get(slug, 0)
+        if offers is None:
+            offers, offer_pages = _page_offers(client, slug, now)
+            caches["offers"][slug] = offers
+        after = int(now) - P.WINDOW_SECONDS
+        events, event_pages, truncated = _page_events(client, slug, after)
+    except opensea.OpenSeaError:
+        return None
+    offer_parsed = [p for p in (P.parse_order(o, now, "offer") for o in offers) if p]
+    sales, buyers, share = P.sale_stats(events, after)
+    seller_share, day_share = P.sale_profile(events, after, now)
+    book = [{"hash": p["hash"], "price_eth": p["price"]} for p in offer_parsed if p.get("hash")]
+    _remember(state, asset, day)
+    state["offers"][asset] = book
+    obs = {
+        "n_contracts": item.get("n_contracts"), "shared": item.get("shared"), "standard": standard,
+        "mint_ok": P.mint_ok((info or {}).get("created_date"), now),
+        "disabled": bool((info or {}).get("is_disabled")),
+        "floor_eth": floor, "floor_usd": floor_usd, "gas_eth": trip, "listings": n_live,
+        "sales": sales, "buyers": buyers, "bidders": P.bidder_count(offer_parsed),
+        "top_share": share,
+    }
+    if truncated:
+        flags["sales_truncated"] = flags.get("sales_truncated", 0) + 1
+    reasons = P.rejection(obs)
+    if reasons:
+        _add_reasons(rejections, reasons)
+        return {"pending": None}
+    if truncated:
+        flags["liquid_tail"] = flags.get("liquid_tail", 0) + 1
+    return {"pending": {
+        "asset_id": asset, "slug": slug, "chain": chain, "snapshot_t": _now_iso(now),
+        "seasoned": P.seasoned(state["seen"].get(asset, []), day),
+        "floor_eth": floor, "floor_usd": floor_usd, "tries": 0,
+        "fees": P.public_fees((info or {}).get("fees")),
+        "book": [dict(row) for row in book], "top_buyer_share": share,
+        "counts": {
+            "sales_7d": sales, "buyers_7d": buyers, "listings": n_live,
+            "bidders_near_top": obs["bidders"], "offer_pages": offer_pages, "event_pages": event_pages,
+            "top_seller_share_7d": seller_share, "max_day_share_7d": day_share,
+            "sales_truncated": bool(truncated), "liquid_tail": bool(truncated),
+        },
+    }}
 
 
 def _under_cap(floor, floor_usd, trip, standard, n_live, shared):
@@ -413,8 +569,9 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
         ))
         return
     details = {}
-    new_units, still_pending, passing, done = [], [], [], set()
-    rejections = {}
+    caches = {"listings": {}, "offers": {}, "offer_pages": {}}
+    new_units = []
+    rejections, flags = {}, {}
 
     def detail(slug):
         nonlocal eth_usd
@@ -427,161 +584,22 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
         return details[slug]
 
     detail.usd = eth_usd
-    try:
-        under, listing_cache, partial = _collect(
-            client, quotes, detail, now, deadline=deadline, rejections=rejections,
-            deadline_flag=deadline_flag,
+    # 1. Pending re-checks first, so a long screen can never starve a unit fill.
+    kept, served, deferred, pend_partial = _serve_pending(
+        client, state, detail, now, code_sha, quotes, deadline, deadline_flag, caches, new_units, day,
+    )
+    # 2. Screen until PASS_TARGET pass, or the cap / clock / page depth.
+    passing, fresh, scr_partial, screened = [], [], False, 0
+    if not pend_partial:
+        passing, fresh, scr_partial, screened = _screen(
+            client, quotes, detail, now, state, caches, day, deadline=deadline,
+            rejections=rejections, deadline_flag=deadline_flag, flags=flags,
         )
-    except opensea.AuthError:
-        raise
-    pending_by_slug = {p["slug"]: p for p in state["pending"]}
-    slugs = []
-    for item in under:
-        if item["slug"] and item["slug"] not in slugs:
-            slugs.append(item["slug"])
-    for slug in pending_by_slug:
-        if slug not in slugs:
-            slugs.append(slug)
-    by_slug = {item["slug"]: item for item in under if item["slug"]}
-
-    def keep(pending, failed=False):
-        done.add(pending["slug"])
-        if not failed:
-            still_pending.append(pending)
-            return
-        pending["tries"] = pending.get("tries", 0) + 1
-        if pending["tries"] >= 3:
-            new_units.append(_close_read_error(pending, now, code_sha))
-        else:
-            still_pending.append(pending)
-
-    for slug in slugs:
-        if _past_deadline(deadline, deadline_flag):
-            partial = True
-            break
-        item = by_slug.get(slug) or {
-            "chain": pending_by_slug[slug]["chain"], "slug": slug, "shared": False, "n_contracts": 1, "addrs": [],
-        }
-        pending = pending_by_slug.get(slug)
-        if item.get("shared") and not pending:
-            continue
-        listings = listing_cache.get(slug)
-        if listings is None:
-            try:
-                listings = client.listings(slug)
-            except opensea.Budget:
-                partial = True
-                if pending:
-                    keep(pending)
-                break
-            except opensea.AuthError:
-                raise
-            except opensea.OpenSeaError:
-                if pending:
-                    keep(pending, failed=True)
-                continue
-        parsed = [P.parse_order(x, now, "listing") for x in listings]
-        floor, n_live = P.floor_and_counts(parsed)
-        standard = P.standard_of(parsed)
-        if standard is None and item.get("addrs") and not item.get("shared"):
-            try:
-                standard = (client.contract(item["chain"], item["addrs"][0]) or "").lower()
-            except opensea.Budget:
-                partial = True
-                if pending:
-                    keep(pending)
-                break
-            except opensea.OpenSeaError:
-                standard = None
-        if eth_usd is None and floor is not None:
-            try:
-                detail(slug)
-            except opensea.Budget:
-                partial = True
-                if pending:
-                    keep(pending)
-                break
-            except opensea.OpenSeaError:
-                pass
-        floor_usd = floor * eth_usd if floor is not None and eth_usd else None
-        leg = P.leg_eth(quotes.get(item["chain"]))
-        trip = P.round_trip_eth(quotes.get(item["chain"]))
-        cheap = _under_cap(floor, floor_usd, trip, standard, n_live, item.get("shared"))
-        if not pending and not cheap:
-            if item.get("addrs") and not item.get("shared"):
-                try:
-                    _remember(state, P.asset_id(item["chain"], item["addrs"][0]), day)
-                except ValueError:
-                    pass
-            continue
-        try:
-            info = detail(slug)
-            offers, offer_pages = _page_offers(client, slug, now)
-            if slug in by_slug and not item.get("shared"):
-                events, event_pages, truncated = _page_events(client, slug, int(now) - 86400)
-            else:
-                events, event_pages, truncated = [], 0, False
-        except opensea.Budget:
-            partial = True
-            if pending:
-                keep(pending)
-            break
-        except opensea.OpenSeaError:
-            if pending:
-                keep(pending, failed=True)
-            continue
-        offer_parsed = [p for p in (P.parse_order(o, now, "offer") for o in offers) if p]
-        sales, buyers, share = P.sale_stats(events, int(now) - 86400)
-        asset = None
-        if item.get("addrs"):
-            try:
-                asset = P.asset_id(item["chain"], item["addrs"][0])
-            except ValueError:
-                asset = None
-        if asset is None and pending:
-            asset = pending["asset_id"]
-        book = [{"hash": p["hash"], "price_eth": p["price"]} for p in offer_parsed if p.get("hash")]
-        if asset:
-            _remember(state, asset, day)
-            state["offers"][asset] = book
-        if pending and asset:
-            done.add(slug)
-            new_units.append(_unit(
-                pending, listings, offers, pending.get("book") or [], leg, (info or {}).get("fees"), now, code_sha,
-            ))
-        obs = {
-            "n_contracts": item.get("n_contracts"), "shared": item.get("shared"), "standard": standard,
-            "mint_ok": P.mint_ok((info or {}).get("created_date"), now),
-            "disabled": bool((info or {}).get("is_disabled")),
-            "floor_eth": floor, "floor_usd": floor_usd, "gas_eth": trip, "listings": n_live,
-            "sales": sales, "buyers": buyers, "bidders": P.bidder_count(offer_parsed),
-            "top_share": share, "sales_truncated": truncated,
-        }
-        reasons = P.rejection(obs) if asset and slug in by_slug else []
-        if reasons:
-            _add_reasons(rejections, reasons)
-        if asset and slug in by_slug and not reasons:
-            passing.append(asset)
-            done.add(slug)
-            still_pending.append({
-                "asset_id": asset, "slug": slug, "chain": item["chain"], "snapshot_t": _now_iso(now),
-                "seasoned": P.seasoned(state["seen"].get(asset, []), day),
-                "floor_eth": floor, "floor_usd": floor_usd, "tries": 0,
-                "fees": P.public_fees((info or {}).get("fees")),
-                "book": [dict(row) for row in book], "top_buyer_share": share,
-                "counts": {
-                    "sales_24h": sales, "buyers_24h": buyers, "listings": n_live,
-                    "bidders_near_top": obs["bidders"], "offer_pages": offer_pages, "event_pages": event_pages,
-                },
-            })
-    for pending in state["pending"]:
-        if pending["slug"] not in done:
-            still_pending.append(pending)
-    state["pending"] = still_pending
-    # A partial run, including a budget hit while listing, does not record a zero day.
+    partial = pend_partial or scr_partial
+    fresh_ids = {p["asset_id"] for p in fresh}
+    state["pending"] = [p for p in kept if p["asset_id"] not in fresh_ids] + fresh
     iso = day.isoformat()
     if not partial:
-        # The v0.2 season starts on the first complete run, not on a partial one.
         if state["pilot_start"] is None:
             state["pilot_start"] = iso
         if iso not in state["complete_days"]:
@@ -590,6 +608,8 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
         for asset in passing:
             if asset not in bucket:
                 bucket.append(asset)
+        if len(state["first_runs"]) < P.EARLY_RUNS:
+            state["first_runs"].append(len(set(passing)))
     cutoff = day.toordinal() - 21
     state["passes"] = {k: v for k, v in state["passes"].items() if date_ok(k, cutoff)}
     state["complete_days"] = [d for d in state["complete_days"] if date_ok(d, cutoff)]
@@ -597,6 +617,7 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
     _append_units(units_path, new_units, prior)
     pilot = datetime.fromisoformat(state["pilot_start"]).date() if state["pilot_start"] else None
     summary = P.summarize(prior + new_units, state["passes"], pilot, state["complete_days"])
+    kill = P.early_kill(state["first_runs"], state["passes"], pilot, day)
     if getattr(client, "raw", None) is not None:
         client.raw.clear()
     _dump(books_path, state)
@@ -606,12 +627,17 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
         reason = "deadline"
     elif partial and isinstance(code, int):
         reason = "opensea http %s" % code
+    elif partial:
+        reason = "call cap"
     _dump(status_path, _status(
         code_sha, now, status="partial" if partial else "ok", measured=True, partial=partial,
         opensea_calls=client.calls, rate_limit=_rate(client),
         floor_passing_this_run=len(set(passing)) if not partial else None,
-        pending=len(still_pending), eth_usd=eth_usd, reason=reason,
-        rejections=_rejection_counts(rejections), **summary,
+        pending=len(state["pending"]), eth_usd=eth_usd, reason=reason,
+        rejections=_rejection_counts(rejections), flags=_flag_counts(flags),
+        screened=screened, pending_served=served, pending_deferred=deferred,
+        passers_footnoted=sum(1 for p in fresh if P.footnoted(p.get("counts"))),
+        early_kill=kill, **summary,
     ))
 
 

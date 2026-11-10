@@ -52,7 +52,10 @@
         "data_branch", "avoids_branch", "opensea_calls", "rate_limit", "floor_passing_this_run",
         "pending", "units", "unsellable_share", "median_cost", "median_cost_seasoned",
         "null_cost_count", "null_cost_share", "null_cost_share_max", "pace_median",
-        "pace_ready", "nh04", "nh04_ready", "buyer_fee_eth", "eth_usd", "raw", "reason", "rejections", "attribution"
+        "pace_ready", "nh04", "nh04_ready", "buyer_fee_eth", "eth_usd", "raw", "reason", "rejections",
+        "flags", "screened", "pending_served", "pending_deferred", "passers_footnoted",
+        "nh04_verdict", "verdict_footnote", "distinct_collections", "distinct_per_day_median",
+        "early_kill", "attribution"
       ],
       "properties": {
         "schema_version": { "const": 1 },
@@ -99,7 +102,7 @@
           "additionalProperties": false,
           "required": [
             "contracts", "shared", "standard", "mint", "disabled", "floor", "gas",
-            "listings", "sales", "buyers", "bidders", "concentration", "sales_truncated"
+            "listings", "sales", "buyers", "bidders", "concentration"
           ],
           "properties": {
             "contracts": { "type": "integer", "minimum": 0 },
@@ -113,8 +116,44 @@
             "sales": { "type": "integer", "minimum": 0 },
             "buyers": { "type": "integer", "minimum": 0 },
             "bidders": { "type": "integer", "minimum": 0 },
-            "concentration": { "type": "integer", "minimum": 0 },
-            "sales_truncated": { "type": "integer", "minimum": 0 }
+            "concentration": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "flags": {
+          "description": "v0.3 counts that are never rejections. sales_truncated: more than 300 sales in 7 days (buyers and share computed on the sample). liquid_tail: truncated collections that passed.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sales_truncated", "liquid_tail"],
+          "properties": {
+            "sales_truncated": { "type": "integer", "minimum": 0 },
+            "liquid_tail": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "screened": { "type": ["integer", "null"], "minimum": 0 },
+        "pending_served": { "type": ["integer", "null"], "minimum": 0 },
+        "pending_deferred": { "type": ["integer", "null"], "minimum": 0 },
+        "passers_footnoted": { "type": ["integer", "null"], "minimum": 0 },
+        "nh04_verdict": {
+          "description": "A v0.3 GO is never plain GO: it reads 'cost GO, supply-limited (median N distinct/day)'.",
+          "type": "string",
+          "pattern": "^(not_ready|INCONCLUSIVE|NO-GO|cost GO, supply-limited \\(median [0-9.na/]+ distinct/day\\))$"
+        },
+        "verdict_footnote": { "type": ["string", "null"] },
+        "distinct_collections": { "type": ["integer", "null"], "minimum": 0 },
+        "distinct_per_day_median": { "type": ["number", "null"] },
+        "early_kill": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["gate1", "gate1_runs", "gate1_avg", "gate1_min_avg", "gate2", "gate2_distinct", "gate2_min_distinct", "result"],
+          "properties": {
+            "gate1": { "enum": ["pending", "pass", "fire"] },
+            "gate1_runs": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "maxItems": 3 },
+            "gate1_avg": { "type": ["number", "null"] },
+            "gate1_min_avg": { "const": 6 },
+            "gate2": { "enum": ["pending", "pass", "fire"] },
+            "gate2_distinct": { "type": "integer", "minimum": 0 },
+            "gate2_min_distinct": { "const": 8 },
+            "result": { "enum": [null, "STOPPED", "INCONCLUSIVE"] }
           }
         },
         "attribution": { "type": "string" }

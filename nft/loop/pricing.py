@@ -11,15 +11,19 @@ from datetime import date, datetime, timezone
 PAGE_ENDPOINT = "/api/v2/collections"
 ORDER_BY = "market_cap"
 PAGE_LIMIT = 100
-# Page until this many collections are under the $250 floor cap, or the call cap hits.
-FLOOR_TARGET = 40
+# v0.3: screen under-cap collections until this many pass, the call cap, the wall clock,
+# or the end of the frozen page depth. v0.2 stopped at 40 under-cap collections instead.
+PASS_TARGET = 10
 MAX_LIST_PAGES = 8
 CHAINS = ("ethereum", "base")
 CAIP = {"ethereum": "eip155:1", "base": "eip155:8453"}
 FLOOR_USD = 250
 GAS_RATIO = 0.02
-MIN_SALES = 10
-MIN_BUYERS = 6
+# v0.3 liquidity window (frozen before the first v0.3 run; chosen after one replay snapshot).
+WINDOW_DAYS = 7
+WINDOW_SECONDS = WINDOW_DAYS * 86400
+MIN_SALES = 30
+MIN_BUYERS = 10
 MIN_LISTINGS = 5
 MIN_BIDDERS = 3
 BID_BAND = 0.85
@@ -29,7 +33,19 @@ LISTING_LIMIT = 20
 OFFER_PAGE_LIMIT = 200
 OFFER_MAX_PAGES = 3
 EVENT_PAGE_LIMIT = 100
-EVENT_MAX_PAGES = 2
+# 3 pages of 100 sale events. More than 300 sales in 7 days is a flag, not a rejection.
+EVENT_MAX_PAGES = 3
+# Reported only (not gates): a passer with either share above this is footnoted in the verdict.
+FOOTNOTE_SHARE = 0.50
+# v0.3 early kill (reported; the stop is a human decision).
+EARLY_RUNS = 3
+EARLY_MIN_AVG = 6
+EARLY_DAYS = 3
+EARLY_MIN_DISTINCT = 8
+# Addendum 1: below this sample by day 14, NH-04 is INCONCLUSIVE, never GO.
+MIN_UNITS = 20
+MIN_DISTINCT = 8
+COST_GO_MAX = 0.10
 # One Seaport basic-order fulfillment per leg. Entry adds one leg; exit subtracts one leg.
 LEG_GAS_UNITS = 250_000
 ROUND_TRIP_GAS_UNITS = LEG_GAS_UNITS * 2
@@ -44,27 +60,36 @@ GAS_RPC = {
     "base": "https://base-rpc.publicnode.com",
 }
 # The self-serve tier allows 120 reads a minute. Every key on the account shares
-# that bucket, so this job must not plan to use all of it.
+# that bucket, so this job must not plan to use all of it. Confirmed per-minute on the
+# repo key: run 42798395767 ran_at 10:21:16Z, x-ratelimit-reset 1794306390 = 10:26:30Z,
+# about 60 s after the run's last call (the run took about 4.5 min), so the window rolls
+# each minute; it is not an hourly 600 bucket.
 READS_PER_MINUTE = 120
 # Half the shared bucket stays free for the account's other keys.
 PACE_PER_MINUTE = 60
 # When the shared bucket is this low, wait for the window instead of draining it.
 RATE_RESERVE = 24
-# Eight minutes of paced reads. The job timeout is 15 minutes.
+# Eight minutes of paced reads (480 / 60). The run stops at 11 minutes; the job timeout is 15.
 MAX_CALLS = PACE_PER_MINUTE * 8
 DATA_BRANCH = "nft-data"
 AVOIDS_BRANCH = "desk-data"
 # books.json clock. A mismatch drops the pre-fix pilot_start, complete_days, and passes.
-STATE_VERSION = "v0.2"
+STATE_VERSION = "v0.3"
 REJECTION_REASONS = (
     "contracts", "shared", "standard", "mint", "disabled", "floor", "gas",
-    "listings", "sales", "buyers", "bidders", "concentration", "sales_truncated",
+    "listings", "sales", "buyers", "bidders", "concentration",
 )
+# Counted, never a rejection. A truncated passer is a liquid-tail collection.
+FLAG_NAMES = ("sales_truncated", "liquid_tail")
 RULE = (
-    "GET /api/v2/collections "
-    f"order_by={ORDER_BY} limit={PAGE_LIMIT} "
-    f"floor_target={FLOOR_TARGET} max_calls={MAX_CALLS} chains=ethereum,base "
-    f"pace_per_minute={PACE_PER_MINUTE}"
+    f"v0.3 GET /api/v2/collections "
+    f"order_by={ORDER_BY} limit={PAGE_LIMIT} max_list_pages={MAX_LIST_PAGES} "
+    f"pass_target={PASS_TARGET} max_calls={MAX_CALLS} chains=ethereum,base "
+    f"pace_per_minute={PACE_PER_MINUTE} "
+    f"window={WINDOW_DAYS}d min_sales={MIN_SALES} min_buyers={MIN_BUYERS} "
+    f"max_buyer_share={MAX_BUYER_SHARE:.2f} min_bidders={MIN_BIDDERS} bid_band={BID_BAND} "
+    f"min_listings={MIN_LISTINGS} floor_usd={FLOOR_USD} gas_ratio={GAS_RATIO} "
+    f"min_mint_days={MIN_MINT_DAYS} event_pages={EVENT_MAX_PAGES} truncated=flag"
 )
 ATTRIBUTION = "Market data from OpenSea (https://opensea.io). Derived metrics only."
 _ADDR = re.compile(r"0x[0-9a-fA-F]{40}")
@@ -321,8 +346,7 @@ def rejection(obs):
     share = obs.get("top_share")
     if share is None or share > MAX_BUYER_SHARE:
         reasons.append("concentration")
-    if obs.get("sales_truncated"):
-        reasons.append("sales_truncated")
+    # v0.3: sales_truncated is a flag, not a rejection (more than 300 sales in 7 days).
     return reasons
 
 
@@ -347,6 +371,65 @@ def sale_stats(events, after):
     if n and complete and buyers:
         share = max(Counter(buyers).values()) / n
     return n, distinct, share
+
+
+def sale_profile(events, after, now):
+    """Reported only. Top seller's share of window sales, and the largest share of
+    window sales inside any one of the 24h buckets ending at `now`."""
+    sellers, stamps, complete = [], [], True
+    for ev in events or []:
+        kind = ev.get("event_type", ev.get("eventType"))
+        if kind not in (None, "sale"):
+            continue
+        t = int(ev.get("event_timestamp") or ev.get("eventTimestamp") or 0)
+        if t < after:
+            continue
+        stamps.append(t)
+        raw = ev.get("seller")
+        if isinstance(raw, dict):
+            raw = raw.get("address") or ""
+        if isinstance(raw, str) and raw:
+            sellers.append(raw.lower())
+        else:
+            complete = False
+    n = len(stamps)
+    seller_share = max(Counter(sellers).values()) / n if n and complete and sellers else None
+    day_share = None
+    if n:
+        buckets = Counter(min(int((now - t) // 86400), WINDOW_DAYS - 1) for t in stamps)
+        day_share = max(buckets.values()) / n
+    return seller_share, day_share
+
+
+def footnoted(counts):
+    """True when a passer's seller share or single-day share is above 50%."""
+    counts = counts or {}
+    for key in ("top_seller_share_7d", "max_day_share_7d"):
+        value = counts.get(key)
+        if isinstance(value, (int, float)) and value > FOOTNOTE_SHARE:
+            return True
+    return False
+
+
+def early_kill(first_runs, passes, pilot_start, today):
+    """Two reported gates. (i) first 3 ok runs average < 6 passing. (ii) after day 3,
+    fewer than 8 distinct passing collections on days 1-3: stop, INCONCLUSIVE."""
+    runs = list(first_runs or [])[:EARLY_RUNS]
+    avg = (sum(runs) / len(runs)) if runs else None
+    gate1 = "pending" if len(runs) < EARLY_RUNS else ("fire" if avg < EARLY_MIN_AVG else "pass")
+    distinct = set()
+    gate2 = "pending"
+    if pilot_start is not None:
+        for day_s, assets in (passes or {}).items():
+            if 1 <= _day_index(date.fromisoformat(day_s), pilot_start) <= EARLY_DAYS:
+                distinct.update(assets or [])
+        if today is not None and _day_index(today, pilot_start) > EARLY_DAYS:
+            gate2 = "fire" if len(distinct) < EARLY_MIN_DISTINCT else "pass"
+    return {
+        "gate1": gate1, "gate1_runs": runs, "gate1_avg": avg, "gate1_min_avg": EARLY_MIN_AVG,
+        "gate2": gate2, "gate2_distinct": len(distinct), "gate2_min_distinct": EARLY_MIN_DISTINCT,
+        "result": "STOPPED" if gate1 == "fire" else ("INCONCLUSIVE" if gate2 == "fire" else None),
+    }
 
 
 def gas_quote(current_wei, samples, chain, now):
@@ -397,9 +480,12 @@ def summarize(units, passes, pilot_start, complete_days=None):
         return date.fromisoformat(unit["snapshot_t"][:10])
 
     def in_window(unit):
+        # Units from another rule string (v0.2 and older) are never v0.3 units.
+        if unit.get("rule", RULE) != RULE:
+            return False
         if pilot_start is None:
             return True
-        return _day_index(day_of(unit), pilot_start) <= 14
+        return 1 <= _day_index(day_of(unit), pilot_start) <= 14
 
     window = [u for u in units if in_window(u)]
     costs = [u["cost"] for u in window if isinstance(u.get("cost"), (int, float))]
@@ -422,6 +508,27 @@ def summarize(units, passes, pilot_start, complete_days=None):
     window_ready = bool(pilot_start and last and _day_index(last, pilot_start) >= 14)
     blocked = null_share is not None and null_share > NULL_COST_MAX
     nh04_ready = window_ready and not blocked
+    distinct = {u.get("asset_id") for u in window if u.get("asset_id")}
+    per_day = []
+    if pilot_start is not None:
+        for day_s in complete_days or []:
+            if 1 <= _day_index(date.fromisoformat(day_s), pilot_start) <= 14:
+                per_day.append(len(set((passes or {}).get(day_s) or [])))
+    supply = statistics.median(per_day) if per_day else None
+    median = statistics.median(costs) if costs else None
+    flagged = sum(1 for u in window if footnoted(u.get("counts")))
+    if not window_ready:
+        verdict = "not_ready"
+    elif blocked or n < MIN_UNITS or len(distinct) < MIN_DISTINCT or median is None:
+        verdict = "INCONCLUSIVE"
+    elif median <= COST_GO_MAX:
+        # Never a plain GO: F2 (>= 20 floor-passing a day) is reported, not a gate.
+        verdict = "cost GO, supply-limited (median %s distinct/day)" % _fmt(supply)
+    else:
+        verdict = "NO-GO"
+    footnote = None
+    if flagged:
+        footnote = "%d of %d units: top seller or one day above 50%% of 7d sales" % (flagged, n)
     return {
         "median_cost": statistics.median(costs) if costs else None,
         "median_cost_seasoned": statistics.median(seasoned_costs) if seasoned_costs else None,
@@ -434,7 +541,17 @@ def summarize(units, passes, pilot_start, complete_days=None):
         "pace_ready": ready,
         "nh04": "ready" if nh04_ready else "not_ready",
         "nh04_ready": nh04_ready,
+        "nh04_verdict": verdict,
+        "verdict_footnote": footnote,
+        "distinct_collections": len(distinct),
+        "distinct_per_day_median": supply,
     }
+
+
+def _fmt(value):
+    if value is None:
+        return "n/a"
+    return ("%g" % value)
 
 
 def stray_addresses(blob):

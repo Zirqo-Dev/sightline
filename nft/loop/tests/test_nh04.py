@@ -133,18 +133,21 @@ class NH04Tests(unittest.TestCase):
     def test_universe_filters_and_identity(self):
         ok = {
             "n_contracts": 1, "shared": False, "standard": "erc721", "mint_ok": True, "disabled": False,
-            "floor_eth": 0.1, "floor_usd": 200, "gas_eth": 0.0005, "listings": 5, "sales": 10, "buyers": 6,
+            "floor_eth": 0.1, "floor_usd": 200, "gas_eth": 0.0005, "listings": 5, "sales": 30, "buyers": 10,
             "bidders": 3, "top_share": 0.2, "sales_truncated": False,
         }
         self.assertEqual(P.rejection(ok), [])
         flips = {
             "floor": {"floor_usd": 250.01}, "gas": {"gas_eth": 0.002}, "listings": {"listings": 4},
-            "sales": {"sales": 9}, "buyers": {"buyers": 5}, "bidders": {"bidders": 2},
+            "sales": {"sales": 29}, "buyers": {"buyers": 9}, "bidders": {"bidders": 2},
             "concentration": {"top_share": 0.201}, "shared": {"shared": True}, "standard": {"standard": "erc1155"},
-            "contracts": {"n_contracts": 2}, "mint": {"mint_ok": False}, "sales_truncated": {"sales_truncated": True},
+            "contracts": {"n_contracts": 2}, "mint": {"mint_ok": False},
         }
         for reason, patch in flips.items():
             self.assertIn(reason, P.rejection({**ok, **patch}))
+        # v0.3: truncation is a flag, never a rejection.
+        self.assertEqual(P.rejection({**ok, "sales_truncated": True}), [])
+        self.assertNotIn("sales_truncated", P.REJECTION_REASONS)
         aid = P.asset_id("ethereum", ADDR.upper())
         self.assertEqual(aid, "nft_collection:eip155:1:" + ADDR)
         self.assertEqual(P.parse_asset_id(aid)["asset_type"], "nft_collection")
@@ -165,7 +168,7 @@ class NH04Tests(unittest.TestCase):
         self.assertLess(P.PACE_PER_MINUTE, P.READS_PER_MINUTE)
         self.assertEqual(P.MAX_CALLS, P.PACE_PER_MINUTE * 8)
         self.assertLessEqual(P.PACE_PER_MINUTE, P.READS_PER_MINUTE // 2)
-        self.assertEqual(P.FLOOR_TARGET, 40)
+        self.assertEqual(P.PASS_TARGET, 10)
         self.assertEqual(P.NULL_COST_MAX, 0.20)
         self.assertEqual(P.ORDER_BY, "market_cap")
         self.assertNotIn("num_owners", P.RULE)
@@ -212,8 +215,10 @@ class NH04Tests(unittest.TestCase):
         ]
         offers_t1 = offers_t + [order(0.091, end, role="offer", offerer="0x" + "c3" * 20, digest="44")]
         offers_new = [order(0.12, end, role="offer", offerer="0x" + "c3" * 20, digest="55")]
-        buyers = [BUYER, BUYER] + ["0x" + format(i, "02x") * 20 for i in range(8)]
-        events = [{"event_type": "sale", "event_timestamp": int(NOW - 100), "buyer": b, "seller": SELLER} for b in buyers]
+        buyers = [BUYER, BUYER] + ["0x%040x" % (i + 1) for i in range(28)]
+        sellers = [SELLER] * 3 + ["0x%040x" % (i + 100) for i in range(27)]
+        events = [{"event_type": "sale", "event_timestamp": int(NOW - 100 - i * 20000), "buyer": b, "seller": sellers[i]}
+                  for i, b in enumerate(buyers)]
 
         class Fake:
             def __init__(self):
@@ -344,46 +349,202 @@ class NH04Tests(unittest.TestCase):
         self.assertFalse(unknown["pace_ready"])
         self.assertIsNone(unknown["pace_median"])
 
-    def test_pages_until_floor_target(self):
-        class Pager:
+    def _universe_fake(self, n=30, pass_every=1, truncate=False, cap=None, log=None):
+        """n under-cap collections on ethereum; every pass_every-th one is liquid."""
+        end = NOW + 10_000
+        log = log if log is not None else []
+
+        class Fake:
             def __init__(self):
-                self.calls = 0
-                self.listed = []
-                self.listing_calls = 0
+                self.calls, self.raw = 0, []
+                self.max_calls = cap if cap is not None else P.MAX_CALLS
+                self.rate = {"limit": "120", "remaining": "100", "reset": "1"}
+            def _tick(self, what):
+                if self.calls >= self.max_calls:
+                    raise opensea.Budget()
+                self.calls += 1
+                log.append(what)
             def list_collections(self, chain, cursor):
-                self.calls += 1
-                self.listed.append((chain, cursor))
-                if chain == "base":
+                self._tick(("list", chain))
+                if chain != "ethereum":
                     return [], None
-                page = 0 if not cursor else int(cursor)
-                if page == 0:
-                    return [{"collection": "blue", "contracts": [{"address": "0x" + "99" * 20, "chain": "ethereum"}]}], "1"
-                rows = []
-                for i in range(P.FLOOR_TARGET):
-                    rows.append({"collection": "c%d" % i, "contracts": [{"address": "0x%040x" % (i + 1), "chain": "ethereum"}]})
-                return rows, None
+                return [{"collection": "c%d" % i, "contracts": [{"address": "0x%040x" % (i + 1), "chain": "ethereum"}]}
+                        for i in range(n)], None
             def listings(self, slug):
-                self.calls += 1
-                self.listing_calls += 1
-                price = 10.0 if slug == "blue" else 0.1
-                return [order(price + n * 0.01, NOW + 10_000, digest="%02x" % (n + (0 if slug == "blue" else 20))) for n in range(5)]
+                self._tick(("listings", slug))
+                return [order(0.1 + k * 0.01, end, digest="%02x" % k) for k in range(5)]
             def collection(self, slug):
-                self.calls += 1
-                return {"pricing_currencies": {"listing_currency": {"symbol": "ETH", "usd_price": "2000"}}}
+                self._tick(("collection", slug))
+                return {"created_date": "2020-01-01", "fees": [{"fee": 1, "required": True}]}
+            def offers(self, slug, cursor):
+                self._tick(("offers", slug))
+                return [order(0.09, end, role="offer", offerer="0x%040x" % (500 + k), digest="%02x" % (40 + k)) for k in range(3)], None
+            def events(self, slug, after, cursor):
+                self._tick(("events", slug))
+                idx = int(slug[1:])
+                liquid = idx % pass_every == 0
+                count = 100 if truncate else (30 if liquid else 5)
+                page = int(cursor or 0)
+                rows = [{"event_type": "sale", "event_timestamp": int(NOW - 1000 - (page * 100 + k) * 1500),
+                         "buyer": "0x%040x" % (1000 + page * 100 + k), "seller": "0x%040x" % (5000 + (page * 100 + k) % 7)}
+                        for k in range(count)]
+                # The 7-day window: `after` is the run time minus 7 days (runs here are whole hours apart).
+                assert (int(NOW) - 7 * 86400 - after) % 3600 == 0
+                return rows, (str(page + 1) if truncate else None)
             def contract(self, chain, address):
                 raise AssertionError("item type is on the listing")
+        return Fake()
 
-        pager = Pager()
-        def detail(slug):
-            detail.usd = 2000.0
-            return pager.collection(slug)
-        detail.usd = None
-        under, _cache, partial = snapshot._collect(pager, {"ethereum": 10 ** 9, "base": 10 ** 9}, detail, NOW)
-        self.assertFalse(partial)
-        self.assertEqual(len(under), P.FLOOR_TARGET)
-        self.assertNotIn("blue", [item["slug"] for item in under])
-        self.assertEqual(pager.listing_calls, P.FLOOR_TARGET + 1)
-        self.assertNotIn(("ethereum", "2"), [(chain, cursor) for chain, cursor in pager.listed])
+    def test_screen_until_pass_target(self):
+        log = []
+        fake = self._universe_fake(n=30, pass_every=2, log=log)
+        data = tempfile.mkdtemp()
+        snapshot.run(data, fake, NOW, "sha", {"ethereum": 10 ** 9, "base": 10 ** 9}, eth_usd=2000)
+        status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
+        self.assertEqual(status["status"], "ok")
+        self.assertEqual(status["floor_passing_this_run"], P.PASS_TARGET)
+        # Passers are c0, c2, ... c18; screening stops after the 10th, so c19+ are never read.
+        self.assertEqual(status["screened"], 19)
+        self.assertNotIn(("listings", "c19"), log)
+        self.assertEqual(status["rejections"]["sales"], 9)
+        books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
+        self.assertEqual(len(books["pending"]), 10)
+        self.assertEqual(books["pending"][0]["counts"]["sales_7d"], 30)
+        self.assertIn("pass_target=10", status["rule"])
+        import jsonschema
+        jsonschema.validate(status, json.load(open(os.path.join(ROOT, "schema", "nft-snapshot.schema.json"))))
+
+    def test_pending_rechecks_are_served_before_screening(self):
+        log = []
+        fake = self._universe_fake(n=30, pass_every=1, log=log)
+        data = tempfile.mkdtemp()
+        gas = {"ethereum": 10 ** 9, "base": 10 ** 9}
+        snapshot.run(data, fake, NOW, "sha", gas, eth_usd=2000)
+        del log[:]
+        snapshot.run(data, fake, NOW + 3600, "sha", gas, eth_usd=2000)
+        first_list = log.index(("list", "ethereum"))
+        pend_reads = [i for i, (kind, slug) in enumerate(log) if kind == "listings" and slug in {"c%d" % k for k in range(10)}]
+        self.assertTrue(pend_reads and max(pend_reads) < first_list)
+        status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
+        self.assertEqual(status["pending_served"], 10)
+        self.assertEqual(status["pending_deferred"], 0)
+        # Cached listings/offers: a pending collection met again in the universe costs only its events.
+        self.assertEqual(log.count(("listings", "c0")), 1)
+        self.assertEqual(log.count(("offers", "c0")), 1)
+
+    def test_call_cap_during_pending_defers_and_is_partial(self):
+        log = []
+        fake = self._universe_fake(n=30, pass_every=1, log=log)
+        data = tempfile.mkdtemp()
+        gas = {"ethereum": 10 ** 9, "base": 10 ** 9}
+        snapshot.run(data, fake, NOW, "sha", gas, eth_usd=2000)
+        for tries in (1, 2, 3):
+            fake.calls, fake.max_calls = 0, 7   # room for two pending re-checks (3 reads each) only
+            del log[:]
+            snapshot.run(data, fake, NOW + 3600 * tries, "sha", gas, eth_usd=2000)
+            status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
+            self.assertEqual(status["status"], "partial")
+            self.assertIsNone(status["floor_passing_this_run"])
+            self.assertNotIn(("list", "ethereum"), log)
+        units = [json.loads(line) for line in open(os.path.join(data, "nft-pilot", "units.jsonl"))]
+        self.assertEqual(sum(1 for u in units if u.get("reason") == "budget"), 4)
+        self.assertEqual(sum(1 for u in units if "reason" not in u), 6)
+        books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
+        self.assertEqual(books["pending"], [])
+        self.assertEqual(books["complete_days"], ["2026-11-09"])
+
+    def test_truncated_sales_are_flagged_not_rejected(self):
+        log = []
+        fake = self._universe_fake(n=3, truncate=True, log=log)
+        data = tempfile.mkdtemp()
+        snapshot.run(data, fake, NOW, "sha", {"ethereum": 10 ** 9, "base": 10 ** 9}, eth_usd=2000)
+        status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
+        self.assertEqual(log.count(("events", "c0")), P.EVENT_MAX_PAGES)
+        self.assertEqual(status["floor_passing_this_run"], 3)
+        self.assertEqual(status["flags"], {"sales_truncated": 3, "liquid_tail": 3})
+        self.assertNotIn("sales_truncated", status["rejections"])
+        books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
+        counts = books["pending"][0]["counts"]
+        self.assertTrue(counts["sales_truncated"] and counts["liquid_tail"])
+        self.assertEqual(counts["sales_7d"], 300)
+        self.assertEqual(counts["buyers_7d"], 300)
+
+    def test_rule_string_freezes_v03_thresholds(self):
+        for part in ("v0.3 ", "window=7d", "min_sales=30", "min_buyers=10", "max_buyer_share=0.20",
+                     "max_list_pages=8", "pass_target=10", "max_calls=480", "pace_per_minute=60",
+                     "event_pages=3", "truncated=flag", "floor_usd=250"):
+            self.assertIn(part, P.RULE)
+        self.assertNotIn("floor_target", P.RULE)
+        self.assertEqual((P.WINDOW_DAYS, P.MIN_SALES, P.MIN_BUYERS, P.MAX_BUYER_SHARE), (7, 30, 10, 0.20))
+        self.assertEqual(P.FLOOR_USD, 250)
+        self.assertEqual(P.STATE_VERSION, "v0.3")
+
+    def test_pace_fits_the_per_minute_window(self):
+        # Repo key: ran_at 10:21:16Z, reset 1794306390 = 10:26:30Z, about 60 s after the
+        # run's last call, so the 120 limit is a rolling minute, not an hour.
+        self.assertEqual(datetime.fromtimestamp(1794306390, timezone.utc).strftime("%H:%M:%S"), "10:26:30")
+        self.assertEqual(60.0 / P.PACE_PER_MINUTE, 1.0)
+        self.assertLessEqual(P.PACE_PER_MINUTE, P.READS_PER_MINUTE // 2)
+        self.assertLess(340 / P.PACE_PER_MINUTE * 60, snapshot.RUN_LIMIT_SECONDS)
+        self.assertLess(P.MAX_CALLS / P.PACE_PER_MINUTE * 60, snapshot.RUN_LIMIT_SECONDS)
+        ticks = []
+        client = opensea.OpenSea("test-key", transport=lambda _p, _q: (200, {}, {"collections": []}),
+                                 sleep=ticks.append, clock=lambda: 1000.0)
+        client.list_collections("ethereum", None)
+        client.list_collections("base", None)
+        self.assertEqual(ticks, [1.0])
+
+    def test_early_kill_two_gates(self):
+        from datetime import date
+        start = date(2026, 11, 1)
+        a = ["nft_collection:eip155:1:0x%040x" % i for i in range(1, 12)]
+        k = P.early_kill([5, 6, 6], {}, start, date(2026, 11, 1))
+        self.assertEqual((k["gate1"], k["result"]), ("fire", "STOPPED"))
+        self.assertAlmostEqual(k["gate1_avg"], 17 / 3)
+        self.assertEqual(P.early_kill([6, 6, 6], {}, start, start)["gate1"], "pass")
+        self.assertEqual(P.early_kill([9, 9], {}, start, start)["gate1"], "pending")
+        passes = {"2026-11-01": a[:4], "2026-11-02": a[2:7], "2026-11-03": a[:2], "2026-11-04": a[7:]}
+        self.assertEqual(P.early_kill([9, 9, 9], passes, start, date(2026, 11, 3))["gate2"], "pending")
+        k = P.early_kill([9, 9, 9], passes, start, date(2026, 11, 4))
+        self.assertEqual((k["gate2"], k["gate2_distinct"], k["result"]), ("fire", 7, "INCONCLUSIVE"))
+        passes["2026-11-03"] = a[:8]
+        self.assertEqual(P.early_kill([9, 9, 9], passes, start, date(2026, 11, 4))["gate2"], "pass")
+
+    def test_go_is_cost_go_supply_limited_and_footnoted(self):
+        from datetime import date
+        start = date(2026, 11, 1)
+        days = ["2026-11-%02d" % d for d in range(1, 15)]
+        ids = ["nft_collection:eip155:1:0x%040x" % i for i in range(1, 11)]
+        passes = {d: ids[: 3 + (i % 3)] for i, d in enumerate(days)}
+        def unit(i, cost, counts=None):
+            return {"asset_id": ids[i % 10], "cost": cost, "unsellable": False, "seasoned": False,
+                    "snapshot_t": "2026-11-%02dT00:00:00Z" % (1 + i % 14), "counts": counts or {}, "rule": P.RULE}
+        units = [unit(i, 0.08) for i in range(20)]
+        got = P.summarize(units, passes, start, days)
+        self.assertEqual(got["nh04_verdict"], "cost GO, supply-limited (median 4 distinct/day)")
+        self.assertNotEqual(got["nh04_verdict"], "GO")
+        self.assertIsNone(got["verdict_footnote"])
+        self.assertFalse(got["pace_ready"] and got["pace_median"] >= 20)  # F2 reported, not a gate
+        self.assertEqual(P.summarize(units[:19], passes, start, days)["nh04_verdict"], "INCONCLUSIVE")
+        few = [dict(u, asset_id=ids[i % 7]) for i, u in enumerate(units)]
+        self.assertEqual(P.summarize(few, passes, start, days)["nh04_verdict"], "INCONCLUSIVE")
+        self.assertEqual(P.summarize([unit(i, 0.3) for i in range(20)], passes, start, days)["nh04_verdict"], "NO-GO")
+        old = [dict(u, rule="older rule") for u in units]
+        self.assertEqual(P.summarize(old + units[:5], passes, start, days)["units"], 5)
+        units[0]["counts"] = {"top_seller_share_7d": 0.6}
+        units[1]["counts"] = {"max_day_share_7d": 0.51}
+        self.assertIn("2 of 20 units", P.summarize(units, passes, start, days)["verdict_footnote"])
+
+    def test_sale_profile_reports_seller_and_single_day_share(self):
+        ev = [{"event_type": "sale", "event_timestamp": int(NOW - 100 - i), "buyer": "0x%040x" % i,
+               "seller": SELLER if i < 6 else "0x%040x" % (100 + i)} for i in range(10)]
+        ev += [{"event_type": "sale", "event_timestamp": int(NOW - 3 * 86400), "buyer": "0x%040x" % 50,
+                "seller": "0x%040x" % 51}] * 2
+        seller, day = P.sale_profile(ev, int(NOW) - 7 * 86400, NOW)
+        self.assertAlmostEqual(seller, 6 / 12)
+        self.assertAlmostEqual(day, 10 / 12)
+        self.assertTrue(P.footnoted({"max_day_share_7d": day}))
+        self.assertFalse(P.footnoted({"top_seller_share_7d": seller}))
 
     def test_rate_limit_backoff_is_one_retry(self):
         seen = {"n": 0}
@@ -632,7 +793,8 @@ class NH04Tests(unittest.TestCase):
 
         snapshot.run(data, Quiet(), NOW, "sha", {"ethereum": 10 ** 9, "base": 10 ** 9}, eth_usd=2000)
         books = json.load(open(os.path.join(root, "books.json")))
-        self.assertEqual(books["state_version"], "v0.2")
+        self.assertEqual(books["state_version"], "v0.3")
+        self.assertEqual(books["first_runs"], [0])
         self.assertEqual(books["pilot_start"], "2026-11-09")
         self.assertEqual(books["complete_days"], ["2026-11-09"])
         self.assertEqual(list(books["passes"]), ["2026-11-09"])
@@ -662,7 +824,7 @@ class NH04Tests(unittest.TestCase):
         self.assertEqual(status["reason"], "deadline")
         books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
         self.assertIsNone(books["pilot_start"])
-        self.assertEqual(books["state_version"], "v0.2")
+        self.assertEqual(books["state_version"], "v0.3")
         self.assertEqual(snapshot.RUN_LIMIT_SECONDS, 11 * 60)
 
     def test_workflow_is_isolated(self):
@@ -701,6 +863,10 @@ class NH04Tests(unittest.TestCase):
         })
         for banned in ("solana-desk/", "build-site.py", "desk.run"):
             self.assertNotIn(banned, text)
+        # v0.3: cron-job.org is the trigger of record; no GitHub schedule (no double runs).
+        self.assertNotIn("schedule:", text)
+        self.assertNotIn("cron:", text)
+        self.assertIn("workflow_dispatch:", text)
 
 
 if __name__ == "__main__":

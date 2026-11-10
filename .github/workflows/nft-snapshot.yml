@@ -6,9 +6,9 @@ name: NFT snapshot
 # Derived rows only. Raw OpenSea bodies are not kept. No Actions artifacts. No key is minted here.
 # The first run creates nft-data. Later runs push to it. publish_nft_data.sh auths with the job token.
 
+# Trigger of record: the owner's cron-job.org job dispatches this workflow hourly at :27.
+# v0.3 removes the GitHub schedule so two runs cannot land in the same hour.
 on:
-  schedule:
-    - cron: "27 * * * *"
   workflow_dispatch:
   pull_request:
     paths:
