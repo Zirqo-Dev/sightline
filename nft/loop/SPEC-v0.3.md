@@ -172,12 +172,12 @@ The owner's words, quoted:
 **2. ETH/USD from Chainlink; Coinbase removed.**
 - Primary: the Chainlink ETH/USD aggregator on Ethereum (`0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419`), read with `eth_call` of `latestRoundData()` (`0xfeaf968c`) over the existing keyless Ethereum RPC. No key and no new dependency.
   - The answer has 8 decimals. It's rejected if updatedAt is more than 1 hour old, more than 5 min in the future, non-positive, or answeredInRound < roundId.
-  - Live check, Nov 10, 7:50 AM EST: "ETH / USD", 8 decimals, about $2,090, updated about 30 min earlier.
+  - Live check on Nov 10 (morning, EST): "ETH / USD", 8 decimals, about $2,090, updated about 30 min earlier.
 - Fallback: DefiLlama, **internal only**. Its price can screen the $250 cap, but it's never published: status `eth_usd` is null, `eth_usd_source = "fallback"`, and new pending rows get `floor_usd = null`.
 - Published files carry ETH values plus Chainlink-derived USD only (`eth_usd_source = "chainlink"`).
 - Note: the feed's heartbeat is 1 hour, so a quote just over 1 hour old can push a run onto the unpublished fallback. That's expected and not an error.
 - Code: `snapshot.parse_chainlink`, `snapshot.fetch_eth_usd`, `snapshot.run`. Tests: `test_chainlink_primary_and_stale_rejected`, `test_defillama_price_is_never_published`, `test_coinbase_is_gone`, `test_eth_usd_parser_keeps_unknown_null`.
 
-**3. One OpenSea key only.** The spare free agent key on the box is **retired and must never be used again**. OpenSea API Terms 7.1 bar circumventing limits, including by creating multiple API keys. The only key is the repo secret `OPENSEA_API_KEY`. The replay (section 1) and the dry-run attempt on Nov 10, 7:35 AM EST (stopped before it finished, no results) were the last uses. The pre-merge dry run is replaced by the post-merge DRY_RUN dispatch on the repo key (section 14).
+**3. One OpenSea key only.** The spare free agent key on the box is **retired and must never be used again**. OpenSea API Terms 7.1 bar circumventing limits, including by creating multiple API keys. The only key is the repo secret `OPENSEA_API_KEY`. The replay (section 1) and the interrupted offline dry-run attempt earlier on Nov 10 (stopped by the owner before it finished, no results) were the last uses. The pre-merge dry run is replaced by the post-merge DRY_RUN dispatch on the repo key (section 14).
 
 **4. Merge order.** The owner pauses the cron-job.org NFT job before merge (his decision A), which satisfies the merge-order rule in section 14. He dispatches the DRY_RUN on the repo key and re-enables the job only after the dry run is green.
