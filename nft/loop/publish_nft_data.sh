@@ -5,6 +5,12 @@
 # on the command, so the token is not written into the URL, the git config, or the log.
 set -euo pipefail
 
+# A DRY_RUN dispatch must never publish. The workflow also skips this step.
+if [ "${NFT_DRY_RUN:-false}" != "false" ]; then
+  echo "dry run: refusing to publish" >&2
+  exit 1
+fi
+
 dest=nft-data
 if [ "$dest" != "nft-data" ]; then
   echo "refusing to push; only nft-data is allowed" >&2
