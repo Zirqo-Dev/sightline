@@ -140,7 +140,9 @@ class NH04Tests(unittest.TestCase):
         self.assertLessEqual(P.PACE_PER_MINUTE, P.READS_PER_MINUTE // 2)
         self.assertEqual(P.FLOOR_TARGET, 40)
         self.assertEqual(P.NULL_COST_MAX, 0.20)
-        self.assertEqual(P.ORDER_BY, "num_owners")
+        self.assertEqual(P.ORDER_BY, "market_cap")
+        self.assertNotIn("num_owners", P.RULE)
+        self.assertIn("order_by=market_cap", P.RULE)
         self.assertNotIn("volume", P.ORDER_BY)
         self.assertNotIn("trending", P.PAGE_ENDPOINT)
 
@@ -497,8 +499,11 @@ class NH04Tests(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(data, "nft-pilot", "units.jsonl")))
 
     def test_list_http_error_stops_partial_and_keeps_the_price(self):
-        def transport(path, _params):
-            return 400, {"X-RateLimit-Limit": "120", "X-RateLimit-Remaining": "118", "X-RateLimit-Reset": "1000"}, {"errors": ["bad"]}
+        seen = []
+
+        def transport(path, params):
+            seen.append((path, params))
+            return 400, {"X-RateLimit-Limit": "120", "X-RateLimit-Remaining": "118", "X-RateLimit-Reset": "1000"}, {"errors": ["Owners sorting has been removed"]}
         sleeps = []
         client = opensea.OpenSea("test-key", transport=transport, sleep=sleeps.append, clock=lambda: 1000.0)
         data = tempfile.mkdtemp()
@@ -507,12 +512,16 @@ class NH04Tests(unittest.TestCase):
         self.assertEqual(sleeps, [1.0])
         status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
         self.assertEqual(status["status"], "partial")
+        self.assertTrue(status["partial"])
         self.assertIsNone(status["floor_passing_this_run"])
         self.assertEqual(status["eth_usd"], 2000)
         self.assertEqual(status["opensea_calls"], 2)
         self.assertEqual(status["reason"], "opensea http 400")
         self.assertEqual(status["rate_limit"]["limit"], "120")
-        self.assertNotIn("bad", json.dumps(status))
+        self.assertEqual([params.get("order_by") for _path, params in seen], ["market_cap", "market_cap"])
+        self.assertEqual([params.get("chain") for _path, params in seen], ["ethereum", "base"])
+        self.assertNotIn("Owners sorting", json.dumps(status))
+        self.assertNotIn("num_owners", json.dumps(status))
 
     def test_server_error_is_retried_and_low_bucket_waits(self):
         seen = {"n": 0}

@@ -186,7 +186,7 @@ def _call_cap(client):
 
 
 def _collect(client, quotes, detail, now):
-    """Page num_owners until FLOOR_TARGET collections are under the $250 cap, or calls run out."""
+    """Page by market cap until FLOOR_TARGET collections are under the $250 cap, or calls run out."""
     cursors = {chain: "" for chain in P.CHAINS}
     pages = {chain: 0 for chain in P.CHAINS}
     seen, under, cache = {}, [], {}

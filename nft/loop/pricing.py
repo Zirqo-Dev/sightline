@@ -6,9 +6,10 @@ import statistics
 from collections import Counter
 from datetime import date, datetime, timezone
 
-# Frozen in PR1. num_owners is a stock of holders, not a 1-day or 7-day trend.
+# OpenSea removed order_by=num_owners ("Owners sorting has been removed").
+# market_cap is the remaining size stock: large established collections, not a 1-day or 7-day trend.
 PAGE_ENDPOINT = "/api/v2/collections"
-ORDER_BY = "num_owners"
+ORDER_BY = "market_cap"
 PAGE_LIMIT = 100
 # Page until this many collections are under the $250 floor cap, or the call cap hits.
 FLOOR_TARGET = 40
@@ -54,7 +55,8 @@ MAX_CALLS = PACE_PER_MINUTE * 8
 DATA_BRANCH = "nft-data"
 AVOIDS_BRANCH = "desk-data"
 RULE = (
-    "GET /api/v2/collections order_by=num_owners limit=100 "
+    "GET /api/v2/collections "
+    f"order_by={ORDER_BY} limit={PAGE_LIMIT} "
     f"floor_target={FLOOR_TARGET} max_calls={MAX_CALLS} chains=ethereum,base "
     f"pace_per_minute={PACE_PER_MINUTE}"
 )
