@@ -189,3 +189,12 @@ The owner's words, quoted:
 - Residual unknown: §2(iii) defers to third-party data-provider terms, which aren't published per feed.
 - §2(iv) and https://docs.chain.link/data-feeds/developer-responsibilities put data quality on the consumer. That's why there's an updatedAt ≤ 1h staleness check, plus the round and sign checks in `parse_chainlink`.
 - The full note is on SPD-123 (Chainlink terms note).
+
+**6. Q1: quiet-hour fallback (Challenger, Nov 10).** The Chainlink heartbeat is 3600 s, so quiet hours often land at 3600–3700 s and use the internal DefiLlama fallback. That doesn't bias the verdict, so `CHAINLINK_MAX_AGE` stays at 3600 s:
+- **Unit cost is ETH-only.** `pricing.round_trip` computes `cost = (entry − exit) / entry` from ETH listing, bid, fees and gas (pricing.py lines 328–343). `snapshot._unit` takes the cost straight from it (snapshot.py lines 214 and 221). No USD value enters, so a fallback run can't create null-cost units, and MIN_UNITS / null-share (pricing.py lines 552–556) see the same units either way.
+- **The $250 cap uses the internal price.**
+  - `detail.usd = eth_usd` holds whichever price was fetched, fallback included (snapshot.py lines 615 and 618).
+  - `floor_usd = floor * detail.usd` is computed per collection (line 459) and checked by `_under_cap` (lines 466 and 520–521).
+  - The fallback only blanks what's published, after screening: pending `floor_usd` (lines 634–638) and status `eth_usd` (line 693).
+- **Source counts.** Measured runs are counted by source in `books.json usd_runs` and reported as `status.eth_usd_runs {chainlink, fallback}`. When any measured run used the fallback, `verdict_footnote` adds "ETH/USD source on measured runs: N Chainlink, M fallback (fallback USD not published; costs are ETH-only)". No-price partial runs aren't counted.
+- Tests: `test_q1_fallback_runs_keep_numeric_costs_and_cap` (quote at 3700 s → fallback; 2 fallback runs give 4 units with numeric cost, 0 null; cap still rejects at $3,000/ETH) and `test_usd_source_counts_mixed`.

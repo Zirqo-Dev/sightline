@@ -829,6 +829,58 @@ class NH04Tests(unittest.TestCase):
         st2 = json.load(open(os.path.join(data2, "nft-pilot", "status.json")))
         self.assertEqual((st2["eth_usd"], st2["eth_usd_source"]), (2090.05, "chainlink"))
 
+    def test_q1_fallback_runs_keep_numeric_costs_and_cap(self):
+        """Quiet hour: Chainlink at 3700 s (past the 3600 s limit) falls back to DefiLlama.
+        Unit costs are ETH ratios and the $250 cap is screened on the internal price."""
+        self.assertIsNone(snapshot.parse_chainlink(self._round(2000, int(NOW) - 3700), NOW))
+        llama = lambda _u: {"coins": {"coingecko:ethereum": {"price": 2000, "symbol": "ETH", "timestamp": NOW - 60}}}
+        quiet = lambda _u, _p: {"result": self._round(2000, int(NOW) - 3700)}
+        self.assertEqual(snapshot.fetch_eth_usd(llama, quiet, now=NOW), (2000, "defillama"))
+        data = tempfile.mkdtemp()
+        gas = {"ethereum": 10 ** 9, "base": 10 ** 9}
+        fb = lambda: (2000, "defillama")
+        fake = self._universe_fake(n=4, pass_every=1)
+        snapshot.run(data, fake, NOW, "sha", gas, fetch_price=fb)
+        snapshot.run(data, fake, NOW + 3600, "sha", gas, fetch_price=fb)
+        root = os.path.join(data, "nft-pilot")
+        status = json.load(open(os.path.join(root, "status.json")))
+        units = [json.loads(line) for line in open(os.path.join(root, "units.jsonl"))]
+        self.assertEqual(status["status"], "ok")
+        self.assertEqual(status["floor_passing_this_run"], 4)
+        self.assertEqual(len(units), 4)
+        self.assertTrue(all(isinstance(u["cost"], float) for u in units))   # never null on fallback
+        self.assertEqual(status["null_cost_count"], 0)
+        self.assertEqual(status["eth_usd_runs"], {"chainlink": 0, "fallback": 2})
+        self.assertIn("0 Chainlink, 2 fallback", status["verdict_footnote"])
+        import jsonschema
+        jsonschema.validate(status, json.load(open(os.path.join(ROOT, "schema", "nft-snapshot.schema.json"))))
+        # Cap still bites on the internal price: at $3,000/ETH a 0.1 ETH floor is $300 > $250.
+        data2 = tempfile.mkdtemp()
+        snapshot.run(data2, self._universe_fake(n=4, pass_every=1), NOW, "sha", gas, fetch_price=lambda: (3000, "defillama"))
+        st2 = json.load(open(os.path.join(data2, "nft-pilot", "status.json")))
+        self.assertEqual(st2["floor_passing_this_run"], 0)
+        self.assertGreaterEqual(st2["rejections"]["floor"], 4)
+        self.assertIsNone(st2["eth_usd"])
+
+    def test_usd_source_counts_mixed(self):
+        data = tempfile.mkdtemp()
+        gas = {"ethereum": 10 ** 9, "base": 10 ** 9}
+        fake = self._universe_fake(n=4, pass_every=1)
+        snapshot.run(data, fake, NOW, "sha", gas, fetch_price=lambda: (2000, "chainlink"))
+        st = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
+        self.assertEqual(st["eth_usd_runs"], {"chainlink": 1, "fallback": 0})
+        self.assertFalse((st["verdict_footnote"] or "").count("fallback"))
+        snapshot.run(data, fake, NOW + 3600, "sha", gas, fetch_price=lambda: (2000, "defillama"))
+        st = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
+        self.assertEqual(st["eth_usd_runs"], {"chainlink": 1, "fallback": 1})
+        self.assertIn("1 Chainlink, 1 fallback", st["verdict_footnote"])
+        # A no-price partial run is not counted.
+        snapshot.run(data, fake, NOW + 7200, "sha", gas, fetch_price=lambda: (None, None))
+        books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
+        self.assertEqual(books["usd_runs"], {"chainlink": 1, "fallback": 1})
+        self.assertEqual(P.with_usd_footnote("x", {"chainlink": 3, "fallback": 0}), "x")
+        self.assertEqual(P.with_usd_footnote("x", {"chainlink": 3, "fallback": 1}).split("; ")[0], "x")
+
     def test_published_files_have_no_raw_offer_fields(self):
         fake = self._universe_fake(n=4, pass_every=1)
         data = tempfile.mkdtemp()

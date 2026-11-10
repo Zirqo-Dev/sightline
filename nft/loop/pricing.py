@@ -522,6 +522,16 @@ def _day_index(day, pilot_start):
     return (day - pilot_start).days + 1
 
 
+def with_usd_footnote(footnote, usd_runs):
+    """Append ETH/USD source counts (measured runs) when any run used the internal fallback."""
+    fb = int((usd_runs or {}).get("fallback") or 0)
+    if not fb:
+        return footnote
+    note = "ETH/USD source on measured runs: %d Chainlink, %d fallback (fallback USD not published; costs are ETH-only)" % (
+        int(usd_runs.get("chainlink") or 0), fb)
+    return note if not footnote else footnote + "; " + note
+
+
 def summarize(units, passes, pilot_start, complete_days=None):
     """Median over numeric costs. Null costs stay in the count and can block NH-04.
 

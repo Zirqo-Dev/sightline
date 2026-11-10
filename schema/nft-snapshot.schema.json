@@ -64,7 +64,7 @@
         "pace_ready", "nh04", "nh04_ready", "buyer_fee_eth", "eth_usd", "raw", "reason", "rejections",
         "flags", "screened", "pending_served", "pending_deferred", "passers_footnoted",
         "nh04_verdict", "verdict_footnote", "distinct_collections", "distinct_per_day_median",
-        "early_kill", "stop", "by_chain", "eth_usd_source", "attribution"
+        "early_kill", "stop", "by_chain", "eth_usd_source", "eth_usd_runs", "attribution"
       ],
       "properties": {
         "schema_version": { "const": 1 },
@@ -151,6 +151,16 @@
         "eth_usd_source": {
           "description": "chainlink: eth_usd and floor_usd come from the Chainlink ETH/USD feed. fallback: an internal price screened the cap and no USD is published.",
           "enum": [null, "chainlink", "fallback"]
+        },
+        "eth_usd_runs": {
+          "description": "Measured runs this v0.3 season by ETH/USD source. Fallback runs screened the $250 cap on an internal price and published no USD; unit costs are ETH ratios either way.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["chainlink", "fallback"],
+          "properties": {
+            "chainlink": { "type": "integer", "minimum": 0 },
+            "fallback": { "type": "integer", "minimum": 0 }
+          }
         },
         "stop": {
           "description": "Why a measured screen ended. Null on partial runs (list error, deferred pending, no eth price, gas failure).",

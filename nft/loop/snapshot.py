@@ -59,6 +59,7 @@ def _status(code_sha, now, **extra):
         "nh04_verdict": "not_ready", "verdict_footnote": None,
         "distinct_collections": None, "distinct_per_day_median": None,
         "stop": None, "by_chain": None, "eth_usd_source": None,
+        "eth_usd_runs": {"chainlink": 0, "fallback": 0},
         "early_kill": P.early_kill([], [], None, None, None, []),
         "attribution": P.ATTRIBUTION,
     }
@@ -72,6 +73,7 @@ def _fresh_state():
         "pilot_start": None, "seen": {}, "passes": {}, "complete_days": [],
         "offers": {}, "pending": [], "gas": [], "first_runs": [],
         "first_measured_at": None, "early_distinct": [], "measured_days": [], "v03_init_at": None,
+        "usd_runs": {"chainlink": 0, "fallback": 0},
     }
 
 
@@ -95,6 +97,7 @@ def load_state(path):
     doc.setdefault("first_runs", [])
     for key, empty in (("first_measured_at", None), ("early_distinct", []), ("measured_days", []), ("v03_init_at", None)):
         doc.setdefault(key, empty)
+    doc.setdefault("usd_runs", {"chainlink": 0, "fallback": 0})
     # Never carry raw order hashes or per-order prices forward (owner decision, Nov 10).
     doc["offers"] = {k: v for k, v in doc["offers"].items() if isinstance(v, dict) and "digests" in v}
     doc["pending"] = [p for p in doc["pending"] if isinstance(p.get("book"), dict)]
@@ -108,6 +111,7 @@ def load_state(path):
         doc["early_distinct"] = []
         doc["measured_days"] = []
         doc["v03_init_at"] = None
+        doc["usd_runs"] = {"chainlink": 0, "fallback": 0}
         # v0.2 passers were screened on the 24h rule; their units are not v0.3 units.
         doc["pending"] = []
         doc["state_version"] = P.STATE_VERSION
@@ -654,6 +658,9 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
                     state["early_distinct"].append(asset)
         if iso not in state["measured_days"]:
             state["measured_days"].append(iso)
+        # Q1: count measured runs by ETH/USD source (fallback = internal-only, USD not published).
+        src = "chainlink" if usd_public else "fallback"
+        state["usd_runs"][src] = state["usd_runs"].get(src, 0) + 1
     cutoff = day.toordinal() - 21
     state["passes"] = {k: v for k, v in state["passes"].items() if date_ok(k, cutoff)}
     state["complete_days"] = [d for d in state["complete_days"] if date_ok(d, cutoff)]
@@ -661,6 +668,8 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
     _append_units(units_path, new_units, prior)
     pilot = datetime.fromisoformat(state["pilot_start"]).date() if state["pilot_start"] else None
     summary = P.summarize(prior + new_units, state["passes"], pilot, state["complete_days"])
+    usd_runs = {"chainlink": state["usd_runs"].get("chainlink", 0), "fallback": state["usd_runs"].get("fallback", 0)}
+    summary["verdict_footnote"] = P.with_usd_footnote(summary.get("verdict_footnote"), usd_runs)
     kill = P.early_kill(
         state["first_runs"], state["early_distinct"], state["first_measured_at"], now,
         state["v03_init_at"], state["measured_days"],
@@ -682,7 +691,7 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
         floor_passing_this_run=len(set(passing)) if not partial else None,
         stop=stop if not partial else None, by_chain=by_chain,
         pending=len(state["pending"]), eth_usd=eth_usd if usd_public else None,
-        eth_usd_source="chainlink" if usd_public else "fallback", reason=reason,
+        eth_usd_source="chainlink" if usd_public else "fallback", eth_usd_runs=usd_runs, reason=reason,
         rejections=_rejection_counts(rejections), flags=_flag_counts(flags),
         screened=screened, pending_served=served, pending_deferred=deferred,
         passers_footnoted=sum(1 for p in fresh if P.footnoted(p.get("counts"))),
