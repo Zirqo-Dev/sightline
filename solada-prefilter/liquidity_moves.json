@@ -1,5 +1,5 @@
 {
- "at": "2026-11-10T07:14:42Z",
+ "at": "2026-11-10T09:14:36Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -124,10 +124,9 @@
    "policy_short": "49e42316",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~71183c8b",
-   "reserve_ada": 132737.25,
-   "reserve_qty": 31507054,
-   "asof": "2026-11-06T16:20:40Z",
-   "stale": true
+   "reserve_ada": 132236.67,
+   "reserve_qty": 31219035,
+   "asof": "2026-11-10T08:56:05Z"
   },
   {
    "ticker": "IAG",
@@ -248,14 +247,14 @@
    "policy_short": "5d16cc1a",
    "rank": 7,
    "unit_source": "cache",
-   "last_checked": "2026-11-09T19:15:47Z"
+   "last_checked": "2026-11-10T09:14:36Z"
   },
   {
    "ticker": "COCK",
    "policy_short": "49e42316",
    "rank": 8,
    "unit_source": "listed",
-   "last_checked": "2026-11-09T17:15:41Z"
+   "last_checked": "2026-11-10T09:14:36Z"
   },
   {
    "ticker": "SOLADA",
@@ -279,20 +278,15 @@
   }
  ],
  "coverage": {
-  "SNEK": {
-   "read": 0,
-   "complete": false,
-   "pools": 0
-  },
   "COCK": {
-   "read": 0,
+   "read": 27,
    "complete": false,
-   "skipped": "budget"
+   "pools": 1
   },
   "IAG": {
    "read": 0,
    "complete": false,
-   "skipped": "budget"
+   "pools": 0
   },
   "SOLADA": {
    "read": 0,
@@ -323,10 +317,14 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "SNEK": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "SNEK",
   "COCK",
   "IAG",
   "SOLADA",
@@ -334,9 +332,10 @@
   "STRIKE",
   "MIN",
   "ASCEND",
-  "NIGHT"
+  "NIGHT",
+  "SNEK"
  ],
- "koios_calls": 4,
+ "koios_calls": 7,
  "blockfrost_calls": 0,
  "blockfrost_fallbacks": 0,
  "blockfrost_available": true,
