@@ -133,3 +133,6 @@ jobs:
         env:
           TOKEN: ${{ github.token }}
         run: bash "$GITHUB_WORKSPACE/code/nft/loop/publish_nft_data.sh"
+      - name: Fail the job on a published outage
+        if: always() && inputs.dry_run != true
+        run: python3 code/nft/loop/snapshot.py --fail-on-outage "$GITHUB_WORKSPACE/data/nft-pilot/status.json"

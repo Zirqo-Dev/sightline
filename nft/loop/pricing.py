@@ -532,6 +532,93 @@ def with_usd_footnote(footnote, usd_runs):
     return note if not footnote else footnote + "; " + note
 
 
+def outage_reason_label(status, reason):
+    """Short reason for the outage footnote. 401 and 403 are auth. Other HTTP codes stay split."""
+    if status == "no_key" or reason in ("no key", "no_key"):
+        return "no_key"
+    text = reason if isinstance(reason, str) else ""
+    if text in ("auth", "opensea http 401", "opensea http 403"):
+        return "auth"
+    if text.startswith("opensea http "):
+        code = text[len("opensea http "):]
+        if code in ("401", "403"):
+            return "auth"
+        return "http " + code
+    if text.startswith("http "):
+        code = text[5:]
+        if code in ("401", "403"):
+            return "auth"
+        return text
+    if text:
+        return text
+    if status in ("error", "partial", "no_key"):
+        return status
+    return "partial"
+
+
+def with_outage_footnote(footnote, kill, outages, init_at, first_measured_at):
+    """Append a note when gate (i) or the 7-day backstop fires and that window had a non-measured run.
+
+    Every non-measured run since v03_init_at is eligible: error, no_key, auth, and any partial
+    that did not measure supply (429, 5xx, no eth price, and the rest). The note lists them by
+    reason. It does not change the verdict label, any threshold, or the early_kill result.
+    Gate (i)'s window is from the first measured run until the third one filled the sample
+    (early still under EARLY_RUNS). The backstop window is the 7 days from the anchor.
+    A row in both windows counts once.
+    """
+    labels = _outages_in_stop_window(kill, outages, init_at, first_measured_at)
+    if not labels:
+        return footnote
+    counts = Counter(labels)
+    parts = ", ".join("%s %d" % (label, counts[label]) for label in sorted(counts))
+    note = "%d non-measured runs in window (%s); stop may reflect data outage, not supply" % (len(labels), parts)
+    return note if not footnote else footnote + "; " + note
+
+
+def _outage_row(item):
+    if isinstance(item, dict):
+        try:
+            t = int(item.get("t"))
+        except (TypeError, ValueError):
+            return None
+        try:
+            early = int(item.get("early") or 0)
+        except (TypeError, ValueError):
+            early = 0
+        reason = item.get("reason")
+        if not isinstance(reason, str):
+            reason = ""
+        return t, early, outage_reason_label(None, reason)
+    try:
+        return int(item), 0, "partial"
+    except (TypeError, ValueError):
+        return None
+
+
+def _outages_in_stop_window(kill, outages, init_at, first_measured_at):
+    kill = kill or {}
+    gate1 = kill.get("gate1") == "fire"
+    backstop = kill.get("backstop") == "fire"
+    if not gate1 and not backstop:
+        return []
+    back_lo = back_hi = None
+    if backstop and init_at is not None:
+        back_lo = int(init_at)
+        back_hi = back_lo + BACKSTOP_SECONDS
+    measured_at = int(first_measured_at) if gate1 and first_measured_at is not None else None
+    labels = []
+    for item in outages or []:
+        row = _outage_row(item)
+        if row is None:
+            continue
+        t, early, reason = row
+        in_back = back_lo is not None and back_lo <= t <= back_hi
+        in_gate = measured_at is not None and t >= measured_at and early < EARLY_RUNS
+        if in_back or in_gate:
+            labels.append(reason)
+    return labels
+
+
 def summarize(units, passes, pilot_start, complete_days=None):
     """Median over numeric costs. Null costs stay in the count and can block NH-04.
 
