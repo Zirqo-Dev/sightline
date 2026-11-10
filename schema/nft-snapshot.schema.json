@@ -8,10 +8,17 @@
     "chain_counts": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["screened", "passing"],
+      "required": ["screened", "passing", "requested", "pages", "calls", "stop"],
       "properties": {
         "screened": { "type": "integer", "minimum": 0 },
-        "passing": { "type": "integer", "minimum": 0 }
+        "passing": { "type": "integer", "minimum": 0 },
+        "requested": { "type": "boolean" },
+        "pages": { "type": "integer", "minimum": 0 },
+        "calls": { "type": "integer", "minimum": 0 },
+        "stop": {
+          "description": "Why this chain's lane stopped. Null when the lane did not finish (list error, or it never started).",
+          "enum": [null, "pass_target", "depth", "call_cap", "deadline"]
+        }
       }
     },
     "unit": {

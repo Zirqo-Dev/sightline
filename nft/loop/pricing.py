@@ -75,10 +75,17 @@ PACE_PER_MINUTE = 60
 RATE_RESERVE = 24
 # Eight minutes of paced reads (480 / 60). The run stops at 11 minutes; the job timeout is 15.
 MAX_CALLS = PACE_PER_MINUTE * 8
+# Base lane only. It runs after the ETH lane and does not share PASS_TARGET.
+# 5 passes, the same 8 list pages, 200 reads, or the run deadline. Pending
+# re-checks on Base count toward the 5. The shared MAX_CALLS cap stays 480.
+BASE_PASS_TARGET = 5
+BASE_MAX_CALLS = 200
 DATA_BRANCH = "nft-data"
 AVOIDS_BRANCH = "desk-data"
 # books.json clock. A mismatch drops the pre-fix pilot_start, complete_days, and passes.
+# Base has its own clock (BASE_STATE_VERSION). A Base mismatch must not clear this one.
 STATE_VERSION = "v0.3"
+BASE_STATE_VERSION = "v0.4-base"
 REJECTION_REASONS = (
     "contracts", "shared", "standard", "mint", "disabled", "floor", "gas",
     "listings", "sales", "buyers", "bidders", "concentration",
@@ -95,6 +102,9 @@ RULE = (
     f"min_listings={MIN_LISTINGS} floor_usd={FLOOR_USD} gas_ratio={GAS_RATIO} "
     f"min_mint_days={MIN_MINT_DAYS} event_pages={EVENT_MAX_PAGES} truncated=flag"
 )
+# Same thresholds as RULE, different count. summarize() keeps only RULE, so Base
+# units never enter the v0.3 median, pace, or distinct totals.
+BASE_RULE = "v0.4-base " + RULE.split(" ", 1)[1]
 ATTRIBUTION = (
     "Market data from OpenSea (https://opensea.io). Published as summaries only: aggregates, "
     "computed costs, and SHA-256 digests of order hashes; no per-order prices or raw order data. "
