@@ -14,6 +14,8 @@ import opensea
 import pricing as P
 
 DIR = "nft-pilot"
+# Leave the privacy guard and the nft-data push inside the 15-minute job.
+RUN_LIMIT_SECONDS = 11 * 60
 
 
 def _now_iso(now):
@@ -52,15 +54,30 @@ def _status(code_sha, now, **extra):
         "null_cost_count": None, "null_cost_share": None, "null_cost_share_max": P.NULL_COST_MAX,
         "pace_median": None, "pace_ready": False, "nh04": "not_ready", "nh04_ready": False,
         "buyer_fee_eth": 0.0, "eth_usd": None, "raw": "not_kept", "reason": None,
+        "rejections": _rejection_counts(None),
         "attribution": P.ATTRIBUTION,
     }
     doc.update(extra)
     return doc
 
 
+def _fresh_state():
+    return {
+        "state_version": P.STATE_VERSION,
+        "pilot_start": None, "seen": {}, "passes": {}, "complete_days": [],
+        "offers": {}, "pending": [], "gas": [],
+    }
+
+
 def load_state(path):
+    """books.json. A state_version other than v0.2 drops the pre-fix clock.
+
+    pilot_start, complete_days, and passes from the num_owners / basic-offer
+    runs are not a season. The next ok run starts day 1. Gas, seen, offers,
+    and pending stay.
+    """
     if not os.path.exists(path):
-        return {"pilot_start": None, "seen": {}, "passes": {}, "complete_days": [], "offers": {}, "pending": [], "gas": []}
+        return _fresh_state()
     with open(path) as fh:
         doc = json.load(fh)
     doc.setdefault("pending", [])
@@ -69,6 +86,11 @@ def load_state(path):
     doc.setdefault("passes", {})
     doc.setdefault("complete_days", [])
     doc.setdefault("offers", {})
+    if doc.get("state_version") != P.STATE_VERSION:
+        doc["pilot_start"] = None
+        doc["passes"] = {}
+        doc["complete_days"] = []
+        doc["state_version"] = P.STATE_VERSION
     return doc
 
 
@@ -185,13 +207,54 @@ def _call_cap(client):
     return getattr(client, "max_calls", P.MAX_CALLS)
 
 
-def _collect(client, quotes, detail, now):
+def _past_deadline(deadline, flag=None):
+    """True once the wall clock reaches the run limit. `flag['hit']` records it."""
+    if deadline is None or time.time() < deadline:
+        return False
+    if flag is not None:
+        flag["hit"] = True
+    return True
+
+
+def _add_reasons(bucket, reasons):
+    if bucket is None:
+        return
+    for reason in reasons:
+        bucket[reason] = bucket.get(reason, 0) + 1
+
+
+def _rejection_counts(bucket):
+    """Reason hits, not collections. One collection can increment several reasons."""
+    found = bucket or {}
+    return {name: int(found.get(name, 0)) for name in P.REJECTION_REASONS}
+
+
+def _cap_fail_reasons(item, floor, floor_usd, trip, standard, n_live):
+    reasons = []
+    if item.get("n_contracts") != 1:
+        reasons.append("contracts")
+    if item.get("shared"):
+        reasons.append("shared")
+    if standard != "erc721":
+        reasons.append("standard")
+    if floor is None or floor_usd is None or floor_usd > P.FLOOR_USD:
+        reasons.append("floor")
+    if floor is None or trip is None or not (trip < P.GAS_RATIO * floor):
+        reasons.append("gas")
+    if (n_live or 0) < P.MIN_LISTINGS:
+        reasons.append("listings")
+    return reasons
+
+
+def _collect(client, quotes, detail, now, deadline=None, rejections=None, deadline_flag=None):
     """Page by market cap until FLOOR_TARGET collections are under the $250 cap, or calls run out."""
     cursors = {chain: "" for chain in P.CHAINS}
     pages = {chain: 0 for chain in P.CHAINS}
     seen, under, cache = {}, [], {}
     partial = False
     while len(under) < P.FLOOR_TARGET and any(cursors[c] is not None for c in P.CHAINS):
+        if _past_deadline(deadline, deadline_flag):
+            return under, cache, True
         for chain in P.CHAINS:
             if cursors[chain] is None or len(under) >= P.FLOOR_TARGET:
                 continue
@@ -227,11 +290,17 @@ def _collect(client, quotes, detail, now):
                         prev["shared"] = True
                         if prev in under:
                             under.remove(prev)
+                            _add_reasons(rejections, ["shared"])
                     else:
                         seen[addrs[0]] = item
                 if item["shared"] or not item["slug"]:
+                    if item["shared"]:
+                        reasons = ["shared"]
+                        if item.get("n_contracts") != 1:
+                            reasons.insert(0, "contracts")
+                        _add_reasons(rejections, reasons)
                     continue
-                if client.calls >= _call_cap(client):
+                if client.calls >= _call_cap(client) or _past_deadline(deadline, deadline_flag):
                     partial = True
                     return under, cache, partial
                 try:
@@ -262,6 +331,10 @@ def _collect(client, quotes, detail, now):
                 trip = P.round_trip_eth(quotes.get(chain))
                 if _under_cap(floor, floor_usd, trip, standard, n_live, item["shared"]):
                     under.append(item)
+                else:
+                    _add_reasons(rejections, _cap_fail_reasons(
+                        item, floor, floor_usd, trip, standard, n_live,
+                    ))
     return under, cache, partial
 
 
@@ -311,12 +384,13 @@ def _close_read_error(pending, now, code_sha):
     }
 
 
-def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None):
+def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None, deadline=None):
     _, status_path, units_path, books_path = _paths(data_dir)
     state = load_state(books_path)
     day = _day(now)
-    if state["pilot_start"] is None:
-        state["pilot_start"] = day.isoformat()
+    if deadline is None:
+        deadline = time.time() + RUN_LIMIT_SECONDS
+    deadline_flag = {"hit": False}
     quotes = {}
     for chain, wei in (gas_wei or {}).items():
         quotes[chain] = P.gas_quote(wei, state["gas"], chain, now)
@@ -335,10 +409,12 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
             code_sha, now, status="partial", measured=False, partial=True,
             opensea_calls=getattr(client, "calls", 0),
             rate_limit=_rate(client), eth_usd=None, reason="no eth price",
+            rejections=_rejection_counts(None),
         ))
         return
     details = {}
     new_units, still_pending, passing, done = [], [], [], set()
+    rejections = {}
 
     def detail(slug):
         nonlocal eth_usd
@@ -352,7 +428,10 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
 
     detail.usd = eth_usd
     try:
-        under, listing_cache, partial = _collect(client, quotes, detail, now)
+        under, listing_cache, partial = _collect(
+            client, quotes, detail, now, deadline=deadline, rejections=rejections,
+            deadline_flag=deadline_flag,
+        )
     except opensea.AuthError:
         raise
     pending_by_slug = {p["slug"]: p for p in state["pending"]}
@@ -377,6 +456,9 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
             still_pending.append(pending)
 
     for slug in slugs:
+        if _past_deadline(deadline, deadline_flag):
+            partial = True
+            break
         item = by_slug.get(slug) or {
             "chain": pending_by_slug[slug]["chain"], "slug": slug, "shared": False, "n_contracts": 1, "addrs": [],
         }
@@ -475,7 +557,10 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
             "sales": sales, "buyers": buyers, "bidders": P.bidder_count(offer_parsed),
             "top_share": share, "sales_truncated": truncated,
         }
-        if asset and slug in by_slug and not P.rejection(obs):
+        reasons = P.rejection(obs) if asset and slug in by_slug else []
+        if reasons:
+            _add_reasons(rejections, reasons)
+        if asset and slug in by_slug and not reasons:
             passing.append(asset)
             done.add(slug)
             still_pending.append({
@@ -496,6 +581,9 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
     # A partial run, including a budget hit while listing, does not record a zero day.
     iso = day.isoformat()
     if not partial:
+        # The v0.2 season starts on the first complete run, not on a partial one.
+        if state["pilot_start"] is None:
+            state["pilot_start"] = iso
         if iso not in state["complete_days"]:
             state["complete_days"].append(iso)
         bucket = state["passes"].setdefault(iso, [])
@@ -514,13 +602,16 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
     _dump(books_path, state)
     reason = None
     code = getattr(client, "list_error", None)
-    if partial and isinstance(code, int):
+    if deadline_flag["hit"]:
+        reason = "deadline"
+    elif partial and isinstance(code, int):
         reason = "opensea http %s" % code
     _dump(status_path, _status(
         code_sha, now, status="partial" if partial else "ok", measured=True, partial=partial,
         opensea_calls=client.calls, rate_limit=_rate(client),
         floor_passing_this_run=len(set(passing)) if not partial else None,
-        pending=len(still_pending), eth_usd=eth_usd, reason=reason, **summary,
+        pending=len(still_pending), eth_usd=eth_usd, reason=reason,
+        rejections=_rejection_counts(rejections), **summary,
     ))
 
 
@@ -555,7 +646,7 @@ def _positive_price(value):
     return number
 
 
-def parse_eth_usd(kind, body):
+def parse_eth_usd(kind, body, now=None):
     """A positive ETH/USD quote, or None. Zero and blanks stay unknown."""
     if not isinstance(body, dict):
         return None
@@ -573,7 +664,20 @@ def parse_eth_usd(kind, body):
             return None
         if str(row.get("symbol") or "").upper() not in ("ETH", "WETH"):
             return None
-        return _positive_price(row.get("price"))
+        price = _positive_price(row.get("price"))
+        if price is None:
+            return None
+        stamp = row.get("timestamp")
+        if stamp is None:
+            return None
+        try:
+            stamp_f = float(stamp)
+        except (TypeError, ValueError):
+            return None
+        clock = time.time() if now is None else float(now)
+        if clock - stamp_f > 3600:
+            return None
+        return price
     return None
 
 
@@ -584,7 +688,7 @@ def fetch_eth_usd(get=None):
             body = get(url)
         except (OSError, ValueError):
             continue
-        price = parse_eth_usd(kind, body)
+        price = parse_eth_usd(kind, body, now=time.time())
         if price is not None:
             return price
     return None

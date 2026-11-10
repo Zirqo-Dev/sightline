@@ -52,7 +52,7 @@
         "data_branch", "avoids_branch", "opensea_calls", "rate_limit", "floor_passing_this_run",
         "pending", "units", "unsellable_share", "median_cost", "median_cost_seasoned",
         "null_cost_count", "null_cost_share", "null_cost_share_max", "pace_median",
-        "pace_ready", "nh04", "nh04_ready", "buyer_fee_eth", "eth_usd", "raw", "reason", "attribution"
+        "pace_ready", "nh04", "nh04_ready", "buyer_fee_eth", "eth_usd", "raw", "reason", "rejections", "attribution"
       ],
       "properties": {
         "schema_version": { "const": 1 },
@@ -93,6 +93,30 @@
         "eth_usd": { "type": ["number", "null"] },
         "raw": { "const": "not_kept" },
         "reason": { "type": ["string", "null"] },
+        "rejections": {
+          "description": "How many times each rejection reason was hit. Not a count of collections: one collection can increment several reasons.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "contracts", "shared", "standard", "mint", "disabled", "floor", "gas",
+            "listings", "sales", "buyers", "bidders", "concentration", "sales_truncated"
+          ],
+          "properties": {
+            "contracts": { "type": "integer", "minimum": 0 },
+            "shared": { "type": "integer", "minimum": 0 },
+            "standard": { "type": "integer", "minimum": 0 },
+            "mint": { "type": "integer", "minimum": 0 },
+            "disabled": { "type": "integer", "minimum": 0 },
+            "floor": { "type": "integer", "minimum": 0 },
+            "gas": { "type": "integer", "minimum": 0 },
+            "listings": { "type": "integer", "minimum": 0 },
+            "sales": { "type": "integer", "minimum": 0 },
+            "buyers": { "type": "integer", "minimum": 0 },
+            "bidders": { "type": "integer", "minimum": 0 },
+            "concentration": { "type": "integer", "minimum": 0 },
+            "sales_truncated": { "type": "integer", "minimum": 0 }
+          }
+        },
         "attribution": { "type": "string" }
       }
     }

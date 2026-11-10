@@ -125,6 +125,8 @@ class OpenSea:
         return body.get("listings") or []
 
     def offers(self, slug, cursor):
+        # Only /api/v2/offers/collection/{slug}. /all returns item offers whose
+        # criteria is null, and a null criteria would be read as a collection-wide bid.
         body = self.request(
             "/api/v2/offers/collection/" + urllib.parse.quote(slug, safe=""),
             {"limit": P.OFFER_PAGE_LIMIT, "next": cursor},

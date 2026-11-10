@@ -54,6 +54,12 @@ RATE_RESERVE = 24
 MAX_CALLS = PACE_PER_MINUTE * 8
 DATA_BRANCH = "nft-data"
 AVOIDS_BRANCH = "desk-data"
+# books.json clock. A mismatch drops the pre-fix pilot_start, complete_days, and passes.
+STATE_VERSION = "v0.2"
+REJECTION_REASONS = (
+    "contracts", "shared", "standard", "mint", "disabled", "floor", "gas",
+    "listings", "sales", "buyers", "bidders", "concentration", "sales_truncated",
+)
 RULE = (
     "GET /api/v2/collections "
     f"order_by={ORDER_BY} limit={PAGE_LIMIT} "
@@ -128,21 +134,73 @@ def _price(obj):
     return int(cur["value"]) / (10 ** decimals)
 
 
+def _criteria(order):
+    raw = order.get("criteria")
+    if isinstance(raw, dict):
+        return raw
+    nested = (order.get("protocol_data") or {}).get("criteria")
+    return nested if isinstance(nested, dict) else {}
+
+
+def _nonempty(value):
+    if value is None:
+        return False
+    if isinstance(value, (str, list, dict)):
+        return len(value) > 0
+    return bool(value)
+
+
+def _specific_token_ids(value):
+    """A collection-wide offer uses "*". Anything else non-empty names tokens."""
+    if isinstance(value, str) and value.strip() == "*":
+        return False
+    return _nonempty(value)
+
+
+def _specific_offer(order):
+    """Trait or token-specific bids are not a collection-wide held bid.
+
+    Only /api/v2/offers/collection/{slug} is valid input. /all returns item
+    offers whose criteria is null, and a null criteria would be read as a
+    collection-wide bid.
+    """
+    criteria = _criteria(order)
+    for key in ("trait", "traits", "numeric_traits", "numericTraits"):
+        if _nonempty(criteria.get(key)):
+            return True
+    if _specific_token_ids(criteria.get("encoded_token_ids")):
+        return True
+    return False
+
+
 def parse_order(order, now, role="listing"):
-    """A live ETH/WETH order, or None when it cannot be used. `valid` listings last 2h."""
+    """A live ETH/WETH order, or None when it cannot be used. `valid` listings last 2h.
+
+    Listings stay basic orders: order type 2 or 3, and quantity above 1, are rejected.
+    Collection offers are those types. Their `price` is the total when quantity is
+    above 1, so the bid is `price_per_item` when that field is present.
+    """
     if not isinstance(order, dict) or str(order.get("status") or "ACTIVE").upper() != "ACTIVE":
         return None
     if order.get("flagged") or order.get("is_flagged"):
         return None
     params = ((order.get("protocol_data") or {}).get("parameters") or {})
-    if int(params.get("orderType") or 0) in (2, 3):
+    offer = role == "offer"
+    if not offer and int(params.get("orderType") or 0) in (2, 3):
         return None
     items = [it for it in (params.get("offer") or []) if isinstance(it, dict)]
     if len(items) > 1 or "bundle" in str(order.get("type") or "").lower():
         return None
-    if int(order.get("remaining_quantity") or 1) > 1:
+    if not offer and int(order.get("remaining_quantity") or 1) > 1:
         return None
-    price = _price(order.get("price"))
+    if offer and _specific_offer(order):
+        return None
+    if offer:
+        price = _price(order.get("price_per_item"))
+        if price is None:
+            price = _price(order.get("price"))
+    else:
+        price = _price(order.get("price"))
     if price is None:
         return None
     end = params.get("endTime")
