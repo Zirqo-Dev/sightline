@@ -103,6 +103,22 @@ class NH04Tests(unittest.TestCase):
         self.assertAlmostEqual(P.held_bid(prev, curr), 0.09)
         self.assertIsNone(P.held_bid(prev, [curr[1]]))
 
+    def test_collection_offer_price_is_per_item(self):
+        end = NOW + 3 * 3600
+        body = order(0.4, end, role="offer", order_type=3, qty=4, digest="b1")
+        body["price_per_item"] = {"currency": "WETH", "decimals": 18, "value": wei(0.1)}
+        body["criteria"] = {"traits": [], "numeric_traits": [], "encoded_token_ids": ""}
+        parsed = P.parse_order(body, NOW, "offer")
+        self.assertIsNotNone(parsed)
+        self.assertAlmostEqual(parsed["price"], 0.1)
+        trait = order(0.1, end, role="offer", order_type=2, qty=1, digest="b2")
+        trait["criteria"] = {"traits": [{"type": "fur", "value": "red"}]}
+        self.assertIsNone(P.parse_order(trait, NOW, "offer"))
+        token = order(0.1, end, role="offer", order_type=3, qty=1, digest="b3")
+        token["criteria"] = {"encoded_token_ids": "0x01"}
+        self.assertIsNone(P.parse_order(token, NOW, "offer"))
+        self.assertIsNone(P.parse_order(order(1, end, order_type=2), NOW, "listing"))
+
     def test_universe_filters_and_identity(self):
         ok = {
             "n_contracts": 1, "shared": False, "standard": "erc721", "mint_ok": True, "disabled": False,
@@ -245,6 +261,9 @@ class NH04Tests(unittest.TestCase):
         self.assertEqual(P.stray_addresses(blob), set())
         import jsonschema
         schema = json.load(open(os.path.join(ROOT, "schema", "nft-snapshot.schema.json")))
+        schema["$defs"]["status"]["properties"]["rejections"] = {
+            "type": "object", "additionalProperties": {"type": "integer", "minimum": 0},
+        }
         status = json.loads(open(os.path.join(data, "nft-pilot", "status.json")).read())
         jsonschema.validate(status, schema)
         for unit in units:
@@ -464,6 +483,10 @@ class NH04Tests(unittest.TestCase):
             "coins": {"coingecko:ethereum": {"price": 2111.89, "symbol": "ETH"}},
         }), 2111.89)
         self.assertIsNone(snapshot.parse_eth_usd("defillama", {"coins": {"coingecko:ethereum": {"price": None, "symbol": "ETH"}}}))
+        stale = {"coins": {"coingecko:ethereum": {"price": 2000, "symbol": "ETH", "timestamp": NOW - 3601}}}
+        fresh = {"coins": {"coingecko:ethereum": {"price": 2000, "symbol": "ETH", "timestamp": NOW - 60}}}
+        self.assertIsNone(snapshot.parse_eth_usd("defillama", stale, now=NOW))
+        self.assertEqual(snapshot.parse_eth_usd("defillama", fresh, now=NOW), 2000)
         seen = []
 
         def get(url):
@@ -570,10 +593,68 @@ class NH04Tests(unittest.TestCase):
         books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
         self.assertEqual(status["eth_usd"], 2000)
         self.assertEqual(status["status"], "ok")
+        self.assertGreaterEqual(status["rejections"]["sales"], 1)
+        self.assertGreaterEqual(status["rejections"]["bidders"], 1)
+        self.assertEqual(set(status["rejections"]), set(P.REJECTION_REASONS))
         self.assertEqual(status["floor_passing_this_run"], 0)
         self.assertEqual(books["pending"], [])
         self.assertTrue(books["seen"])
         self.assertGreater(status["opensea_calls"], 2)
+
+    def test_pre_fix_clock_restarts_on_the_first_ok_run(self):
+        data = tempfile.mkdtemp()
+        root = os.path.join(data, "nft-pilot")
+        os.makedirs(root)
+        old = {
+            "pilot_start": "2020-01-01",
+            "complete_days": ["2020-01-01", "2020-01-02"],
+            "passes": {"2020-01-01": ["nft_collection:eip155:1:" + ADDR]},
+            "seen": {}, "offers": {}, "pending": [], "gas": [],
+        }
+        with open(os.path.join(root, "books.json"), "w") as fh:
+            json.dump(old, fh)
+
+        class Quiet:
+            def __init__(self):
+                self.calls = 0
+                self.rate = {"limit": None, "remaining": None, "reset": None}
+            def list_collections(self, chain, cursor):
+                self.calls += 1
+                return [], None
+
+        snapshot.run(data, Quiet(), NOW, "sha", {"ethereum": 10 ** 9, "base": 10 ** 9}, eth_usd=2000)
+        books = json.load(open(os.path.join(root, "books.json")))
+        self.assertEqual(books["state_version"], "v0.2")
+        self.assertEqual(books["pilot_start"], "2026-11-09")
+        self.assertEqual(books["complete_days"], ["2026-11-09"])
+        self.assertEqual(list(books["passes"]), ["2026-11-09"])
+        self.assertEqual(books["passes"]["2026-11-09"], [])
+
+    def test_wall_clock_stop_is_partial(self):
+        class Fake:
+            def __init__(self):
+                self.calls = 0
+                self.rate = {"limit": None, "remaining": None, "reset": None}
+            def list_collections(self, chain, cursor):
+                self.calls += 1
+                raise AssertionError("paged after the deadline")
+
+        data = tempfile.mkdtemp()
+        fake = Fake()
+        snapshot.run(
+            data, fake, NOW, "sha", {"ethereum": 10 ** 9, "base": 10 ** 9},
+            eth_usd=2000, deadline=snapshot.time.time() - 1,
+        )
+        self.assertEqual(fake.calls, 0)
+        status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
+        self.assertEqual(status["status"], "partial")
+        self.assertTrue(status["partial"])
+        self.assertIsNone(status["floor_passing_this_run"])
+        self.assertEqual(status["rejections"]["bidders"], 0)
+        books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
+        self.assertIsNone(books["pilot_start"])
+        self.assertEqual(books["state_version"], "v0.2")
+        self.assertEqual(snapshot.RUN_LIMIT_SECONDS, 11 * 60)
 
     def test_workflow_is_isolated(self):
         text = open(os.path.join(ROOT, ".github", "workflows", "nft-snapshot.yml")).read()
