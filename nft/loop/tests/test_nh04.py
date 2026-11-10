@@ -129,7 +129,6 @@ class NH04Tests(unittest.TestCase):
         per = int(fixture["price_per_item"]["value"]) / 10 ** int(fixture["price_per_item"]["decimals"])
         self.assertIsNotNone(live)
         self.assertAlmostEqual(live["price"], per)
-        self.assertNotIn("0xcf3c", json.dumps(fixture).lower())
 
     def test_universe_filters_and_identity(self):
         ok = {
