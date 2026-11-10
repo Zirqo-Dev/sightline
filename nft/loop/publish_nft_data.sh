@@ -37,6 +37,7 @@ if [ -n "${GITHUB_REPOSITORY:-}" ]; then
 fi
 
 b64=$(printf '%s' "x-access-token:${TOKEN}" | base64 -w 0)
+echo "::add-mask::${b64}"
 git_auth() {
   git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${b64}" "$@"
 }
