@@ -42,13 +42,21 @@ GAS_RPC = {
     "ethereum": "https://ethereum-rpc.publicnode.com",
     "base": "https://base-rpc.publicnode.com",
 }
-MAX_CALLS = 520
-HOURLY_LIMIT = 600
+# The self-serve tier allows 120 reads a minute. Every key on the account shares
+# that bucket, so this job must not plan to use all of it.
+READS_PER_MINUTE = 120
+# Half the shared bucket stays free for the account's other keys.
+PACE_PER_MINUTE = 60
+# When the shared bucket is this low, wait for the window instead of draining it.
+RATE_RESERVE = 24
+# Eight minutes of paced reads. The job timeout is 15 minutes.
+MAX_CALLS = PACE_PER_MINUTE * 8
 DATA_BRANCH = "nft-data"
 AVOIDS_BRANCH = "desk-data"
 RULE = (
     "GET /api/v2/collections order_by=num_owners limit=100 "
-    "floor_target=40 max_calls=520 chains=ethereum,base"
+    f"floor_target={FLOOR_TARGET} max_calls={MAX_CALLS} chains=ethereum,base "
+    f"pace_per_minute={PACE_PER_MINUTE}"
 )
 ATTRIBUTION = "Market data from OpenSea (https://opensea.io). Derived metrics only."
 _ADDR = re.compile(r"0x[0-9a-fA-F]{40}")
@@ -56,7 +64,7 @@ _HASH = re.compile(r"0x[0-9a-fA-F]{64}")
 
 
 def upper_bound_calls():
-    """The run stops at MAX_CALLS, which stays under the free hourly key."""
+    """The run stops at MAX_CALLS, paced under the shared per-minute read bucket."""
     return MAX_CALLS
 
 

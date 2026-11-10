@@ -204,9 +204,10 @@ def _collect(client, quotes, detail, now):
                 batch, nxt = client.list_collections(chain, cursors[chain] or None)
             except opensea.Budget:
                 return under, cache, True
-            except opensea.OpenSeaError:
+            except opensea.OpenSeaError as exc:
                 cursors[chain] = None
                 partial = True
+                setattr(client, "list_error", exc.status)
                 continue
             pages[chain] += 1
             cursors[chain] = nxt or None
@@ -310,7 +311,7 @@ def _close_read_error(pending, now, code_sha):
     }
 
 
-def run(data_dir, client, now, code_sha, gas_wei):
+def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None):
     _, status_path, units_path, books_path = _paths(data_dir)
     state = load_state(books_path)
     day = _day(now)
@@ -325,18 +326,31 @@ def run(data_dir, client, now, code_sha, gas_wei):
     if any(quotes.get(c) is None for c in P.CHAINS):
         _dump(status_path, _status(code_sha, now, status="error", reason="gas"))
         return
-    details, eth_usd = {}, None
+    if not _usable_price(eth_usd):
+        eth_usd = (fetch_price or fetch_eth_usd)()
+    if not _usable_price(eth_usd):
+        # The $250 cap cannot be evaluated. Do not spend the shared read bucket.
+        _dump(books_path, state)
+        _dump(status_path, _status(
+            code_sha, now, status="partial", measured=False, partial=True,
+            opensea_calls=getattr(client, "calls", 0),
+            rate_limit=_rate(client), eth_usd=None, reason="no eth price",
+        ))
+        return
+    details = {}
     new_units, still_pending, passing, done = [], [], [], set()
 
     def detail(slug):
         nonlocal eth_usd
         if slug not in details:
             details[slug] = client.collection(slug)
-            eth_usd = eth_usd or _eth_usd(details[slug])
+            # A missing OpenSea usd_price must not replace a keyless quote.
+            if not _usable_price(eth_usd):
+                eth_usd = _eth_usd(details[slug])
         detail.usd = eth_usd
         return details[slug]
 
-    detail.usd = None
+    detail.usd = eth_usd
     try:
         under, listing_cache, partial = _collect(client, quotes, detail, now)
     except opensea.AuthError:
@@ -498,12 +512,91 @@ def run(data_dir, client, now, code_sha, gas_wei):
     if getattr(client, "raw", None) is not None:
         client.raw.clear()
     _dump(books_path, state)
+    reason = None
+    code = getattr(client, "list_error", None)
+    if partial and isinstance(code, int):
+        reason = "opensea http %s" % code
     _dump(status_path, _status(
         code_sha, now, status="partial" if partial else "ok", measured=True, partial=partial,
-        opensea_calls=client.calls, rate_limit=dict(client.rate),
+        opensea_calls=client.calls, rate_limit=_rate(client),
         floor_passing_this_run=len(set(passing)) if not partial else None,
-        pending=len(still_pending), eth_usd=eth_usd, reason=None, **summary,
+        pending=len(still_pending), eth_usd=eth_usd, reason=reason, **summary,
     ))
+
+
+def _rate(client):
+    rate = getattr(client, "rate", None) or {}
+    return {
+        "limit": rate.get("limit"),
+        "remaining": rate.get("remaining"),
+        "reset": rate.get("reset"),
+    }
+
+
+def _usable_price(value):
+    return isinstance(value, (int, float)) and value == value and 0 < value < float("inf")
+
+
+# Coinbase public spot is keyless. DefiLlama's coins API is the fallback, also keyless.
+# One read per run, and only the fallback when Coinbase does not answer.
+ETH_USD_SOURCES = (
+    ("coinbase", "https://api.coinbase.com/v2/prices/ETH-USD/spot"),
+    ("defillama", "https://coins.llama.fi/prices/current/coingecko:ethereum"),
+)
+
+
+def _positive_price(value):
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if number != number or number <= 0 or number == float("inf"):
+        return None
+    return number
+
+
+def parse_eth_usd(kind, body):
+    """A positive ETH/USD quote, or None. Zero and blanks stay unknown."""
+    if not isinstance(body, dict):
+        return None
+    if kind == "coinbase":
+        data = body.get("data") if isinstance(body.get("data"), dict) else {}
+        if str(data.get("base") or "").upper() != "ETH":
+            return None
+        if str(data.get("currency") or "").upper() != "USD":
+            return None
+        return _positive_price(data.get("amount"))
+    if kind == "defillama":
+        coins = body.get("coins") if isinstance(body.get("coins"), dict) else {}
+        row = coins.get("coingecko:ethereum")
+        if not isinstance(row, dict):
+            return None
+        if str(row.get("symbol") or "").upper() not in ("ETH", "WETH"):
+            return None
+        return _positive_price(row.get("price"))
+    return None
+
+
+def fetch_eth_usd(get=None):
+    get = get or _get_json
+    for kind, url in ETH_USD_SOURCES:
+        try:
+            body = get(url)
+        except (OSError, ValueError):
+            continue
+        price = parse_eth_usd(kind, body)
+        if price is not None:
+            return price
+    return None
+
+
+def _get_json(url):
+    req = urllib.request.Request(url, headers={
+        "accept": "application/json",
+        "user-agent": "sightline-nft-snapshot",
+    })
+    with urllib.request.urlopen(req, timeout=20) as res:
+        return json.load(res)
 
 
 def fetch_gas(post=None):

@@ -58,8 +58,9 @@ class PublishTests(unittest.TestCase):
         first = _run(data)
         self.assertEqual(first.returncode, 0, first.stderr)
         self.assertNotIn("fatal:", first.stderr)
+        masked = base64.b64encode(f"x-access-token:{TOKEN}".encode()).decode()
+        self.assertIn("::add-mask::" + masked, first.stdout)
         self.assertNotIn(TOKEN, first.stdout + first.stderr)
-        self.assertNotIn(base64.b64encode(f"x-access-token:{TOKEN}".encode()).decode(), first.stdout + first.stderr)
         tip = subprocess.check_output(["git", "-C", bare, "rev-parse", "nft-data"], text=True).strip()
         shown = subprocess.check_output(["git", "-C", bare, "show", f"{tip}:nft-pilot/status.json"], text=True)
         self.assertIn('"status":"ok"', shown)
@@ -170,7 +171,8 @@ exec "$real" "${args[@]}"
         self.assertNotIn(TOKEN, header)
         encoded = header.split("basic ", 1)[1]
         self.assertEqual(base64.b64decode(encoded).decode(), "x-access-token:" + TOKEN)
-        self.assertNotIn(encoded, combined)
+        self.assertIn("::add-mask::" + encoded, proc.stdout)
+        self.assertNotIn(encoded, proc.stderr)
 
     def test_non_fast_forward_retries_and_other_failures_do_not(self):
         tmp = tempfile.mkdtemp()
