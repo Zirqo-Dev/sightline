@@ -150,12 +150,26 @@ def _nonempty(value):
     return bool(value)
 
 
+def _specific_token_ids(value):
+    """A collection-wide offer uses "*". Anything else non-empty names tokens."""
+    if isinstance(value, str) and value.strip() == "*":
+        return False
+    return _nonempty(value)
+
+
 def _specific_offer(order):
-    """Trait or token-specific bids are not a collection-wide held bid."""
+    """Trait or token-specific bids are not a collection-wide held bid.
+
+    Only /api/v2/offers/collection/{slug} is valid input. /all returns item
+    offers whose criteria is null, and a null criteria would be read as a
+    collection-wide bid.
+    """
     criteria = _criteria(order)
-    for key in ("traits", "numeric_traits", "numericTraits", "encoded_token_ids"):
+    for key in ("trait", "traits", "numeric_traits", "numericTraits"):
         if _nonempty(criteria.get(key)):
             return True
+    if _specific_token_ids(criteria.get("encoded_token_ids")):
+        return True
     return False
 
 

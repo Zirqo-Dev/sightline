@@ -54,6 +54,7 @@ def _status(code_sha, now, **extra):
         "null_cost_count": None, "null_cost_share": None, "null_cost_share_max": P.NULL_COST_MAX,
         "pace_median": None, "pace_ready": False, "nh04": "not_ready", "nh04_ready": False,
         "buyer_fee_eth": 0.0, "eth_usd": None, "raw": "not_kept", "reason": None,
+        "rejections": _rejection_counts(None),
         "attribution": P.ATTRIBUTION,
     }
     doc.update(extra)
@@ -206,8 +207,13 @@ def _call_cap(client):
     return getattr(client, "max_calls", P.MAX_CALLS)
 
 
-def _past_deadline(deadline):
-    return deadline is not None and time.time() >= deadline
+def _past_deadline(deadline, flag=None):
+    """True once the wall clock reaches the run limit. `flag['hit']` records it."""
+    if deadline is None or time.time() < deadline:
+        return False
+    if flag is not None:
+        flag["hit"] = True
+    return True
 
 
 def _add_reasons(bucket, reasons):
@@ -218,6 +224,7 @@ def _add_reasons(bucket, reasons):
 
 
 def _rejection_counts(bucket):
+    """Reason hits, not collections. One collection can increment several reasons."""
     found = bucket or {}
     return {name: int(found.get(name, 0)) for name in P.REJECTION_REASONS}
 
@@ -239,14 +246,14 @@ def _cap_fail_reasons(item, floor, floor_usd, trip, standard, n_live):
     return reasons
 
 
-def _collect(client, quotes, detail, now, deadline=None, rejections=None):
+def _collect(client, quotes, detail, now, deadline=None, rejections=None, deadline_flag=None):
     """Page by market cap until FLOOR_TARGET collections are under the $250 cap, or calls run out."""
     cursors = {chain: "" for chain in P.CHAINS}
     pages = {chain: 0 for chain in P.CHAINS}
     seen, under, cache = {}, [], {}
     partial = False
     while len(under) < P.FLOOR_TARGET and any(cursors[c] is not None for c in P.CHAINS):
-        if _past_deadline(deadline):
+        if _past_deadline(deadline, deadline_flag):
             return under, cache, True
         for chain in P.CHAINS:
             if cursors[chain] is None or len(under) >= P.FLOOR_TARGET:
@@ -293,7 +300,7 @@ def _collect(client, quotes, detail, now, deadline=None, rejections=None):
                             reasons.insert(0, "contracts")
                         _add_reasons(rejections, reasons)
                     continue
-                if client.calls >= _call_cap(client) or _past_deadline(deadline):
+                if client.calls >= _call_cap(client) or _past_deadline(deadline, deadline_flag):
                     partial = True
                     return under, cache, partial
                 try:
@@ -383,6 +390,7 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
     day = _day(now)
     if deadline is None:
         deadline = time.time() + RUN_LIMIT_SECONDS
+    deadline_flag = {"hit": False}
     quotes = {}
     for chain, wei in (gas_wei or {}).items():
         quotes[chain] = P.gas_quote(wei, state["gas"], chain, now)
@@ -422,6 +430,7 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
     try:
         under, listing_cache, partial = _collect(
             client, quotes, detail, now, deadline=deadline, rejections=rejections,
+            deadline_flag=deadline_flag,
         )
     except opensea.AuthError:
         raise
@@ -447,7 +456,7 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
             still_pending.append(pending)
 
     for slug in slugs:
-        if _past_deadline(deadline):
+        if _past_deadline(deadline, deadline_flag):
             partial = True
             break
         item = by_slug.get(slug) or {
@@ -593,7 +602,9 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
     _dump(books_path, state)
     reason = None
     code = getattr(client, "list_error", None)
-    if partial and isinstance(code, int):
+    if deadline_flag["hit"]:
+        reason = "deadline"
+    elif partial and isinstance(code, int):
         reason = "opensea http %s" % code
     _dump(status_path, _status(
         code_sha, now, status="partial" if partial else "ok", measured=True, partial=partial,
@@ -657,14 +668,15 @@ def parse_eth_usd(kind, body, now=None):
         if price is None:
             return None
         stamp = row.get("timestamp")
-        if stamp is not None:
-            try:
-                stamp_f = float(stamp)
-            except (TypeError, ValueError):
-                return None
-            clock = time.time() if now is None else float(now)
-            if clock - stamp_f > 3600:
-                return None
+        if stamp is None:
+            return None
+        try:
+            stamp_f = float(stamp)
+        except (TypeError, ValueError):
+            return None
+        clock = time.time() if now is None else float(now)
+        if clock - stamp_f > 3600:
+            return None
         return price
     return None
 

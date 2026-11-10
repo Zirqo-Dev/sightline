@@ -118,6 +118,18 @@ class NH04Tests(unittest.TestCase):
         token["criteria"] = {"encoded_token_ids": "0x01"}
         self.assertIsNone(P.parse_order(token, NOW, "offer"))
         self.assertIsNone(P.parse_order(order(1, end, order_type=2), NOW, "listing"))
+        star = order(0.2, end, role="offer", order_type=2, qty=1, digest="b4")
+        star["criteria"] = {"traits": None, "numeric_traits": None, "encoded_token_ids": "*"}
+        self.assertAlmostEqual(P.parse_order(star, NOW, "offer")["price"], 0.2)
+        named = order(0.2, end, role="offer", order_type=2, qty=1, digest="b5")
+        named["criteria"] = {"trait": {"type": "hat", "value": "blue"}}
+        self.assertIsNone(P.parse_order(named, NOW, "offer"))
+        fixture = json.load(open(os.path.join(os.path.dirname(__file__), "fixtures", "cool_cats_offer.json")))
+        live = P.parse_order(fixture, NOW, "offer")
+        per = int(fixture["price_per_item"]["value"]) / 10 ** int(fixture["price_per_item"]["decimals"])
+        self.assertIsNotNone(live)
+        self.assertAlmostEqual(live["price"], per)
+        self.assertNotIn("0xcf3c", json.dumps(fixture).lower())
 
     def test_universe_filters_and_identity(self):
         ok = {
@@ -261,9 +273,6 @@ class NH04Tests(unittest.TestCase):
         self.assertEqual(P.stray_addresses(blob), set())
         import jsonschema
         schema = json.load(open(os.path.join(ROOT, "schema", "nft-snapshot.schema.json")))
-        schema["$defs"]["status"]["properties"]["rejections"] = {
-            "type": "object", "additionalProperties": {"type": "integer", "minimum": 0},
-        }
         status = json.loads(open(os.path.join(data, "nft-pilot", "status.json")).read())
         jsonschema.validate(status, schema)
         for unit in units:
@@ -479,9 +488,9 @@ class NH04Tests(unittest.TestCase):
         self.assertIsNone(snapshot.parse_eth_usd("coinbase", {"data": {"amount": "0", "base": "ETH", "currency": "USD"}}))
         self.assertIsNone(snapshot.parse_eth_usd("coinbase", {"data": {"amount": "", "base": "ETH", "currency": "USD"}}))
         self.assertIsNone(snapshot.parse_eth_usd("coinbase", {"data": {"amount": "10", "base": "BTC", "currency": "USD"}}))
-        self.assertEqual(snapshot.parse_eth_usd("defillama", {
+        self.assertIsNone(snapshot.parse_eth_usd("defillama", {
             "coins": {"coingecko:ethereum": {"price": 2111.89, "symbol": "ETH"}},
-        }), 2111.89)
+        }))
         self.assertIsNone(snapshot.parse_eth_usd("defillama", {"coins": {"coingecko:ethereum": {"price": None, "symbol": "ETH"}}}))
         stale = {"coins": {"coingecko:ethereum": {"price": 2000, "symbol": "ETH", "timestamp": NOW - 3601}}}
         fresh = {"coins": {"coingecko:ethereum": {"price": 2000, "symbol": "ETH", "timestamp": NOW - 60}}}
@@ -493,7 +502,7 @@ class NH04Tests(unittest.TestCase):
             seen.append(url)
             if "coinbase" in url:
                 raise OSError("down")
-            return {"coins": {"coingecko:ethereum": {"price": 2000, "symbol": "ETH"}}}
+            return {"coins": {"coingecko:ethereum": {"price": 2000, "symbol": "ETH", "timestamp": snapshot.time.time()}}}
 
         self.assertEqual(snapshot.fetch_eth_usd(get), 2000)
         self.assertEqual(len(seen), 2)
@@ -651,6 +660,7 @@ class NH04Tests(unittest.TestCase):
         self.assertTrue(status["partial"])
         self.assertIsNone(status["floor_passing_this_run"])
         self.assertEqual(status["rejections"]["bidders"], 0)
+        self.assertEqual(status["reason"], "deadline")
         books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
         self.assertIsNone(books["pilot_start"])
         self.assertEqual(books["state_version"], "v0.2")
