@@ -1,9 +1,12 @@
 """Fixture tests for the NH-04 snapshot pilot. No live HTTP."""
+import contextlib
+import io
 import json
 import os
 import sys
 import tempfile
 import unittest
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 
@@ -362,6 +365,88 @@ class NH04Tests(unittest.TestCase):
         self.assertEqual(client.calls, 2)
         self.assertEqual(client.rate["remaining"], "599")
         self.assertNotIn("test-key", json.dumps(client.raw))
+
+    def test_gas_rpc_user_agent_and_http_error_line(self):
+        seen = []
+
+        def boom(req, timeout=None):
+            seen.append((req, timeout))
+            raise urllib.error.HTTPError(
+                "https://user:sekret-value@ethereum-rpc.publicnode.com/eth?api_key=sekret-value",
+                403,
+                "Forbidden sekret-value",
+                {"x-api-key": "sekret-value", "User-Agent": "sekret-value"},
+                None,
+            )
+
+        urllib.request.urlopen = boom
+        data = tempfile.mkdtemp()
+        old = os.environ.get("OPENSEA_API_KEY")
+        os.environ["OPENSEA_API_KEY"] = "sekret-value"
+        err = io.StringIO()
+        try:
+            with contextlib.redirect_stderr(err):
+                code = snapshot.main(["--data-dir", data, "--code-sha", "abc123"])
+        finally:
+            if old is None:
+                os.environ.pop("OPENSEA_API_KEY", None)
+            else:
+                os.environ["OPENSEA_API_KEY"] = old
+        self.assertEqual(code, 1)
+        req, timeout = seen[0]
+        self.assertEqual(timeout, 20)
+        self.assertEqual(req.get_header("User-agent"), "sightline-nft-snapshot")
+        self.assertTrue(req.has_header("User-agent"))
+        self.assertNotIn("Python-urllib", req.get_header("User-agent"))
+        self.assertEqual(req.get_header("Content-type"), "application/json")
+        self.assertEqual(req.full_url, P.GAS_RPC["ethereum"])
+        text = err.getvalue().strip()
+        self.assertEqual(text, "snapshot error: HTTPError 403 ethereum-rpc.publicnode.com")
+        self.assertNotIn("sekret-value", text)
+        self.assertNotIn("api_key", text)
+        self.assertNotIn("https://", text)
+        self.assertEqual(snapshot._snapshot_error_line(ValueError("sekret-value")), "snapshot error: ValueError")
+        self.assertEqual(snapshot._snapshot_error_line(opensea.OpenSeaError(502)), "snapshot error: OpenSeaError 502")
+        with open(os.path.join(data, "nft-pilot", "status.json")) as fh:
+            status = json.load(fh)
+        self.assertEqual(status["status"], "error")
+        self.assertEqual(status["reason"], "error")
+        self.assertNotIn("sekret-value", json.dumps(status))
+
+    def test_opensea_request_sends_user_agent(self):
+        seen = []
+
+        class Res:
+            status = 200
+            headers = {}
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self, _n=-1):
+                return b"{}"
+
+        def capture(req, timeout=None):
+            seen.append((req, timeout))
+            return Res()
+
+        urllib.request.urlopen = capture
+        client = opensea.OpenSea("sekret-value")
+        status, _headers, body = client._http("/api/v2/collections", {"chain": "ethereum"})
+        self.assertEqual(status, 200)
+        self.assertEqual(body, {})
+        req, timeout = seen[0]
+        self.assertEqual(timeout, 20)
+        agent = req.get_header("User-agent")
+        self.assertEqual(agent, "sightline-nft-snapshot")
+        self.assertTrue(req.has_header("User-agent"))
+        self.assertNotIn("Python-urllib", agent)
+        self.assertNotIn("sekret-value", agent)
+        self.assertEqual(req.get_header("X-api-key"), "sekret-value")
+        self.assertNotIn("sekret-value", req.full_url)
 
     def test_workflow_is_isolated(self):
         text = open(os.path.join(ROOT, ".github", "workflows", "nft-snapshot.yml")).read()
