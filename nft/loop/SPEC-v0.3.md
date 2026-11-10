@@ -181,3 +181,11 @@ The owner's words, quoted:
 **3. One OpenSea key only.** The spare free agent key on the box is **retired and must never be used again**. OpenSea API Terms 7.1 bar circumventing limits, including by creating multiple API keys. The only key is the repo secret `OPENSEA_API_KEY`. The replay (section 1) and the interrupted offline dry-run attempt earlier on Nov 10 (stopped by the owner before it finished, no results) were the last uses. The pre-merge dry run is replaced by the post-merge DRY_RUN dispatch on the repo key (section 14).
 
 **4. Merge order.** The owner pauses the cron-job.org NFT job before merge (his decision A), which satisfies the merge-order rule in section 14. He dispatches the DRY_RUN on the repo key and re-enables the job only after the dry run is green.
+
+**5. Chainlink terms (required before merge).**
+- Chainlink ToS v6.0, effective Aug 18, 2026 (https://chain.link/terms), §3 licenses access through designated public interfaces. Our use is an on-chain `latestRoundData()` read over a public RPC.
+- No clause bans republishing a feed value or a USD figure derived from it.
+- No attribution is required. The trademark terms only bar implying endorsement, and nothing here does.
+- Residual unknown: §2(iii) defers to third-party data-provider terms, which aren't published per feed.
+- §2(iv) and https://docs.chain.link/data-feeds/developer-responsibilities put data quality on the consumer. That's why there's an updatedAt ≤ 1h staleness check, plus the round and sign checks in `parse_chainlink`.
+- The full note is on SPD-123 (Chainlink terms note).
