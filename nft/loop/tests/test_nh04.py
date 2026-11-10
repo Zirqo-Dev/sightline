@@ -351,7 +351,7 @@ class NH04Tests(unittest.TestCase):
 
     def _universe_fake(self, n=30, pass_every=1, truncate=False, cap=None, log=None):
         """n under-cap collections on ethereum; every pass_every-th one is liquid."""
-        end = NOW + 10_000
+        end = NOW + 400 * 86400
         log = log if log is not None else []
 
         class Fake:
@@ -495,20 +495,131 @@ class NH04Tests(unittest.TestCase):
         self.assertEqual(ticks, [1.0])
 
     def test_early_kill_two_gates(self):
-        from datetime import date
-        start = date(2026, 11, 1)
         a = ["nft_collection:eip155:1:0x%040x" % i for i in range(1, 12)]
-        k = P.early_kill([5, 6, 6], {}, start, date(2026, 11, 1))
+        t0 = int(NOW)
+        k = P.early_kill([5, 6, 6], [], t0, t0)
         self.assertEqual((k["gate1"], k["result"]), ("fire", "STOPPED"))
         self.assertAlmostEqual(k["gate1_avg"], 17 / 3)
-        self.assertEqual(P.early_kill([6, 6, 6], {}, start, start)["gate1"], "pass")
-        self.assertEqual(P.early_kill([9, 9], {}, start, start)["gate1"], "pending")
-        passes = {"2026-11-01": a[:4], "2026-11-02": a[2:7], "2026-11-03": a[:2], "2026-11-04": a[7:]}
-        self.assertEqual(P.early_kill([9, 9, 9], passes, start, date(2026, 11, 3))["gate2"], "pending")
-        k = P.early_kill([9, 9, 9], passes, start, date(2026, 11, 4))
-        self.assertEqual((k["gate2"], k["gate2_distinct"], k["result"]), ("fire", 7, "INCONCLUSIVE"))
-        passes["2026-11-03"] = a[:8]
-        self.assertEqual(P.early_kill([9, 9, 9], passes, start, date(2026, 11, 4))["gate2"], "pass")
+        self.assertEqual(P.early_kill([6, 6, 6], [], t0, t0)["gate1"], "pass")
+        self.assertEqual(P.early_kill([9, 9], [], t0, t0)["gate1"], "pending")
+        # Gate (ii) is a 72h window from the first measured run, not UTC days.
+        self.assertEqual(P.early_kill([9, 9, 9], a[:7], t0, t0 + 72 * 3600 - 1)["gate2"], "pending")
+        k = P.early_kill([9, 9, 9], a[:7], t0, t0 + 72 * 3600)
+        self.assertEqual((k["gate2"], k["gate2_distinct"], k["result"], k["gate2_window_hours"]), ("fire", 7, "INCONCLUSIVE", 72))
+        self.assertEqual(P.early_kill([9, 9, 9], a[:8], t0, t0 + 72 * 3600)["gate2"], "pass")
+
+    def test_gate2_counts_only_passes_inside_72h(self):
+        fake = self._universe_fake(n=3, pass_every=1)
+        data = tempfile.mkdtemp()
+        gas = {"ethereum": 10 ** 9, "base": 10 ** 9}
+        start = NOW + 20 * 3600     # 20:00Z: a UTC-day window would end 52h later, not 72h
+        snapshot.run(data, fake, start, "sha", gas, eth_usd=2000)
+        books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
+        self.assertEqual(books["first_measured_at"], int(start))
+        self.assertEqual(len(books["early_distinct"]), 3)
+        status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
+        self.assertEqual(status["early_kill"]["gate2"], "pending")
+        snapshot.run(data, fake, start + 60 * 3600, "sha", gas, eth_usd=2000)   # day 4 UTC, inside 72h
+        status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
+        self.assertEqual(status["early_kill"]["gate2"], "pending")
+        snapshot.run(data, fake, start + 72 * 3600, "sha", gas, eth_usd=2000)
+        status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
+        self.assertEqual((status["early_kill"]["gate2"], status["early_kill"]["result"]), ("fire", "STOPPED"))
+        self.assertEqual(status["early_kill"]["gate2_distinct"], 3)
+
+    def test_capped_run_with_four_passes_is_measured(self):
+        log = []
+        fake = self._universe_fake(n=30, pass_every=2, log=log)
+        data = tempfile.mkdtemp()
+        gas = {"ethereum": 10 ** 9, "base": 10 ** 9}
+        # 2 list calls, then 4 reads per screened collection (listings, collection, offers, events):
+        # c0..c6 screened = 28 reads -> passes c0, c2, c4, c6.
+        fake.max_calls = 1 + 28 + 1
+        snapshot.run(data, fake, NOW, "sha", gas, eth_usd=2000)
+        status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
+        books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
+        self.assertEqual(status["status"], "ok")
+        self.assertFalse(status["partial"])
+        self.assertEqual(status["stop"], "call_cap")
+        self.assertEqual(status["floor_passing_this_run"], 4)
+        self.assertEqual(books["first_runs"], [4])
+        self.assertEqual(len(books["passes"]["2026-11-09"]), 4)
+        self.assertEqual(books["pilot_start"], "2026-11-09")
+        self.assertEqual(status["by_chain"]["ethereum"], {"screened": 7, "passing": 4})
+        self.assertEqual(status["by_chain"]["base"], {"screened": 0, "passing": 0})
+        import jsonschema
+        jsonschema.validate(status, json.load(open(os.path.join(ROOT, "schema", "nft-snapshot.schema.json"))))
+
+    def test_three_capped_runs_under_six_fire_gate1(self):
+        data = tempfile.mkdtemp()
+        gas = {"ethereum": 10 ** 9, "base": 10 ** 9}
+        for hour in range(3):
+            fake = self._universe_fake(n=30, pass_every=2)
+            fake.max_calls = 30          # 4 passes before the cap, as above
+            if hour:                      # room for the 4 pending re-checks first (3 reads each)
+                fake.max_calls += 12
+            snapshot.run(data, fake, NOW + hour * 3600, "sha", gas, eth_usd=2000)
+        status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
+        books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
+        self.assertEqual(status["stop"], "call_cap")
+        self.assertEqual(len(books["first_runs"]), 3)
+        self.assertTrue(all(n < 6 for n in books["first_runs"]))
+        self.assertEqual(status["early_kill"]["gate1"], "fire")
+        self.assertEqual(status["early_kill"]["result"], "STOPPED")
+
+    def test_depth_stop_is_measured(self):
+        fake = self._universe_fake(n=3, pass_every=3)
+        data = tempfile.mkdtemp()
+        snapshot.run(data, fake, NOW, "sha", {"ethereum": 10 ** 9, "base": 10 ** 9}, eth_usd=2000)
+        status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
+        self.assertEqual((status["status"], status["stop"], status["floor_passing_this_run"]), ("ok", "depth", 1))
+
+    def test_calendar_backstop_fires_without_pilot_start(self):
+        class Broken:
+            def __init__(self):
+                self.calls = 0
+                self.rate = {"limit": None, "remaining": None, "reset": None}
+            def list_collections(self, chain, cursor):
+                self.calls += 1
+                raise opensea.OpenSeaError(500)
+        data = tempfile.mkdtemp()
+        gas = {"ethereum": 10 ** 9, "base": 10 ** 9}
+        snapshot.run(data, Broken(), NOW, "sha", gas, eth_usd=2000)
+        books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
+        self.assertEqual(books["v03_init_at"], int(NOW))
+        self.assertIsNone(books["pilot_start"])
+        snapshot.run(data, Broken(), NOW + 7 * 86400 - 60, "sha", gas, eth_usd=2000)
+        status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
+        self.assertEqual(status["status"], "partial")
+        self.assertEqual(status["early_kill"]["backstop"], "pending")
+        snapshot.run(data, Broken(), NOW + 7 * 86400, "sha", gas, eth_usd=2000)
+        status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
+        books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
+        self.assertIsNone(books["pilot_start"])
+        self.assertEqual(status["early_kill"]["backstop"], "fire")
+        self.assertEqual(status["early_kill"]["backstop_measured_days"], 0)
+        self.assertEqual(status["early_kill"]["result"], "STOPPED")
+        days = ["2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12"]
+        self.assertEqual(P.early_kill([], [], None, NOW + 7 * 86400, NOW, days)["backstop"], "pass")
+        self.assertEqual(P.early_kill([], [], None, NOW + 7 * 86400, NOW, days[:3])["backstop"], "fire")
+
+    def test_min_units_counts_numeric_costs_only(self):
+        from datetime import date
+        start = date(2026, 11, 1)
+        days = ["2026-11-%02d" % d for d in range(1, 15)]
+        ids = ["nft_collection:eip155:1:0x%040x" % i for i in range(1, 11)]
+        passes = {d: ids for d in days}
+        def unit(i, cost):
+            return {"asset_id": ids[i % 10], "cost": cost, "unsellable": False, "seasoned": False,
+                    "snapshot_t": "2026-11-%02dT00:00:00Z" % (1 + i % 14), "counts": {}, "rule": P.RULE}
+        # 19 numeric + 2 null: 21 units, null share 9.5% (under the 20% block), but only 19 count.
+        rows = [unit(i, 0.05) for i in range(19)] + [unit(19, None), unit(20, None)]
+        got = P.summarize(rows, passes, start, days)
+        self.assertEqual(got["units"], 21)
+        self.assertLessEqual(got["null_cost_share"], 0.2)
+        self.assertEqual(got["nh04_verdict"], "INCONCLUSIVE")
+        rows.append(unit(21, 0.05))
+        self.assertTrue(P.summarize(rows, passes, start, days)["nh04_verdict"].startswith("cost GO, supply-limited"))
 
     def test_go_is_cost_go_supply_limited_and_footnoted(self):
         from datetime import date
@@ -800,7 +911,7 @@ class NH04Tests(unittest.TestCase):
         self.assertEqual(list(books["passes"]), ["2026-11-09"])
         self.assertEqual(books["passes"]["2026-11-09"], [])
 
-    def test_wall_clock_stop_is_partial(self):
+    def test_wall_clock_stop_is_measured(self):
         class Fake:
             def __init__(self):
                 self.calls = 0
@@ -817,13 +928,15 @@ class NH04Tests(unittest.TestCase):
         )
         self.assertEqual(fake.calls, 0)
         status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
-        self.assertEqual(status["status"], "partial")
-        self.assertTrue(status["partial"])
-        self.assertIsNone(status["floor_passing_this_run"])
-        self.assertEqual(status["rejections"]["bidders"], 0)
+        # No pending rows were deferred, so a deadline stop is a measured run (0 passes).
+        self.assertEqual(status["status"], "ok")
+        self.assertFalse(status["partial"])
+        self.assertEqual(status["stop"], "deadline")
+        self.assertEqual(status["floor_passing_this_run"], 0)
         self.assertEqual(status["reason"], "deadline")
         books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
-        self.assertIsNone(books["pilot_start"])
+        self.assertEqual(books["pilot_start"], "2026-11-09")
+        self.assertEqual(books["first_runs"], [0])
         self.assertEqual(books["state_version"], "v0.3")
         self.assertEqual(snapshot.RUN_LIMIT_SECONDS, 11 * 60)
 

@@ -5,6 +5,15 @@
   "description": "Derived NH-04 row or the run status. No raw OpenSea body, no wallet, no handle.",
   "oneOf": [{ "$ref": "#/$defs/unit" }, { "$ref": "#/$defs/status" }],
   "$defs": {
+    "chain_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["screened", "passing"],
+      "properties": {
+        "screened": { "type": "integer", "minimum": 0 },
+        "passing": { "type": "integer", "minimum": 0 }
+      }
+    },
     "unit": {
       "type": "object",
       "additionalProperties": false,
@@ -55,7 +64,7 @@
         "pace_ready", "nh04", "nh04_ready", "buyer_fee_eth", "eth_usd", "raw", "reason", "rejections",
         "flags", "screened", "pending_served", "pending_deferred", "passers_footnoted",
         "nh04_verdict", "verdict_footnote", "distinct_collections", "distinct_per_day_median",
-        "early_kill", "attribution"
+        "early_kill", "stop", "by_chain", "attribution"
       ],
       "properties": {
         "schema_version": { "const": 1 },
@@ -139,12 +148,25 @@
           "pattern": "^(not_ready|INCONCLUSIVE|NO-GO|cost GO, supply-limited \\(median [0-9.na/]+ distinct/day\\))$"
         },
         "verdict_footnote": { "type": ["string", "null"] },
+        "stop": {
+          "description": "Why a measured screen ended. Null on partial runs (list error, deferred pending, no eth price, gas failure).",
+          "enum": [null, "pass_target", "depth", "call_cap", "deadline"]
+        },
+        "by_chain": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "ethereum": { "$ref": "#/$defs/chain_counts" },
+            "base": { "$ref": "#/$defs/chain_counts" }
+          }
+        },
         "distinct_collections": { "type": ["integer", "null"], "minimum": 0 },
         "distinct_per_day_median": { "type": ["number", "null"] },
         "early_kill": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["gate1", "gate1_runs", "gate1_avg", "gate1_min_avg", "gate2", "gate2_distinct", "gate2_min_distinct", "result"],
+          "required": ["gate1", "gate1_runs", "gate1_avg", "gate1_min_avg", "gate2", "gate2_distinct", "gate2_min_distinct",
+                       "gate2_window_hours", "backstop", "backstop_measured_days", "backstop_min_days", "result"],
           "properties": {
             "gate1": { "enum": ["pending", "pass", "fire"] },
             "gate1_runs": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "maxItems": 3 },
@@ -153,6 +175,10 @@
             "gate2": { "enum": ["pending", "pass", "fire"] },
             "gate2_distinct": { "type": "integer", "minimum": 0 },
             "gate2_min_distinct": { "const": 8 },
+            "gate2_window_hours": { "const": 72 },
+            "backstop": { "enum": ["pending", "pass", "fire"] },
+            "backstop_measured_days": { "type": "integer", "minimum": 0 },
+            "backstop_min_days": { "const": 4 },
             "result": { "enum": [null, "STOPPED", "INCONCLUSIVE"] }
           }
         },

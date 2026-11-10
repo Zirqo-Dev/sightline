@@ -1,6 +1,6 @@
 # NFT snapshot pilot — NH-04 spec v0.3
 
-Status: approved by Sightline Challenger as Option A with required revisions (Nov 10, 2026); this revision applies them. Implemented in the v0.3 PR (not merged; merge only after Challenger PASS on the 8-item checklist at the exact PR head). The owner is never named; no collection identifiers appear here.
+Status: approved by Sightline Challenger as Option A with required revisions (Nov 10, 2026); this revision applies them, plus the HOLD fix round on PR #116 at b457e09 (fixes 1–5, section 13). Implemented in the v0.3 PR (not merged; merge only after Challenger PASS on the 8-item checklist at the exact PR head). The owner is never named; no collection identifiers appear here.
 
 ## 0. Why v0.3
 
@@ -28,7 +28,8 @@ Sensitivity of (a): top buyer ≤25% → 10; ≤15% → 7; 20/8 → 9; 40/12 →
 - They are frozen in the rule string written to every status row and unit before the first v0.3 run:
   `v0.3 GET /api/v2/collections order_by=market_cap limit=100 max_list_pages=8 pass_target=10 max_calls=480 chains=ethereum,base pace_per_minute=60 window=7d min_sales=30 min_buyers=10 max_buyer_share=0.20 min_bidders=3 bid_band=0.85 min_listings=5 floor_usd=250 gas_ratio=0.02 min_mint_days=14 event_pages=3 truncated=flag`
   - Code: `nft/loop/pricing.py` (`WINDOW_DAYS`, `MIN_SALES`, `MIN_BUYERS`, `MAX_BUYER_SHARE`, `RULE`). Test: `test_rule_string_freezes_v03_thresholds`.
-- **Screen until 10 passing:** page by market_cap (8 pages per chain, in the rule string) and screen each under-cap collection immediately; stop at 10 passes, the 480-call cap, the 11-minute wall clock, or the end of the page depth. The run is complete when 10 pass or the page depth runs out; partial when the cap, clock or a list error stops it first. Code: `snapshot._screen`. Test: `test_screen_until_pass_target`.
+- **Screen until 10 passing:** page by market_cap (8 pages per chain, in the rule string) and screen each under-cap collection immediately; stop at 10 passes, the 480-call cap, the 11-minute wall clock, or the end of the page depth.
+- **Measured vs partial (fix 1):** once every pending row has been served, a screen that stops for any of those reasons is a **measured run**. It records `floor_passing_this_run` = passes found, appends to `first_runs`, records the day's passes, and may set `pilot_start`. `status.stop` = `pass_target` | `depth` | `call_cap` | `deadline`. A run is `partial` only for a list error, deferred pending rows, no ETH price, or a gas failure, and then `stop` is null. `status.by_chain` reports screened and passing counts per chain. Code: `snapshot._screen`, `snapshot.run`. Tests: `test_screen_until_pass_target`, `test_capped_run_with_four_passes_is_measured`, `test_depth_stop_is_measured`, `test_wall_clock_stop_is_measured`.
 - Units from any other rule string (v0.2 and older) never count toward v0.3 (`summarize` filters on the rule string).
 
 ## 3. Rate limit and pacing (item 0)
@@ -42,18 +43,20 @@ Sensitivity of (a): top buyer ≤25% → 10; ≤15% → 7; 20/8 → 9; 40/12 →
 ## 4. Early kill: two gates (item 2)
 
 - (i) **First 3 ok runs average fewer than 6 passing → stop.** Status `early_kill.result = "STOPPED"`.
-- (ii) **At the end of day 3 (the first run on day 4 or later), fewer than 8 cumulative distinct passing collections over days 1–3 → stop, result INCONCLUSIVE.**
-- The code reports both gates in every status row (`early_kill`: gate1/gate2 = pending/pass/fire, the run counts, the distinct count, result). Stopping is the human decision, as for v0.2. Code: `pricing.early_kill`; books.json keeps `first_runs`. Test: `test_early_kill_two_gates`.
+  Capped, depth and deadline runs count (fix 1). Test: `test_three_capped_runs_under_six_fire_gate1`.
+- (ii) **72 hours after the first measured run, fewer than 8 distinct collections passing in measured runs inside that 72h → stop, result INCONCLUSIVE** (fix 2; a 72h window, not UTC days 1–3). books.json keeps `first_measured_at` and `early_distinct`. Test: `test_gate2_counts_only_passes_inside_72h`.
+- **Calendar backstop for the pace rule (fix 4):** the v0.3 anchor `v03_init_at` is the first v0.3 run after merge/deploy (state init time). If 7 days after the anchor there are fewer than 4 UTC days with a measured run, stop (`early_kill.backstop = fire`, result STOPPED), even if `pilot_start` was never set. books.json keeps `measured_days`. Test: `test_calendar_backstop_fires_without_pilot_start`.
+- The code reports all three in every status row (`early_kill`: gate1/gate2/backstop = pending/pass/fire, run counts, distinct count, measured days, result). Stopping is the human decision, as for v0.2. Code: `pricing.early_kill`. Test: `test_early_kill_two_gates`.
 
 ## 5. GO definition and F2 (item 3)
 
 - F2 (median ≥20 floor-passing a day over days 8–14) is **demoted to a reported metric** (`pace_median`, `pace_ready`, plus `distinct_per_day_median` over days 1–14). It is no longer a gate.
 - NH-04 verdict (`nh04_verdict` in status):
   - `not_ready` before day 14 completes;
-  - `INCONCLUSIVE` if fewer than 20 measured units, fewer than 8 distinct collections (addendum 1), or null-cost share above 20%;
+  - `INCONCLUSIVE` if fewer than 20 **numeric-cost** units (null-cost units never count toward 20; fix 3), fewer than 8 distinct collections (addendum 1), or null-cost share above 20%;
   - `NO-GO` if the median cost is above 10%;
   - otherwise **`cost GO, supply-limited (median N distinct/day)`**, never plain GO. The schema enforces this wording.
-- Code: `pricing.summarize`. Test: `test_go_is_cost_go_supply_limited_and_footnoted`.
+- Code: `pricing.summarize`. Tests: `test_go_is_cost_go_supply_limited_and_footnoted`, `test_min_units_counts_numeric_costs_only`.
 
 ## 6. New reported fields, not gates (item 4)
 
@@ -79,15 +82,16 @@ Sensitivity of (a): top buyer ≤25% → 10; ≤15% → 7; 20/8 → 9; 40/12 →
 
 **When demand exceeds 480:** the client stops at 480 (`Budget`).
 - Pending is served first, so fills are never starved. The worst-case 150 leaves at least 330 reads for screening, about 34 under-cap collections at the 9.7-read worst case.
-- If the cap stops screening before 10 passes and before the page depth runs out, the run is **partial**: no complete day, `floor_passing_this_run` null, the day's passes aren't recorded, and the early-kill run list isn't advanced.
+- If the cap stops screening before 10 passes, the run is still **measured** (fix 1): `stop = call_cap`, passes found are recorded and count toward `first_runs`, gate (ii) and the day. Only when the cap is hit while **pending rows are still being served** (deferred pending) is the run partial (`reason = "pending deferred"`, `stop` null), with no day recorded and no new screening.
 - Passers found before the cap still become pending (same as v0.2). Unreached pending rows stay pending with tries + 1.
-- The status reports `opensea_calls`, `screened`, `pending_served` and `pending_deferred`, plus `reason = "call cap"`.
+- The status reports `opensea_calls`, `screened`, `by_chain`, `pending_served`, `pending_deferred` and `stop`.
 
 ## 8. Truncation (item 6)
 
 - More than 300 sales in 7 days (3 event pages of 100 with a next cursor): **flag, don't reject.**
 - Buyers and top-buyer share are computed on the 300-sale sample. Sales passes (≥300).
 - Status `flags.sales_truncated` counts every truncated screen. `flags.liquid_tail` counts truncated passers, and the passer's counts carry `sales_truncated: true, liquid_tail: true`. `sales_truncated` is no longer a rejection reason.
+- **Caveat (fix 5):** on a truncated collection, every share (top buyer, top seller, max single-day share) is computed on the **newest 300 sales**. That sample covers less than 7 days, so `max_day_share_7d` is overstated (and seller and buyer shares are shares of the sample). These rows are flagged (`sales_truncated`, `liquid_tail`), and the >50% verdict footnote may over-fire for them.
 - Code: `pricing.rejection`, `snapshot._screen_one`, schema `flags`. Test: `test_truncated_sales_are_flagged_not_rejected`.
 
 ## 9. Clock, state, workflow
@@ -99,8 +103,8 @@ Sensitivity of (a): top buyer ≤25% → 10; ≤15% → 7; 20/8 → 9; 40/12 →
 
 ## 10. Addenda carried forward
 
-1. **Minimum sample:** by day 14, at least 20 measured units across at least 8 distinct collections; otherwise INCONCLUSIVE, never GO.
-2. **Early kill:** replaced by the two gates in section 4.
+1. **Minimum sample:** by day 14, at least 20 numeric-cost units across at least 8 distinct collections; otherwise INCONCLUSIVE, never GO.
+2. **Early kill:** replaced by the two gates and the calendar backstop in section 4.
 3. **No loosening mid-test:** no change to window, thresholds, universe or pass target during the 14 days.
 4. **Reporting:** per-run rejection counts, flags and floor_passing; scheduled vs actual runs per day (cron-job.org hourly at :27 is scheduled; actual = status rows on nft-data).
 
@@ -116,3 +120,11 @@ Carried from v0.1/v0.2: cost = (entry − exit) ÷ entry with t+1 2nd-cheapest l
 ## 12. Owner-only, not proposed
 
 Raising the $250 floor cap is the owner's money rule. This spec doesn't propose it. If v0.3 stops early, the next step is a spec decision for the owner (end NH-04 as untestable at this cap, change the source or chains, or the owner revisits the cap), not more code.
+
+## 13. HOLD fix round (Challenger, PR #116 at b457e09)
+
+1. Measured runs include call_cap, depth and deadline stops after all pending rows are served; `status.stop` added; partial only for list errors, deferred pending, no ETH price, or gas failure (sections 2, 7).
+2. Gate (ii) is a 72h window from the first measured run (section 4).
+3. Addendum 1 counts numeric-cost units only (section 5).
+4. Calendar backstop: fewer than 4 measured days 7 days after the v0.3 anchor → stop, even with no pilot_start (section 4).
+5. Truncation caveat: shares on the newest 300 sales overstate max_day_share; flagged; footnote may over-fire (section 8).

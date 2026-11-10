@@ -40,8 +40,11 @@ FOOTNOTE_SHARE = 0.50
 # v0.3 early kill (reported; the stop is a human decision).
 EARLY_RUNS = 3
 EARLY_MIN_AVG = 6
-EARLY_DAYS = 3
+EARLY_WINDOW_SECONDS = 72 * 3600
 EARLY_MIN_DISTINCT = 8
+# Calendar backstop for the pace rule.
+BACKSTOP_SECONDS = 7 * 86400
+BACKSTOP_MIN_DAYS = 4
 # Addendum 1: below this sample by day 14, NH-04 is INCONCLUSIVE, never GO.
 MIN_UNITS = 20
 MIN_DISTINCT = 8
@@ -411,24 +414,37 @@ def footnoted(counts):
     return False
 
 
-def early_kill(first_runs, passes, pilot_start, today):
-    """Two reported gates. (i) first 3 ok runs average < 6 passing. (ii) after day 3,
-    fewer than 8 distinct passing collections on days 1-3: stop, INCONCLUSIVE."""
+def early_kill(first_runs, early_distinct, first_measured_at, now, init_at=None, measured_days=None):
+    """Reported gates; stopping is a human decision.
+
+    (i) first 3 measured runs average < 6 passing -> STOPPED.
+    (ii) 72h after the first measured run, fewer than 8 distinct passing collections
+        in measured runs inside that 72h -> INCONCLUSIVE.
+    Backstop: 7 days after the v0.3 anchor (first v0.3 run after merge/deploy), fewer than
+        4 UTC days with a measured run -> STOPPED, even if no run was ever measured.
+    """
     runs = list(first_runs or [])[:EARLY_RUNS]
     avg = (sum(runs) / len(runs)) if runs else None
     gate1 = "pending" if len(runs) < EARLY_RUNS else ("fire" if avg < EARLY_MIN_AVG else "pass")
-    distinct = set()
+    distinct = len(set(early_distinct or []))
     gate2 = "pending"
-    if pilot_start is not None:
-        for day_s, assets in (passes or {}).items():
-            if 1 <= _day_index(date.fromisoformat(day_s), pilot_start) <= EARLY_DAYS:
-                distinct.update(assets or [])
-        if today is not None and _day_index(today, pilot_start) > EARLY_DAYS:
-            gate2 = "fire" if len(distinct) < EARLY_MIN_DISTINCT else "pass"
+    if first_measured_at is not None and now is not None and now >= first_measured_at + EARLY_WINDOW_SECONDS:
+        gate2 = "fire" if distinct < EARLY_MIN_DISTINCT else "pass"
+    days = len(set(measured_days or []))
+    backstop = "pending"
+    if init_at is not None and now is not None and now >= init_at + BACKSTOP_SECONDS:
+        backstop = "fire" if days < BACKSTOP_MIN_DAYS else "pass"
+    result = None
+    if gate1 == "fire" or backstop == "fire":
+        result = "STOPPED"
+    elif gate2 == "fire":
+        result = "INCONCLUSIVE"
     return {
         "gate1": gate1, "gate1_runs": runs, "gate1_avg": avg, "gate1_min_avg": EARLY_MIN_AVG,
-        "gate2": gate2, "gate2_distinct": len(distinct), "gate2_min_distinct": EARLY_MIN_DISTINCT,
-        "result": "STOPPED" if gate1 == "fire" else ("INCONCLUSIVE" if gate2 == "fire" else None),
+        "gate2": gate2, "gate2_distinct": distinct, "gate2_min_distinct": EARLY_MIN_DISTINCT,
+        "gate2_window_hours": EARLY_WINDOW_SECONDS // 3600,
+        "backstop": backstop, "backstop_measured_days": days, "backstop_min_days": BACKSTOP_MIN_DAYS,
+        "result": result,
     }
 
 
@@ -519,7 +535,8 @@ def summarize(units, passes, pilot_start, complete_days=None):
     flagged = sum(1 for u in window if footnoted(u.get("counts")))
     if not window_ready:
         verdict = "not_ready"
-    elif blocked or n < MIN_UNITS or len(distinct) < MIN_DISTINCT or median is None:
+    elif blocked or len(costs) < MIN_UNITS or len(distinct) < MIN_DISTINCT or median is None:
+        # Addendum 1 counts numeric-cost units only; null-cost units never count toward 20.
         verdict = "INCONCLUSIVE"
     elif median <= COST_GO_MAX:
         # Never a plain GO: F2 (>= 20 floor-passing a day) is reported, not a gate.

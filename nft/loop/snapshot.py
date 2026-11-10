@@ -58,7 +58,8 @@ def _status(code_sha, now, **extra):
         "screened": None, "pending_served": None, "pending_deferred": None, "passers_footnoted": None,
         "nh04_verdict": "not_ready", "verdict_footnote": None,
         "distinct_collections": None, "distinct_per_day_median": None,
-        "early_kill": P.early_kill([], {}, None, None),
+        "stop": None, "by_chain": None,
+        "early_kill": P.early_kill([], [], None, None, None, []),
         "attribution": P.ATTRIBUTION,
     }
     doc.update(extra)
@@ -70,6 +71,7 @@ def _fresh_state():
         "state_version": P.STATE_VERSION,
         "pilot_start": None, "seen": {}, "passes": {}, "complete_days": [],
         "offers": {}, "pending": [], "gas": [], "first_runs": [],
+        "first_measured_at": None, "early_distinct": [], "measured_days": [], "v03_init_at": None,
     }
 
 
@@ -91,11 +93,17 @@ def load_state(path):
     doc.setdefault("complete_days", [])
     doc.setdefault("offers", {})
     doc.setdefault("first_runs", [])
+    for key, empty in (("first_measured_at", None), ("early_distinct", []), ("measured_days", []), ("v03_init_at", None)):
+        doc.setdefault(key, empty)
     if doc.get("state_version") != P.STATE_VERSION:
         doc["pilot_start"] = None
         doc["passes"] = {}
         doc["complete_days"] = []
         doc["first_runs"] = []
+        doc["first_measured_at"] = None
+        doc["early_distinct"] = []
+        doc["measured_days"] = []
+        doc["v03_init_at"] = None
         # v0.2 passers were screened on the 24h rule; their units are not v0.3 units.
         doc["pending"] = []
         doc["state_version"] = P.STATE_VERSION
@@ -330,9 +338,9 @@ def _screen(client, quotes, detail, now, state, caches, day, deadline=None, reje
             deadline_flag=None, flags=None):
     """Page by market cap; screen each under-cap collection at once; stop at PASS_TARGET.
 
-    Complete (not partial) when PASS_TARGET passes are found or the frozen page depth /
-    cursors run out. Partial when the call cap, a budget error, a list error, or the wall
-    clock stops it first.
+    Returns (passing, new_pending, list_error, screened, stop, by_chain). `stop` is
+    pass_target, depth (frozen page depth or cursors ran out), call_cap, or deadline.
+    Every stop is a measured run; only a list error makes the run partial.
     """
     cursors = {chain: "" for chain in P.CHAINS}
     pages = {chain: 0 for chain in P.CHAINS}
@@ -340,6 +348,12 @@ def _screen(client, quotes, detail, now, state, caches, day, deadline=None, reje
     screened = 0
     partial = False
     flags = flags if flags is not None else {}
+    by_chain = {chain: {"screened": 0, "passing": 0} for chain in P.CHAINS}
+
+    def done(stop):
+        for chain in P.CHAINS:
+            by_chain[chain]["passing"] = sum(1 for p in new_pending if p["chain"] == chain)
+        return passing, new_pending, partial, screened, stop, by_chain
 
     def drop_shared(prev):
         prev["shared"] = True
@@ -352,7 +366,7 @@ def _screen(client, quotes, detail, now, state, caches, day, deadline=None, reje
 
     while len(passing) < P.PASS_TARGET and any(cursors[c] is not None for c in P.CHAINS):
         if _past_deadline(deadline, deadline_flag):
-            return passing, new_pending, True, screened
+            return done("deadline")
         for chain in P.CHAINS:
             if cursors[chain] is None or len(passing) >= P.PASS_TARGET:
                 continue
@@ -360,11 +374,11 @@ def _screen(client, quotes, detail, now, state, caches, day, deadline=None, reje
                 cursors[chain] = None
                 continue
             if _cap_hit(client):
-                return passing, new_pending, True, screened
+                return done("call_cap")
             try:
                 batch, nxt = client.list_collections(chain, cursors[chain] or None)
             except opensea.Budget:
-                return passing, new_pending, True, screened
+                return done("call_cap")
             except opensea.OpenSeaError as exc:
                 cursors[chain] = None
                 partial = True
@@ -395,19 +409,22 @@ def _screen(client, quotes, detail, now, state, caches, day, deadline=None, reje
                             reasons.insert(0, "contracts")
                         _add_reasons(rejections, reasons)
                     continue
-                if _cap_hit(client) or _past_deadline(deadline, deadline_flag):
-                    return passing, new_pending, True, screened
+                if _cap_hit(client):
+                    return done("call_cap")
+                if _past_deadline(deadline, deadline_flag):
+                    return done("deadline")
                 try:
                     out = _screen_one(client, item, quotes, detail, now, state, caches, day, rejections, flags)
                 except opensea.Budget:
-                    return passing, new_pending, True, screened
+                    return done("call_cap")
                 if out is None:
                     continue
                 screened += 1
+                by_chain[chain]["screened"] += 1
                 if out.get("pending"):
                     passing.append(out["pending"]["asset_id"])
                     new_pending.append(out["pending"])
-    return passing, new_pending, partial, screened
+    return done("pass_target" if len(passing) >= P.PASS_TARGET else "depth")
 
 
 def _screen_one(client, item, quotes, detail, now, state, caches, day, rejections, flags):
@@ -543,6 +560,9 @@ def _close_read_error(pending, now, code_sha):
 def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None, deadline=None):
     _, status_path, units_path, books_path = _paths(data_dir)
     state = load_state(books_path)
+    if state["v03_init_at"] is None:
+        # Calendar anchor for the pace backstop: the first v0.3 run after merge/deploy.
+        state["v03_init_at"] = int(now)
     day = _day(now)
     if deadline is None:
         deadline = time.time() + RUN_LIMIT_SECONDS
@@ -589,13 +609,16 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
         client, state, detail, now, code_sha, quotes, deadline, deadline_flag, caches, new_units, day,
     )
     # 2. Screen until PASS_TARGET pass, or the cap / clock / page depth.
-    passing, fresh, scr_partial, screened = [], [], False, 0
+    passing, fresh, list_error, screened, stop = [], [], False, 0, None
+    by_chain = {chain: {"screened": 0, "passing": 0} for chain in P.CHAINS}
     if not pend_partial:
-        passing, fresh, scr_partial, screened = _screen(
+        passing, fresh, list_error, screened, stop, by_chain = _screen(
             client, quotes, detail, now, state, caches, day, deadline=deadline,
             rejections=rejections, deadline_flag=deadline_flag, flags=flags,
         )
-    partial = pend_partial or scr_partial
+    # Measured = every pending row served and the screen ran to any stop. Partial only for
+    # deferred pending or a list error (no eth price / gas failure return earlier).
+    partial = pend_partial or list_error
     fresh_ids = {p["asset_id"] for p in fresh}
     state["pending"] = [p for p in kept if p["asset_id"] not in fresh_ids] + fresh
     iso = day.isoformat()
@@ -610,6 +633,14 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
                 bucket.append(asset)
         if len(state["first_runs"]) < P.EARLY_RUNS:
             state["first_runs"].append(len(set(passing)))
+        if state["first_measured_at"] is None:
+            state["first_measured_at"] = int(now)
+        if now < state["first_measured_at"] + P.EARLY_WINDOW_SECONDS:
+            for asset in passing:
+                if asset not in state["early_distinct"]:
+                    state["early_distinct"].append(asset)
+        if iso not in state["measured_days"]:
+            state["measured_days"].append(iso)
     cutoff = day.toordinal() - 21
     state["passes"] = {k: v for k, v in state["passes"].items() if date_ok(k, cutoff)}
     state["complete_days"] = [d for d in state["complete_days"] if date_ok(d, cutoff)]
@@ -617,22 +648,26 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
     _append_units(units_path, new_units, prior)
     pilot = datetime.fromisoformat(state["pilot_start"]).date() if state["pilot_start"] else None
     summary = P.summarize(prior + new_units, state["passes"], pilot, state["complete_days"])
-    kill = P.early_kill(state["first_runs"], state["passes"], pilot, day)
+    kill = P.early_kill(
+        state["first_runs"], state["early_distinct"], state["first_measured_at"], now,
+        state["v03_init_at"], state["measured_days"],
+    )
     if getattr(client, "raw", None) is not None:
         client.raw.clear()
     _dump(books_path, state)
     reason = None
     code = getattr(client, "list_error", None)
-    if deadline_flag["hit"]:
-        reason = "deadline"
-    elif partial and isinstance(code, int):
+    if list_error and isinstance(code, int):
         reason = "opensea http %s" % code
-    elif partial:
-        reason = "call cap"
+    elif pend_partial:
+        reason = "pending deferred"
+    elif deadline_flag["hit"]:
+        reason = "deadline"
     _dump(status_path, _status(
         code_sha, now, status="partial" if partial else "ok", measured=True, partial=partial,
         opensea_calls=client.calls, rate_limit=_rate(client),
         floor_passing_this_run=len(set(passing)) if not partial else None,
+        stop=stop if not partial else None, by_chain=by_chain,
         pending=len(state["pending"]), eth_usd=eth_usd, reason=reason,
         rejections=_rejection_counts(rejections), flags=_flag_counts(flags),
         screened=screened, pending_served=served, pending_deferred=deferred,
