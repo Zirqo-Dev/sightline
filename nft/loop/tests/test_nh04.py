@@ -940,6 +940,106 @@ class NH04Tests(unittest.TestCase):
         self.assertEqual(books["state_version"], "v0.3")
         self.assertEqual(snapshot.RUN_LIMIT_SECONDS, 11 * 60)
 
+    def test_dry_run_never_publishes(self):
+        text = open(os.path.join(ROOT, ".github", "workflows", "nft-snapshot.yml")).read()
+        dispatch = text.split("workflow_dispatch:", 1)[1].split("pull_request:", 1)[0]
+        self.assertIn("dry_run:", dispatch)
+        self.assertIn("type: boolean", dispatch)
+        self.assertIn("default: false", dispatch)
+        self.assertIn("NFT_DRY_RUN: ${{ inputs.dry_run == true }}", text)
+        steps = {}
+        for block in text.split("      - name: ")[1:]:
+            name = block.split("\n", 1)[0].strip()
+            steps[name] = block
+        publish = [n for n, b in steps.items() if "publish_nft_data.sh" in b]
+        self.assertEqual(publish, ["Commit to nft-data"])
+        self.assertIn("if: success() && inputs.dry_run != true", steps["Commit to nft-data"])
+        self.assertIn("if: success() && inputs.dry_run != true", steps["Privacy guard on nft-data"])
+        self.assertIn("if: inputs.dry_run != true", steps["Snapshot"])
+        dry = steps["Dry run (temp dir, step summary only)"]
+        self.assertIn("if: inputs.dry_run == true", dry)
+        self.assertIn("--dry-run", dry)
+        self.assertIn('--data-dir "$(mktemp -d)"', dry)
+        self.assertNotIn("GITHUB_WORKSPACE/data", dry)
+        for name, block in steps.items():
+            if "git push" in block or "HEAD:" in block:
+                self.assertIn("inputs.dry_run != true", block, name)
+        # Code-level guards: the publish script refuses under NFT_DRY_RUN, and --dry-run
+        # refuses any data dir that is not an empty directory outside a git checkout.
+        import subprocess
+        script = os.path.join(ROOT, "nft", "loop", "publish_nft_data.sh")
+        repo = tempfile.mkdtemp()
+        subprocess.run(["git", "init", "-q", "-b", "nft-data", repo], check=True)
+        proc = subprocess.run(["bash", script], cwd=repo, text=True, capture_output=True,
+                              env={"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "NFT_DRY_RUN": "true", "TOKEN": "t"})
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("dry run: refusing to publish", proc.stderr)
+        self.assertFalse(snapshot._dry_dir_ok(repo))
+        os.makedirs(os.path.join(repo, "nft-pilot"))
+        self.assertFalse(snapshot._dry_dir_ok(os.path.join(repo, "nft-pilot")))
+        self.assertTrue(snapshot._dry_dir_ok(tempfile.mkdtemp()))
+        old = os.environ.pop("OPENSEA_API_KEY", None)
+        try:
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(snapshot.main(["--dry-run", "--data-dir", repo, "--code-sha", "x"]), 2)
+        finally:
+            if old is not None:
+                os.environ["OPENSEA_API_KEY"] = old
+        self.assertFalse(os.path.exists(os.path.join(repo, "nft-pilot", "status.json")))
+
+    def test_dry_run_summary_is_counts_only(self):
+        fake = self._universe_fake(n=4, pass_every=2)
+        data = tempfile.mkdtemp()
+        snapshot.run(data, fake, NOW, "sha", {"ethereum": 10 ** 9, "base": 10 ** 9}, eth_usd=2000)
+        out = os.path.join(tempfile.mkdtemp(), "summary.md")
+        text = snapshot.write_summary(os.path.join(data, "nft-pilot", "status.json"), out)
+        self.assertEqual(open(out).read(), text)
+        for key in ("stop", "opensea_calls", "floor_passing_this_run", "by_chain", "rejections"):
+            self.assertIn("- %s:" % key, text)
+        self.assertIn('"depth"', text)
+        self.assertNotIn("c0", text)
+        self.assertNotIn("0x", text)
+
+    def test_deadline_during_pending_serve_is_partial(self):
+        fake = self._universe_fake(n=30, pass_every=1)
+        data = tempfile.mkdtemp()
+        gas = {"ethereum": 10 ** 9, "base": 10 ** 9}
+        snapshot.run(data, fake, NOW, "sha", gas, eth_usd=2000)
+        books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
+        self.assertEqual(books["first_runs"], [10])
+        self.assertEqual(len(books["pending"]), 10)
+        calls = fake.calls
+        snapshot.run(data, fake, NOW + 3600, "sha", gas, eth_usd=2000, deadline=snapshot.time.time() - 1)
+        status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
+        books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
+        self.assertEqual(fake.calls, calls)
+        self.assertEqual(status["status"], "partial")
+        self.assertTrue(status["partial"])
+        self.assertIsNone(status["stop"])
+        self.assertIsNone(status["floor_passing_this_run"])
+        self.assertEqual(status["pending_deferred"], 10)
+        self.assertEqual(status["reason"], "pending deferred")
+        self.assertEqual(books["first_runs"], [10])
+        self.assertEqual(books["measured_days"], ["2026-11-09"])
+        self.assertTrue(all(p["tries"] == 1 for p in books["pending"]))
+
+    def test_early_distinct_holds_collection_ids(self):
+        # Two passers share nothing but each is one contract; early_distinct stores the
+        # collection id (chain + contract), never a token id.
+        fake = self._universe_fake(n=4, pass_every=1)
+        data = tempfile.mkdtemp()
+        snapshot.run(data, fake, NOW, "sha", {"ethereum": 10 ** 9, "base": 10 ** 9}, eth_usd=2000)
+        books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
+        import re
+        self.assertEqual(len(books["early_distinct"]), 4)
+        for asset in books["early_distinct"]:
+            self.assertRegex(asset, r"^nft_collection:eip155:(1|8453):0x[0-9a-f]{40}$")
+        self.assertEqual(sorted(books["early_distinct"]), sorted(p["asset_id"] for p in books["pending"]))
+        # Re-passing the same collections in later runs does not grow the distinct count.
+        snapshot.run(data, fake, NOW + 3600, "sha", {"ethereum": 10 ** 9, "base": 10 ** 9}, eth_usd=2000)
+        books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
+        self.assertEqual(len(books["early_distinct"]), 4)
+
     def test_workflow_is_isolated(self):
         text = open(os.path.join(ROOT, ".github", "workflows", "nft-snapshot.yml")).read()
         script = open(os.path.join(ROOT, "nft", "loop", "publish_nft_data.sh")).read()

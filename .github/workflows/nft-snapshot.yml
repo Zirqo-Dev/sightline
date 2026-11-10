@@ -10,6 +10,12 @@ name: NFT snapshot
 # v0.3 removes the GitHub schedule so two runs cannot land in the same hour.
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "DRY_RUN: snapshot into a temp dir, write only the step summary, never publish"
+        type: boolean
+        required: false
+        default: false
   pull_request:
     paths:
       - "nft/loop/**"
@@ -44,6 +50,9 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write
+    env:
+      # "true" only on a manual DRY_RUN dispatch. cron-job.org sends only ref, so this is "false".
+      NFT_DRY_RUN: ${{ inputs.dry_run == true }}
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -94,11 +103,17 @@ jobs:
         with:
           python-version: "3.12"
       - name: Snapshot
+        if: inputs.dry_run != true
         env:
           OPENSEA_API_KEY: ${{ secrets.OPENSEA_API_KEY }}
         run: python3 code/nft/loop/snapshot.py --data-dir "$GITHUB_WORKSPACE/data" --code-sha "${{ github.sha }}"
+      - name: Dry run (temp dir, step summary only)
+        if: inputs.dry_run == true
+        env:
+          OPENSEA_API_KEY: ${{ secrets.OPENSEA_API_KEY }}
+        run: python3 code/nft/loop/snapshot.py --dry-run --data-dir "$(mktemp -d)" --code-sha "${{ github.sha }}"
       - name: Privacy guard on nft-data
-        if: success()
+        if: success() && inputs.dry_run != true
         env:
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
           PRIVACY_IDENTITY_HASHES: ${{ secrets.PRIVACY_IDENTITY_HASHES }}
@@ -113,7 +128,7 @@ jobs:
           fi
           bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"
       - name: Commit to nft-data
-        if: success()
+        if: success() && inputs.dry_run != true
         working-directory: data
         env:
           TOKEN: ${{ github.token }}

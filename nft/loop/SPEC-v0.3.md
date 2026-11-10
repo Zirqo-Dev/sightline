@@ -1,6 +1,6 @@
 # NFT snapshot pilot — NH-04 spec v0.3
 
-Status: approved by Sightline Challenger as Option A with required revisions (Nov 10, 2026); this revision applies them, plus the HOLD fix round on PR #116 at b457e09 (fixes 1–5, section 13). Implemented in the v0.3 PR (not merged; merge only after Challenger PASS on the 8-item checklist at the exact PR head). The owner is never named; no collection identifiers appear here.
+Status: approved by Sightline Challenger as Option A with required revisions (Nov 10, 2026); this revision applies them, plus the HOLD fix round on PR #116 at b457e09 (fixes 1–5, section 13) and the re-gate items at 3666893 (section 14). Implemented in the v0.3 PR (not merged; merge only after Challenger PASS on the 8-item checklist at the exact PR head). The owner is never named; no collection identifiers appear here.
 
 ## 0. Why v0.3
 
@@ -128,3 +128,27 @@ Raising the $250 floor cap is the owner's money rule. This spec doesn't propose 
 3. Addendum 1 counts numeric-cost units only (section 5).
 4. Calendar backstop: fewer than 4 measured days 7 days after the v0.3 anchor → stop, even with no pilot_start (section 4).
 5. Truncation caveat: shares on the newest 300 sales overstate max_day_share; flagged; footnote may over-fire (section 8).
+
+## 14. Dry run, merge order (Challenger re-gate at 3666893)
+
+**DRY_RUN input (A).** `nft-snapshot.yml` has a boolean `workflow_dispatch` input `dry_run`, default **false**.
+- With `dry_run = true`, the job runs `snapshot.py --dry-run` against a fresh `mktemp -d` directory and writes only the job step summary: status, stop, opensea_calls, floor_passing_this_run, by_chain, rejections. These are counts only, with no slugs or ids.
+- The privacy-guard and "Commit to nft-data" steps are skipped (`if: success() && inputs.dry_run != true`), so `publish_nft_data.sh` never runs. Code-level guards back this up:
+  - The publish script exits 1 when `NFT_DRY_RUN` is not `false` (the job sets it from the input).
+  - `--dry-run` refuses any data dir that isn't an empty directory outside a git checkout.
+- cron-job.org dispatches send only `{"ref":"main"}`, so `dry_run` takes its default (false) and those runs publish as normal.
+- Code: `.github/workflows/nft-snapshot.yml`, `nft/loop/publish_nft_data.sh`, `snapshot._dry_dir_ok`, `snapshot.write_summary`, `snapshot.main`. Tests: `test_dry_run_never_publishes`, `test_dry_run_summary_is_counts_only`.
+
+**Deadline during the pending serve (B).** If the wall clock is reached while pending rows are being served, the run is partial: `stop` is null, `floor_passing_this_run` is null, the deferred rows get tries + 1, and neither `first_runs` nor `measured_days` is appended. Test: `test_deadline_during_pending_serve_is_partial`.
+
+**early_distinct (C).** It holds collection-level ids (`nft_collection:eip155:<chain>:<contract>`, one per contract), the same ids as `passes` and `pending`. It never holds per-token ids, and re-passes don't grow it. No fix was needed. Test: `test_early_distinct_holds_collection_ids`.
+
+**Dry-run procedure (D).** No OpenSea calls on any key before merge; the spare agent key is retired from use.
+1. After merge, the owner dispatches `nft-snapshot` **once with DRY_RUN = true** on the repo key, at least 10 minutes away from :27 (for example, between :40 and :15).
+2. Publishing v0.3 runs resume only after that dry run is green and its summary has been read: stop reason, calls used, passes, and screened and passing counts per chain (including Base).
+3. Checklist item 7 ("next 2 runs green") counts from the dry run.
+
+**Merge-order rule.** No publishing v0.3 run may happen until either:
+- the owner pauses his cron-job.org job before merge (and re-enables it after the dry run), or
+- the summary-only books.json change and the Chainlink change land first.
+Otherwise the first hourly dispatch after merge would publish a v0.3 run before the dry run.

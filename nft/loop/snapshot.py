@@ -815,11 +815,53 @@ def _no_key_unchanged(path, code_sha):
             and doc.get("buyer_fee_eth") == 0 and doc.get("raw") == "not_kept")
 
 
+def _dry_dir_ok(path):
+    """A dry run writes only into an empty directory that is not inside a git checkout."""
+    real = os.path.realpath(path)
+    if not os.path.isdir(real) or os.listdir(real):
+        return False
+    probe = real
+    while True:
+        if os.path.exists(os.path.join(probe, ".git")):
+            return False
+        parent = os.path.dirname(probe)
+        if parent == probe:
+            return True
+        probe = parent
+
+
+SUMMARY_KEYS = ("status", "stop", "opensea_calls", "floor_passing_this_run", "by_chain", "rejections")
+
+
+def write_summary(status_path, out=None):
+    """Counts only (no slugs, no ids) to the job step summary, or stdout."""
+    with open(status_path) as fh:
+        doc = json.load(fh)
+    lines = ["### NFT snapshot DRY_RUN (nothing published)", ""]
+    for key in SUMMARY_KEYS:
+        lines.append("- %s: `%s`" % (key, json.dumps(doc.get(key), sort_keys=True)))
+    text = "\n".join(lines) + "\n"
+    if P.stray_addresses(text):
+        raise RuntimeError("summary has an address")
+    target = out or os.environ.get("GITHUB_STEP_SUMMARY")
+    if target:
+        with open(target, "a") as fh:
+            fh.write(text)
+    else:
+        print(text)
+    return text
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="NFT snapshot pilot")
     parser.add_argument("--data-dir", required=True)
     parser.add_argument("--code-sha", default=os.environ.get("GITHUB_SHA", "local"))
+    parser.add_argument("--dry-run", action="store_true",
+                        help="snapshot into an empty temp dir and write only the step summary")
     args = parser.parse_args(argv)
+    if args.dry_run and not _dry_dir_ok(args.data_dir):
+        print("dry run: --data-dir must be an empty directory outside any git checkout", file=sys.stderr)
+        return 2
     now = time.time()
     key = os.environ.get("OPENSEA_API_KEY", "").strip()
     _, status_path, _, _ = _paths(args.data_dir)
@@ -832,6 +874,8 @@ def main(argv=None):
         client = opensea.OpenSea(key)
         gas = fetch_gas()
         run(args.data_dir, client, now, args.code_sha, gas)
+        if args.dry_run:
+            write_summary(status_path)
     except opensea.AuthError:
         _dump(status_path, _status(args.code_sha, now, status="error", reason="auth"))
         return 0
