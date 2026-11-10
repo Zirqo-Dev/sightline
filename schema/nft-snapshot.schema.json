@@ -163,7 +163,7 @@
           }
         },
         "outage_runs": {
-          "description": "error, no_key, and OpenSea 401/403 runs since v03_init_at. Not a measured run and not a gate.",
+          "description": "Count of non-measured runs since v03_init_at (error, no_key, auth, 429/5xx or other list error, deferred pending, no eth price). Not a measured run and not a gate.",
           "type": "integer",
           "minimum": 0
         },
