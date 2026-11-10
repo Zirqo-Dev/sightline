@@ -64,7 +64,7 @@
         "pace_ready", "nh04", "nh04_ready", "buyer_fee_eth", "eth_usd", "raw", "reason", "rejections",
         "flags", "screened", "pending_served", "pending_deferred", "passers_footnoted",
         "nh04_verdict", "verdict_footnote", "distinct_collections", "distinct_per_day_median",
-        "early_kill", "stop", "by_chain", "eth_usd_source", "eth_usd_runs", "attribution"
+        "early_kill", "stop", "by_chain", "eth_usd_source", "eth_usd_runs", "outage_runs", "attribution"
       ],
       "properties": {
         "schema_version": { "const": 1 },
@@ -161,6 +161,11 @@
             "chainlink": { "type": "integer", "minimum": 0 },
             "fallback": { "type": "integer", "minimum": 0 }
           }
+        },
+        "outage_runs": {
+          "description": "error, no_key, and OpenSea 401/403 runs since v03_init_at. Not a measured run and not a gate.",
+          "type": "integer",
+          "minimum": 0
         },
         "stop": {
           "description": "Why a measured screen ended. Null on partial runs (list error, deferred pending, no eth price, gas failure).",

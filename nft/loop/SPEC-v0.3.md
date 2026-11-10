@@ -198,3 +198,12 @@ The owner's words, quoted:
   - The fallback only blanks what's published, after screening: pending `floor_usd` (lines 634–638) and status `eth_usd` (line 693).
 - **Source counts.** Measured runs are counted by source in `books.json usd_runs` and reported as `status.eth_usd_runs {chainlink, fallback}`. When any measured run used the fallback, `verdict_footnote` adds "ETH/USD source on measured runs: N Chainlink, M fallback (fallback USD not published; costs are ETH-only)". No-price partial runs aren't counted.
 - Tests: `test_q1_fallback_runs_keep_numeric_costs_and_cap` (quote at 3700 s → fallback; 2 fallback runs give 4 units with numeric cost, 0 null; cap still rejects at $3,000/ETH) and `test_usd_source_counts_mixed`.
+
+## 16. Outage runs are not a supply result
+
+A dead OpenSea key used to write `status.json` (`error` / `auth`, or `no_key`) and leave the job green. Those runs are not measured, so a long outage can make the 7-day backstop fire STOPPED, which reads as a supply result.
+
+- The status is still written and committed first. The workflow step "Fail the job on a published outage" then runs with `if: always() && inputs.dry_run != true`, reads `nft-pilot/status.json`, and exits 1 when status is `error` or `no_key`, or `partial` with reason `opensea http 401` or `opensea http 403`. A dry run skips that step. No new secret.
+- `status.outage_runs` counts error, no_key, and auth runs since `v03_init_at`. The anchor is not moved to record them, and they are not measured days. An outage before the anchor is on disk is not counted, so a missing key cannot start the backstop clock. `books.json` keeps the rows in `outage_at` (`t`, and `early` = measured runs already saved). `early_kill` does not read that list.
+- When gate (i) or the 7-day backstop fires and that window contains any of those runs, `verdict_footnote` adds "N outage runs in window; stop may reflect data outage, not supply". Gate (i)'s window is from the first measured run until the third measured run fills the sample (`early` still under 3). The backstop window is the 7 days from `v03_init_at`. A run in both counts once. Labels, thresholds, and the kill result are unchanged. Gate (ii) does not add this note.
+- Tests: `test_opensea_401_publishes_then_fails`, `test_no_key_fails_the_published_run`, `test_outage_footnote_only_when_the_window_has_outages`, `test_healthy_run_stays_green`.

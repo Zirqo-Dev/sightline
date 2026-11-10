@@ -532,6 +532,63 @@ def with_usd_footnote(footnote, usd_runs):
     return note if not footnote else footnote + "; " + note
 
 
+def with_outage_footnote(footnote, kill, outages, init_at, first_measured_at):
+    """Append an outage note when gate (i) or the 7-day backstop fires and that window had one.
+
+    The note does not change the verdict label, any threshold, or the early_kill result.
+    `outages` are rows recorded since v03_init_at: {"t", "early"} where early is how many
+    measured runs were already on the books. Gate (i)'s window is from the first measured
+    run until the third one filled the sample (early still under EARLY_RUNS). The backstop
+    window is the 7 days from the anchor. A row in both windows counts once.
+    """
+    n = _outages_in_stop_window(kill, outages, init_at, first_measured_at)
+    if n <= 0:
+        return footnote
+    note = "%d outage runs in window; stop may reflect data outage, not supply" % n
+    return note if not footnote else footnote + "; " + note
+
+
+def _outage_row(item):
+    if isinstance(item, dict):
+        try:
+            t = int(item.get("t"))
+        except (TypeError, ValueError):
+            return None
+        try:
+            early = int(item.get("early") or 0)
+        except (TypeError, ValueError):
+            early = 0
+        return t, early
+    try:
+        return int(item), 0
+    except (TypeError, ValueError):
+        return None
+
+
+def _outages_in_stop_window(kill, outages, init_at, first_measured_at):
+    kill = kill or {}
+    gate1 = kill.get("gate1") == "fire"
+    backstop = kill.get("backstop") == "fire"
+    if not gate1 and not backstop:
+        return 0
+    back_lo = back_hi = None
+    if backstop and init_at is not None:
+        back_lo = int(init_at)
+        back_hi = back_lo + BACKSTOP_SECONDS
+    measured_at = int(first_measured_at) if gate1 and first_measured_at is not None else None
+    n = 0
+    for item in outages or []:
+        row = _outage_row(item)
+        if row is None:
+            continue
+        t, early = row
+        in_back = back_lo is not None and back_lo <= t <= back_hi
+        in_gate = measured_at is not None and t >= measured_at and early < EARLY_RUNS
+        if in_back or in_gate:
+            n += 1
+    return n
+
+
 def summarize(units, passes, pilot_start, complete_days=None):
     """Median over numeric costs. Null costs stay in the count and can block NH-04.
 
