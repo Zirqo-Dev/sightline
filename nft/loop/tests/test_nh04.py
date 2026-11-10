@@ -592,6 +592,8 @@ class NH04Tests(unittest.TestCase):
         status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
         self.assertEqual(status["status"], "partial")
         self.assertEqual(status["early_kill"]["backstop"], "pending")
+        self.assertEqual(status["outage_runs"], 2)
+        self.assertNotIn("non-measured runs in window", status.get("verdict_footnote") or "")
         snapshot.run(data, Broken(), NOW + 7 * 86400, "sha", gas, eth_usd=2000)
         status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
         books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
@@ -599,9 +601,11 @@ class NH04Tests(unittest.TestCase):
         self.assertEqual(status["early_kill"]["backstop"], "fire")
         self.assertEqual(status["early_kill"]["backstop_measured_days"], 0)
         self.assertEqual(status["early_kill"]["result"], "STOPPED")
-        self.assertEqual(status["outage_runs"], 0)
-        self.assertNotIn("outage runs in window", status.get("verdict_footnote") or "")
-        self.assertNotIn("outage_at", books)
+        self.assertEqual(status["outage_runs"], 3)
+        self.assertIn(
+            "3 non-measured runs in window (http 500 3); stop may reflect data outage, not supply",
+            status["verdict_footnote"],
+        )
         days = ["2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12"]
         self.assertEqual(P.early_kill([], [], None, NOW + 7 * 86400, NOW, days)["backstop"], "pass")
         self.assertEqual(P.early_kill([], [], None, NOW + 7 * 86400, NOW, days[:3])["backstop"], "fire")
@@ -1291,25 +1295,28 @@ class NH04Tests(unittest.TestCase):
         self.assertEqual(books["measured_days"], before["measured_days"])
         self.assertEqual(len(books["outage_at"]), 1)
         self.assertEqual(books["outage_at"][0]["early"], len(before["first_runs"]))
+        self.assertEqual(books["outage_at"][0]["reason"], "auth")
 
         fresh = tempfile.mkdtemp()
         snapshot.run(fresh, ListHttp(500), NOW, "sha", gas, eth_usd=2000)
         path = os.path.join(fresh, "nft-pilot", "status.json")
         status = json.load(open(path))
         self.assertEqual(status["reason"], "opensea http 500")
-        self.assertEqual(status["outage_runs"], 0)
+        self.assertEqual(status["outage_runs"], 1)
         self.assertEqual(snapshot.fail_on_published_status(path), 0)
         snapshot.run(fresh, ListHttp(401), NOW + 3600, "sha", gas, eth_usd=2000)
         status = json.load(open(path))
-        self.assertEqual((status["status"], status["reason"], status["outage_runs"]), ("partial", "opensea http 401", 1))
+        self.assertEqual((status["status"], status["reason"], status["outage_runs"]), ("partial", "opensea http 401", 2))
         self.assertEqual(snapshot.fail_on_published_status(path), 1)
         snapshot.run(fresh, ListHttp(403), NOW + 7200, "sha", gas, eth_usd=2000)
         status = json.load(open(path))
         self.assertEqual(status["reason"], "opensea http 403")
-        self.assertEqual(status["outage_runs"], 2)
+        self.assertEqual(status["outage_runs"], 3)
         self.assertTrue(snapshot.outage_status_fails({"status": "partial", "reason": "opensea http 403"}))
         self.assertFalse(snapshot.outage_status_fails({"status": "ok", "reason": None}))
+        self.assertFalse(snapshot.outage_status_fails({"status": "partial", "reason": "opensea http 429"}))
         self.assertFalse(snapshot.outage_status_fails({"status": "partial", "reason": "opensea http 500"}))
+        self.assertFalse(snapshot.outage_status_fails({"status": "partial", "reason": "no eth price"}))
         self.assertFalse(snapshot.outage_status_fails({"status": "partial", "reason": "pending deferred"}))
         self.assertEqual(snapshot.fail_on_published_status(os.path.join(fresh, "missing.json")), 1)
 
@@ -1367,6 +1374,7 @@ class NH04Tests(unittest.TestCase):
             self.assertEqual(status["status"], "no_key")
             books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
             self.assertEqual(len(books["outage_at"]), 2)
+            self.assertEqual([row["reason"] for row in books["outage_at"]], ["no_key", "no_key"])
             self.assertEqual(books["first_runs"], before["first_runs"])
             self.assertEqual(books["passes"], before["passes"])
             self.assertEqual(books["v03_init_at"], before["v03_init_at"])
@@ -1379,31 +1387,44 @@ class NH04Tests(unittest.TestCase):
         fired = P.early_kill([], [], None, init + 7 * 86400, init, [])
         self.assertEqual((fired["backstop"], fired["result"]), ("fire", "STOPPED"))
         self.assertIsNone(P.with_outage_footnote(None, fired, [], init, None))
-        rows = [{"t": init + 3600, "early": 0}, {"t": init + 86400, "early": 0}]
+        rows = [
+            {"t": init + 3600, "early": 0, "reason": "auth"},
+            {"t": init + 86400, "early": 0, "reason": "auth"},
+        ]
         self.assertEqual(
             P.with_outage_footnote(None, fired, rows, init, None),
-            "2 outage runs in window; stop may reflect data outage, not supply",
+            "2 non-measured runs in window (auth 2); stop may reflect data outage, not supply",
         )
-        late = [{"t": init + 7 * 86400 + 1, "early": 0}]
+        mixed = rows + [
+            {"t": init + 2 * 86400, "early": 0, "reason": "opensea http 429"},
+            {"t": init + 3 * 86400, "early": 0, "reason": "http 429"},
+            {"t": init + 4 * 86400, "early": 0, "reason": "opensea http 429"},
+            {"t": init + 5 * 86400, "early": 0, "reason": "no eth price"},
+        ]
+        self.assertEqual(
+            P.with_outage_footnote(None, fired, mixed, init, None),
+            "6 non-measured runs in window (auth 2, http 429 3, no eth price 1); stop may reflect data outage, not supply",
+        )
+        late = [{"t": init + 7 * 86400 + 1, "early": 0, "reason": "http 429"}]
         self.assertIsNone(P.with_outage_footnote(None, fired, late, init, None))
         gate = P.early_kill([4, 4, 4], [], init, init + 3 * 3600)
         self.assertEqual((gate["gate1"], gate["backstop"], gate["result"]), ("fire", "pending", "STOPPED"))
-        self.assertIsNone(P.with_outage_footnote(None, gate, [{"t": init - 10, "early": 0}], init - 100, init))
-        one = [{"t": init + 1800, "early": 1}]
+        self.assertIsNone(P.with_outage_footnote(None, gate, [{"t": init - 10, "early": 0, "reason": "auth"}], init - 100, init))
+        one = [{"t": init + 1800, "early": 1, "reason": "auth"}]
         self.assertEqual(
             P.with_outage_footnote(None, gate, one, init - 100, init),
-            "1 outage runs in window; stop may reflect data outage, not supply",
+            "1 non-measured runs in window (auth 1); stop may reflect data outage, not supply",
         )
         # A later outage, after the third measured run, does not raise that count.
         self.assertEqual(
-            P.with_outage_footnote(None, gate, one + [{"t": init + 5 * 3600, "early": 3}], init - 100, init),
-            "1 outage runs in window; stop may reflect data outage, not supply",
+            P.with_outage_footnote(None, gate, one + [{"t": init + 5 * 3600, "early": 3, "reason": "http 429"}], init - 100, init),
+            "1 non-measured runs in window (auth 1); stop may reflect data outage, not supply",
         )
         pending = P.early_kill([4], [], init, init + 3600)
         self.assertIsNone(P.with_outage_footnote(None, pending, one, init, init))
         kept = P.with_outage_footnote("2 of 20 units: top seller or one day above 50% of 7d sales", fired, rows, init, None)
         self.assertTrue(kept.startswith("2 of 20 units"))
-        self.assertIn("2 outage runs in window", kept)
+        self.assertIn("non-measured runs in window (auth 2)", kept)
         self.assertEqual(fired["result"], "STOPPED")
         self.assertEqual(gate["gate1_min_avg"], 6)
 
@@ -1419,19 +1440,22 @@ class NH04Tests(unittest.TestCase):
         gas = {"ethereum": 10 ** 9, "base": 10 ** 9}
         data = tempfile.mkdtemp()
         snapshot.run(data, Broken(), NOW, "sha", gas, eth_usd=2000)
-        self.assertEqual(snapshot._persist_outage(data, NOW + 86400), 1)
-        self.assertEqual(snapshot._persist_outage(data, NOW + 2 * 86400), 2)
+        self.assertEqual(snapshot._persist_outage(data, NOW + 86400, "auth"), 2)
+        self.assertEqual(snapshot._persist_outage(data, NOW + 2 * 86400, "auth"), 3)
         snapshot.run(data, Broken(), NOW + 7 * 86400 - 60, "sha", gas, eth_usd=2000)
         status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
-        self.assertEqual(status["outage_runs"], 2)
+        self.assertEqual(status["outage_runs"], 4)
         self.assertEqual(status["early_kill"]["backstop"], "pending")
-        self.assertNotIn("outage runs in window", status.get("verdict_footnote") or "")
+        self.assertNotIn("non-measured runs in window", status.get("verdict_footnote") or "")
         snapshot.run(data, Broken(), NOW + 7 * 86400, "sha", gas, eth_usd=2000)
         status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
         books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
         self.assertEqual(status["early_kill"]["result"], "STOPPED")
         self.assertEqual(status["early_kill"]["backstop"], "fire")
-        self.assertIn("2 outage runs in window; stop may reflect data outage, not supply", status["verdict_footnote"])
+        self.assertIn(
+            "5 non-measured runs in window (auth 2, http 500 3); stop may reflect data outage, not supply",
+            status["verdict_footnote"],
+        )
         self.assertEqual(status["early_kill"], P.early_kill(
             books["first_runs"], books["early_distinct"], books["first_measured_at"],
             NOW + 7 * 86400, books["v03_init_at"], books["measured_days"],
@@ -1444,26 +1468,74 @@ class NH04Tests(unittest.TestCase):
 
         data = tempfile.mkdtemp()
         thin(data, NOW, 0)
-        self.assertEqual(snapshot._persist_outage(data, NOW + 1800), 1)
+        self.assertEqual(snapshot._persist_outage(data, NOW + 1800, "auth"), 1)
         thin(data, NOW + 3600, 12)
         thin(data, NOW + 7200, 12)
         status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
         self.assertEqual(status["early_kill"]["gate1"], "fire")
         self.assertEqual(status["early_kill"]["result"], "STOPPED")
-        self.assertIn("1 outage runs in window; stop may reflect data outage, not supply", status["verdict_footnote"])
+        self.assertIn(
+            "1 non-measured runs in window (auth 1); stop may reflect data outage, not supply",
+            status["verdict_footnote"],
+        )
 
         # An outage before the first measured run is outside gate (i). It does not add the note.
         data = tempfile.mkdtemp()
         snapshot.run(data, Broken(), NOW, "sha", gas, eth_usd=2000)
-        self.assertEqual(snapshot._persist_outage(data, NOW + 60), 1)
+        self.assertEqual(snapshot._persist_outage(data, NOW + 60, "auth"), 2)
         thin(data, NOW + 3600, 0)
         thin(data, NOW + 7200, 12)
         thin(data, NOW + 10800, 12)
         status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
-        self.assertEqual(status["outage_runs"], 1)
+        self.assertEqual(status["outage_runs"], 2)
         self.assertEqual(status["early_kill"]["result"], "STOPPED")
         self.assertEqual(status["early_kill"]["gate1"], "fire")
-        self.assertNotIn("outage runs in window", status.get("verdict_footnote") or "")
+        self.assertNotIn("non-measured runs in window", status.get("verdict_footnote") or "")
+
+    def test_http_429_partials_are_footnoted_and_stay_green(self):
+        """Four days of list 429s after the anchor are footnoted when the backstop fires, and stay green."""
+        class Listed:
+            def __init__(self, code=None):
+                self.calls = 0
+                self.rate = {"limit": None, "remaining": None, "reset": None}
+                self.code = code
+
+            def list_collections(self, chain, cursor):
+                self.calls += 1
+                if self.code is None:
+                    return [], None
+                raise opensea.OpenSeaError(self.code)
+
+        gas = {"ethereum": 10 ** 9, "base": 10 ** 9}
+        data = tempfile.mkdtemp()
+        snapshot.run(data, Listed(), NOW, "sha", gas, eth_usd=2000)
+        books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
+        self.assertEqual(books["v03_init_at"], int(NOW))
+        self.assertNotIn("outage_at", books)
+        path = os.path.join(data, "nft-pilot", "status.json")
+        for day in range(1, 5):
+            snapshot.run(data, Listed(429), NOW + day * 86400, "sha", gas, eth_usd=2000)
+            status = json.load(open(path))
+            self.assertEqual((status["status"], status["reason"]), ("partial", "opensea http 429"))
+            self.assertEqual(status["outage_runs"], day)
+            self.assertEqual(snapshot.fail_on_published_status(path), 0)
+        snapshot.run(data, Listed(), NOW + 7 * 86400, "sha", gas, eth_usd=2000)
+        status = json.load(open(path))
+        books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
+        self.assertEqual(status["early_kill"]["backstop"], "fire")
+        self.assertEqual(status["early_kill"]["result"], "STOPPED")
+        self.assertEqual(status["early_kill"]["backstop_min_days"], 4)
+        self.assertEqual(status["early_kill"]["gate1_min_avg"], 6)
+        self.assertEqual(status["outage_runs"], 4)
+        self.assertEqual(
+            [row["reason"] for row in books["outage_at"]],
+            ["http 429", "http 429", "http 429", "http 429"],
+        )
+        self.assertIn(
+            "4 non-measured runs in window (http 429 4); stop may reflect data outage, not supply",
+            status["verdict_footnote"],
+        )
+        self.assertEqual(snapshot.fail_on_published_status(path), 0)
 
     def test_healthy_run_stays_green(self):
         data = tempfile.mkdtemp()

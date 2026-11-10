@@ -588,7 +588,7 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
     state["gas"] = [s for s in state["gas"] if s.get("t", 0) >= now - 8 * 86400]
     if any(quotes.get(c) is None for c in P.CHAINS):
         # Do not save this run's anchor or gas samples. A gas failure must not start the backstop.
-        count = _persist_outage(data_dir, now) if anchor_existed else 0
+        count = _persist_outage(data_dir, now, "gas") if anchor_existed else 0
         _dump(status_path, _status(code_sha, now, status="error", reason="gas", outage_runs=count))
         return
     if not _usable_price(eth_usd):
@@ -596,6 +596,9 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
         eth_usd, eth_usd_source = got if isinstance(got, tuple) else (got, None)
     if not _usable_price(eth_usd):
         # The $250 cap cannot be evaluated. Do not spend the shared read bucket.
+        # A no-price run did not measure supply. Record it once the anchor exists (this run sets it).
+        if state.get("v03_init_at") is not None:
+            _append_outage(state, now, len(state.get("first_runs") or []), "no eth price")
         _dump(books_path, state)
         _dump(status_path, _status(
             code_sha, now, status="partial", measured=False, partial=True,
@@ -690,9 +693,10 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
     elif deadline_flag["hit"]:
         reason = "deadline"
     status_name = "partial" if partial else "ok"
-    # A 401/403 that stayed partial is an auth outage. error and no_key are recorded in main.
-    if _counts_as_outage(status_name, reason) and state.get("v03_init_at") is not None:
-        _append_outage(state, now, len(state.get("first_runs") or []))
+    # Every partial missed the supply measurement: 429, 5xx, auth, pending deferred, and the rest.
+    # error and no_key are recorded in main. A measured ok run is not recorded.
+    if status_name == "partial" and state.get("v03_init_at") is not None:
+        _append_outage(state, now, len(state.get("first_runs") or []), reason)
     summary["verdict_footnote"] = P.with_outage_footnote(
         summary.get("verdict_footnote"), kill, state.get("outage_at") or [],
         state.get("v03_init_at"), state.get("first_measured_at"),
@@ -871,7 +875,11 @@ _AUTH_HTTP_REASONS = ("opensea http 401", "opensea http 403")
 
 
 def _counts_as_outage(status, reason):
-    """error, no_key, and an OpenSea 401/403. These are not measured supply runs."""
+    """Red-step cases only: error, no_key, and OpenSea auth (401/403).
+
+    A 429, a 5xx, a missing ETH price, and any other partial stay green. They are still
+    counted in the footnote when they did not measure supply.
+    """
     if status in ("error", "no_key"):
         return True
     return status == "partial" and reason in _AUTH_HTTP_REASONS
@@ -903,21 +911,26 @@ def _outage_count(state):
     return len(times) if isinstance(times, list) else 0
 
 
-def _append_outage(state, now, early_runs):
-    """Record one outage since the anchor. `early_runs` is the measured-run sample so far."""
+def _append_outage(state, now, early_runs, reason):
+    """Record one non-measured run since the anchor. `early_runs` is the measured sample so far."""
     times = state.get("outage_at")
     if not isinstance(times, list):
         times = []
-    times.append({"t": int(now), "early": int(early_runs)})
+    times.append({
+        "t": int(now),
+        "early": int(early_runs),
+        "reason": P.outage_reason_label(None, reason),
+    })
     state["outage_at"] = times
     return len(times)
 
 
-def _persist_outage(data_dir, now):
-    """Count one outage on disk when the v0.3 anchor is already saved.
+def _persist_outage(data_dir, now, reason):
+    """Count one non-measured run on disk when the v0.3 anchor is already saved.
 
     Reloads books.json so a failed run cannot write in-memory gas, passes, or a new anchor.
     Returns the count since v03_init_at, or 0 when the anchor is not on disk yet.
+    `reason` is stored as the footnote label (auth, http 429, no eth price, no_key, ...).
     """
     _, _, _, books_path = _paths(data_dir)
     if not os.path.exists(books_path):
@@ -931,7 +944,7 @@ def _persist_outage(data_dir, now):
         return 0
     early = doc.get("first_runs")
     early_n = len(early) if isinstance(early, list) else 0
-    count = _append_outage(doc, now, early_n)
+    count = _append_outage(doc, now, early_n, reason)
     _dump(books_path, doc)
     return count
 
@@ -1008,7 +1021,7 @@ def main(argv=None):
     _, status_path, _, _ = _paths(args.data_dir)
     if not key:
         # Count only after the anchor is already saved, so a missing key cannot start the backstop.
-        count = _persist_outage(args.data_dir, now)
+        count = _persist_outage(args.data_dir, now, "no key")
         if count or not _no_key_unchanged(status_path, args.code_sha):
             _dump(status_path, _status(args.code_sha, now, status="no_key", reason="no key", outage_runs=count))
         print("no key")
@@ -1020,12 +1033,14 @@ def main(argv=None):
         if args.dry_run:
             write_summary(status_path)
     except opensea.AuthError:
-        count = _persist_outage(args.data_dir, now)
+        count = _persist_outage(args.data_dir, now, "auth")
         _dump(status_path, _status(args.code_sha, now, status="error", reason="auth", outage_runs=count))
         return 0
     except Exception as exc:
         print(_snapshot_error_line(exc), file=sys.stderr)
-        count = _persist_outage(args.data_dir, now)
+        # Return 1 so the commit step is skipped. The local count is not published.
+        # The job is already red. See SPEC-v0.3 section 16.
+        count = _persist_outage(args.data_dir, now, "error")
         _dump(status_path, _status(args.code_sha, now, status="error", reason="error", outage_runs=count))
         return 1
     return 0
