@@ -1,11 +1,11 @@
 {
- "at": "2026-11-10T03:13:16Z",
+ "at": "2026-11-10T05:12:37Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14180675,
+ "height": 14181118,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 268.920245,
+ "ada_balance": 270.083945,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 314392018968,
@@ -15,6 +15,7 @@
   "BEAST": 24207218267752,
   "BESSTIVE": 26596411321470,
   "BHOLE": 17286936712834,
+  "BHOLEArmy1": 1,
   "BLUE BULL": 200000000,
   "BMEPE": 69420000000,
   "BOLT": 21958338539996,
@@ -129,6 +130,7 @@
   "BEAST": 24207218267752,
   "BESSTIVE": 26596411321470,
   "BHOLE": 17286936712834,
+  "BHOLEArmy1": 1,
   "BLUE BULL": 200000000,
   "BMEPE": 69420000000,
   "BOLT": 21958338539996,
@@ -274,6 +276,11 @@
    "token": "BHOLE",
    "policy": "5ac66204",
    "qty": 17286936712834
+  },
+  {
+   "token": "BHOLEArmy1",
+   "policy": "e10f028b",
+   "qty": 1
   },
   {
    "token": "BLUE BULL",
@@ -14976,17 +14983,6 @@
   }
  },
  "rows": [
-  {
-   "time": "2026-10-27T17:41:26Z",
-   "tx_short": "1a6934d3c4",
-   "kind": "order_open",
-   "token": "ADA",
-   "qty": 504000000,
-   "ada_leg": 504.0,
-   "counterparty_tag": null,
-   "order_ref_short": "1a6934d3c4#0",
-   "order_status": "open"
-  },
   {
    "time": "2026-10-27T17:42:05Z",
    "tx_short": "f55e29bade",
@@ -46449,6 +46445,15 @@
    "order_ref_short": "2542fe8359#0",
    "order_status": "filled",
    "sold": "ADA"
+  },
+  {
+   "time": "2026-11-10T04:25:53Z",
+   "tx_short": "6fd1ff2f19",
+   "kind": "transfer_in",
+   "token": "BHOLEArmy1",
+   "qty": 1,
+   "ada_leg": null,
+   "counterparty_tag": "w-daf64cf6"
   }
  ],
  "capped": false,
