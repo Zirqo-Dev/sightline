@@ -752,13 +752,12 @@ class NH04Tests(unittest.TestCase):
         self.assertEqual(req.get_header("X-api-key"), "sekret-value")
         self.assertNotIn("sekret-value", req.full_url)
 
+    @staticmethod
+    def _round(answer_usd, updated, round_id=5, answered=5):
+        words = [round_id, int(round(answer_usd * 10 ** 8)), updated, updated, answered]
+        return "0x" + "".join("%064x" % w for w in words)
+
     def test_eth_usd_parser_keeps_unknown_null(self):
-        self.assertEqual(snapshot.parse_eth_usd("coinbase", {
-            "data": {"amount": "2112.825", "base": "ETH", "currency": "USD"},
-        }), 2112.825)
-        self.assertIsNone(snapshot.parse_eth_usd("coinbase", {"data": {"amount": "0", "base": "ETH", "currency": "USD"}}))
-        self.assertIsNone(snapshot.parse_eth_usd("coinbase", {"data": {"amount": "", "base": "ETH", "currency": "USD"}}))
-        self.assertIsNone(snapshot.parse_eth_usd("coinbase", {"data": {"amount": "10", "base": "BTC", "currency": "USD"}}))
         self.assertIsNone(snapshot.parse_eth_usd("defillama", {
             "coins": {"coingecko:ethereum": {"price": 2111.89, "symbol": "ETH"}},
         }))
@@ -767,17 +766,106 @@ class NH04Tests(unittest.TestCase):
         fresh = {"coins": {"coingecko:ethereum": {"price": 2000, "symbol": "ETH", "timestamp": NOW - 60}}}
         self.assertIsNone(snapshot.parse_eth_usd("defillama", stale, now=NOW))
         self.assertEqual(snapshot.parse_eth_usd("defillama", fresh, now=NOW), 2000)
-        seen = []
+        self.assertIsNone(snapshot.parse_eth_usd("coinbase", {"data": {"amount": "2000", "base": "ETH", "currency": "USD"}}))
 
+    def test_coinbase_is_gone(self):
+        for name in ("snapshot.py", "pricing.py", "opensea.py", "publish_nft_data.sh"):
+            text = open(os.path.join(ROOT, "nft", "loop", name)).read().lower()
+            self.assertNotIn("coinbase", text, name)
+        self.assertNotIn("coinbase", open(os.path.join(ROOT, ".github", "workflows", "nft-snapshot.yml")).read().lower())
+        self.assertFalse(hasattr(snapshot, "ETH_USD_SOURCES"))
+
+    def test_chainlink_primary_and_stale_rejected(self):
+        self.assertEqual(snapshot.CHAINLINK_ETH_USD, "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419")
+        self.assertEqual(snapshot.LATEST_ROUND_DATA, "0xfeaf968c")
+        self.assertAlmostEqual(snapshot.parse_chainlink(self._round(2090.05, int(NOW) - 600), NOW), 2090.05)
+        self.assertIsNone(snapshot.parse_chainlink(self._round(2090.05, int(NOW) - 3601), NOW))   # stale > 1h
+        self.assertIsNotNone(snapshot.parse_chainlink(self._round(2090.05, int(NOW) - 3600), NOW))
+        self.assertIsNone(snapshot.parse_chainlink(self._round(0, int(NOW)), NOW))
+        self.assertIsNone(snapshot.parse_chainlink(self._round(2000, int(NOW), round_id=6, answered=5), NOW))
+        self.assertIsNone(snapshot.parse_chainlink("0x", NOW))
+        neg = "0x" + "%064x" % 5 + "f" * 64 + ("%064x" % int(NOW)) * 2 + "%064x" % 5
+        self.assertIsNone(snapshot.parse_chainlink(neg, NOW))
+        posts, gets = [], []
+        def post(url, payload):
+            posts.append((url, payload))
+            return {"result": self._round(2090.05, int(NOW) - 60)}
         def get(url):
-            seen.append(url)
-            if "coinbase" in url:
-                raise OSError("down")
-            return {"coins": {"coingecko:ethereum": {"price": 2000, "symbol": "ETH", "timestamp": snapshot.time.time()}}}
+            gets.append(url)
+            raise AssertionError("fallback read while Chainlink is fresh")
+        self.assertEqual(snapshot.fetch_eth_usd(get, post, now=NOW), (2090.05, "chainlink"))
+        self.assertEqual(posts[0][0], P.GAS_RPC["ethereum"])
+        self.assertEqual(posts[0][1]["method"], "eth_call")
+        self.assertEqual(posts[0][1]["params"][0], {"to": snapshot.CHAINLINK_ETH_USD, "data": "0xfeaf968c"})
+        stale_post = lambda _u, _p: {"result": self._round(2090.05, int(NOW) - 7200)}
+        llama = lambda _u: {"coins": {"coingecko:ethereum": {"price": 2001, "symbol": "ETH", "timestamp": NOW - 60}}}
+        self.assertEqual(snapshot.fetch_eth_usd(llama, stale_post, now=NOW), (2001, "defillama"))
+        def down(_u, _p):
+            raise OSError("rpc down")
+        self.assertEqual(snapshot.fetch_eth_usd(llama, down, now=NOW), (2001, "defillama"))
+        self.assertEqual(snapshot.fetch_eth_usd(lambda _u: {}, down, now=NOW), (None, None))
 
-        self.assertEqual(snapshot.fetch_eth_usd(get), 2000)
-        self.assertEqual(len(seen), 2)
-        self.assertIsNone(snapshot.fetch_eth_usd(lambda _url: {"data": {"amount": "nope", "base": "ETH", "currency": "USD"}}))
+    def test_defillama_price_is_never_published(self):
+        fake = self._universe_fake(n=4, pass_every=1)
+        data = tempfile.mkdtemp()
+        snapshot.run(data, fake, NOW, "sha", {"ethereum": 10 ** 9, "base": 10 ** 9},
+                     fetch_price=lambda: (2345.67, "defillama"))
+        status = json.load(open(os.path.join(data, "nft-pilot", "status.json")))
+        books = json.load(open(os.path.join(data, "nft-pilot", "books.json")))
+        self.assertEqual(status["status"], "ok")
+        self.assertEqual(status["floor_passing_this_run"], 4)      # the cap was still screened
+        self.assertIsNone(status["eth_usd"])
+        self.assertEqual(status["eth_usd_source"], "fallback")
+        self.assertTrue(all(p["floor_usd"] is None for p in books["pending"]))
+        blob = "".join(open(os.path.join(data, "nft-pilot", n)).read() for n in os.listdir(os.path.join(data, "nft-pilot")))
+        self.assertNotIn("2345.67", blob)
+        floor_usd = 0.1 * 2345.67
+        self.assertNotIn(repr(floor_usd), blob)
+        import jsonschema
+        jsonschema.validate(status, json.load(open(os.path.join(ROOT, "schema", "nft-snapshot.schema.json"))))
+        data2 = tempfile.mkdtemp()
+        snapshot.run(data2, self._universe_fake(n=4, pass_every=1), NOW, "sha", {"ethereum": 10 ** 9, "base": 10 ** 9},
+                     fetch_price=lambda: (2090.05, "chainlink"))
+        st2 = json.load(open(os.path.join(data2, "nft-pilot", "status.json")))
+        self.assertEqual((st2["eth_usd"], st2["eth_usd_source"]), (2090.05, "chainlink"))
+
+    def test_published_files_have_no_raw_offer_fields(self):
+        fake = self._universe_fake(n=4, pass_every=1)
+        data = tempfile.mkdtemp()
+        gas = {"ethereum": 10 ** 9, "base": 10 ** 9}
+        snapshot.run(data, fake, NOW, "sha", gas, eth_usd=2000)
+        snapshot.run(data, fake, NOW + 3600, "sha", gas, eth_usd=2000)
+        root = os.path.join(data, "nft-pilot")
+        blob = "".join(open(os.path.join(root, n)).read() for n in os.listdir(root))
+        import re
+        self.assertEqual(re.findall(r"0x[0-9a-fA-F]{64}", blob), [])          # no raw order hashes
+        for banned in ('"hash"', "price_eth", "order_hash", "price_per_item", "protocol_data", "offerer"):
+            self.assertNotIn(banned, blob)
+        books = json.load(open(os.path.join(root, "books.json")))
+        for summary in list(books["offers"].values()) + [p["book"] for p in books["pending"]]:
+            self.assertEqual(set(summary), {"digests", "top_bid_eth", "bidders_near_top"})
+            for d in summary["digests"]:
+                self.assertRegex(d, r"^[0-9a-f]{64}$")
+        # The held-bid check still works from digests alone: units have a held bid.
+        units = [json.loads(line) for line in open(os.path.join(root, "units.jsonl"))]
+        self.assertEqual(len(units), 4)
+        self.assertTrue(all(u["unsellable"] is False and u["cost"] is not None for u in units))
+        self.assertIn("no per-order prices", P.ATTRIBUTION)
+        self.assertNotIn("Derived metrics only", P.ATTRIBUTION)
+
+    def test_legacy_raw_offer_books_are_dropped_on_load(self):
+        data = tempfile.mkdtemp()
+        root = os.path.join(data, "nft-pilot")
+        os.makedirs(root)
+        legacy = {"state_version": "v0.2", "pilot_start": "2026-11-10", "complete_days": [], "passes": {},
+                  "seen": {}, "gas": [], "offers": {"nft_collection:eip155:1:" + ADDR: [{"hash": "0x" + "ab" * 32, "price_eth": 0.1}]},
+                  "pending": [{"asset_id": "nft_collection:eip155:1:" + ADDR, "slug": "x", "chain": "ethereum",
+                               "snapshot_t": "2026-11-10T00:00:00Z", "book": [{"hash": "0x" + "ab" * 32, "price_eth": 0.1}]}]}
+        with open(os.path.join(root, "books.json"), "w") as fh:
+            json.dump(legacy, fh)
+        state = snapshot.load_state(os.path.join(root, "books.json"))
+        self.assertEqual(state["offers"], {})
+        self.assertEqual(state["pending"], [])
 
     def test_missing_eth_price_does_not_spend_reads(self):
         class Fake:

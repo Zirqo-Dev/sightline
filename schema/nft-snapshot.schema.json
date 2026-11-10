@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://zirqo-dev.github.io/sightline/schema/nft-snapshot.schema.json",
   "title": "NFT snapshot pilot row",
-  "description": "Derived NH-04 row or the run status. No raw OpenSea body, no wallet, no handle.",
+  "description": "Summary NH-04 row or the run status. No raw OpenSea body, no per-order price or raw order hash, no wallet, no handle.",
   "oneOf": [{ "$ref": "#/$defs/unit" }, { "$ref": "#/$defs/status" }],
   "$defs": {
     "chain_counts": {
@@ -64,7 +64,7 @@
         "pace_ready", "nh04", "nh04_ready", "buyer_fee_eth", "eth_usd", "raw", "reason", "rejections",
         "flags", "screened", "pending_served", "pending_deferred", "passers_footnoted",
         "nh04_verdict", "verdict_footnote", "distinct_collections", "distinct_per_day_median",
-        "early_kill", "stop", "by_chain", "attribution"
+        "early_kill", "stop", "by_chain", "eth_usd_source", "attribution"
       ],
       "properties": {
         "schema_version": { "const": 1 },
@@ -148,6 +148,10 @@
           "pattern": "^(not_ready|INCONCLUSIVE|NO-GO|cost GO, supply-limited \\(median [0-9.na/]+ distinct/day\\))$"
         },
         "verdict_footnote": { "type": ["string", "null"] },
+        "eth_usd_source": {
+          "description": "chainlink: eth_usd and floor_usd come from the Chainlink ETH/USD feed. fallback: an internal price screened the cap and no USD is published.",
+          "enum": [null, "chainlink", "fallback"]
+        },
         "stop": {
           "description": "Why a measured screen ended. Null on partial runs (list error, deferred pending, no eth price, gas failure).",
           "enum": [null, "pass_target", "depth", "call_cap", "deadline"]

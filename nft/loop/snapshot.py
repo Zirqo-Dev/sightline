@@ -58,7 +58,7 @@ def _status(code_sha, now, **extra):
         "screened": None, "pending_served": None, "pending_deferred": None, "passers_footnoted": None,
         "nh04_verdict": "not_ready", "verdict_footnote": None,
         "distinct_collections": None, "distinct_per_day_median": None,
-        "stop": None, "by_chain": None,
+        "stop": None, "by_chain": None, "eth_usd_source": None,
         "early_kill": P.early_kill([], [], None, None, None, []),
         "attribution": P.ATTRIBUTION,
     }
@@ -95,11 +95,15 @@ def load_state(path):
     doc.setdefault("first_runs", [])
     for key, empty in (("first_measured_at", None), ("early_distinct", []), ("measured_days", []), ("v03_init_at", None)):
         doc.setdefault(key, empty)
+    # Never carry raw order hashes or per-order prices forward (owner decision, Nov 10).
+    doc["offers"] = {k: v for k, v in doc["offers"].items() if isinstance(v, dict) and "digests" in v}
+    doc["pending"] = [p for p in doc["pending"] if isinstance(p.get("book"), dict)]
     if doc.get("state_version") != P.STATE_VERSION:
         doc["pilot_start"] = None
         doc["passes"] = {}
         doc["complete_days"] = []
         doc["first_runs"] = []
+        doc["offers"] = {}
         doc["first_measured_at"] = None
         doc["early_distinct"] = []
         doc["measured_days"] = []
@@ -317,9 +321,7 @@ def _serve_pending(client, state, detail, now, code_sha, quotes, deadline, deadl
             pending, listings, offers, pending.get("book") or [], leg, (info or {}).get("fees"), now, code_sha,
         ))
         offer_parsed = [p for p in (P.parse_order(o, now, "offer") for o in offers) if p]
-        state["offers"][pending["asset_id"]] = [
-            {"hash": p["hash"], "price_eth": p["price"]} for p in offer_parsed if p.get("hash")
-        ]
+        state["offers"][pending["asset_id"]] = P.book_summary(offer_parsed)
         _remember(state, pending["asset_id"], day)
     return keep, served, deferred, partial
 
@@ -477,7 +479,7 @@ def _screen_one(client, item, quotes, detail, now, state, caches, day, rejection
     offer_parsed = [p for p in (P.parse_order(o, now, "offer") for o in offers) if p]
     sales, buyers, share = P.sale_stats(events, after)
     seller_share, day_share = P.sale_profile(events, after, now)
-    book = [{"hash": p["hash"], "price_eth": p["price"]} for p in offer_parsed if p.get("hash")]
+    book = P.book_summary(offer_parsed)
     _remember(state, asset, day)
     state["offers"][asset] = book
     obs = {
@@ -501,7 +503,7 @@ def _screen_one(client, item, quotes, detail, now, state, caches, day, rejection
         "seasoned": P.seasoned(state["seen"].get(asset, []), day),
         "floor_eth": floor, "floor_usd": floor_usd, "tries": 0,
         "fees": P.public_fees((info or {}).get("fees")),
-        "book": [dict(row) for row in book], "top_buyer_share": share,
+        "book": dict(book), "top_buyer_share": share,
         "counts": {
             "sales_7d": sales, "buyers_7d": buyers, "listings": n_live,
             "bidders_near_top": obs["bidders"], "offer_pages": offer_pages, "event_pages": event_pages,
@@ -557,7 +559,10 @@ def _close_read_error(pending, now, code_sha):
     }
 
 
-def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None, deadline=None):
+def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None, deadline=None,
+        eth_usd_source="chainlink"):
+    """`eth_usd` given by a caller is treated as `eth_usd_source` (tests pass a Chainlink-like quote).
+    Otherwise the price comes from fetch_eth_usd: Chainlink first, DefiLlama internal-only fallback."""
     _, status_path, units_path, books_path = _paths(data_dir)
     state = load_state(books_path)
     if state["v03_init_at"] is None:
@@ -577,7 +582,8 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
         _dump(status_path, _status(code_sha, now, status="error", reason="gas"))
         return
     if not _usable_price(eth_usd):
-        eth_usd = (fetch_price or fetch_eth_usd)()
+        got = (fetch_price or fetch_eth_usd)()
+        eth_usd, eth_usd_source = got if isinstance(got, tuple) else (got, None)
     if not _usable_price(eth_usd):
         # The $250 cap cannot be evaluated. Do not spend the shared read bucket.
         _dump(books_path, state)
@@ -589,6 +595,7 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
         ))
         return
     details = {}
+    eth_usd_box = {"source": eth_usd_source}
     caches = {"listings": {}, "offers": {}, "offer_pages": {}}
     new_units = []
     rejections, flags = {}, {}
@@ -600,6 +607,7 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
             # A missing OpenSea usd_price must not replace a keyless quote.
             if not _usable_price(eth_usd):
                 eth_usd = _eth_usd(details[slug])
+                eth_usd_box["source"] = "opensea"
         detail.usd = eth_usd
         return details[slug]
 
@@ -619,6 +627,11 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
     # Measured = every pending row served and the screen ran to any stop. Partial only for
     # deferred pending or a list error (no eth price / gas failure return earlier).
     partial = pend_partial or list_error
+    usd_public = eth_usd_box["source"] == "chainlink"
+    if not usd_public:
+        # A fallback (DefiLlama) USD price screens the $250 cap internally but is never published.
+        for row in fresh:
+            row["floor_usd"] = None
     fresh_ids = {p["asset_id"] for p in fresh}
     state["pending"] = [p for p in kept if p["asset_id"] not in fresh_ids] + fresh
     iso = day.isoformat()
@@ -668,7 +681,8 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
         opensea_calls=client.calls, rate_limit=_rate(client),
         floor_passing_this_run=len(set(passing)) if not partial else None,
         stop=stop if not partial else None, by_chain=by_chain,
-        pending=len(state["pending"]), eth_usd=eth_usd, reason=reason,
+        pending=len(state["pending"]), eth_usd=eth_usd if usd_public else None,
+        eth_usd_source="chainlink" if usd_public else "fallback", reason=reason,
         rejections=_rejection_counts(rejections), flags=_flag_counts(flags),
         screened=screened, pending_served=served, pending_deferred=deferred,
         passers_footnoted=sum(1 for p in fresh if P.footnoted(p.get("counts"))),
@@ -689,12 +703,15 @@ def _usable_price(value):
     return isinstance(value, (int, float)) and value == value and 0 < value < float("inf")
 
 
-# Coinbase public spot is keyless. DefiLlama's coins API is the fallback, also keyless.
-# One read per run, and only the fallback when Coinbase does not answer.
-ETH_USD_SOURCES = (
-    ("coinbase", "https://api.coinbase.com/v2/prices/ETH-USD/spot"),
-    ("defillama", "https://coins.llama.fi/prices/current/coingecko:ethereum"),
-)
+# Primary ETH/USD: the Chainlink ETH/USD aggregator on Ethereum, read with eth_call over the
+# same keyless RPC as the gas price. latestRoundData() -> (roundId, answer, startedAt,
+# updatedAt, answeredInRound); answer has 8 decimals. Rejected when updatedAt is over 1h old.
+# DefiLlama is an internal-only fallback: its price screens the cap but is never published.
+CHAINLINK_ETH_USD = "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
+LATEST_ROUND_DATA = "0xfeaf968c"
+CHAINLINK_DECIMALS = 8
+CHAINLINK_MAX_AGE = 3600
+DEFILLAMA_URL = "https://coins.llama.fi/prices/current/coingecko:ethereum"
 
 
 def _positive_price(value):
@@ -707,52 +724,75 @@ def _positive_price(value):
     return number
 
 
-def parse_eth_usd(kind, body, now=None):
-    """A positive ETH/USD quote, or None. Zero and blanks stay unknown."""
-    if not isinstance(body, dict):
+def parse_chainlink(result_hex, now):
+    """A positive, fresh ETH/USD answer from latestRoundData, or None."""
+    if not isinstance(result_hex, str) or not result_hex.startswith("0x"):
         return None
-    if kind == "coinbase":
-        data = body.get("data") if isinstance(body.get("data"), dict) else {}
-        if str(data.get("base") or "").upper() != "ETH":
-            return None
-        if str(data.get("currency") or "").upper() != "USD":
-            return None
-        return _positive_price(data.get("amount"))
-    if kind == "defillama":
-        coins = body.get("coins") if isinstance(body.get("coins"), dict) else {}
-        row = coins.get("coingecko:ethereum")
-        if not isinstance(row, dict):
-            return None
-        if str(row.get("symbol") or "").upper() not in ("ETH", "WETH"):
-            return None
-        price = _positive_price(row.get("price"))
-        if price is None:
-            return None
-        stamp = row.get("timestamp")
-        if stamp is None:
-            return None
-        try:
-            stamp_f = float(stamp)
-        except (TypeError, ValueError):
-            return None
-        clock = time.time() if now is None else float(now)
-        if clock - stamp_f > 3600:
-            return None
-        return price
-    return None
+    raw = result_hex[2:]
+    if len(raw) < 64 * 5:
+        return None
+    try:
+        words = [int(raw[i:i + 64], 16) for i in range(0, 64 * 5, 64)]
+    except ValueError:
+        return None
+    round_id, answer, _started, updated, answered = words
+    if answer >= 2 ** 255:          # int256 negative
+        return None
+    if updated <= 0 or now - updated > CHAINLINK_MAX_AGE or updated > now + 300:
+        return None
+    if answered < round_id:
+        return None
+    return _positive_price(answer / 10 ** CHAINLINK_DECIMALS)
 
 
-def fetch_eth_usd(get=None):
+def parse_eth_usd(kind, body, now=None):
+    """DefiLlama quote (internal fallback), or None. Zero, blanks and >1h-old stay unknown."""
+    if not isinstance(body, dict) or kind != "defillama":
+        return None
+    coins = body.get("coins") if isinstance(body.get("coins"), dict) else {}
+    row = coins.get("coingecko:ethereum")
+    if not isinstance(row, dict):
+        return None
+    if str(row.get("symbol") or "").upper() not in ("ETH", "WETH"):
+        return None
+    price = _positive_price(row.get("price"))
+    if price is None:
+        return None
+    stamp = row.get("timestamp")
+    if stamp is None:
+        return None
+    try:
+        stamp_f = float(stamp)
+    except (TypeError, ValueError):
+        return None
+    clock = time.time() if now is None else float(now)
+    if clock - stamp_f > 3600:
+        return None
+    return price
+
+
+def fetch_eth_usd(get=None, post=None, now=None):
+    """(price, source): Chainlink first; DefiLlama only when Chainlink is missing or stale."""
     get = get or _get_json
-    for kind, url in ETH_USD_SOURCES:
-        try:
-            body = get(url)
-        except (OSError, ValueError):
-            continue
-        price = parse_eth_usd(kind, body, now=time.time())
+    post = post or _rpc_post
+    clock = time.time() if now is None else now
+    try:
+        body = post(P.GAS_RPC["ethereum"], {
+            "jsonrpc": "2.0", "id": 1, "method": "eth_call",
+            "params": [{"to": CHAINLINK_ETH_USD, "data": LATEST_ROUND_DATA}, "latest"],
+        })
+        price = parse_chainlink((body or {}).get("result"), clock)
         if price is not None:
-            return price
-    return None
+            return price, "chainlink"
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    try:
+        price = parse_eth_usd("defillama", get(DEFILLAMA_URL), now=clock)
+    except (OSError, ValueError):
+        price = None
+    if price is not None:
+        return price, "defillama"
+    return None, None
 
 
 def _get_json(url):

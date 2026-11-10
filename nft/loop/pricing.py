@@ -1,6 +1,7 @@
 """NH-04 round-trip cost and the frozen universe rule. No network and no fees baked in."""
 from __future__ import annotations
 
+import hashlib
 import re
 import statistics
 from collections import Counter
@@ -94,7 +95,11 @@ RULE = (
     f"min_listings={MIN_LISTINGS} floor_usd={FLOOR_USD} gas_ratio={GAS_RATIO} "
     f"min_mint_days={MIN_MINT_DAYS} event_pages={EVENT_MAX_PAGES} truncated=flag"
 )
-ATTRIBUTION = "Market data from OpenSea (https://opensea.io). Derived metrics only."
+ATTRIBUTION = (
+    "Market data from OpenSea (https://opensea.io). Published as summaries only: aggregates, "
+    "computed costs, and SHA-256 digests of order hashes; no per-order prices or raw order data. "
+    "USD from the Chainlink ETH/USD feed only."
+)
 _ADDR = re.compile(r"0x[0-9a-fA-F]{40}")
 _HASH = re.compile(r"0x[0-9a-fA-F]{64}")
 
@@ -275,10 +280,40 @@ def second_cheapest(parsed):
     return prices[1] if len(prices) > 1 else None
 
 
+def order_digest(order_hash):
+    """SHA-256 of a lower-cased order hash. Only this digest is ever persisted."""
+    if not order_hash:
+        return None
+    return hashlib.sha256(str(order_hash).lower().encode()).hexdigest()
+
+
+def book_summary(offer_parsed):
+    """What the held-bid check needs next run, without per-order prices or raw hashes."""
+    live = [p for p in offer_parsed if p]
+    digests = sorted({order_digest(p["hash"]) for p in live if p.get("hash")})
+    return {
+        "digests": digests,
+        "top_bid_eth": max(p["price"] for p in live) if live else None,
+        "bidders_near_top": bidder_count(live),
+    }
+
+
+def _prev_digests(prev):
+    if isinstance(prev, dict):
+        prev = prev.get("digests") or []
+    out = set()
+    for row in prev or []:
+        if isinstance(row, str):
+            out.add(row)
+        elif isinstance(row, dict) and row.get("hash"):
+            out.add(order_digest(row["hash"]))
+    return out
+
+
 def held_bid(prev, curr):
-    """Highest bid whose order hash was on the previous read and this one."""
-    old = {o["hash"] for o in prev if o.get("hash")}
-    held = [o["price"] for o in curr if o.get("hash") and o["hash"] in old]
+    """Highest current bid whose order (by SHA-256 digest of its hash) was on the previous read."""
+    old = _prev_digests(prev)
+    held = [o["price"] for o in curr if o.get("hash") and order_digest(o["hash"]) in old]
     return max(held) if held else None
 
 
