@@ -770,7 +770,7 @@ print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"),
   assert(previous.includes('href="../preview/app.css"') && previous.includes('src="../preview/app.js"') && previous.includes('src="../preview/cardano-v2.js"'), "previous site keeps the four-page shell");
   assert(!previous.includes("<base "), "previous site does not rewrite hash links with a base URL");
   assert(previous.includes('new URL("../"'), "previous site still reads desk JSON from the site root");
-  assert(index.includes('href="revamp/app.css"') && index.includes('src="revamp/app.js"') && index.includes('src="revamp/races.js"'), "live page serves the revamp shell");
+  assert(index.includes('href="revamp/app.css"') && index.includes('src="revamp/app.js"') && index.includes('src="revamp/races.js"') && index.includes('src="revamp/hood.js"'), "live page serves the revamp shell");
   assert(!index.includes("preview/app.js") && !index.includes("dashboard/panels/"), "live page does not boot the old shell or desk panels");
   assert(!index.includes("preview.html") && !index.includes("preview-tag"), "live page is not the design sandbox");
   assert(index.includes("legacy/index.html") && index.includes("legacy.html"), "live page points at the previous site and the older dashboard");
@@ -962,6 +962,8 @@ print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"),
   assert(revampApp.includes("view.banner") && revampApp.includes("view.overlap") && revampApp.includes("R.PENDING"), "the page renders the banner, the overlap line, and the R5 label");
   assert(raceSrc.includes("awaiting first run") && !revampApp.includes("pending lock"), "R5 waits for a first run, not a pending lock");
   assert(revampCss.includes("@keyframes blink") && revampCss.includes("prefers-reduced-motion") && revampCss.includes("#0B0E11"), "revamp shell keeps the terminal look and reduced motion");
+  assert(revampCss.includes("min-height:44px") && revampCss.includes("font:500 14px/1"), "tabs stay at least 44px tall with 14px text");
+  assert(revampCss.includes("font:650 16px/1.2 Archivo"), "the section name uses the same face as the page, at a readable size");
   assert(!revampCss.includes("#9945FF") && !/indigo|purple/i.test(revampCss), "revamp shell does not use purple");
   const box = { console };
   box.window = box;
@@ -1049,6 +1051,29 @@ print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"),
   assert(dropped.wallets.every(w => w.id !== "1".repeat(40)), "an address-shaped id is not added to the roster");
   const missing = Race.emptyView("missing");
   assert(missing.message === "race starting soon" && missing.wallets.length === 6 && missing.lead == null, "a missing branch is an empty race");
+  const hoodSrc = fs.readFileSync(path.join(root, "revamp/hood.js"), "utf8");
+  const hoodBox = { console };
+  hoodBox.globalThis = hoodBox;
+  vm.runInNewContext(hoodSrc, hoodBox);
+  const Hood = hoodBox.SightlineHood;
+  const emptyHood = Hood.parse(null);
+  assert(emptyHood.empty && emptyHood.rows.length === 0 && emptyHood.share == null, "a missing Hoodscout file is an empty desk");
+  const sample = Hood.parse({
+    generated_at: "2026-11-11T01:14:03Z",
+    chain: "robinhood",
+    collections: [
+      { slug: "alpha", name: "Alpha", image_url: "https://cdn.example/a.png", volume_24h: 50, sales_24h: 4, floor_symbol: "ETH", opensea_url: "https://opensea.io/collection/alpha", flag_new: false, floor_chg_pct: null },
+      { slug: "beta", name: "Beta", image_url: "", volume_24h: 30, sales_24h: 2, floor_symbol: "ETH", flag_new: true, floor_chg_pct: null },
+      { slug: "yield-field-deeds", name: "Yield Field Deeds", image_url: "https://cdn.example/y.png", volume_24h: 80, sales_24h: 9, floor_symbol: "ETH", flag_new: true },
+      { slug: "items", name: "Yield Fields Items", volume_24h: 3, sales_24h: 1, floor_symbol: "USDG", flag_new: false }
+    ]
+  });
+  assert(sample.rows[0].slug === "yield-field-deeds" && sample.top.slug === "alpha", "rows sort by 24h volume and RWA stays out of the headline");
+  assert(sample.totalEth === 80 && Math.round(sample.share) === 63 && sample.volumeCheck === "volume check: not confirmed", "a top share over 40% is not confirmed");
+  assert(sample.rwa.length === 2 && sample.newcomers.length === 1 && sample.newcomers[0].slug === "beta", "new is flag_new, and RWA is marked aside");
+  assert(sample.jumpSupported === false && sample.hot == null, "an empty floor change is not a hot jump");
+  assert(sample.rows.find(r => r.slug === "alpha").image.indexOf("https://") === 0 && sample.rows.find(r => r.slug === "beta").image === "", "logos use the file URL and otherwise stay blank");
+  assert(!revampApp.includes("EXCAT") && !revampApp.includes("+18.4") && !revampApp.includes("EXAMPLE DATA"), "the public shell no longer ships the example trade card");
   const calls = [];
   const fakeFetch = (url) => {
     calls.push(url);
