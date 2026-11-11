@@ -981,6 +981,8 @@ print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"),
   assert(view.lead.netPct === 0, "the lead uses official_net_pct");
   const r1 = view.wallets.find(w => w.id === "R1");
   assert(r1.n === 0 && r1.lo == null && r1.hi == null && r1.netPct < 0 && r1.avgDeployed === 0.1, "n_trades and ci95 are the n and the interval");
+  const dryTrade = JSON.parse(fs.readFileSync(path.join(root, "revamp/fixtures/trades.jsonl"), "utf8").trim());
+  assert(dryTrade.wallet === "R1" && r1.trades.length === 1 && r1.trades[0].symbol === "MEME" && r1.trades[0].side === "buy" && r1.trades[0].size === 0.5, "the dry-run trade row carries wallet R1 and the adapter assigns it");
   assert(view.overlap && view.overlap.line === "R5 holdings also in R3: 0 of 0" && view.overlap.k === 0 && view.overlap.n === 0, "overlap is read from the summary");
   assert(view.split && view.split.meme.n === 0 && view.split.non_meme.n === 0 && view.split.untagged.n === 0, "the meme split is read from the summary");
   const r5 = view.wallets.find(w => w.id === "R5");
