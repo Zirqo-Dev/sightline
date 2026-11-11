@@ -11,6 +11,7 @@ body[data-layout="mono"][data-desk="home"]{--sl-wordmark:#22D3EE}
 body[data-layout="mono"][data-desk="solada"]{--sl-wordmark:#3d8bff}
 body[data-layout="mono"][data-desk="solana"]{--sl-wordmark:#14F195}
 body[data-layout="mono"][data-desk="nft"]{--sl-wordmark:#FF5FA2}
+body[data-layout="mono"][data-desk="races"]{--sl-wordmark:#F0B90B}
 body[data-layout="mono"] .m{font-family:"DM Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
 body[data-layout="mono"] .wrap{max-width:1180px;margin:0 auto;padding:12px 12px 28px}
 body[data-layout="mono"] .top{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
@@ -23,7 +24,7 @@ body[data-layout="mono"] .badge{font:10px "DM Mono",monospace;border:1px solid v
 body[data-layout="mono"] .live{font:10px "DM Mono",monospace;color:var(--mute);text-align:right}
 body[data-layout="mono"] .live b{color:var(--up);font-weight:400}
 body[data-layout="mono"] .subt{color:var(--mute);font-size:12px;margin-top:2px}
-body[data-layout="mono"] nav{display:flex;gap:4px;margin-top:12px;background:var(--bg);border-radius:8px;padding:3px;width:max-content;max-width:100%}
+body[data-layout="mono"] nav{display:flex;flex-wrap:wrap;gap:4px;margin-top:12px;background:var(--bg);border-radius:8px;padding:3px;width:auto;max-width:100%}
 body[data-layout="mono"] nav a{font:500 11px "DM Mono",monospace;color:var(--mute);text-decoration:none;padding:5px 10px;border-radius:6px;text-transform:uppercase;letter-spacing:.04em}
 body[data-layout="mono"] nav a.on{background:var(--line);color:var(--tx);box-shadow:inset 0 -2px 0 var(--acc)}
 body[data-layout="mono"] .note,.meta{font-size:11px;color:var(--dim);margin-top:10px}
@@ -89,8 +90,15 @@ body[data-layout="mono"] .legend{font:10px "DM Mono",monospace;color:var(--dim);
 body[data-layout="mono"] .ro{font:10px "DM Mono",monospace;color:var(--dim);border:1px solid var(--line);border-radius:4px;padding:0 5px;white-space:nowrap}
 body[data-layout="mono"] footer,body[data-layout="mono"] .foot{display:block;text-align:center;font:10px "DM Mono",monospace;color:var(--dim);margin-top:18px;text-transform:uppercase;letter-spacing:.05em}
 body[data-layout="mono"] footer a{color:var(--mute)}
+.race-banner{border:1px solid rgba(240,185,11,.45);color:var(--amb,#F0B90B);border-radius:8px;padding:8px 10px;font-size:12px;margin:0 0 12px}
+.race-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.race-list li{border:1px solid var(--line,#1E2329);border-radius:12px;padding:12px;background:var(--card,#161A1E)}
+.race-top{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
+.race-fig{font:500 28px/1.1 "DM Mono",ui-monospace,monospace;margin-top:6px}
+.race-note{font-size:12px;color:#C7CCD3;margin:6px 0 0}
 @media (max-width:640px){
   body[data-layout="mono"] .two{grid-template-columns:1fr}
+  .race-fig{font-size:22px}
 }
 @media (prefers-reduced-motion:reduce){
   .logo i{animation:none !important}

@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "extension_note": "A later wallet is a new wallets entry plus one races.rules module. Caps must sum to total_cap. R5 is the owner-approved book after the v1 pre-registration. Do not reserve unused calls.",
+  "prereg": {
+    "file": "prereg_races_v2.md",
+    "sha256_v1": "97c0114aefe4f986d6c453be6fd2e2b23b7b51bdbacccc2ecf51b985ee6118f3",
+    "sha256_expected": "5f52f68845e93c7338c08b1a898e29d6a96560c5f108916000e53e708f578e66"
+  },
+  "starting_sol": 5.0,
+  "ticket_sol": 0.5,
+  "ticket_lamports": 500000000,
+  "wsol_mint": "So11111111111111111111111111111111111111112",
+  "usdc_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "usdc_decimals": 6,
+  "sol_usdc_scale": 10,
+  "quote_slippage_bps": 50,
+  "http_timeout_seconds": 8,
+  "gecko_interval_seconds": 6,
+  "costs": {
+    "base_bps": 60,
+    "impact_weight": 0.25,
+    "stop_extra_bps": 150,
+    "cap_bps": 600
+  },
+  "death": {
+    "failed_sell_quotes": 3
+  },
+  "stats": {
+    "period_days": 30,
+    "bootstrap_draws": 10000,
+    "bootstrap_seed": 20261111,
+    "min_closes_for_interval": 5
+  },
+  "jupiter": {
+    "base": "https://lite-api.jup.ag",
+    "quote_path": "/swap/v1/quote",
+    "total_cap": 45,
+    "caps": {
+      "R1": 14,
+      "R2": 14,
+      "R3": 7,
+      "R4": 3,
+      "SOL": 2,
+      "R5": 5
+    }
+  },
+  "discovery": {
+    "gecko_pumpswap": "https://api.geckoterminal.com/api/v2/networks/solana/dexes/pumpswap/pools",
+    "gecko_letsbonk": "https://api.geckoterminal.com/api/v2/networks/solana/dexes/letsbonk-fun/pools",
+    "gecko_new_pools": "https://api.geckoterminal.com/api/v2/networks/solana/new_pools",
+    "gecko_accept": "application/json;version=20230203",
+    "dex_pages_per_list": 6,
+    "new_pool_pages": 2,
+    "dex_batch_url": "https://api.dexscreener.com/latest/dex/pairs/solana/",
+    "dex_batch_max": 30,
+    "dex_token_url": "https://api.dexscreener.com/latest/dex/tokens/",
+    "eligible_dex_ids": ["pumpswap", "letsbonk-fun"],
+    "min_age_seconds": 3600,
+    "max_age_seconds": 21600,
+    "min_sol_reserve": 50,
+    "rpc_urls": [
+      "https://api.mainnet-beta.solana.com"
+    ],
+    "pumpswap_program": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+    "pumpfun_program": "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
+    "metadata_program": "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s",
+    "pool_base_vault_offset": 139,
+    "pool_quote_vault_offset": 171
+  },
+  "banners": {
+    "standing": "Display only, untested. A lead in the race is luck until tested.",
+    "leader": "leading so far",
+    "r3_r5_note": "R3 and R5 will move together in a meme rally; two leads there are one bet, not two."
+  },
+  "wallets": {
+    "R1": {
+      "name": "Random meme picker",
+      "module": "races.rules.r1",
+      "label": "close variant of v6.5 R; random among discoverable graduates (coverage logged)",
+      "note": "Close in style to the frozen test's meme books. This race cannot change that test.",
+      "max_fills_per_day": 10,
+      "time_stop_hours": 4
+    },
+    "R2": {
+      "name": "Filtered meme flipper",
+      "module": "races.rules.r2",
+      "label": "close variant of v6.5 F",
+      "note": "Close in style to the frozen test's meme books. This race cannot change that test.",
+      "max_fills_per_day": 10,
+      "time_stop_hours": 4,
+      "take_profit": 0.25,
+      "hard_stop": -0.20,
+      "max_top10_pct": 0.30,
+      "max_dev_pct": 0.10,
+      "min_sells_h1": 1
+    },
+    "R3": {
+      "name": "Big meme basket",
+      "module": "races.rules.r3",
+      "label": "Established meme basket",
+      "note": "",
+      "basket": 5,
+      "asof": "2026-11-11T23:59:59Z",
+      "rebalance_day": 1,
+      "coingecko_markets": "https://api.coingecko.com/api/v3/coins/markets",
+      "coingecko_coin": "https://api.coingecko.com/api/v3/coins/",
+      "binance_klines": "https://api.binance.com/api/v3/klines",
+      "binance_vision": "https://data.binance.vision/",
+      "pages_per_run": 1,
+      "details_per_run": 12
+    },
+    "R4": {
+      "name": "Listing bounce",
+      "module": "races.rules.r4",
+      "label": "Listing bounce",
+      "note": "",
+      "time_stop_hours": 24,
+      "entry_delay_seconds": 900,
+      "list_url": "https://api-manager.upbit.com/api/v1/announcements",
+      "detail_url": "https://api-manager.upbit.com/api/v1/announcements/",
+      "markets_url": "https://api.upbit.com/v1/market/all?isDetails=true",
+      "wallet_url": "https://api.upbit.com/v1/status/wallet",
+      "history_pages": 10,
+      "include_titles": ["디지털 자산 추가", "신규 거래지원", "Market Support for", "Trading Support for"],
+      "exclude_titles": ["유의", "종료", "중단", "Investment Warning", "Delist", "Trading Support Termination", "Suspension"]
+    },
+    "SOL": {
+      "name": "SOL hold",
+      "module": "races.rules.sol",
+      "label": "Benchmark. Official net % in SOL is 0.",
+      "note": "USDC is a companion column only."
+    },
+    "R5": {
+      "name": "Established breakout (memes included)",
+      "module": "races.rules.r5",
+      "label": "R5 Established breakout (memes included) — close variant of killed Trend/momentum (time-series breakout); display only, untested",
+      "note": "Evidence weak. Not C. Cannot revive Trend/momentum.",
+      "toptraded_url": "https://lite-api.jup.ag/tokens/v2/toptraded/24h",
+      "organic_url": "https://lite-api.jup.ag/tokens/v2/toporganicscore/24h",
+      "search_url": "https://lite-api.jup.ag/tokens/v2/search",
+      "list_limit": 100,
+      "min_mcap_usd": 25000000,
+      "min_mcap_fdv": 0.30,
+      "min_liquidity_usd": 1000000,
+      "min_age_days": 90,
+      "min_organic_score": 50,
+      "min_universe": 8,
+      "denylist_symbols": ["SOL", "wSOL", "ETH", "cbBTC", "WBTC", "ZEC", "HYPE", "JLP", "CASH"],
+      "symbol_substrings": ["USD", "EUR"],
+      "reject_tags": ["stable", "lst", "original-lst", "xstocks", "stocks", "prestocks", "equities", "rwa", "yb", "jup-lend-earn"],
+      "meme_launchpads": ["pump.fun", "pumpswap", "letsbonk", "letsbonk.fun", "believe", "moonshot"],
+      "price_24h_min": 12,
+      "price_24h_max": 60,
+      "price_6h_gt": 0,
+      "volume_change_min": 100,
+      "min_organic_buy_ratio": 0.05,
+      "hard_stop": -0.15,
+      "trail_arm": 0.10,
+      "trail_giveback": 0.15,
+      "time_stop_days": 10,
+      "liq_floor_usd": 500000,
+      "max_open": 5,
+      "max_entries_per_day": 1,
+      "cooldown_days": 7,
+      "coingecko_contract": "https://api.coingecko.com/api/v3/coins/solana/contract/"
+    }
+  }
+}
