@@ -151,6 +151,37 @@
     if (h <= 24) return "warn";
     return "bad";
   }
+  function freshTone(t) {
+    const d = new Date(timeOf(t));
+    if (isNaN(d.getTime())) return "";
+    const h = (Date.now() - d.getTime()) / 36e5;
+    if (h <= 2) return "up";
+    if (h <= 26) return "amb";
+    return "dn";
+  }
+  function builtEt(t) {
+    const d = new Date(timeOf(t));
+    if (isNaN(d.getTime())) return "";
+    const parts = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "America/Toronto" }).formatToParts(d);
+    let hh = (parts.find(p => p.type === "hour") || {}).value || "";
+    const mm = (parts.find(p => p.type === "minute") || {}).value || "";
+    if (hh === "24") hh = "00";
+    if (!hh || !mm) return "";
+    return hh + ":" + mm + " ET";
+  }
+  function freshnessHtml(picks) {
+    const doc = picks || {};
+    const lines = [
+      ["Cardano", doc.cardano && doc.cardano.asof, false],
+      ["Solana", doc.solana && doc.solana.asof, false],
+      ["NFT", doc.nft && doc.nft.asof, false],
+      ["built", doc.generated_at, true]
+    ];
+    return lines.map(([name, at, built]) => {
+      const text = built ? ("built " + (builtEt(at) || "–")) : (name + " " + (when(at) || "–"));
+      return `<span class="${freshTone(at)}">${esc(text)}</span>`;
+    }).join("<br>");
+  }
   function parseCsv(text) {
     if (!text) return [];
     const lines = String(text).split(/\r?\n/).filter(Boolean);
@@ -1490,8 +1521,7 @@
       view.innerHTML = html;
       const warn = document.getElementById("warn");
       if (warn && p.picks && root.SightlineV19) warn.innerHTML = root.SightlineV19.warn(p.picks, route.id);
-      const asof = p.picks && p.picks.cardano && p.picks.cardano.asof;
-      if (status) status.innerHTML = "<b>●</b> Live" + (asof ? "<br>" + esc(when(asof)) : "");
+      if (status) status.innerHTML = p.picks ? freshnessHtml(p.picks) : "<span>picks file missing</span>";
       const visible = view.innerText || "";
       if (/(?:stake|addr)(?:_test)?1[0-9a-z]{8,}/i.test(visible)) {
         view.innerHTML = empty("Privacy hold", "This view was cleared because a wallet or stake key reached the page.");

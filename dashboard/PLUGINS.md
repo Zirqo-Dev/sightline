@@ -15,6 +15,12 @@ The dashboard has no desk-specific code. It reads `desks.json` to find the desks
 
 If a desk has no `panels.json`, it gets a default page from its standard files: latest run, scoreboard, open tickets, closed tickets, rules, briefs. A new desk added to `desks.json` shows up in the navigation, on Home and in Briefs with no other change.
 
+## What draws each tab today
+
+`index.html` and `preview.html` set `data-layout="mono"` and load `preview/cardano-v2.js`, `preview/mono.js`, and `preview/v19.js`. While `dashboard/picks.json` is in the build, `preview/app.js` draws Home, Cardano, Solana, and NFT with `preview/v19.js` (`SightlineV19.page`) from that file. `scripts/score_picks.py` writes `dashboard/picks.json` when the site is built.
+
+`preview/cardano-v2.js` and `preview/mono.js` still load. They do not render while `picks.json` exists. `preview/mono.js` is the fallback on the mono shell when the picks file is missing. `preview/cardano-v2.js` is the Cardano board on the non-mono path (`cardanoHtml` in `preview/app.js`). Neither file is removed.
+
 ```json
 {
   "panels": [
@@ -52,7 +58,7 @@ One file each in `dashboard/panels/`. Each calls `S.register`.
 
 ## Cardano tab (v2)
 
-The live Cardano tab (`preview/cardano-v2.js`, route `#/cardano`) is two boards: Top 10 Runners, then Top 10 Established. It reads the desk-data copies of `solada/log.json`, `solada/pulse.json`, `solada/paper.json`, `solada-prefilter/flags.json`, `solada-prefilter/dev_checks.json`, `solada-prefilter/vetoes.json`, `solada-prefilter/whale_ledger.json`, `solada-prefilter/big_moves.json`, and `x_buzz.json`, falling back to main. A missing figure is omitted or shown as "?". The tab does not invent a Sentinel pick or a percent.
+`preview/cardano-v2.js` (route `#/cardano` on the non-mono path) is two boards: Top 10 Runners, then Top 10 Established. On the live mono shell that file loads and does not render while `dashboard/picks.json` exists. The Cardano tab that draws today is `preview/v19.js`. It reads the desk-data copies of `solada/log.json`, `solada/pulse.json`, `solada/paper.json`, `solada-prefilter/flags.json`, `solada-prefilter/dev_checks.json`, `solada-prefilter/vetoes.json`, `solada-prefilter/whale_ledger.json`, `solada-prefilter/big_moves.json`, and `x_buzz.json`, falling back to main. A missing figure is omitted or shown as "?". The tab does not invent a Sentinel pick or a percent.
 
 Runners are fresh launches (`cardano_v2.launches` and verdicts whose `launchpad` is not `established` or `minswap`), ranked by the newest percent move. Established is `cardano_top10` plus verdicts tagged `established` or `minswap`, in the desk's high-cap order. The row pill is SW-01 only for an open SW-01 ticket, otherwise Lottery, Watch, Passed·moving (a pass whose price is up), or Pass. ▲ renders only when both holders and volume rose over the last 6h. A sparkline renders only when price or market-cap history is fresh enough to draw.
 
@@ -200,7 +206,7 @@ python3 -m http.server -d dist
 
 Since Oct 24 `main` only takes PRs, so the desk bots push their data to the `desk-data` branch. `S.get()` in `dashboard/core.js` reads desk data JSON (each desk's `log`, `pulse`, `paper` books, briefs, and `nft/site/intel.json` / `watchlist.json` via `window.sightlineData` in `nft/site/index.html`) from `https://raw.githubusercontent.com/Zirqo-Dev/sightline/desk-data/<path>?ts=<now>` and the same-origin Pages copy from `main` in parallel. The desk-data copy wins; main's copy is used when the file is missing on desk-data (404/not JSON) or when main's `asof`/`updated_at` is strictly newer. The freshness stamp is computed from whatever was picked, so it reflects the newer data.
 
-Code and config always come from `main`: `desks.json`, `panels.json`, `config.json`, the build-generated `briefs/index.json` (so a brief must also be listed by a main build to appear; each listed brief is then read desk-data-first), icons and schema. raw.githubusercontent has a ~5 minute CDN cache; the `?ts=` buster usually avoids it, but allow a few minutes. Set `window.SIGHTLINE_DESK_DATA = ""` before `core.js` to read main only (or set another base URL). Why client-side rather than overlaying desk-data at build time: a Pages build is only triggered by `main` pushes, and pushes made with the workflow `GITHUB_TOKEN` do not trigger other workflows, so the overlay would go stale between deploys.
+Code and config always come from `main`: `desks.json`, `panels.json`, `config.json`, the build-generated `briefs/index.json` (so a brief must also be listed by a main build to appear; each listed brief is then read desk-data-first), icons and schema. raw.githubusercontent has a ~5 minute CDN cache; the `?ts=` buster usually avoids it, but allow a few minutes. Set `window.SIGHTLINE_DESK_DATA = ""` before `core.js` to read main only (or set another base URL). Why client-side rather than overlaying desk-data at build time: a Pages build runs on a `main` push and on the hourly schedule in `.github/workflows/pages.yml`. Pushes made with the workflow `GITHUB_TOKEN` do not trigger other workflows, so a desk-data push alone still does not rebuild the site.
 
 
 GitHub Actions (`.github/workflows/pages.yml`) runs `scripts/privacy-guard.sh` and `scripts/validate-desks.py` on every push to `main`, then builds `dist/` and deploys it with `actions/upload-pages-artifact` and `actions/deploy-pages` only if both checks pass.
