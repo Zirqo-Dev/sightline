@@ -763,12 +763,16 @@ print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"),
   const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
   const preview = fs.readFileSync(path.join(root, "preview.html"), "utf8");
   const legacyPage = fs.readFileSync(path.join(root, "legacy.html"), "utf8");
+  const previous = fs.readFileSync(path.join(root, "legacy/index.html"), "utf8");
   const legacyLogo = '<a class="logo" href="#/">&gt;sight<span>line</span><i>_</i></a>';
-  assert(legacyPage.includes(legacyLogo) && index.includes(legacyLogo) && preview.includes(legacyLogo), "every shell keeps the >sightline_ logo");
-  assert(index.includes('href="preview/theme.css"') && preview.includes('href="preview/theme.css"'), "live shell loads the shared theme");
-  assert(index.includes('href="preview/app.css"') && index.includes('src="preview/app.js"') && index.includes('src="preview/cardano-v2.js"'), "live page serves the redesigned shell");
+  assert(legacyPage.includes(legacyLogo) && index.includes(legacyLogo) && preview.includes(legacyLogo) && previous.includes(legacyLogo), "every shell keeps the >sightline_ logo");
+  assert(previous.includes('href="preview/theme.css"') && preview.includes('href="preview/theme.css"'), "previous shell loads the shared theme");
+  assert(previous.includes('href="preview/app.css"') && previous.includes('src="preview/app.js"') && previous.includes('src="preview/cardano-v2.js"'), "previous site keeps the four-page shell");
+  assert(previous.includes('<base href="../">'), "previous site resolves data from the site root");
+  assert(index.includes('href="revamp/app.css"') && index.includes('src="revamp/app.js"') && index.includes('src="revamp/races.js"'), "live page serves the revamp shell");
+  assert(!index.includes("preview/app.js") && !index.includes("dashboard/panels/"), "live page does not boot the old shell or desk panels");
   assert(!index.includes("preview.html") && !index.includes("preview-tag"), "live page is not the design sandbox");
-  assert(index.includes("legacy.html"), "live page points at the legacy fallback");
+  assert(index.includes("legacy/index.html") && index.includes("legacy.html"), "live page points at the previous site and the older dashboard");
   assert(preview.includes('href="preview/app.css"') && preview.includes('src="preview/app.js"') && preview.includes("preview-tag"), "preview shell still iterates on its own");
   assert(legacyPage.includes("dashboard/core.js") && legacyPage.includes("<!-- panels:begin -->") && legacyPage.includes("dashboard/pages.js"), "legacy dashboard keeps the old shell");
   assert(!legacyPage.includes("preview/app.js"), "legacy page does not load the redesigned shell");
@@ -794,6 +798,7 @@ print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"),
   assert(build.includes("def bust_preview(") && build.includes("def preview_version("), "preview assets are cache-busted on their own");
   assert(build.includes("Kept off asset_version()"), "preview hash does not retint the legacy dashboard assets");
   assert(build.includes("bust_preview(index)"), "published index cache-busts the redesigned assets");
+  assert(build.includes("def bust_revamp(") && build.includes("legacy/index.html"), "build publishes the revamp shell and the previous site");
   assert(build.includes("legacy.html"), "build publishes the legacy dashboard");
   assert(P.isDeskData("x_buzz.json"), "x_buzz.json is read from desk-data");
   assert(!P.isDeskData("desks.json") && !P.isDeskData("schema/x-buzz.schema.json"), "root config and schema stay on main");
@@ -935,6 +940,68 @@ print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"),
   assert(B.decorate("home", shellHome, null, null).includes("no buzz history yet"), "home without a history file does not error");
 }
 
-console.log("smoke-dashboard: OK");
-console.log("  fixture ADA", sc.byUnit.ADA.pnl, "ADA-equivalent", sc.byUnit["ADA-equivalent"].pnl, "USD", sc.byUnit.USD.pnl);
-console.log("  live books", live.length, "open", live.reduce((n, b) => n + b.json.open.length, 0), "closed", live.reduce((n, b) => n + b.json.closed.length, 0));
+{
+  const raceSrc = fs.readFileSync(path.join(root, "revamp/races.js"), "utf8");
+  const revampApp = fs.readFileSync(path.join(root, "revamp/app.js"), "utf8");
+  const revampCss = fs.readFileSync(path.join(root, "revamp/app.css"), "utf8");
+  assert(!/winner/i.test(raceSrc), "the race adapter never says winner");
+  assert(raceSrc.includes("Display only, untested. A lead in the race is luck until tested."), "race banner is the required sentence");
+  assert(raceSrc.includes("leading so far") && raceSrc.includes("race starting soon"), "a lead is labeled leading so far, and a missing file says the race is starting soon");
+  const raceCopy = ["Who's winning", "Top winners", "recent winners"].reduce(function (s, phrase) {
+    return s.split(phrase).join("");
+  }, revampApp);
+  assert(!/winner/i.test(raceCopy), "revamp copy does not say winner outside the mockup book name and screen title");
+  assert(revampApp.includes("view.banner") && revampApp.includes("raceBlock(view"), "race surfaces print the adapter banner");
+  assert(revampCss.includes("@keyframes blink") && revampCss.includes("prefers-reduced-motion") && revampCss.includes("#0B0E11"), "revamp shell keeps the terminal look and reduced motion");
+  assert(!revampCss.includes("#9945FF") && !/indigo|purple/i.test(revampCss), "revamp shell does not use purple");
+  const box = { console };
+  box.window = box;
+  box.globalThis = box;
+  vm.runInNewContext(raceSrc, box);
+  const Race = box.SightlineRaces;
+  const summary = JSON.parse(fs.readFileSync(path.join(root, "revamp/fixtures/summary.json"), "utf8"));
+  const events = fs.readFileSync(path.join(root, "revamp/fixtures/events.jsonl"), "utf8");
+  const view = Race.buildView(summary, events, { source: "fixtures" });
+  assert(view.banner.startsWith("Display only"), "fixture view keeps the banner");
+  assert(view.lead && view.lead.ids.length === 1 && view.lead.ids[0] === "R2" && view.lead.label === "R2 is leading so far", "the highest race wallet is leading so far");
+  assert(view.wallets.map(w => w.id).join(",") === "R1,R2,R3,R4,R5,SOL", "R1-R5 and the SOL benchmark are always on the roster");
+  const sol = view.wallets.find(w => w.id === "SOL");
+  assert(sol.role === "benchmark" && sol.equity === 5.24 && view.lead.ids.indexOf("SOL") === -1, "SOL hold is a benchmark and is not the race lead");
+  const r2 = view.wallets.find(w => w.id === "R2");
+  assert(r2.series.length === 4 && r2.equity === 5.22, "equity events become the balance series");
+  assert(r2.trades.length === 2 && r2.trades[0].side === "sell" && r2.trades[0].symbol === "EXDOG" && r2.trades[0].pnl === 0.03, "newest trade is first and keeps fill fields");
+  assert(r2.positions.length === 1 && r2.positions[0].symbol === "EXCAT" && r2.positions[0].upnl === 0.04, "the open position keeps unrealized P&L");
+  const aliased = Race.buildView({
+    updated_at: "2026-11-11T16:00:00Z",
+    run_status: "running",
+    wallets: [{ wallet_id: "BH", label: "Hold", kind: "benchmark", balance: 5.1, unit: "SOL" }]
+  }, [
+    JSON.stringify({ event: "fill", wallet_id: "R1", time: "2026-11-11T15:00:00Z", action: "buy", ticker: "EXCAT", fill_price: 0.00002, qty: 0.25, size_unit: "SOL", realized_pnl: null }),
+    JSON.stringify({ type: "position", book: "R1", at: "2026-11-11T16:00:00Z", sym: "EXCAT", entry_px: 0.00002, last_mark: 0.00003, unrealized_pnl: 0.01 })
+  ].join("\n"), { source: "races-data" });
+  const a1 = aliased.wallets.find(w => w.id === "R1");
+  const hold = aliased.wallets.find(w => w.id === "SOL");
+  assert(a1.trades[0].price === 0.00002 && a1.trades[0].size === 0.25 && a1.positions[0].upnl === 0.01, "alias field names map onto the same trade and position");
+  assert(a1.positions[0].upnlPct > 49 && a1.positions[0].upnlPct < 51, "a missing percent is derived from entry and mark");
+  assert(hold.role === "benchmark" && hold.equity === 5.1, "BH maps to the SOL benchmark");
+  assert(!/winner/i.test(JSON.stringify(aliased)), "a built view does not contain winner");
+  const dropped = Race.buildView({ wallets: [{ id: "1".repeat(40), name: "skip", equity: 9 }] }, "", {});
+  assert(dropped.wallets.every(w => w.id !== "1".repeat(40)), "an address-shaped id is not added to the roster");
+  const missing = Race.emptyView("missing");
+  assert(missing.message === "race starting soon" && missing.wallets.length === 6 && missing.lead == null, "a missing branch is an empty race");
+  const calls = [];
+  const fakeFetch = (url) => {
+    calls.push(url);
+    return Promise.resolve({ ok: false, text: () => Promise.resolve("") });
+  };
+  Race.load(fakeFetch, {}).then(loaded => {
+    assert(loaded.message === "race starting soon" && calls.some(u => u.endsWith("summary.json")), "client load treats a 404 as race starting soon");
+    assert(calls.every(u => u.startsWith("https://raw.githubusercontent.com/Zirqo-Dev/sightline/races-data/")), "race files are read from the races-data branch");
+    console.log("smoke-dashboard: OK");
+    console.log("  fixture ADA", sc.byUnit.ADA.pnl, "ADA-equivalent", sc.byUnit["ADA-equivalent"].pnl, "USD", sc.byUnit.USD.pnl);
+    console.log("  live books", live.length, "open", live.reduce((n, b) => n + b.json.open.length, 0), "closed", live.reduce((n, b) => n + b.json.closed.length, 0));
+  }).catch(err => {
+    console.error(err);
+    process.exit(1);
+  });
+}
