@@ -962,7 +962,8 @@ print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"),
   assert(revampApp.includes("view.banner") && revampApp.includes("view.overlap") && revampApp.includes("R.PENDING"), "the page renders the banner, the overlap line, and the R5 label");
   assert(raceSrc.includes("awaiting first run") && !revampApp.includes("pending lock"), "R5 waits for a first run, not a pending lock");
   assert(revampCss.includes("@keyframes blink") && revampCss.includes("prefers-reduced-motion") && revampCss.includes("#0B0E11"), "revamp shell keeps the terminal look and reduced motion");
-  assert(revampCss.includes("min-height:44px") && revampCss.includes("font:500 14px/1"), "tabs stay at least 44px tall with 14px text");
+  assert(revampCss.includes("min-height:44px") && revampCss.includes("font:500 14px/1") && revampCss.includes("grid-template-columns:repeat(4,1fr)"), "tabs are a 4-column grid, 44px tall, 14px text");
+  assert(revampCss.includes("a.back{") && revampApp.includes("Back to Desks") && revampApp.includes('id === "king2" ? "desks"'), "king2 returns to Desks and keeps that tab on");
   assert(revampCss.includes("font:650 16px/1.2 Archivo"), "the section name uses the same face as the page, at a readable size");
   assert(!revampCss.includes("#9945FF") && !/indigo|purple/i.test(revampCss), "revamp shell does not use purple");
   const box = { console };
@@ -1052,7 +1053,7 @@ print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"),
   const missing = Race.emptyView("missing");
   assert(missing.message === "race starting soon" && missing.wallets.length === 6 && missing.lead == null, "a missing branch is an empty race");
   const hoodSrc = fs.readFileSync(path.join(root, "revamp/hood.js"), "utf8");
-  const hoodBox = { console };
+  const hoodBox = { console, URL };
   hoodBox.globalThis = hoodBox;
   vm.runInNewContext(hoodSrc, hoodBox);
   const Hood = hoodBox.SightlineHood;
@@ -1070,6 +1071,16 @@ print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"),
   });
   assert(sample.rows[0].slug === "yield-field-deeds" && sample.top.slug === "alpha", "rows sort by 24h volume and RWA stays out of the headline");
   assert(sample.totalEth === 80 && Math.round(sample.share) === 63 && sample.volumeCheck === "volume check: not confirmed", "a top share over 40% is not confirmed");
+  assert(sample.shareLabel === "62.5% of 24h volume across the 4 listed collections (top 4 by 7-day volume)", "the share names the listed top-by-7-day set");
+  assert(sample.totalLabel === "80.00 ETH across those listed collections", "the ETH total names that same listed set");
+  assert(sample.volumeCheckNote.indexOf("same listed set") !== -1, "the 40% check is on the listed set");
+  const unsafe = Hood.parse({ collections: [{ slug: "z", name: "Z", image_url: "http://insecure/a.png", opensea_url: "javascript:alert(1)", volume_24h: 1, floor_symbol: "ETH" }] });
+  assert(unsafe.rows[0].image === "" && unsafe.rows[0].url === "https://opensea.io/collection/z", "only https image and link URLs are kept");
+  const now = Date.parse("2026-11-11T20:00:00Z");
+  const fresh = Hood.ageStamp("2026-11-11T01:00:00Z", now);
+  const late = Hood.ageStamp("2026-11-10T10:00:00Z", now);
+  assert(fresh.text === "19 h ago" && fresh.tone === "good", "19h is inside twice the 16h Hoodscout gap");
+  assert(late.tone === "warn" && Hood.AMBER_MS === 32 * 60 * 60 * 1000, "older than 32h is amber");
   assert(sample.rwa.length === 2 && sample.newcomers.length === 1 && sample.newcomers[0].slug === "beta", "new is flag_new, and RWA is marked aside");
   assert(sample.jumpSupported === false && sample.hot == null, "an empty floor change is not a hot jump");
   assert(sample.rows.find(r => r.slug === "alpha").image.indexOf("https://") === 0 && sample.rows.find(r => r.slug === "beta").image === "", "logos use the file URL and otherwise stay blank");

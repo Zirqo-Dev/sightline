@@ -48,10 +48,10 @@
     { id: "winning", href: "#/winning", label: "Winning" },
     { id: "wallets", href: "#/wallets", label: "Wallets" },
     { id: "duration", href: "#/duration", label: "Duration" },
-    { id: "evolution", href: "#/evolution", label: "Evolution" },
+    { id: "evolution", href: "#/evolution", label: "Evolve" },
     { id: "trades", href: "#/trades", label: "Trades" },
     { id: "archive", href: "#/archive", label: "Archive" },
-    { id: "fresh", href: "#/freshness", label: "Freshness" }
+    { id: "fresh", href: "#/freshness", label: "Fresh" }
   ];
   var TITLES = {
     desks: "Desks",
@@ -584,15 +584,16 @@
   function kingCard(hood) {
     if (!hood || hood.empty) {
       return '<article class="card"><div class="rowtop"><span><h3>KING desk (2)</h3></span>' + tag("Robinhood Chain", "accent") + "</div>" +
-        '<p class="muted">Waiting for first run. Hoodscout has not published data/nft_discover.json.</p></article>';
+        '<p class="muted">Couldn\'t load Hoodscout data/nft_discover.json. No volumes are shown.</p></article>';
     }
-    var share = hood.share == null ? "—" : hood.share.toFixed(1) + "%";
-    var top = hood.top ? esc(hood.top.name) + " is " + esc(share) + " of 24h ETH volume" : "No ETH volume yet";
+    var age = SightlineHood.ageStamp(hood.generatedAt);
+    var top = hood.top ? esc(hood.top.name) + " is " + esc(hood.shareLabel) : "No ETH volume yet";
     return '<article class="card"><div class="rowtop"><span><h3>KING desk (2)</h3></span>' + tag("Robinhood Chain", "accent") + "</div>" +
       line("Display only. Not a trading signal.", null, " small muted") +
       line(top, null, " small") +
-      (hood.volumeCheck ? line(esc(hood.volumeCheck), null, " small") : "") +
-      '<div style="margin-top:6px">' + tag("updated " + (hood.generatedAt ? fmtEt(hood.generatedAt) : "—"), "good") + "</div>" +
+      (hood.totalLabel ? line(esc(hood.totalLabel), null, " small muted") : "") +
+      (hood.volumeCheck ? line(esc(hood.volumeCheck) + ". " + esc(hood.volumeCheckNote), null, " small") : "") +
+      '<div style="margin-top:6px">' + tag("updated " + age.text, age.tone) + "</div>" +
       '<p><a class="link" href="#/king2">Open KING desk (2)</a></p></article>';
   }
   function uaCard(doc) {
@@ -608,8 +609,9 @@
       '<p class="muted">Counts only. No mean, t, or win rate.</p></article>';
   }
   function screenKing(hood) {
+    var back = '<p><a class="back" href="#/">Back to Desks</a></p>';
     if (!hood || hood.empty) {
-      return '<article class="card"><h3>Waiting for first run</h3><p class="muted">Hoodscout data/nft_discover.json is missing. No collections and no volumes are shown.</p></article>';
+      return back + '<article class="card"><h3>Couldn\'t load</h3><p class="muted">Couldn\'t load the Hoodscout file. No collections and no volumes are shown.</p></article>';
     }
     var news = hood.newcomers.length
       ? '<p class="kicker">New on the top list</p>' + hood.newcomers.map(collRow).join("")
@@ -617,18 +619,18 @@
     var jump = hood.jumpSupported && hood.hot
       ? line(esc(hood.hot.name) + " has the largest 24h floor change", esc(signed(hood.hot.floorChg, 1) + "%"), " small")
       : '<p class="muted">No 24h jump is in this file. Floor change is empty, so nothing is marked hot for a jump.</p>';
-    var share = hood.share == null ? "—" : hood.share.toFixed(1) + "% of 24h ETH volume";
     var head = hood.top
       ? '<article class="card"><div class="rowtop"><span><h3>' + esc(hood.top.name) + "</h3></span>" + tag("top 24h", "accent") + "</div>" +
-        line(esc(share), esc(hood.totalEth == null ? "" : hood.totalEth.toFixed(2) + " ETH total"), " small") +
-        (hood.volumeCheck ? '<p class="warnline">' + esc(hood.volumeCheck) + "</p>" : "") +
-        "</article>"
+        line(esc(hood.shareLabel), esc(hood.totalLabel), " small") +
+        (hood.volumeCheck ? '<p class="warnline">' + esc(hood.volumeCheck) + ". " + esc(hood.volumeCheckNote) + "</p>" : "") +
+        '<p class="muted">RWA rows are left out of this ETH total.</p></article>'
       : "";
     var rwa = hood.rwa.length
       ? '<p class="kicker">RWA · left out of the headline total</p>' + hood.rwa.map(collRow).join("")
       : "";
-    return '<p class="muted">KING desk (2) · Robinhood Chain · display only, not a trading signal. Logos come from the image URL already in the Hoodscout file.</p>' +
-      '<div style="margin:8px 0">' + tag("data age " + (hood.generatedAt ? fmtEt(hood.generatedAt) : "—"), "good") + "</div>" +
+    var age = SightlineHood.ageStamp(hood.generatedAt);
+    return back + '<p class="muted">KING desk (2) · Robinhood Chain · display only, not a trading signal. Logos come from the image URL already in the Hoodscout file.</p>' +
+      '<div style="margin:8px 0">' + tag("data age " + age.text, age.tone) + "</div>" +
       head + news + jump +
       '<p class="kicker">Top collections by 24h volume</p>' +
       hood.rows.filter(function (row) { return !row.rwa; }).map(collRow).join("") +
@@ -691,8 +693,9 @@
 
   function paintNav(id) {
     var nav = document.getElementById("nav");
+    var active = id === "king2" ? "desks" : id;
     nav.innerHTML = NAV.map(function (item) {
-      var on = item.id === id ? ' class="on" aria-current="page"' : "";
+      var on = item.id === active ? ' class="on" aria-current="page"' : "";
       return '<a href="' + item.href + '"' + on + ">" + item.label + "</a>";
     }).join("");
     var r = route();
