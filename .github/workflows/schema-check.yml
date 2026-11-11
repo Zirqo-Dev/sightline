@@ -27,3 +27,5 @@ jobs:
         run: python3 -m unittest discover -s scripts/tests
       - name: Wallet race tests
         run: python3 -m unittest races.tests.test_r5 races.tests.test_race races.tests.test_r3_vision
+      - name: LST count tests
+        run: python3 -m unittest discover -s prereg/lst_count/tests
