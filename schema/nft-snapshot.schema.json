@@ -8,10 +8,17 @@
     "chain_counts": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["screened", "passing"],
+      "required": ["screened", "passing", "requested", "pages", "calls", "stop"],
       "properties": {
         "screened": { "type": "integer", "minimum": 0 },
-        "passing": { "type": "integer", "minimum": 0 }
+        "passing": { "type": "integer", "minimum": 0 },
+        "requested": { "type": "boolean" },
+        "pages": { "type": "integer", "minimum": 0 },
+        "calls": { "type": "integer", "minimum": 0 },
+        "stop": {
+          "description": "Why this lane stopped. not_run_budget means the lane was given no calls. Null when a list error stopped it.",
+          "enum": [null, "pass_target", "depth", "call_cap", "deadline", "not_run_budget"]
+        }
       }
     },
     "unit": {
@@ -168,8 +175,8 @@
           "minimum": 0
         },
         "stop": {
-          "description": "Why a measured screen ended. Null on partial runs (list error, deferred pending, no eth price, gas failure).",
-          "enum": [null, "pass_target", "depth", "call_cap", "deadline"]
+          "description": "Why the ETH screen ended. Null on partial runs (list error, deferred pending, no eth price, gas failure). not_run_budget means the ETH lane was given no calls. A run that hit the 280 ETH ceiling is call_cap and its rule starts with v0.3-eth280.",
+          "enum": [null, "pass_target", "depth", "call_cap", "deadline", "not_run_budget"]
         },
         "by_chain": {
           "type": ["object", "null"],

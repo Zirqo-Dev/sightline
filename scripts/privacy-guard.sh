@@ -421,6 +421,50 @@ if bad:
       fail=1
     fi
   fi
+  # nft-pilot status by_chain rows are counts. requested is a bool; pages, calls,
+  # screened and passing are non-negative integers; stop is the lane enum or null.
+  # An extra key or a string in those fields is rejected. Values are not printed.
+  # Solana desk-data has no nft-pilot directory, so this branch does not run there.
+  if [ "$f" = "nft-pilot/status.json" ] || { [ "$(basename "$f")" = "status.json" ] && [ "$(basename "$(dirname "$f")")" = "nft-pilot" ]; }; then
+    if ! python3 -c '
+import json, sys
+path = sys.argv[1]
+try:
+    doc = json.load(open(path))
+except Exception:
+    sys.stderr.write("PRIVACY GUARD FAILED: cannot read nft-pilot status\n")
+    sys.exit(1)
+if not isinstance(doc, dict):
+    sys.stderr.write("PRIVACY GUARD: %s: by_chain fields are not counts\n" % path)
+    sys.exit(1)
+by = doc.get("by_chain")
+if by is None:
+    sys.exit(0)
+stops = {None, "pass_target", "depth", "call_cap", "deadline", "not_run_budget"}
+keys = {"screened", "passing", "requested", "pages", "calls", "stop"}
+ok = isinstance(by, dict) and not (set(by) - {"ethereum", "base"})
+if ok:
+    for row in by.values():
+        if not isinstance(row, dict) or set(row) != keys or not isinstance(row.get("requested"), bool):
+            ok = False
+            break
+        if row.get("stop") not in stops:
+            ok = False
+            break
+        for key in ("screened", "passing", "pages", "calls"):
+            value = row.get(key)
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                ok = False
+                break
+        if not ok:
+            break
+if not ok:
+    sys.stderr.write("PRIVACY GUARD: %s: by_chain fields are not counts\n" % path)
+    sys.exit(1)
+' "$f"; then
+      fail=1
+    fi
+  fi
   # Private blacklist documents are detected by shape, not only by file name.
   case "$f" in
     *.json)
