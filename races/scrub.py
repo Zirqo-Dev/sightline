@@ -25,7 +25,7 @@ def scrub(value, allow):
         if isinstance(node, dict):
             out = {}
             for k, v in node.items():
-                if k == "wallet" and isinstance(v, str) and re.fullmatch(r"(R[1-5]|SOL_HOLD)", v):
+                if k == "wallet" and isinstance(v, str) and re.fullmatch(r"(R[1-5]|SOL)", v):
                     out[k] = v
                     continue
                 if k in _DROP_KEYS and k not in ("mint", "pool_id"):
