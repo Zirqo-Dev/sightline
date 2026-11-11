@@ -18,6 +18,7 @@ from lst_count.logic import (
     consider,
     coverage_of,
     discount_bps,
+    floor_hour,
     floor_seconds,
     fmt_bps,
     fmt_ratio,
@@ -30,7 +31,7 @@ from lst_count.logic import (
 )
 from lst_count.quote import buy_url, parse_quote, sell_url, sol_per_lst
 from lst_count.rate import RateError, read_mint_decimals, read_msol, read_spl
-from lst_count.speccheck import assert_spec
+from lst_count.speccheck import assert_deviations, assert_spec
 from lst_count.store import append_jsonl, captures_path, read_jsonl, read_status, status_path, write_status
 
 ROOT = Path(__file__).resolve().parent
@@ -435,7 +436,7 @@ def _qualify(data_dir, records, manifest, transport, sleep, chain, now):
             "runs_ok": True,
             "chain_ok": chain["epoch_ok"],
         }, now)
-    t0 = floor_seconds(now)
+    t0 = floor_hour(now)
     symbols = [cand["symbol"] for cand in included]
     fresh = [cand for cand in included if held_quotes[cand["symbol"]][2] == "ok"]
     if not fresh:
@@ -477,6 +478,7 @@ def _qualify(data_dir, records, manifest, transport, sleep, chain, now):
 
 def run_once(data_dir, transport=None, now=None, sleep=None, manifest=None):
     assert_spec()
+    assert_deviations()
     _refuse_data_dir(data_dir)
     data_dir = Path(data_dir)
     data_dir.mkdir(parents=True, exist_ok=True)

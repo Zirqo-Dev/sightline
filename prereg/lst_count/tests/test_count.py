@@ -23,7 +23,9 @@ from lst_count.logic import (
 )
 from lst_count.quote import buy_url, sell_amount, sell_url, sol_per_lst
 from lst_count.rate import read_spl
+from lst_count import SPEC_SHA256
 from lst_count.run import load_manifest, run_once
+from lst_count.speccheck import deviations_path, file_sha256, spec_path
 from lst_count.store import read_jsonl
 
 FIX = Path(__file__).resolve().parents[1] / "fixtures"
@@ -252,6 +254,24 @@ class ManifestRules(unittest.TestCase):
         self.assertNotIn("import desk", text)
         self.assertIn('"solana-desk"', text)
 
+    def test_deviations_are_logged_before_any_capture(self):
+        text = deviations_path().read_text(encoding="utf-8")
+        self.assertIn("before any capture", text)
+        self.assertIn("mSOL fee = 0", text)
+        self.assertIn("7Q2afV64in6N6SeZsAAB81TJzwDoD6zpqmHkzi9Dcavn", text)
+        self.assertIn("exact 72h", text)
+        self.assertIn("that hour can onset", text)
+        self.assertIn("D < 30 bps", text)
+        self.assertIn("finer splits of `rpc_fail`", text)
+        self.assertIn("slot hour's UTC date", text)
+        self.assertIn("plus any other mint", text)
+        self.assertIn("stricter for a PASS", text)
+        self.assertIn("no bot reads the onset or d_bps fields", text)
+        self.assertIn("status.json only", text)
+        self.assertEqual(file_sha256(spec_path()), SPEC_SHA256)
+        readme = (deviations_path().parent / "README.md").read_text(encoding="utf-8")
+        self.assertIn("if: false", readme)
+
     def test_workflow_is_hourly_and_maps_the_token(self):
         text = (ROOT / ".github" / "workflows" / "lst-count.yml").read_text(encoding="utf-8")
         self.assertIn('cron: "17 * * * *"', text)
@@ -276,8 +296,10 @@ class CaptureRun(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             first = _run(transport, T0, tmp, manifest)
             self.assertTrue(first["frozen"])
-            self.assertEqual(first["t0"], "2026-11-11T19:17:00Z")
-            self.assertEqual(first["window_end"], "2026-11-25T19:17:00Z")
+            self.assertEqual(first["t0"], "2026-11-11T19:00:00Z")
+            self.assertEqual(first["window_end"], "2026-11-25T19:00:00Z")
+            self.assertNotIn("d_bps", json.dumps(first))
+            self.assertNotIn("onset", json.dumps(first))
             self.assertEqual(first["symbols"], ["JitoSOL", "mSOL"])
             self.assertNotIn("verdict", first)
             self.assertNotIn("onsets", first)
@@ -358,6 +380,35 @@ class CaptureRun(unittest.TestCase):
             target.mkdir()
             with self.assertRaises(SystemExit):
                 run_once(target, transport=FakeTransport(), now=T0, sleep=lambda _s: None, manifest=_manifest("mSOL"))
+
+    def test_jitter_each_later_hour_captures_its_own_slot(self):
+        """Freeze at :21. Later :17, :19, :45, and :59 each take their own UTC hour."""
+        freeze = datetime(2026, 11, 11, 19, 21, tzinfo=timezone.utc)
+        transport = FakeTransport()
+        manifest = _manifest("JitoSOL")
+        with tempfile.TemporaryDirectory() as tmp:
+            first = _run(transport, freeze, tmp, manifest)
+            self.assertEqual(first["t0"], "2026-11-11T19:00:00Z")
+            self.assertEqual(first["window_end"], "2026-11-25T19:00:00Z")
+            same_hour = len(_rows(tmp))
+            _run(transport, datetime(2026, 11, 11, 19, 59, tzinfo=timezone.utc), tmp, manifest)
+            self.assertEqual(len(_rows(tmp)), same_hour)
+            for when in (
+                datetime(2026, 11, 11, 20, 17, tzinfo=timezone.utc),
+                datetime(2026, 11, 11, 21, 19, tzinfo=timezone.utc),
+                datetime(2026, 11, 11, 22, 45, tzinfo=timezone.utc),
+                datetime(2026, 11, 11, 23, 59, tzinfo=timezone.utc),
+            ):
+                _run(transport, when, tmp, manifest)
+            captured = [row for row in _rows(tmp) if row["type"] == "capture"]
+            self.assertEqual([row["slot"] for row in captured], [0, 1, 2, 3, 4])
+            self.assertEqual([row["hour_start"] for row in captured], [
+                "2026-11-11T19:00:00Z",
+                "2026-11-11T20:00:00Z",
+                "2026-11-11T21:00:00Z",
+                "2026-11-11T22:00:00Z",
+                "2026-11-11T23:00:00Z",
+            ])
 
     def test_onset_after_a_gap_is_flagged(self):
         transport = FakeTransport()

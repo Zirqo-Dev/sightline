@@ -55,12 +55,18 @@ def floor_seconds(when):
     return when.astimezone(timezone.utc).replace(microsecond=0)
 
 
+def floor_hour(when):
+    """UTC hour that contains `when`. T0 is this value at the freeze."""
+    return when.astimezone(timezone.utc).replace(minute=0, second=0, microsecond=0)
+
+
 def slot_index(t0, now):
-    return int((now - t0).total_seconds() // 3600)
+    """Whole UTC hours from the floored T0 hour to the floored hour of `now`."""
+    return int((floor_hour(now) - floor_hour(t0)).total_seconds() // 3600)
 
 
 def hour_start(t0, slot):
-    return t0 + timedelta(hours=slot)
+    return floor_hour(t0) + timedelta(hours=slot)
 
 
 class Arm:
