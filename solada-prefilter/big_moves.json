@@ -1,5 +1,5 @@
 {
- "at": "2026-11-11T09:12:46Z",
+ "at": "2026-11-11T11:12:47Z",
  "phase": 1,
  "window_h": 24,
  "keep_h": 72,
@@ -9,54 +9,6 @@
  },
  "note": "Research data for Snek. next_hop is phase 2 (null). ada = the mover's net ADA when it is the only token against ADA in the tx (ada_basis tx), else qty x price (ada_basis price). LP = liquidity token.",
  "moves": [
-  {
-   "tag": "m-8d3b7f11",
-   "ticker": "SOLADA",
-   "direction": "in",
-   "ada": 1202.57,
-   "qty": 574300,
-   "qty_basis": "raw",
-   "tx_short": "07aee3cf19",
-   "time": "2026-11-08T10:34:33Z",
-   "window_ada": 1322.75,
-   "pool_pct": 27.5,
-   "lp": false,
-   "unit_short": "e7c77b2784",
-   "ada_basis": "tx",
-   "next_hop": null
-  },
-  {
-   "tag": "m-8d3b7f11",
-   "ticker": "SOLADA",
-   "direction": "in",
-   "ada": 17.57,
-   "qty": 7108,
-   "qty_basis": "raw",
-   "tx_short": "ef14eafda6",
-   "time": "2026-11-08T10:37:51Z",
-   "window_ada": 1322.75,
-   "pool_pct": 27.5,
-   "lp": false,
-   "unit_short": "e7c77b2784",
-   "ada_basis": "tx",
-   "next_hop": null
-  },
-  {
-   "tag": "m-8d3b7f11",
-   "ticker": "SOLADA",
-   "direction": "in",
-   "ada": 102.62,
-   "qty": 47345,
-   "qty_basis": "raw",
-   "tx_short": "fbbc3a8bea",
-   "time": "2026-11-08T10:51:11Z",
-   "window_ada": 1322.75,
-   "pool_pct": 27.5,
-   "lp": false,
-   "unit_short": "e7c77b2784",
-   "ada_basis": "tx",
-   "next_hop": null
-  },
   {
    "tag": "m-30888431",
    "ticker": "SOLADA",
@@ -4491,26 +4443,21 @@
   }
  ],
  "units_scanned": 12,
- "txs_read": 30,
+ "txs_read": 58,
  "capped": [],
  "coverage": {
-  "SOLADA": {
-   "read": 8,
-   "complete": true,
-   "pages": 1
-  },
   "FEED": {
    "read": 1,
    "complete": true,
    "pages": 1
   },
   "BEAST": {
-   "read": 2,
+   "read": 1,
    "complete": true,
    "pages": 1
   },
   "HIVE": {
-   "read": 2,
+   "read": 3,
    "complete": true,
    "pages": 1
   },
@@ -4535,25 +4482,30 @@
    "pages": 1
   },
   "COCK": {
-   "read": 4,
+   "read": 11,
    "complete": true,
    "pages": 1
   },
   "BOLT": {
-   "read": 3,
+   "read": 4,
    "complete": true,
    "pages": 1
   },
   "CLOVE": {
-   "read": 3,
+   "read": 20,
    "complete": true,
    "pages": 1
   },
   "SHARKY": {
-   "read": 2,
+   "read": 1,
+   "complete": true,
+   "pages": 1
+  },
+  "SOLADA": {
+   "read": 12,
    "complete": true,
    "pages": 1
   }
  },
- "koios_calls": 27
+ "koios_calls": 30
 }
