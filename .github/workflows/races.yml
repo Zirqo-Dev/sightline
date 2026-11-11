@@ -1,0 +1,103 @@
+name: wallet races
+
+# Paper only. Display race. No keys, no signing, no real trades.
+# Solana forensics smoke, accept, and forensics skip on this PR because of job ifs, not paths-ignore: smoke only when the head branch is cursor/sol-forensics-v01-6802, accept only on a push to that branch, and forensics only on schedule or workflow_dispatch.
+# Single toggle: set the job `if` below to false to disable the schedule and manual runs.
+
+on:
+  schedule:
+    - cron: "12,42 * * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run uses mocks and does not push. live writes races-data."
+        required: false
+        default: dry-run
+        type: choice
+        options:
+          - dry-run
+          - live
+
+# Frozen with races/config.json. tests/test_r5.py fails if these drift.
+env:
+  R5_DENYLIST: SOL,wSOL,ETH,cbBTC,WBTC,ZEC,HYPE,JLP,CASH
+  R5_DENY_SUBSTRINGS: USD,EUR
+  R5_REJECT_TAGS: stable,lst,original-lst,xstocks,stocks,prestocks,equities,rwa,yb,jup-lend-earn
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sightline-races
+  cancel-in-progress: false
+
+jobs:
+  race:
+    # Single toggle. Set this to false to disable every run, including the schedule.
+    if: ${{ true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out main (code only)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: code
+
+      - name: Prepare races-data
+        working-directory: code
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin races-data >/dev/null 2>&1; then
+            git fetch --depth 1 origin races-data
+            git worktree add "$GITHUB_WORKSPACE/data" FETCH_HEAD
+          else
+            mkdir -p "$GITHUB_WORKSPACE/data"
+            git -C "$GITHUB_WORKSPACE/data" init -b races-data
+          fi
+
+      - name: Run the race
+        working-directory: code
+        env:
+          MODE: ${{ github.event.inputs.mode || 'live' }}
+        run: |
+          set -euo pipefail
+          if [ "$MODE" = "dry-run" ]; then
+            python3 -m races --data-dir "$RUNNER_TEMP/race-dry" --dry-run
+            exit 0
+          fi
+          python3 -m races --data-dir "$GITHUB_WORKSPACE/data"
+
+      - name: Privacy guard
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.mode == 'live' }}
+        working-directory: data
+        env:
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          PRIVACY_IDENTITY_HASHES: ${{ secrets.PRIVACY_IDENTITY_HASHES }}
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
+        run: bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"
+
+      - name: Commit to races-data only
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.mode == 'live' }}
+        working-directory: data
+        run: |
+          set -euo pipefail
+          target=races-data
+          case "$target" in
+            main|master|desk-data) echo "refusing $target"; exit 1 ;;
+          esac
+          git config user.name "sightline-races"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --name-only | grep -E '^(solana-desk|desk-data)/'; then
+            echo "refusing desk paths"
+            exit 1
+          fi
+          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
+          git commit -q -m "race run $(date -u +%Y-%m-%dT%H:%MZ)"
+          if [ ! -d .git ] || ! git remote get-url origin >/dev/null 2>&1; then
+            git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git" || true
+          fi
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin HEAD:races-data
