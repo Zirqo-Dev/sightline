@@ -8,7 +8,7 @@
       "screened": 48
     },
     "ethereum": {
-      "passing": 9,
+      "passing": 8,
       "screened": 45
     }
   },
@@ -34,9 +34,9 @@
     "gate2_window_hours": 72,
     "result": null
   },
-  "eth_usd": 2054.56343745,
+  "eth_usd": 2055.73,
   "eth_usd_runs": {
-    "chainlink": 13,
+    "chainlink": 14,
     "fallback": 0
   },
   "eth_usd_source": "chainlink",
@@ -44,54 +44,54 @@
     "liquid_tail": 0,
     "sales_truncated": 1
   },
-  "floor_passing_this_run": 9,
+  "floor_passing_this_run": 8,
   "kind": "status",
   "measured": true,
-  "median_cost": 0.14466768988169754,
+  "median_cost": 0.1448945137862664,
   "median_cost_seasoned": null,
   "nh04": "not_ready",
   "nh04_ready": false,
   "nh04_verdict": "not_ready",
   "null_cost_count": 9,
-  "null_cost_share": 0.08411214953271028,
+  "null_cost_share": 0.07758620689655173,
   "null_cost_share_max": 0.2,
   "opensea_calls": 480,
   "outage_runs": 0,
   "pace_median": null,
   "pace_ready": false,
   "partial": false,
-  "passers_footnoted": 2,
-  "pending": 9,
+  "passers_footnoted": 1,
+  "pending": 8,
   "pending_deferred": 0,
-  "pending_served": 8,
-  "ran_at": "2026-11-11T02:27:12Z",
+  "pending_served": 9,
+  "ran_at": "2026-11-11T03:27:10Z",
   "rate_limit": {
     "limit": "120",
     "remaining": "119",
-    "reset": "1794364733"
+    "reset": "1794368293"
   },
   "raw": "not_kept",
   "reason": null,
   "rejections": {
     "bidders": 29,
     "buyers": 65,
-    "concentration": 79,
+    "concentration": 78,
     "contracts": 7,
     "disabled": 1,
     "floor": 57,
     "gas": 35,
-    "listings": 31,
+    "listings": 30,
     "mint": 0,
     "sales": 70,
     "shared": 9,
-    "standard": 16
+    "standard": 15
   },
   "rule": "v0.3 GET /api/v2/collections order_by=market_cap limit=100 max_list_pages=8 pass_target=10 max_calls=480 chains=ethereum,base pace_per_minute=60 window=7d min_sales=30 min_buyers=10 max_buyer_share=0.20 min_bidders=3 bid_band=0.85 min_listings=5 floor_usd=250 gas_ratio=0.02 min_mint_days=14 event_pages=3 truncated=flag",
   "schema_version": 1,
   "screened": 93,
   "status": "ok",
   "stop": "call_cap",
-  "units": 107,
+  "units": 116,
   "unsellable_share": 0.0,
-  "verdict_footnote": "16 of 107 units: top seller or one day above 50% of 7d sales"
+  "verdict_footnote": "18 of 116 units: top seller or one day above 50% of 7d sales"
 }
