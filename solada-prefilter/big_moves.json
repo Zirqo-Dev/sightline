@@ -1,5 +1,5 @@
 {
- "at": "2026-11-11T05:12:51Z",
+ "at": "2026-11-11T07:12:59Z",
  "phase": 1,
  "window_h": 24,
  "keep_h": 72,
@@ -9,22 +9,6 @@
  },
  "note": "Research data for Snek. next_hop is phase 2 (null). ada = the mover's net ADA when it is the only token against ADA in the tx (ada_basis tx), else qty x price (ada_basis price). LP = liquidity token.",
  "moves": [
-  {
-   "tag": "m-2fac44f2",
-   "ticker": "BHOLE",
-   "direction": "out",
-   "ada": 116.98,
-   "qty": 4261796.042542,
-   "qty_basis": "whole",
-   "tx_short": "cbb67482c1",
-   "time": "2026-11-08T05:31:26Z",
-   "window_ada": 589.08,
-   "pool_pct": 10.9,
-   "lp": false,
-   "unit_short": "5ac6620454",
-   "ada_basis": "price",
-   "next_hop": null
-  },
   {
    "tag": "m-f3186187",
    "ticker": "BHOLE",
@@ -4539,35 +4523,30 @@
   }
  ],
  "units_scanned": 12,
- "txs_read": 46,
+ "txs_read": 51,
  "capped": [],
  "coverage": {
-  "CLOVE": {
-   "read": 1,
-   "complete": true,
-   "pages": 1
-  },
   "SHARKY": {
    "read": 1,
    "complete": true,
    "pages": 1
   },
   "SOLADA": {
-   "read": 24,
+   "read": 11,
    "complete": true,
    "pages": 1
   },
   "FEED": {
-   "read": 3,
-   "complete": true,
-   "pages": 1
-  },
-  "HIVE": {
    "read": 1,
    "complete": true,
    "pages": 1
   },
   "BEAST": {
+   "read": 1,
+   "complete": true,
+   "pages": 1
+  },
+  "HIVE": {
    "read": 5,
    "complete": true,
    "pages": 1
@@ -4593,12 +4572,17 @@
    "pages": 1
   },
   "COCK": {
-   "read": 0,
-   "complete": false,
-   "skipped": "koios"
+   "read": 23,
+   "complete": true,
+   "pages": 1
   },
   "BOLT": {
-   "read": 6,
+   "read": 3,
+   "complete": true,
+   "pages": 1
+  },
+  "CLOVE": {
+   "read": 1,
    "complete": true,
    "pages": 1
   }
