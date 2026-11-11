@@ -1,6 +1,7 @@
 """Caps, costs, dry-run files, and the first two run call counts."""
 
 import json
+import re
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -94,3 +95,116 @@ class Isolation(unittest.TestCase):
         self.assertNotIn("ref: desk-data", wf)
         self.assertNotIn("JUPITER_API_KEY", wf)
         self.assertNotIn("\n  push:", wf)
+        self.assertIn("contents: write", wf)
+
+
+_TOKEN_REF = re.compile(r"\$\{\{\s*GITHUB_TOKEN\s*\}\}|\$\{GITHUB_TOKEN\}|\$GITHUB_TOKEN")
+
+
+def _workflow_steps(text):
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        header = re.match(r"^(\s*)steps:\s*$", lines[i])
+        if not header:
+            i += 1
+            continue
+        base = len(header.group(1))
+        i += 1
+        current = None
+        buf = []
+        while i < len(lines):
+            line = lines[i]
+            if not line.strip():
+                if current is not None:
+                    buf.append(line)
+                i += 1
+                continue
+            indent = len(line) - len(line.lstrip(" "))
+            if indent <= base:
+                break
+            if indent == base + 2 and line.lstrip().startswith("- "):
+                if current is not None:
+                    yield "\n".join(buf)
+                current = line
+                buf = [line]
+            elif current is not None:
+                buf.append(line)
+            i += 1
+        if current is not None:
+            yield "\n".join(buf)
+
+
+def _run_script(step):
+    lines = step.splitlines()
+    script = []
+    in_run = False
+    run_indent = None
+    for line in lines[1:]:
+        if not line.strip():
+            if in_run:
+                script.append("")
+            continue
+        indent = len(line) - len(line.lstrip(" "))
+        stripped = line.strip()
+        if in_run and indent > run_indent:
+            script.append(stripped)
+            continue
+        in_run = False
+        if stripped == "run:" or stripped.startswith("run:") :
+            in_run = True
+            run_indent = indent
+            rest = stripped[4:].strip()
+            if rest and rest not in ("|", ">", "|-", ">-"):
+                script.append(rest)
+    return "\n".join(script)
+
+
+def _maps_github_token(step):
+    in_env = False
+    env_indent = None
+    in_run = False
+    run_indent = None
+    for line in step.splitlines()[1:]:
+        if not line.strip() or line.strip().startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip(" "))
+        stripped = line.strip()
+        if in_run and indent > run_indent:
+            continue
+        in_run = False
+        if in_env and indent > env_indent:
+            if stripped.startswith("GITHUB_TOKEN:"):
+                return True
+            continue
+        in_env = False
+        if stripped == "env:" or stripped.startswith("env:"):
+            in_env = True
+            env_indent = indent
+            continue
+        if stripped == "run:" or stripped.startswith("run:"):
+            in_run = True
+            run_indent = indent
+    return False
+
+
+def unmapped_github_token(text):
+    bad = []
+    for step in _workflow_steps(text):
+        if _TOKEN_REF.search(_run_script(step)) and not _maps_github_token(step):
+            bad.append(step.splitlines()[0].strip())
+    return bad
+
+
+class WorkflowToken(unittest.TestCase):
+    def test_a_step_that_uses_the_token_must_map_it(self):
+        sample = "jobs:\n  j:\n    steps:\n      - name: Push\n        run: echo ${GITHUB_TOKEN}\n"
+        self.assertEqual(unmapped_github_token(sample), ["- name: Push"])
+        mapped = "jobs:\n  j:\n    steps:\n      - name: Push\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n        run: echo ${GITHUB_TOKEN}\n"
+        self.assertEqual(unmapped_github_token(mapped), [])
+
+    def test_live_workflows_map_github_token_on_the_step(self):
+        root = ROOT / ".github" / "workflows"
+        for path in sorted(root.glob("*.yml")):
+            bad = unmapped_github_token(path.read_text(encoding="utf-8"))
+            self.assertEqual(bad, [], "%s: %s" % (path.name, bad))
