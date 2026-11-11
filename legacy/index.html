@@ -4,11 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
-<base href="../">
 <title>Sightline · previous site</title>
-<link rel="stylesheet" href="preview/fonts.css">
-<link rel="stylesheet" href="preview/theme.css">
-<link rel="stylesheet" href="preview/app.css">
+<link rel="stylesheet" href="../preview/fonts.css">
+<link rel="stylesheet" href="../preview/theme.css">
+<link rel="stylesheet" href="../preview/app.css">
 </head>
 <body data-layout="mono" data-desk="home">
 <div class="wrap">
@@ -20,16 +19,29 @@
   <div class="subt" id="subt">Research desks · Cardano · Solana · NFT</div>
   <nav id="nav" aria-label="Desks"></nav>
   <div id="warn"></div>
-  <p class="note">Previous site, kept until the owner archives it. <a href="./">Current pages</a>. Research and paper only. Not advice. No buy buttons. Whales by codename only.</p>
+  <p class="note">Previous site, kept until the owner archives it. <a href="../">Current pages</a>. Research and paper only. Not advice. No buy buttons. Whales by codename only.</p>
 </header>
 <main id="view" aria-live="polite">
   <section class="c span"><div class="h"><h2>Loading the desk</h2></div><div class="sub">Reading the latest run…</div></section>
 </main>
-<footer class="foot">Previous site · <a href="./">Current pages</a> · <a href="legacy.html">legacy.html</a> · <a href="archive/v75/">Previous version</a></footer>
+<footer class="foot">Previous site · <a href="../">Current pages</a> · <a href="../legacy.html">legacy.html</a> · <a href="../archive/v75/">Previous version</a></footer>
 </div>
-<script src="preview/cardano-v2.js"></script>
-<script src="preview/mono.js"></script>
-<script src="preview/v19.js"></script>
-<script src="preview/app.js"></script>
+<script>
+/* Desk JSON stays at the site root. Hash links stay on this page. */
+(function () {
+  var root = new URL("../", window.location.href);
+  var orig = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    if (typeof input === "string" && !/^[a-z][a-z0-9+.-]*:/i.test(input) && input.charAt(0) !== "/") {
+      input = new URL(input, root).href;
+    }
+    return orig(input, init);
+  };
+})();
+</script>
+<script src="../preview/cardano-v2.js"></script>
+<script src="../preview/mono.js"></script>
+<script src="../preview/v19.js"></script>
+<script src="../preview/app.js"></script>
 </body>
 </html>

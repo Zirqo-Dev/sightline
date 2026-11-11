@@ -6,8 +6,10 @@
   var racePromise = null;
   var stampPromise = null;
 
+  var S2_STATUS = "unworkable before start (owner, Nov 11); v3 redesign after Nov 25";
+  var F_STATUS = "F stopped early on Nov 11, 2026 under its pre-set rule (Day-14 check). Sealed review Nov 25, 2026.";
   var NOW_BOOKS = [
-    { tag: "S2", name: "Survivors", desc: "Meme tokens that survive their early stretch. Only tested book (m=1, p ≤ 0.10, binding n of 150 closes, about 50 days, roughly Dec 31 if started now). Gate (item 9 prereg plus workflow isolation) and the owner's yes are still missing.", twin: "random twin, same universe", tradesDay: "~0.5 planned", status: "approved, not started", statusTone: "accent" }
+    { tag: "S2", name: "Survivors", desc: "Meme tokens that survive their early stretch. S2 v2 is not a running test. v3 is a redesign after Nov 25, dates TBD.", twin: "random twin, same universe", tradesDay: "—", status: S2_STATUS, statusTone: "warn" }
   ];
   var KILLED = [
     { tag: "A", name: "Hour-drop bounce", desc: "Liquid non-meme Solana tokens after a sharp 1h drop vs SOL, exit after 24h. No retunes this cycle.", twin: "random twin, same universe", tradesDay: "—", status: "killed in backtest (Nov 11)", tone: "bad" },
@@ -16,25 +18,23 @@
     { tag: "D", name: "Best-hours SOL", desc: "Trades SOL only in historically stronger hour-of-day windows. No retunes this cycle.", twin: "random twin, same hours", tradesDay: "—", status: "killed in backtest (Nov 11)", tone: "bad" }
   ];
   var BLOCKED = { tag: "E", name: "Staked-SOL discount", desc: "jitoSOL discount vs SOL. Blocked because CoinGecko price glitches produced the locked-rule pass; clean data since Aug 1 has 0 episodes.", twin: "random twin on the discount", tradesDay: "—", status: "blocked: bad price data", tone: "warn" };
-  var RUN_BOOKS = [
-    { tag: "S2", name: "Survivors", desc: "Meme tokens that survive their early stretch. Only tested book (m=1, p ≤ 0.10, binding n of 150 closes).", twin: "random twin, same universe", tradesDay: "~0.5", n: 48, req: 150, unit: "closes", stop: "EXAMPLE stop date (~Dec 31 if started now)", lo: -4.8, mid: 1.6, hi: 8.0, insufficient: true }
-  ];
+  var ANATOMY_BOOK = { tag: "EX", name: "Example book", desc: "Book anatomy only. How a tested book would show net excess, a 95% interval, and n against its own twin. This card is not S2 and not a live book.", twin: "its random twin", tradesDay: "example", n: 48, req: 150, unit: "closes", stop: "EXAMPLE stop date", lo: -4.8, mid: 1.6, hi: 8.0, insufficient: true };
   var CYCLE2 = { tag: "C2", name: "Top winners", desc: "Weekly momentum into recent winners. Killed pre-test at 11:49 AM EST Nov 11: at most 9 eligible tokens before 2025 vs the 15 needed.", twin: "—", tradesDay: "—", status: "killed pre-test (too few tokens)", tone: "bad" };
   var WALLETS = [
-    { tag: "S2", name: "Survivors", group: "Cycle 1 · tested", purpose: "Meme tokens that survive their early stretch. The only tested book (m=1, p ≤ 0.10, binding n of 150 closes).", twin: "random twin, same universe", tradesDay: "~0.5 planned", status: "approved, not started", tone: "accent", note: "Gate (item 9 prereg plus workflow isolation) and the owner's yes are still missing." },
+    { tag: "S2", name: "Survivors", group: "Cycle 1 · tested", purpose: "Meme tokens that survive their early stretch. No tested book is running.", twin: "random twin, same universe", tradesDay: "—", status: S2_STATUS, tone: "warn", note: S2_STATUS },
     { tag: "A", name: "Hour-drop bounce", group: "Killed in backtest (Nov 11)", purpose: "Liquid non-meme Solana tokens after a sharp 1h drop vs SOL, exit after 24h.", twin: "random twin, same universe", tradesDay: "—", status: "killed in backtest (Nov 11)", tone: "bad", note: "No retunes this cycle." },
     { tag: "B", name: "Funding extreme", group: "Killed in backtest (Nov 11)", purpose: "Buy spot when Binance perp funding is in the bottom 5% of its 90 days, hold 72h.", twin: "random twin, same universe", tradesDay: "—", status: "killed in backtest (Nov 11)", tone: "bad", note: "No retunes this cycle." },
     { tag: "C", name: "Calm-or-wild SOL", group: "Killed in backtest (Nov 11)", purpose: "Vol-targeted SOL at 60%, capped at 1x.", twin: "buy-and-hold SOL", tradesDay: "—", status: "killed in backtest (Nov 11)", tone: "bad", note: "No retunes this cycle." },
     { tag: "D", name: "Best-hours SOL", group: "Killed in backtest (Nov 11)", purpose: "Trades SOL only in historically stronger hour-of-day windows.", twin: "random twin, same hours", tradesDay: "—", status: "killed in backtest (Nov 11)", tone: "bad", note: "No retunes this cycle." },
     { tag: "E", name: "Staked-SOL discount", group: "Blocked", purpose: "Buy discounted jitoSOL vs SOL.", twin: "random twin on the discount", tradesDay: "—", status: "blocked: bad price data", tone: "warn", note: "CoinGecko price glitches produced the locked-rule pass; clean data since Aug 1 has 0 episodes." },
-    { tag: "DW", name: "Busy S2 (exit variant)", group: "Display only", purpose: "One S2 exit rule, to be fixed in S2's prereg.", twin: "none · not tested", tradesDay: "TBD", status: "display only, untested", tone: "warn", note: "Owner pick, 11:48 AM EST Nov 11. Trades/day stays TBD until S2's prereg fixes it. Never ranked with the tested books." },
+    { tag: "DW", name: "Busy S2 (exit variant)", group: "Display only", purpose: "One S2 exit rule. It waits for S2 v3.", twin: "none · not tested", tradesDay: "TBD", status: "waits for S2 v3", tone: "warn", note: "Display only, untested. It waits for S2 v3. Never ranked with the tested books." },
     { tag: "BH", name: "SOL buy-and-hold", group: "Display only", purpose: "Display-only benchmark, not a tested book.", twin: "—", tradesDay: "0 (hold)", status: "benchmark", tone: "accent" },
     { tag: "C2", name: "Top winners", group: "Cycle 2 · killed pre-test", purpose: "Weekly momentum into recent winners.", twin: "—", tradesDay: "—", status: "killed pre-test (too few tokens)", tone: "bad", note: "Killed pre-test at 11:49 AM EST Nov 11: at most 9 eligible tokens before 2025 vs the 15 needed." }
   ];
   var GROUPS = ["Cycle 1 · tested", "Killed in backtest (Nov 11)", "Blocked", "Display only", "Cycle 2 · killed pre-test"];
   var DAYS = ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D13", "D14"];
   var EVO = [
-    { key: "S2", label: "S2", note: "S2 vs its random twin. SOL hold is dashed and display-only.", series: [
+    { key: "S2", label: "S2", note: "EXAMPLE DATA only. S2 v2 is unworkable before start (owner, Nov 11); v3 redesign after Nov 25. This curve is not a live book.", series: [
       { name: "S2 Survivors", kind: "book", values: [5, 5.02, 4.95, 4.98, 5.06, 5.01, 4.9, 4.97, 5.08, 5.12, 5.04, 5.1, 5.15, 5.11] },
       { name: "S2 twin", kind: "twin", values: [5, 4.97, 4.93, 4.96, 4.99, 4.92, 4.86, 4.9, 4.98, 5.03, 4.97, 5.01, 5.04, 5.02] },
       { name: "SOL hold", kind: "bench", values: [5, 5.05, 5.01, 5.08, 5.12, 5.04, 4.98, 5.06, 5.14, 5.2, 5.12, 5.18, 5.25, 5.24] }
@@ -55,7 +55,7 @@
       { name: "D Best-hours", kind: "book", values: [5, 5.03, 5.01, 5.05, 5.04, 5.08, 5.06, 5.1, 5.09, 5.13, 5.11, 5.15, 5.14, 5.17] },
       { name: "D twin", kind: "twin", values: [5, 5.01, 4.98, 5.02, 5, 5.03, 4.99, 5.02, 5.01, 5.04, 5.02, 5.05, 5.03, 5.06] }
     ] },
-    { key: "DW", label: "DW · untested", note: "Busy S2 (exit variant), display only, untested. Trades/day is TBD until S2's prereg fixes the exit rule. No live curve yet.", series: [
+    { key: "DW", label: "DW · untested", note: "Busy S2 (exit variant), display only, untested. It waits for S2 v3. No live curve yet.", series: [
       { name: "Busy S2 (exit variant)", kind: "book", values: [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5] }
     ] },
     { key: "BH", label: "SOL hold", note: "Display-only benchmark. Dashed, never ranked.", series: [
@@ -63,10 +63,10 @@
     ] }
   ];
   var DUR = [
-    { tag: "S2 v3", name: "Survivors redesign", mode: "redesign", status: "redesign after Nov 25, dates TBD", tone: "warn", note: "S2 v2 was ruled unworkable before start. S2 v3 is a redesign after Nov 25. Start, shakedown, check-ins, verdict and hard cap will appear once dates are locked. EXAMPLE / planned — not a live book.", dayLabel: "day — of —", pctLabel: "—%" },
+    { tag: "S2 v3", name: "Survivors redesign", mode: "redesign", status: S2_STATUS, tone: "warn", note: S2_STATUS + ". Start, shakedown, check-ins, verdict and hard cap will appear once dates are locked. EXAMPLE / planned — not a live book.", dayLabel: "day — of —", pctLabel: "—%" },
     { tag: "DW", name: "Busy S2 (exit variant)", mode: "waiting", status: "waits for S2 v3", tone: "warn", note: "Display only, untested. No verdict and no hard cap. It waits for S2 v3, so dates stay TBD until that redesign is locked.", dayLabel: "day — of —", pctLabel: "—%" },
     { tag: "BH", name: "SOL buy-and-hold", mode: "display", status: "display only", tone: "accent", note: "Benchmark, not a tested book. No verdict date and no hard cap. Shown for scale only.", dayLabel: "no verdict", pctLabel: "display only" },
-    { tag: "v6.5", name: "Frozen F / R / S", mode: "sealed", status: "sealed review Nov 25, 2026", tone: "accent", note: "Frozen, read-only. Sealed review on Nov 25, 2026. Nothing here reads the sealed books. Today is Nov 11, 2026 (America/Toronto).", dayLabel: "14 days to review", pctLabel: "sealed" },
+    { tag: "v6.5", name: "Frozen F / R / S", mode: "sealed", status: "sealed review Nov 25, 2026", tone: "accent", note: F_STATUS + " Nothing here reads the sealed books.", dayLabel: "review Nov 25", pctLabel: "sealed" },
     { tag: "L", name: "Listing bounce", mode: "counting", status: "counting history now", tone: "accent", note: "Round 3 idea. Free event count is running. Dates TBD until the count finishes and a prereg is locked.", dayLabel: "day — of —", pctLabel: "—%" },
     { tag: "M", name: "Meme basket", mode: "counting", status: "counting history now", tone: "accent", note: "Round 3 idea. Free history count is running. Dates TBD until the count finishes and a prereg is locked.", dayLabel: "day — of —", pctLabel: "—%" },
     { tag: "U", name: "Unlock → SOL overlay", mode: "counting", status: "counting history now", tone: "accent", note: "Switch-to-SOL safety overlay, not a long-only book. Free history count is running. Dates TBD.", dayLabel: "day — of —", pctLabel: "—%" },
@@ -297,33 +297,30 @@
   }
 
   function screenWinning() {
-    var books = state.phase === "run" ? RUN_BOOKS : NOW_BOOKS;
-    var head = state.phase === "now"
-      ? "Cycle 1 · only tested book: S2 Survivors vs its twin. Not started. A–D were killed in backtest (Nov 11); E is blocked for bad price data."
-      : "Cycle 1 · EXAMPLE mid-run for S2 only (m=1). Until 150 closes it shows insufficient sample. Rank never promotes or kills a book.";
+    var anatomy = state.phase === "anatomy";
     var pills = '<div class="pills"><button type="button" data-act="phase" data-v="now" class="' + (state.phase === "now" ? "on" : "") + '">Now</button>' +
-      '<button type="button" data-act="phase" data-v="run" class="' + (state.phase === "run" ? "on" : "") + '">Example mid-run</button></div>';
+      '<button type="button" data-act="phase" data-v="anatomy" class="' + (anatomy ? "on" : "") + '">Book anatomy</button></div>';
     var killed = KILLED.map(quietCard).join("");
     var display = '<p class="kicker">Display only · never ranked with the tested books</p>' +
-      '<article class="card dim"><div class="rowtop"><span>' + tag("DW") + "Busy S2 (exit variant)</span>" + tag("display only, untested", "warn") + "</div>" +
-      line("Owner pick, 11:48 AM EST Nov 11: one S2 exit rule, to be fixed in S2's prereg. Not a tested book, never ranked.", null, " small muted") +
+      '<article class="card dim"><div class="rowtop"><span>' + tag("DW") + "Busy S2 (exit variant)</span>" + tag("waits for S2 v3", "warn") + "</div>" +
+      line("Display only, untested. It waits for S2 v3. Never ranked.", null, " small muted") +
       line("Trades / day", "TBD", " small") +
-      line("Trades/day stays TBD until S2's prereg fixes it.", null, " small muted") +
       "</article>" +
       '<article class="card dim"><div class="rowtop"><span>SOL buy-and-hold</span>' + tag("benchmark", "accent") + "</div>" +
       line("Display-only benchmark, not a tested book", null, " small muted") +
       line("Trades / day", "0 (hold)", " small") +
-      line("Example return", state.phase === "now" ? "no results yet" : "+4.8% (example)", " small muted") +
+      line("Example return", "no results yet", " small muted") +
       "</article>";
-    return pills +
-      '<p class="warnline">S2 figures are EXAMPLE DATA · no wallet has started. A–D killed, E blocked, and cycle-2 Top winners killed pre-test are the real Nov 11 verdicts. Rank never promotes or kills a book.</p>' +
-      line(esc(head), null, " small muted") +
-      books.map(bookCard).join("") +
+    var body = anatomy
+      ? '<p class="warnline">Book anatomy · EXAMPLE. Not a live book and not S2.</p>' + bookCard(ANATOMY_BOOK)
+      : '<p class="warnline">No tested book is running.</p>' + NOW_BOOKS.map(bookCard).join("");
+    return pills + body +
+      line("A–D were killed in backtest (Nov 11). E is blocked. Top winners was killed pre-test. Rank never promotes or kills a book.", null, " small muted") +
       '<p class="kicker">Killed in backtest · Nov 11 · no retunes this cycle</p>' + killed +
       '<p class="kicker">Blocked</p>' + quietCard(BLOCKED) +
       '<p class="kicker">Cycle 2 · own group, judged separately, shown on the same board</p>' + quietCard(CYCLE2) +
       display +
-      '<p class="muted">Until S2 reaches its required n it shows insufficient sample. A top-3 luck badge would apply only among tested books that have reached n. Rank never promotes or kills. Required n and every figure here are examples.</p>';
+      '<p class="muted">No tested book is running. ' + esc(S2_STATUS) + ". Rank never promotes or kills a book.</p>";
   }
 
   function movement(w, view) {
@@ -333,25 +330,42 @@
       var pnl = p.upnl != null ? signed(p.upnl, 2) + " SOL" : "—";
       var pct = p.upnlPct != null ? " · " + signed(p.upnlPct, 1) + "%" : "";
       return '<div class="trade"><div class="rowtop"><strong>' + esc(p.symbol) + "</strong><span class=\"" + cls(p.upnl != null ? p.upnl : p.upnlPct) + "\">" + esc(pnl + pct) + "</span></div>" +
-        line("Size " + (p.size == null ? "—" : p.size.toFixed(2) + " " + p.sizeUnit), "unrealized", " small muted") +
+        line("Size " + (p.size == null ? "—" : p.size.toFixed(2) + " SOL"), "unrealized", " small muted") +
         line("Entry " + px(p.entry), "Mark " + px(p.mark), " small") +
         "</div>";
     }).join("") : '<p class="muted">No open positions.</p>';
     var trades = w.trades.length ? w.trades.map(function (t) {
       var pnl = t.pnl == null ? "—" : signed(t.pnl, 2) + " SOL";
+      var extra = (t.costBps != null ? "Cost " + t.costBps + " bps" : "") + (t.exitReason ? " · " + t.exitReason : "");
       return '<div class="trade"><div class="rowtop"><span>' + esc(fmtEt(t.t)) + "</span><span class=\"" + (t.side === "sell" ? "dn" : "up") + "\">" + esc(t.side.toUpperCase()) + " " + esc(t.symbol) + "</span></div>" +
-        line("Fill " + px(t.price), "Size " + (t.size == null ? "—" : t.size.toFixed(2) + " " + t.sizeUnit), " small") +
+        line("Fill " + px(t.price), "Size " + (t.size == null ? "—" : t.size.toFixed(2) + " SOL"), " small") +
         line("P&amp;L", '<span class="' + cls(t.pnl) + '">' + esc(pnl) + "</span>", " small") +
+        (extra ? line(esc(extra), null, " small muted") : "") +
         "</div>";
     }).join("") : '<p class="muted">No buys or sells yet.</p>';
+    var split = "";
+    if (w.memeN != null || w.nonMemeN != null) {
+      split = line("Meme vs non-meme", esc((w.memeN == null ? "—" : w.memeN) + " / " + (w.nonMemeN == null ? "—" : w.nonMemeN)), " small");
+    }
+    if (w.id === "R5" && w.overlapK != null && w.overlapN != null) {
+      split += line("R5 holdings also in R3: " + w.overlapK + " of " + w.overlapN, null, " small");
+    }
+    var official = w.pendingLock ? "" :
+      line("Official net", esc(w.netPct == null ? "—" : signed(w.netPct, 2) + "%"), " small") +
+      line("n", esc(w.n == null ? "—" : String(w.n)), " small") +
+      line("95% interval", esc(w.lo == null || w.hi == null ? "—" : signed(w.lo, 2) + "% to " + signed(w.hi, 2) + "%"), " small") +
+      line("Avg % deployed", esc(w.avgDeployed == null ? "—" : w.avgDeployed.toFixed(0) + "%"), " small");
     return '<article class="card"><div class="rowtop"><span><h3>' + tag(w.id, "accent") + esc(w.name) + "</h3></span>" + tag(w.status || "starting", w.status === "running" ? "good" : "warn") + "</div>" +
       lead +
+      (w.pendingLock ? line(esc(R.PENDING) + ". No equity until summary.json lists this wallet.", null, " small muted") : "") +
       line("Last updated", esc(w.updatedAt ? fmtEt(w.updatedAt) : "—"), " small") +
       line("Run status", esc(w.status || "starting"), " small") +
-      line("Equity", esc(level(w.equity, w.currency)), " small") +
-      equitySvg(series) +
-      '<p class="kicker">Open positions</p>' + positions +
-      '<p class="kicker">Trades</p>' + trades +
+      line("Started at", esc(level(w.startEquity, "SOL")), " small") +
+      line("Equity", esc(w.pendingLock || w.equity == null ? "—" : level(w.equity, w.currency)), " small") +
+      official + split +
+      (w.pendingLock ? "" : equitySvg(series)) +
+      '<p class="kicker">Open positions</p>' + (w.pendingLock ? '<p class="muted">None yet.</p>' : positions) +
+      '<p class="kicker">Trades</p>' + (w.pendingLock ? '<p class="muted">None yet.</p>' : trades) +
       "</article>";
   }
   function raceBlock(view, focus) {
@@ -361,9 +375,10 @@
     var lead = view.lead ? line(esc(view.lead.label), null, " small") : line(esc(view.message || R.MESSAGE), null, " small");
     var buttons = view.wallets.map(function (w) {
       var on = focus === w.id ? " on" : "";
-      var right = w.equity == null ? esc(w.status || "starting") : esc(level(w.equity, w.currency));
+      var right = w.pendingLock ? R.PENDING : (w.netPct == null ? (w.status || "starting") : signed(w.netPct, 2) + "%");
+      var deployed = !w.pendingLock && w.avgDeployed != null ? line("Avg % deployed " + w.avgDeployed.toFixed(0) + "%", null, " small muted") : "";
       return '<a class="wallet' + on + '" href="#/wallets/' + esc(w.id) + '"><div class="rowtop"><span>' + tag(w.id, w.role === "benchmark" ? "accent" : "") + esc(w.name) + "</span>" + tag(w.role === "benchmark" ? "benchmark" : (w.status || "starting"), w.role === "benchmark" ? "accent" : "warn") + "</div>" +
-        line(right, null, " small muted") + "</a>";
+        line(esc(right), null, " small muted") + deployed + "</a>";
     }).join("");
     var detail = "";
     if (focus) {
@@ -489,18 +504,9 @@
   }
 
   function screenArchive() {
-    return '<article class="card dim"><div class="rowtop"><span><h3>v6.5 F / R / S</h3></span><span>' + tag("RETIRED") + tag("STOP · final", "bad") + "</span></div>" +
-      line("Day-14 verdict, Nov 11, 2026 · real figures", null, " small muted") +
-      line("F filtered: closes", "118") +
-      line("F total P&amp;L", "-11.64 SOL") +
-      line("F expectancy per 0.5 SOL trade", "-0.197 SOL") +
-      '<div style="margin-top:8px;border-top:1px solid #2B3139;padding-top:6px">' +
-      line("Per trade after costs, as of Nov 4 (real, earlier read)", null, " small muted") +
-      line("F filtered, 62 closes", "-30.7%", " small") +
-      line("R random twin", "-28.8%", " small") +
-      line("S rejected-only", "-32.5%", " small") +
-      "</div>" +
-      line("Frozen, read-only. This card repeats the published verdict. It does not recompute the sealed test.", null, " small muted") +
+    return '<article class="card dim"><div class="rowtop"><span><h3>v6.5 F / R / S</h3></span>' + tag("sealed review Nov 25", "warn") + "</div>" +
+      line(esc(F_STATUS), null, " small") +
+      line("This card does not print the sealed book's figures. The previous site still shows that view.", null, " small muted") +
       '<p><a class="link" href="legacy/index.html#/solana">Open the frozen v6.5 view</a></p>' +
       "</article>" +
       '<article class="card dim"><div class="rowtop"><span><h3>Trend-SOL long/flat</h3></span><span>' + tag("KILLED", "bad") + tag("by Step 0") + "</span></div>" +
@@ -587,10 +593,11 @@
       ? esc(view.message)
       : (view.lead ? esc(view.lead.label) : esc(R.MESSAGE));
     return '<article class="card"><div class="rowtop"><span><h3>1. Solana desk</h3></span>' + tag("Cycle 1 setting up", "accent") + "</div>" +
-      line("Only tested book: S2 vs twin, not started (gate and owner's yes still missing)", null, " small muted") +
+      line("No tested book is running. " + esc(S2_STATUS) + ".", null, " small muted") +
       line("A–D killed in backtest (Nov 11); E blocked: bad price data", null, " small muted") +
-      line("Display: SOL hold plus Busy S2 (exit variant), untested, trades/day TBD; cycle 2 Top winners killed pre-test", null, " small muted") +
-      line("v6.5 F/R/S archived: STOP; Trend-SOL killed", null, " small muted") +
+      line("Display: SOL hold plus Busy S2 (exit variant), which waits for S2 v3; cycle 2 Top winners killed pre-test", null, " small muted") +
+      line(esc(F_STATUS), null, " small muted") +
+      line("Trend-SOL was killed by Step 0 before launch.", null, " small muted") +
       line("Scan every 30 min", null, " small muted") +
       '<div style="margin-top:6px">' + tag(sol.text, sol.tone) + "</div></article>" +
       '<article class="card"><p class="banner">' + esc(view.banner) + "</p>" +

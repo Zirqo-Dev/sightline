@@ -1,14 +1,13 @@
 {
   "schema": "sightline.races.summary.v1",
-  "updated_at": "2026-11-11T16:40:00Z",
+  "last_run_ts": "2026-11-11T16:40:00Z",
   "status": "running",
-  "note": "EXAMPLE file for the wallet layout. Not a live race.",
+  "note": "EXAMPLE file for the wallet layout. Not a live race. R5 is omitted on purpose.",
   "wallets": [
-    {"id": "R1", "name": "Race wallet 1", "role": "race", "status": "running", "updated_at": "2026-11-11T16:40:00Z", "currency": "SOL"},
-    {"id": "R2", "name": "Race wallet 2", "role": "race", "status": "running", "updated_at": "2026-11-11T16:40:00Z", "currency": "SOL"},
-    {"id": "R3", "name": "Race wallet 3", "role": "race", "status": "running", "updated_at": "2026-11-11T16:35:00Z", "currency": "SOL"},
-    {"id": "R4", "name": "Race wallet 4", "role": "race", "status": "paused", "updated_at": "2026-11-11T15:10:00Z", "currency": "SOL", "equity": 5.0},
-    {"id": "R5", "name": "Race wallet 5", "role": "race", "status": "running", "updated_at": "2026-11-11T16:40:00Z", "currency": "SOL"},
-    {"id": "SOL", "name": "SOL buy-and-hold", "role": "benchmark", "status": "running", "updated_at": "2026-11-11T16:40:00Z", "currency": "SOL"}
+    {"id": "R1", "name": "Race wallet 1", "role": "race", "status": "running", "net_pct": 1.4, "n": 8, "interval_lo": -0.6, "interval_hi": 3.2, "avg_deployed_pct": 40, "equity_sol": 5.11, "last_run_ts": "2026-11-11T16:40:00Z"},
+    {"id": "R2", "name": "Race wallet 2", "role": "race", "status": "running", "net_pct": 3.1, "n": 11, "interval_lo": 0.4, "interval_hi": 5.8, "avg_deployed_pct": 62, "equity_sol": 5.22, "last_run_ts": "2026-11-11T16:40:00Z"},
+    {"id": "R3", "name": "Race wallet 3", "role": "race", "status": "running", "net_pct": -1.2, "n": 6, "interval_lo": -4.0, "interval_hi": 1.1, "avg_deployed_pct": 35, "equity_sol": 4.90, "last_run_ts": "2026-11-11T16:35:00Z"},
+    {"id": "R4", "name": "Race wallet 4", "role": "race", "status": "paused", "net_pct": 0.0, "n": 2, "interval_lo": -1.0, "interval_hi": 1.0, "avg_deployed_pct": 10, "equity_sol": 5.0, "last_run_ts": "2026-11-11T15:10:00Z"},
+    {"id": "SOL", "name": "SOL buy-and-hold", "role": "benchmark", "status": "running", "net_pct": 4.8, "n": 1, "interval_lo": 4.8, "interval_hi": 4.8, "avg_deployed_pct": 100, "equity_sol": 5.24, "last_run_ts": "2026-11-11T16:40:00Z"}
   ]
 }

@@ -766,9 +766,10 @@ print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"),
   const previous = fs.readFileSync(path.join(root, "legacy/index.html"), "utf8");
   const legacyLogo = '<a class="logo" href="#/">&gt;sight<span>line</span><i>_</i></a>';
   assert(legacyPage.includes(legacyLogo) && index.includes(legacyLogo) && preview.includes(legacyLogo) && previous.includes(legacyLogo), "every shell keeps the >sightline_ logo");
-  assert(previous.includes('href="preview/theme.css"') && preview.includes('href="preview/theme.css"'), "previous shell loads the shared theme");
-  assert(previous.includes('href="preview/app.css"') && previous.includes('src="preview/app.js"') && previous.includes('src="preview/cardano-v2.js"'), "previous site keeps the four-page shell");
-  assert(previous.includes('<base href="../">'), "previous site resolves data from the site root");
+  assert(previous.includes('href="../preview/theme.css"') && preview.includes('href="preview/theme.css"'), "previous shell loads the shared theme");
+  assert(previous.includes('href="../preview/app.css"') && previous.includes('src="../preview/app.js"') && previous.includes('src="../preview/cardano-v2.js"'), "previous site keeps the four-page shell");
+  assert(!previous.includes("<base "), "previous site does not rewrite hash links with a base URL");
+  assert(previous.includes('new URL("../"'), "previous site still reads desk JSON from the site root");
   assert(index.includes('href="revamp/app.css"') && index.includes('src="revamp/app.js"') && index.includes('src="revamp/races.js"'), "live page serves the revamp shell");
   assert(!index.includes("preview/app.js") && !index.includes("dashboard/panels/"), "live page does not boot the old shell or desk panels");
   assert(!index.includes("preview.html") && !index.includes("preview-tag"), "live page is not the design sandbox");
@@ -951,6 +952,13 @@ print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"),
     return s.split(phrase).join("");
   }, revampApp);
   assert(!/winner/i.test(raceCopy), "revamp copy does not say winner outside the mockup book name and screen title");
+  assert(revampApp.includes("No tested book is running."), "who's winning says no tested book is running");
+  assert(revampApp.includes("unworkable before start (owner, Nov 11); v3 redesign after Nov 25"), "S2 v2 status is the unworkable line");
+  assert(revampApp.includes("F stopped early on Nov 11, 2026 under its pre-set rule (Day-14 check). Sealed review Nov 25, 2026."), "the archive names the Day-14 stop without figures");
+  assert(!revampApp.includes("to be fixed in S2"), "Busy S2 no longer waits on a prereg edit");
+  for (const banned of ["-11.64", "-0.197", "-30.7", "-28.8", "-32.5", "RETIRED", "STOP · final"]) {
+    assert(!revampApp.includes(banned), "revamp does not print a v6.5 result figure: " + banned);
+  }
   assert(revampApp.includes("view.banner") && revampApp.includes("raceBlock(view"), "race surfaces print the adapter banner");
   assert(revampCss.includes("@keyframes blink") && revampCss.includes("prefers-reduced-motion") && revampCss.includes("#0B0E11"), "revamp shell keeps the terminal look and reduced motion");
   assert(!revampCss.includes("#9945FF") && !/indigo|purple/i.test(revampCss), "revamp shell does not use purple");
@@ -960,32 +968,60 @@ print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"),
   vm.runInNewContext(raceSrc, box);
   const Race = box.SightlineRaces;
   const summary = JSON.parse(fs.readFileSync(path.join(root, "revamp/fixtures/summary.json"), "utf8"));
-  const events = fs.readFileSync(path.join(root, "revamp/fixtures/events.jsonl"), "utf8");
-  const view = Race.buildView(summary, events, { source: "fixtures" });
+  const equity = fs.readFileSync(path.join(root, "revamp/fixtures/equity.jsonl"), "utf8");
+  const positions = fs.readFileSync(path.join(root, "revamp/fixtures/positions.json"), "utf8");
+  const trades = {
+    R1: fs.readFileSync(path.join(root, "revamp/fixtures/trades/R1.jsonl"), "utf8"),
+    R2: fs.readFileSync(path.join(root, "revamp/fixtures/trades/R2.jsonl"), "utf8")
+  };
+  const view = Race.buildView(summary, { equity, positions, trades }, { source: "fixtures" });
   assert(view.banner.startsWith("Display only"), "fixture view keeps the banner");
-  assert(view.lead && view.lead.ids.length === 1 && view.lead.ids[0] === "R2" && view.lead.label === "R2 is leading so far", "the highest race wallet is leading so far");
+  assert(view.lead && view.lead.ids.length === 1 && view.lead.ids[0] === "R2", "the official net % picks the lead");
+  assert(view.lead.label === "R2 is leading so far · n=11 · 95% interval +0.40% to +5.80%", "the lead shows n and the 95% interval");
+  assert(view.lead.netPct === 3.1, "the lead is the official net percent, not raw equity");
   assert(view.wallets.map(w => w.id).join(",") === "R1,R2,R3,R4,R5,SOL", "R1-R5 and the SOL benchmark are always on the roster");
   const sol = view.wallets.find(w => w.id === "SOL");
-  assert(sol.role === "benchmark" && sol.equity === 5.24 && view.lead.ids.indexOf("SOL") === -1, "SOL hold is a benchmark and is not the race lead");
+  assert(sol.role === "benchmark" && sol.equity === 5.24 && sol.netPct === 4.8 && view.lead.ids.indexOf("SOL") === -1, "SOL hold is a benchmark and is not the race lead");
+  const r5 = view.wallets.find(w => w.id === "R5");
+  assert(r5.pendingLock && r5.status === "pending lock" && r5.equity == null && r5.series.length === 0, "R5 stays pending lock with no equity until the summary lists it");
   const r2 = view.wallets.find(w => w.id === "R2");
-  assert(r2.series.length === 4 && r2.equity === 5.22, "equity events become the balance series");
-  assert(r2.trades.length === 2 && r2.trades[0].side === "sell" && r2.trades[0].symbol === "EXDOG" && r2.trades[0].pnl === 0.03, "newest trade is first and keeps fill fields");
-  assert(r2.positions.length === 1 && r2.positions[0].symbol === "EXCAT" && r2.positions[0].upnl === 0.04, "the open position keeps unrealized P&L");
+  assert(r2.series.length === 4 && r2.equity === 5.22 && r2.avgDeployed === 62 && r2.startEquity === 5, "equity.jsonl is the balance series and the book starts at 5 SOL");
+  assert(r2.trades.length === 2 && r2.trades[0].side === "sell" && r2.trades[0].symbol === "EXDOG" && r2.trades[0].pnl === 0.03 && r2.trades[0].price === 0.000088 && r2.trades[0].size === 0.4, "per-wallet trades keep fill, size, and P&L");
+  assert(r2.positions.length === 1 && r2.positions[0].symbol === "EXCAT" && r2.positions[0].upnl === 0.04, "positions.json keeps unrealized P&L");
+  const flat = Race.buildView({
+    status: "running",
+    wallets: [
+      { id: "R1", role: "race", net_pct: -1.5, n: 4, interval_lo: -3, interval_hi: 0.2, equity_sol: 9 },
+      { id: "R2", role: "race", net_pct: 0, n: 3, interval_lo: -1, interval_hi: 1, equity_sol: 4 },
+      { id: "SOL", role: "benchmark", net_pct: 4.8, equity_sol: 5.24 }
+    ]
+  }, {}, {});
+  assert(flat.lead.ids[0] === "R2" && flat.lead.label.indexOf("(not ahead of SOL hold)") !== -1, "a lead at 0.00% is not ahead of SOL hold");
+  assert(flat.lead.ids.indexOf("SOL") === -1 && flat.wallets.find(w => w.id === "R1").equity === 9, "a higher equity does not outrank the official net %");
+  const withR5 = Race.buildView({
+    wallets: [{ id: "R5", role: "race", net_pct: 2, n: 5, interval_lo: 0.1, interval_hi: 3, meme_n: 3, non_meme_n: 2, overlap_k: 2, overlap_n: 5 }]
+  }, {}, {});
+  const listed = withR5.wallets.find(w => w.id === "R5");
+  assert(!listed.pendingLock && listed.memeN === 3 && listed.nonMemeN === 2 && listed.overlapK === 2 && listed.overlapN === 5, "a listed R5 carries the meme split and the R3 overlap");
   const aliased = Race.buildView({
-    updated_at: "2026-11-11T16:00:00Z",
+    last_run_ts: "2026-11-11T16:00:00Z",
     run_status: "running",
-    wallets: [{ wallet_id: "BH", label: "Hold", kind: "benchmark", balance: 5.1, unit: "SOL" }]
-  }, [
-    JSON.stringify({ event: "fill", wallet_id: "R1", time: "2026-11-11T15:00:00Z", action: "buy", ticker: "EXCAT", fill_price: 0.00002, qty: 0.25, size_unit: "SOL", realized_pnl: null }),
-    JSON.stringify({ type: "position", book: "R1", at: "2026-11-11T16:00:00Z", sym: "EXCAT", entry_px: 0.00002, last_mark: 0.00003, unrealized_pnl: 0.01 })
-  ].join("\n"), { source: "races-data" });
+    wallets: [
+      { wallet_id: "R1", official_net_pct: 1.2, sample_n: 4, ci_lo: -1, ci_hi: 2, avg_pct_deployed: 15 },
+      { wallet_id: "BH", label: "Hold", kind: "benchmark", net_pct: 9, equity_sol: 5.1 }
+    ]
+  }, {
+    trades: JSON.stringify({ ts: "2026-11-11T15:00:00Z", wallet: "R1", action: "buy", symbol: "EXCAT", fill_price: 0.00002, size_sol: 0.25, cost_bps: 12, pnl: null }),
+    positions: JSON.stringify({ positions: [{ wallet: "R1", symbol: "EXCAT", ts: "2026-11-11T16:00:00Z", entry: 0.00002, mark: 0.00003, upnl: 0.01, size_sol: 0.25 }] })
+  }, { source: "races-data" });
   const a1 = aliased.wallets.find(w => w.id === "R1");
   const hold = aliased.wallets.find(w => w.id === "SOL");
-  assert(a1.trades[0].price === 0.00002 && a1.trades[0].size === 0.25 && a1.positions[0].upnl === 0.01, "alias field names map onto the same trade and position");
+  assert(a1.trades[0].price === 0.00002 && a1.trades[0].size === 0.25 && a1.trades[0].costBps === 12 && a1.positions[0].upnl === 0.01, "alias field names map onto the same trade and position");
   assert(a1.positions[0].upnlPct > 49 && a1.positions[0].upnlPct < 51, "a missing percent is derived from entry and mark");
-  assert(hold.role === "benchmark" && hold.equity === 5.1, "BH maps to the SOL benchmark");
+  assert(a1.netPct === 1.2 && a1.n === 4 && a1.avgDeployed === 15, "summary aliases fill the official net, n, and deployed percent");
+  assert(hold.role === "benchmark" && hold.equity === 5.1 && aliased.lead.ids[0] === "R1", "BH maps to the SOL benchmark and does not take the lead");
   assert(!/winner/i.test(JSON.stringify(aliased)), "a built view does not contain winner");
-  const dropped = Race.buildView({ wallets: [{ id: "1".repeat(40), name: "skip", equity: 9 }] }, "", {});
+  const dropped = Race.buildView({ wallets: [{ id: "1".repeat(40), name: "skip", net_pct: 9 }] }, {}, {});
   assert(dropped.wallets.every(w => w.id !== "1".repeat(40)), "an address-shaped id is not added to the roster");
   const missing = Race.emptyView("missing");
   assert(missing.message === "race starting soon" && missing.wallets.length === 6 && missing.lead == null, "a missing branch is an empty race");
@@ -996,6 +1032,8 @@ print(json.dumps({"verdict": got.get("VERDICT"), "rule": got.get("rule_result"),
   };
   Race.load(fakeFetch, {}).then(loaded => {
     assert(loaded.message === "race starting soon" && calls.some(u => u.endsWith("summary.json")), "client load treats a 404 as race starting soon");
+    assert(calls.some(u => u.endsWith("equity.jsonl")) && calls.some(u => u.indexOf("trades/R1.jsonl") !== -1) && calls.some(u => u.endsWith("positions.json")), "client load asks for the race job files");
+    assert(!calls.some(u => u.indexOf("events.jsonl") !== -1), "client load does not ask for events.jsonl");
     assert(calls.every(u => u.startsWith("https://raw.githubusercontent.com/Zirqo-Dev/sightline/races-data/")), "race files are read from the races-data branch");
     console.log("smoke-dashboard: OK");
     console.log("  fixture ADA", sc.byUnit.ADA.pnl, "ADA-equivalent", sc.byUnit["ADA-equivalent"].pnl, "USD", sc.byUnit.USD.pnl);
