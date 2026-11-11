@@ -81,6 +81,8 @@ jobs:
       - name: Commit to races-data only
         if: ${{ github.event_name == 'schedule' || github.event.inputs.mode == 'live' }}
         working-directory: data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           target=races-data
