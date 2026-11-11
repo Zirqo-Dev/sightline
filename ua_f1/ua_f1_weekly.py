@@ -507,11 +507,10 @@ def month_has_snapshot(now: datetime.datetime) -> bool:
 
 
 def weekly_monthly_snapshot_due(now: datetime.datetime) -> bool:
-    """A Monday run takes a monthly snapshot only when one is due.
+    """A weekly run takes a monthly snapshot only on the 1st, if none exists.
 
-    Due means this UTC day is the 1st, the lock month (November 2026) has
-    passed, and this month has no snapshot yet. A later Monday does not
-    backfill a missed 1st. The 00:00 cron on the 1st owns that snapshot.
+    The lock month (November 2026) is S0. After the 1st, a missing snapshot
+    is logged and not backfilled. The 1st-of-month crons own that fetch.
     """
     now = _as_utc(now)
     if now.day != 1:
@@ -519,6 +518,22 @@ def weekly_monthly_snapshot_due(now: datetime.datetime) -> bool:
     if (now.year, now.month) <= (2026, 11):
         return False
     return not month_has_snapshot(now)
+
+
+def missing_snapshot_flag(now: datetime.datetime) -> str | None:
+    """`monthly_snapshot_missing YYYY-MM` after the 1st when that month has none.
+
+    None during the lock month and on the 1st itself. The weekly run logs
+    this and does not fetch a replacement snapshot.
+    """
+    now = _as_utc(now)
+    if now.day <= 1:
+        return None
+    if (now.year, now.month) <= (2026, 11):
+        return None
+    if month_has_snapshot(now):
+        return None
+    return f"monthly_snapshot_missing {now.strftime('%Y-%m')}"
 
 
 def take_monthly_snapshot(dry_run: bool = False, now: datetime.datetime | None = None) -> str | None | bool:
@@ -1565,7 +1580,13 @@ def _integrity(dry_run: bool) -> int:
 # ---------------------------------------------------------------------------
 
 def cmd_monthly(dry_run: bool = False) -> int:
-    """1st of the month, 00:00 UTC. Snapshot and its sha256 only. No weekly pass."""
+    """Monthly snapshot only. No weekly registration and no price fetch.
+
+    Used by every 1st-of-month cron and by a manual dispatch with mode
+    monthly. A month that already has a snapshot is left untouched.
+    A late start is labeled with the actual time, and the delay is
+    appended to deviations.md before any fetch.
+    """
     if dry_run:
         disable_network()
     if _integrity(dry_run) != 0:
@@ -1574,18 +1595,29 @@ def cmd_monthly(dry_run: bool = False) -> int:
         seed_run_log()
     now = current_utc()
     actual = _stamp(now)
+    month = now.strftime("%Y-%m")
     print(f"monthly snapshot actual start {actual}")
-    if not dry_run:
-        log("monthly_start", actual_start=actual, note="Due 00:00 UTC on the 1st. This is the actual start.")
+    if month_has_snapshot(now):
+        print(f"monthly snapshot for {month} already taken; nothing to do")
+        if not dry_run:
+            log("monthly_snapshot_skipped", month=month, actual_start=actual)
+        return 0
     if dry_run:
         print("dry-run: monthly snapshot only; no weekly registration or price fetch.")
         take_monthly_snapshot(dry_run=True, now=now)
         return 0
     snap = take_monthly_snapshot(dry_run=False, now=now)
+    if snap is None:
+        print(f"monthly snapshot for {month} is not due; nothing to do")
+        log("monthly_snapshot_skipped", month=month, actual_start=actual)
+        return 0
     if snap is False:
         write_status("RUNNING", note="Counts only. Monthly snapshot fetch failed.")
         return 1
-    write_status("RUNNING", note="Counts only. Monthly snapshot run. No episode scoring.")
+    write_status(
+        "RUNNING",
+        note=f"Counts only. Monthly snapshot run. Actual start {actual}. No episode scoring.",
+    )
     return 0
 
 
@@ -1612,6 +1644,9 @@ def cmd_weekly(dry_run: bool = False) -> int:
             take_monthly_snapshot(dry_run=True, now=now)
         else:
             print("dry-run: no monthly snapshot is due on this weekly run")
+            missed = missing_snapshot_flag(now)
+            if missed:
+                print(f"dry-run: would log {missed}")
         register_due_episodes(dry_run=True)
         flag_schedule_changes(dry_run=True)
         cache_for_registered(dry_run=True)
@@ -1647,6 +1682,11 @@ def cmd_weekly(dry_run: bool = False) -> int:
     note = "Counts only until judgment. No means, t or win rates are written."
     if today_utc() < EARLIEST_CLIFF:
         note += f" Before {EARLIEST_CLIFF.isoformat()} this job only snapshots, registers and caches."
+    # After the 1st, a missing month is recorded and not backfilled.
+    missed = missing_snapshot_flag(now)
+    if missed:
+        log(missed)
+        note = f"{note} {missed}"
     if today_utc() >= HARD_STOP:
         # Hard stop: fewer than 30 usable episodes resolves as INCONCLUSIVE.
         # The count is reported; means are not.

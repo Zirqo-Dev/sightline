@@ -13,7 +13,19 @@ on:
   schedule:
     - cron: "0 1 * * 1"
     - cron: "0 0 1 * *"
+    # Retries on the 1st, off the top of the hour. Same monthly path.
+    - cron: "23 0 1 * *"
+    - cron: "23 3 1 * *"
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "weekly (default) or monthly. monthly takes this month's snapshot only."
+        required: false
+        default: weekly
+        type: choice
+        options:
+          - weekly
+          - monthly
   pull_request:
 
 permissions:
@@ -59,6 +71,7 @@ jobs:
       contents: write
     env:
       UA_F1_SCHEDULE: ${{ github.event.schedule }}
+      UA_F1_MODE: ${{ github.event.inputs.mode || 'weekly' }}
     steps:
       - name: Check out main (code only)
         uses: actions/checkout@v4
@@ -104,9 +117,16 @@ jobs:
         run: |
           set -euo pipefail
           args=(--data-dir "$GITHUB_WORKSPACE/data")
-          # 00:00 UTC on the 1st takes the monthly snapshot only.
-          # The Monday cron stays on the weekly path.
-          if [ "${UA_F1_SCHEDULE}" = "0 0 1 * *" ]; then
+          # Day-of-month is field 3. Every 1st-of-month cron, including the
+          # :23 retries, takes only the monthly snapshot. The Monday cron's
+          # day-of-month is *, so it stays on the weekly path.
+          # A manual dispatch with mode monthly does the same on any date.
+          # read does not glob, so the * fields stay literal.
+          dom=""
+          if [ -n "${UA_F1_SCHEDULE}" ]; then
+            read -r _ _ dom _ _ <<< "${UA_F1_SCHEDULE}"
+          fi
+          if [ "$dom" = "1" ] || [ "${UA_F1_MODE}" = "monthly" ]; then
             args+=(--monthly-snapshot)
           fi
           python3 ua_f1/ua_f1_weekly.py "${args[@]}"

@@ -251,7 +251,96 @@ class TestRunner(_Restore):
             self.assertEqual(rc, 0)
             self.assertIn("no monthly snapshot is due on this weekly run", buf.getvalue())
             self.assertNotIn("would take monthly snapshot", buf.getvalue())
+            self.assertIn("would log monthly_snapshot_missing 2026-12", buf.getvalue())
             self.assertFalse((Path(tmp) / "snapshots").exists())
+        self.assertEqual(self._tree_stamp(), before)
+
+    def test_retry_cron_with_existing_snapshot_does_nothing(self):
+        started = datetime.datetime(2026, 12, 1, 0, 23, tzinfo=datetime.timezone.utc)
+        before = self._tree_stamp()
+
+        def boom(*_args, **_kwargs):
+            raise AssertionError("fetch on a retry that should do nothing")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            data = Path(tmp)
+            snap = data / "snapshots" / "S1"
+            (snap / "emissions").mkdir(parents=True)
+            manifest = {
+                "snapshot_id": "S1",
+                "taken_at": "2026-12-01T00:02:00Z",
+                "included": {"n": 1, "protocols": ["jito"]},
+            }
+            man_path = snap / "manifest.json"
+            man_path.write_text(json.dumps(manifest) + "\n")
+            original = man_path.read_bytes()
+            with mock.patch.object(weekly, "current_utc", lambda: started), \
+                 mock.patch.object(weekly, "http_get", boom):
+                rc = weekly.main(["--monthly-snapshot", "--data-dir", str(data)])
+            self.assertEqual(rc, 0)
+            self.assertEqual(man_path.read_bytes(), original)
+            self.assertFalse((data / "deviations.md").exists())
+            self.assertFalse((data / "snapshots" / "S2").exists())
+            self.assertNotIn("s late", (data / "run_log.jsonl").read_text())
+        self.assertEqual(self._tree_stamp(), before)
+
+    def test_manual_monthly_on_the_9th_is_late_and_deviates_before_fetch(self):
+        started = datetime.datetime(2026, 12, 9, 15, 0, tzinfo=datetime.timezone.utc)
+        due = datetime.datetime(2026, 12, 1, 0, 0, tzinfo=datetime.timezone.utc)
+        late = int((started - due).total_seconds())
+        self.assertGreater(late, 0)
+        before = self._tree_stamp()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            data = Path(tmp)
+
+            def fake_http(url, dest=None, timeout=60, retries=4):
+                note = (data / "deviations.md").read_text()
+                if f"{late}s late" not in note or "2026-12-09T15:00:00Z" not in note:
+                    raise AssertionError("late deviation was not written before the fetch")
+                if url.endswith("emissionsProtocolsList"):
+                    body = b'["fixture"]'
+                else:
+                    body = b'{"name":"fixture","documentedData":{}}'
+                if dest is not None:
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    dest.write_bytes(body)
+                return body, {"url": url, "ok": True, "status": 200, "bytes": len(body)}
+
+            with mock.patch.object(weekly, "current_utc", lambda: started), \
+                 mock.patch.object(weekly, "http_get", fake_http):
+                rc = weekly.main(["--monthly-snapshot", "--data-dir", str(data)])
+            self.assertEqual(rc, 0)
+            manifest = json.loads((data / "snapshots" / "S1" / "manifest.json").read_text())
+            self.assertEqual(manifest["taken_at"], "2026-12-09T15:00:00Z")
+            self.assertNotEqual(manifest["taken_at"][:10], "2026-12-01")
+            note = (data / "deviations.md").read_text()
+            self.assertEqual(note.count(f"{late}s late"), 1)
+            self.assertIn("2026-12-01T00:00:00Z", note)
+            self.assertFalse((data / "episodes.jsonl").exists())
+        self.assertEqual(self._tree_stamp(), before)
+
+    def test_weekly_on_the_8th_logs_missing_and_takes_none(self):
+        day = datetime.datetime(2026, 12, 8, 1, 5, tzinfo=datetime.timezone.utc)
+        before = self._tree_stamp()
+
+        def fake_http(url, dest=None, timeout=60, retries=4):
+            if "defillama-datasets.llama.fi" in url:
+                raise AssertionError(f"weekly run fetched a snapshot: {url}")
+            return None, {"url": url, "ok": False, "status": None}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            data = Path(tmp)
+            with mock.patch.object(weekly, "current_utc", lambda: day), \
+                 mock.patch.object(weekly, "http_get", fake_http):
+                rc = weekly.main(["--data-dir", str(data)])
+            self.assertEqual(rc, 0)
+            self.assertFalse((data / "snapshots" / "S1").exists())
+            flag = "monthly_snapshot_missing 2026-12"
+            self.assertIn(flag, (data / "run_log.jsonl").read_text())
+            status = json.loads((data / "status.json").read_text())
+            self.assertIn(flag, status["note"])
+            self.assertNotIn("s late", (data / "deviations.md").read_text() if (data / "deviations.md").exists() else "")
         self.assertEqual(self._tree_stamp(), before)
 
     def test_judge_refuses_before_30_usable(self):
@@ -294,6 +383,15 @@ class TestRunner(_Restore):
         text = (REPO / ".github" / "workflows" / "ua-f1.yml").read_text()
         self.assertIn('cron: "0 1 * * 1"', text)
         self.assertIn('cron: "0 0 1 * *"', text)
+        self.assertIn('cron: "23 0 1 * *"', text)
+        self.assertIn('cron: "23 3 1 * *"', text)
+        crons = re.findall(r'cron: "([^"]+)"', text)
+        self.assertEqual([c for c in crons if c.split()[2] == "1"], ["0 0 1 * *", "23 0 1 * *", "23 3 1 * *"])
+        self.assertNotIn('[ "${UA_F1_SCHEDULE}" = "0 0 1 * *"', text)
+        self.assertIn('read -r _ _ dom _ _', text)
+        self.assertIn("[ \"$dom\" = \"1\" ]", text)
+        self.assertIn("default: weekly", text)
+        self.assertIn("- monthly", text)
         self.assertIn("workflow_dispatch:", text)
         self.assertIn("contents: write", text)
         self.assertIn("--monthly-snapshot", text)
