@@ -32,19 +32,29 @@ permissions:
 
 jobs:
   # One getSlot and one getTokenSupply. Not part of the daily schedule.
+  # Pull requests run the dashboard smoke (scripts/smoke-dashboard.mjs).
+  # The RPC secret check stays on the forensics branch only. accept and the
+  # scheduled forensics job keep their own conditions, so a UI pull request
+  # does not scan mints.
   smoke:
     if: >-
-      (github.event_name == 'push' && github.ref == 'refs/heads/cursor/sol-forensics-v01-6802') ||
-      (github.event_name == 'pull_request' && github.head_ref == 'cursor/sol-forensics-v01-6802')
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/cursor/sol-forensics-v01-6802')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
+        if: github.head_ref == 'cursor/sol-forensics-v01-6802' || github.ref == 'refs/heads/cursor/sol-forensics-v01-6802'
         with:
           python-version: "3.12"
 
+      - name: Dashboard smoke
+        if: github.head_ref != 'cursor/sol-forensics-v01-6802'
+        run: node scripts/smoke-dashboard.mjs
+
       - name: Secret smoke test
+        if: github.head_ref == 'cursor/sol-forensics-v01-6802' || github.ref == 'refs/heads/cursor/sol-forensics-v01-6802'
         env:
           SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}
         run: python3 -m sol_forensics.smoke_rpc

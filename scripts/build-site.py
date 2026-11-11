@@ -70,6 +70,27 @@ def bust_preview(html):
     )
 
 
+def revamp_version():
+    """Content hash of the public revamp shell. Separate from the legacy dashboard hash."""
+    h = hashlib.sha256()
+    revamp = ROOT / "revamp"
+    for p in sorted(revamp.rglob("*")):
+        if p.is_file() and p.suffix in (".css", ".js"):
+            h.update(p.relative_to(ROOT).as_posix().encode())
+            h.update(p.read_bytes())
+    return h.hexdigest()[:10]
+
+
+def bust_revamp(html):
+    """Append ?v=<hash> to revamp/*.css|js on the published home page."""
+    v = revamp_version()
+    return re.sub(
+        r'((?:href|src)="revamp/[^"?]+\.(?:css|js))"',
+        lambda m: f'{m.group(1)}?v={v}"',
+        html,
+    )
+
+
 def copy_desk(desk_id):
     src = ROOT / desk_id
     dest = DIST / desk_id
@@ -226,11 +247,24 @@ def main():
         legacy_path.write_text(html2, encoding="utf-8")
         print("  refreshed legacy.html panel list")
     index = (ROOT / "index.html").read_text(encoding="utf-8")
-    if "preview/app.css" not in index or "preview/app.js" not in index:
-        sys.exit("build-site: index.html must load preview/app.css and preview/app.js")
-    if "<!-- panels:begin -->" in index:
+    if "revamp/app.css" not in index or "revamp/app.js" not in index or "revamp/races.js" not in index:
+        sys.exit("build-site: index.html must load revamp/app.css, revamp/app.js, and revamp/races.js")
+    if "<!-- panels:begin -->" in index or "dashboard/panels/" in index:
         sys.exit("build-site: panel script tags belong in legacy.html, not index.html")
-    (DIST / "index.html").write_text(bust_preview(index), encoding="utf-8")
+    (DIST / "index.html").write_text(bust_revamp(bust_preview(index)), encoding="utf-8")
+    previous = ROOT / "legacy" / "index.html"
+    if not previous.is_file():
+        sys.exit("build-site: legacy/index.html is missing (previous public site)")
+    previous_html = previous.read_text(encoding="utf-8")
+    if "preview/app.css" not in previous_html or "preview/app.js" not in previous_html:
+        sys.exit("build-site: legacy/index.html must keep the previous public site")
+    (DIST / "legacy").mkdir(parents=True, exist_ok=True)
+    (DIST / "legacy" / "index.html").write_text(bust_preview(previous_html), encoding="utf-8")
+    if not (ROOT / "revamp" / "app.js").is_file() or not (ROOT / "revamp" / "races.js").is_file():
+        sys.exit("build-site: revamp shell is missing")
+    shutil.copytree(ROOT / "revamp", DIST / "revamp")
+    print(f"  revamp assets ?v={revamp_version()}")
+    print("  previous site at legacy/index.html")
     preview = ROOT / "preview.html"
     src_preview = ROOT / "preview"
     if not preview.is_file() or not (src_preview / "app.js").is_file() or not (src_preview / "app.css").is_file():
