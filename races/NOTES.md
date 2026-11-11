@@ -1,0 +1,1 @@
+SOL-hold rows written before the commit that allow-lists the wallet id SOL have no wallet key. Each slot's one wallet-less equity row is the SOL hold. Those rows stay as they were written. Later runs only append.

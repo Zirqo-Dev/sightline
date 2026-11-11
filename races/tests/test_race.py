@@ -53,6 +53,15 @@ class DryRun(unittest.TestCase):
             self.assertFalse((path / "config.lock.json").exists())
             trades = [json.loads(line) for line in (path / "trades.jsonl").read_text(encoding="utf-8").splitlines()]
             self.assertTrue(any(row.get("wallet") == "R1" for row in trades))
+            equity = [json.loads(line) for line in (path / "equity.jsonl").read_text(encoding="utf-8").splitlines()]
+            by_slot = {}
+            for row in equity:
+                self.assertIn("wallet", row)
+                self.assertTrue(row["wallet"])
+                by_slot.setdefault(row["ts"], set()).add(row["wallet"])
+            self.assertTrue(by_slot)
+            for wallets in by_slot.values():
+                self.assertEqual(wallets, {"R1", "R2", "R3", "R4", "R5", "SOL"})
         self.assertEqual(len(runs), 2)
         names = ("R1", "R2", "R3", "R4", "SOL", "R5")
         for row in runs:
@@ -67,13 +76,13 @@ class DryRun(unittest.TestCase):
         from races.scrub import scrub
         leaked = "1" * 44
         kept = {"symbol": "MEME", "action": "buy", "mint": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"}
-        for good in ("R1", "SOL_HOLD"):
+        for good in ("R1", "SOL"):
             cleaned = scrub({"wallet": good, **kept}, {kept["mint"]})
             self.assertEqual(cleaned["wallet"], good)
             self.assertEqual(cleaned["symbol"], "MEME")
             self.assertEqual(cleaned["action"], "buy")
             self.assertEqual(cleaned["mint"], kept["mint"])
-        for bad in ("R1\n", "r1", "R6", leaked):
+        for bad in ("R1\n", "r1", "R6", "SOL_HOLD", "sol", "SOL\n", leaked):
             cleaned = scrub({"wallet": bad, **kept}, {kept["mint"]})
             self.assertNotIn("wallet", cleaned)
             self.assertNotIn(bad, json.dumps(cleaned))
