@@ -209,7 +209,7 @@ def _page_events(client, slug, after):
     return found, pages, bool(cursor)
 
 
-def _unit(pending, listings, offers, prev, gas_eth, fees, now, code_sha, rule=None):
+def _unit(pending, listings, offers, prev, gas_eth, fees, now, code_sha):
     parsed = [P.parse_order(x, now, "listing") for x in listings]
     curr = [p for p in (P.parse_order(x, now, "offer") for x in offers) if p]
     rates = P.fee_rates(fees)
@@ -220,7 +220,7 @@ def _unit(pending, listings, offers, prev, gas_eth, fees, now, code_sha, rule=No
         "schema_version": 1, "kind": "unit", "asset_id": pending["asset_id"],
         "chain": ident["chain"], "asset_type": ident["asset_type"], "contract": ident["contract"],
         "slug": pending["slug"], "snapshot_t": pending["snapshot_t"], "filled_at": _now_iso(now),
-        "commit_sha": code_sha, "rule": P.RULE if rule is None else rule, "seasoned": bool(pending.get("seasoned")),
+        "commit_sha": code_sha, "rule": P.RULE, "seasoned": bool(pending.get("seasoned")),
         "fill": result["fill"], "unsellable": result["unsellable"], "cost": result["cost"],
         "entry_eth": result["entry_eth"], "exit_eth": result["exit_eth"], "gas_eth": gas_eth,
         "buyer_fee_eth": 0.0, "marketplace_fee_rate": mp, "creator_fee_rate": creator,
@@ -282,128 +282,6 @@ def _cap_hit(client):
     return client.calls >= _call_cap(client)
 
 
-def _blocked(client, call_limit):
-    """Global MAX_CALLS, or a lane ceiling. `call_limit` None is the global cap only."""
-    if _cap_hit(client):
-        return True
-    return call_limit is not None and client.calls >= call_limit
-
-
-def _chain_stats():
-    return {
-        "screened": 0, "passing": 0, "requested": False,
-        "pages": 0, "calls": 0, "stop": None,
-    }
-
-
-def _blank_by_chain(chains=None):
-    return {chain: _chain_stats() for chain in (chains if chains is not None else P.CHAINS)}
-
-
-_CHAIN_STOPS = (None, "pass_target", "depth", "call_cap", "deadline")
-_CHAIN_KEYS = ("screened", "passing", "requested", "pages", "calls", "stop")
-
-
-def public_by_chain(by_chain):
-    """Refuse a by_chain object whose new fields are not counts.
-
-    requested is a bool. pages, calls, screened and passing are counts.
-    stop is the lane enum or null. Anything else (a slug, an address, an
-    extra key) is not written and is not put in the step summary.
-    """
-    if by_chain is None:
-        return
-    if not isinstance(by_chain, dict) or set(by_chain) - set(P.CHAINS):
-        raise RuntimeError("status by_chain is not counts")
-    for row in by_chain.values():
-        if not isinstance(row, dict) or set(row) != set(_CHAIN_KEYS):
-            raise RuntimeError("status by_chain is not counts")
-        if not isinstance(row["requested"], bool):
-            raise RuntimeError("status by_chain is not counts")
-        if row["stop"] not in _CHAIN_STOPS:
-            raise RuntimeError("status by_chain is not counts")
-        for key in ("screened", "passing", "pages", "calls"):
-            value = row[key]
-            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-                raise RuntimeError("status by_chain is not counts")
-
-
-def _fresh_base():
-    return {
-        "version": P.BASE_STATE_VERSION,
-        "init_at": None,
-        "pending": [],
-        "passes": {},
-        "run_passes": [],
-    }
-
-
-def _ensure_base(state, now):
-    """Base count clock. A missing or other version starts at v0.4-base.
-
-    Ethereum pilot_start, passes, first_runs, pending and v03_init_at stay.
-    """
-    base = state.get("base")
-    if not isinstance(base, dict) or base.get("version") != P.BASE_STATE_VERSION:
-        base = _fresh_base()
-        state["base"] = base
-    base.setdefault("pending", [])
-    base.setdefault("passes", {})
-    base.setdefault("run_passes", [])
-    base.setdefault("init_at", None)
-    base["pending"] = [p for p in base["pending"] if isinstance(p, dict) and isinstance(p.get("book"), dict)]
-    if base.get("init_at") is None:
-        base["init_at"] = int(now)
-    return base
-
-
-_GUARDED_CALLS = ("list_collections", "listings", "collection", "offers", "events", "contract")
-
-
-def _guard_client(client, ceiling):
-    """Raise Budget before a call that would pass `ceiling` or the global cap.
-
-    Pacing is unchanged: this only refuses the next read. The wrapped methods
-    are the caller's own. Restore them with the returned dict.
-    """
-    saved = {}
-
-    def wrap(fn):
-        def wrapped(*args, **kwargs):
-            if client.calls >= ceiling or _cap_hit(client):
-                raise opensea.Budget()
-            return fn(*args, **kwargs)
-        return wrapped
-
-    for name in _GUARDED_CALLS:
-        fn = getattr(client, name, None)
-        if not callable(fn):
-            continue
-        saved[name] = fn
-        setattr(client, name, wrap(fn))
-    return saved
-
-
-def _restore_client(client, saved):
-    for name, fn in saved.items():
-        setattr(client, name, fn)
-
-
-def _load_listing_book(client, slug, caches, detail, now):
-    """Listings, collection, then offers. Same order as the ETH pending serve."""
-    listings = caches["listings"].get(slug)
-    if listings is None:
-        listings = client.listings(slug)
-        caches["listings"][slug] = listings
-    info = detail(slug)
-    offers = caches["offers"].get(slug)
-    if offers is None:
-        offers, pages = _page_offers(client, slug, now)
-        caches["offers"][slug] = offers
-        caches["offer_pages"][slug] = pages
-    return listings, info, offers
-
-
 def _serve_pending(client, state, detail, now, code_sha, quotes, deadline, deadline_flag, caches, new_units, day):
     """Pending re-checks are served before any new screening.
 
@@ -423,7 +301,16 @@ def _serve_pending(client, state, detail, now, code_sha, quotes, deadline, deadl
                 _retry(rest, keep, new_units, now, code_sha, "budget")
             break
         try:
-            listings, info, offers = _load_listing_book(client, slug, caches, detail, now)
+            listings = caches["listings"].get(slug)
+            if listings is None:
+                listings = client.listings(slug)
+                caches["listings"][slug] = listings
+            info = detail(slug)
+            offers = caches["offers"].get(slug)
+            if offers is None:
+                offers, pages = _page_offers(client, slug, now)
+                caches["offers"][slug] = offers
+                caches["offer_pages"][slug] = pages
         except opensea.Budget:
             partial = True
             for rest in queue[idx:]:
@@ -446,151 +333,36 @@ def _serve_pending(client, state, detail, now, code_sha, quotes, deadline, deadl
     return keep, served, deferred, partial
 
 
-def _retry(pending, keep, new_units, now, code_sha, reason, rule=None):
+def _retry(pending, keep, new_units, now, code_sha, reason):
     pending["tries"] = pending.get("tries", 0) + 1
     if pending["tries"] >= 3:
-        row = _close_read_error(pending, now, code_sha, rule=rule)
+        row = _close_read_error(pending, now, code_sha)
         row["reason"] = reason
         new_units.append(row)
     else:
         keep.append(pending)
 
 
-def _base_lane(client, quotes, detail, now, state, caches, day, deadline, code_sha, new_units, publish_usd):
-    """Base after the ETH lane. Stops at 5 passes, 8 pages, 200 calls, or the deadline.
-
-    Pending re-checks count toward the 5. This lane does not set the run's list
-    error, deadline flag, or partial bit, and its rejections are not the ETH
-    bucket. A list 429 is returned so the caller can count it without touching
-    the ETH clock.
-    """
-    base = _ensure_base(state, now)
-    row = _chain_stats()
-    row["requested"] = True
-    start = client.calls
-    ceiling = start + P.BASE_MAX_CALLS
-    target = P.BASE_PASS_TARGET
-    credit = 0
-    http = None
-    passing, fresh = [], []
-    own_flag = {"hit": False}
-    saved = _guard_client(client, ceiling)
-    try:
-        queue = list(base.get("pending") or [])
-        keep = []
-        for idx, pending in enumerate(queue):
-            if credit >= target:
-                keep.extend(queue[idx:])
-                row["stop"] = "pass_target"
-                break
-            if _past_deadline(deadline, own_flag):
-                keep.extend(queue[idx:])
-                row["stop"] = "deadline"
-                break
-            if client.calls >= ceiling or _cap_hit(client):
-                keep.extend(queue[idx:])
-                row["stop"] = "call_cap"
-                break
-            try:
-                listings, info, offers = _load_listing_book(client, pending["slug"], caches, detail, now)
-            except opensea.Budget:
-                keep.extend(queue[idx:])
-                row["stop"] = "call_cap"
-                break
-            except opensea.AuthError:
-                raise
-            except opensea.OpenSeaError as exc:
-                status = getattr(exc, "status", None)
-                if status == 429:
-                    http = 429
-                    keep.extend(queue[idx:])
-                    break
-                _retry(pending, keep, new_units, now, code_sha, "read_error", rule=P.BASE_RULE)
-                credit += 1
-                continue
-            credit += 1
-            leg = P.leg_eth(quotes.get(pending.get("chain")))
-            new_units.append(_unit(
-                pending, listings, offers, pending.get("book") or [], leg,
-                (info or {}).get("fees"), now, code_sha, rule=P.BASE_RULE,
-            ))
-            offer_parsed = [p for p in (P.parse_order(o, now, "offer") for o in offers) if p]
-            state["offers"][pending["asset_id"]] = P.book_summary(offer_parsed)
-            _remember(state, pending["asset_id"], day)
-        if row["stop"] is None and http is None and credit >= target:
-            row["stop"] = "pass_target"
-        if row["stop"] is None and http is None and credit < target:
-            if _past_deadline(deadline, own_flag):
-                row["stop"] = "deadline"
-            elif client.calls >= ceiling or _cap_hit(client):
-                row["stop"] = "call_cap"
-            else:
-                error_box = {}
-                b_pass, b_fresh, b_err, _b_screened, _b_stop, b_rows = _screen(
-                    client, quotes, detail, now, state, caches, day, deadline=deadline,
-                    rejections={}, deadline_flag=own_flag, flags={},
-                    chains=("base",), pass_target=target - credit, call_limit=ceiling,
-                    isolate_errors=True, error_box=error_box,
-                )
-                sub = b_rows["base"]
-                row["pages"] = sub["pages"]
-                row["screened"] = sub["screened"]
-                row["passing"] = sub["passing"]
-                fresh = list(b_fresh)
-                passing = list(b_pass)
-                if b_err:
-                    http = error_box.get("status")
-                    row["stop"] = None
-                else:
-                    row["stop"] = sub["stop"]
-    finally:
-        _restore_client(client, saved)
-    if http is None and row["stop"] == "call_cap" and getattr(client, "last_error_status", None) == 429:
-        http = 429
-    if not publish_usd:
-        for item in fresh:
-            item["floor_usd"] = None
-    fresh_ids = {p["asset_id"] for p in fresh}
-    base["pending"] = [p for p in keep if p.get("asset_id") not in fresh_ids] + fresh
-    row["calls"] = client.calls - start
-    row["requested"] = True
-    return row, passing, http, base
-
-
 def _screen(client, quotes, detail, now, state, caches, day, deadline=None, rejections=None,
-            deadline_flag=None, flags=None, chains=None, pass_target=None, call_limit=None,
-            isolate_errors=False, error_box=None):
-    """Page by market cap; screen each under-cap collection at once; stop at pass_target.
+            deadline_flag=None, flags=None):
+    """Page by market cap; screen each under-cap collection at once; stop at PASS_TARGET.
 
-    Default `chains` is ethereum then base, which is the pre-lane walk: the inner
-    loop stops once `pass_target` passes are in, so a full Ethereum page never
-    lists Base. The ETH lane passes ethereum only (same target, pages, and
-    thresholds). Base is a later lane with its own target and call ceiling.
     Returns (passing, new_pending, list_error, screened, stop, by_chain). `stop` is
     pass_target, depth (frozen page depth or cursors ran out), call_cap, or deadline.
     Every stop is a measured run; only a list error makes the run partial.
     """
-    chains = tuple(chains) if chains is not None else P.CHAINS
-    if pass_target is None:
-        pass_target = P.PASS_TARGET
-    cursors = {chain: "" for chain in chains}
-    pages = {chain: 0 for chain in chains}
+    cursors = {chain: "" for chain in P.CHAINS}
+    pages = {chain: 0 for chain in P.CHAINS}
     seen, passing, new_pending = {}, [], []
     screened = 0
     partial = False
     flags = flags if flags is not None else {}
-    by_chain = _blank_by_chain(chains)
-    for chain in chains:
-        by_chain[chain]["requested"] = True
+    by_chain = {chain: {"screened": 0, "passing": 0} for chain in P.CHAINS}
 
     def done(stop):
-        for chain in chains:
+        for chain in P.CHAINS:
             by_chain[chain]["passing"] = sum(1 for p in new_pending if p["chain"] == chain)
-            by_chain[chain]["stop"] = None if partial else stop
         return passing, new_pending, partial, screened, stop, by_chain
-
-    def charge(chain, before):
-        by_chain[chain]["calls"] += client.calls - before
 
     def drop_shared(prev):
         prev["shared"] = True
@@ -601,38 +373,30 @@ def _screen(client, quotes, detail, now, state, caches, day, deadline=None, reje
         if prev.get("screened"):
             _add_reasons(rejections, ["shared"])
 
-    while len(passing) < pass_target and any(cursors[c] is not None for c in chains):
+    while len(passing) < P.PASS_TARGET and any(cursors[c] is not None for c in P.CHAINS):
         if _past_deadline(deadline, deadline_flag):
             return done("deadline")
-        for chain in chains:
-            if cursors[chain] is None or len(passing) >= pass_target:
+        for chain in P.CHAINS:
+            if cursors[chain] is None or len(passing) >= P.PASS_TARGET:
                 continue
             if pages[chain] >= P.MAX_LIST_PAGES:
                 cursors[chain] = None
                 continue
-            if _blocked(client, call_limit):
+            if _cap_hit(client):
                 return done("call_cap")
-            before = client.calls
             try:
                 batch, nxt = client.list_collections(chain, cursors[chain] or None)
             except opensea.Budget:
-                charge(chain, before)
                 return done("call_cap")
             except opensea.OpenSeaError as exc:
-                charge(chain, before)
                 cursors[chain] = None
                 partial = True
-                if error_box is not None:
-                    error_box["status"] = getattr(exc, "status", None)
-                if not isolate_errors:
-                    setattr(client, "list_error", exc.status)
+                setattr(client, "list_error", exc.status)
                 continue
-            charge(chain, before)
             pages[chain] += 1
-            by_chain[chain]["pages"] = pages[chain]
             cursors[chain] = nxt or None
             for row in batch:
-                if len(passing) >= pass_target:
+                if len(passing) >= P.PASS_TARGET:
                     break
                 addrs = _contracts(row, chain)
                 item = {
@@ -654,17 +418,14 @@ def _screen(client, quotes, detail, now, state, caches, day, deadline=None, reje
                             reasons.insert(0, "contracts")
                         _add_reasons(rejections, reasons)
                     continue
-                if _blocked(client, call_limit):
+                if _cap_hit(client):
                     return done("call_cap")
                 if _past_deadline(deadline, deadline_flag):
                     return done("deadline")
-                before = client.calls
                 try:
                     out = _screen_one(client, item, quotes, detail, now, state, caches, day, rejections, flags)
                 except opensea.Budget:
-                    charge(chain, before)
                     return done("call_cap")
-                charge(chain, before)
                 if out is None:
                     continue
                 screened += 1
@@ -672,7 +433,7 @@ def _screen(client, quotes, detail, now, state, caches, day, deadline=None, reje
                 if out.get("pending"):
                     passing.append(out["pending"]["asset_id"])
                     new_pending.append(out["pending"])
-    return done("pass_target" if len(passing) >= pass_target else "depth")
+    return done("pass_target" if len(passing) >= P.PASS_TARGET else "depth")
 
 
 def _screen_one(client, item, quotes, detail, now, state, caches, day, rejections, flags):
@@ -790,13 +551,13 @@ def _candidates(client):
     return kept
 
 
-def _close_read_error(pending, now, code_sha, rule=None):
+def _close_read_error(pending, now, code_sha):
     ident = P.parse_asset_id(pending["asset_id"])
     return {
         "schema_version": 1, "kind": "unit", "asset_id": pending["asset_id"],
         "chain": ident["chain"], "asset_type": ident["asset_type"], "contract": ident["contract"],
         "slug": pending["slug"], "snapshot_t": pending["snapshot_t"], "filled_at": _now_iso(now),
-        "commit_sha": code_sha, "rule": P.RULE if rule is None else rule, "seasoned": bool(pending.get("seasoned")),
+        "commit_sha": code_sha, "rule": P.RULE, "seasoned": bool(pending.get("seasoned")),
         "fill": False, "unsellable": False, "cost": None, "entry_eth": None, "exit_eth": None,
         "gas_eth": None, "buyer_fee_eth": 0.0, "marketplace_fee_rate": None, "creator_fee_rate": None,
         "floor_eth": pending.get("floor_eth"), "floor_usd": pending.get("floor_usd"),
@@ -806,13 +567,9 @@ def _close_read_error(pending, now, code_sha, rule=None):
 
 
 def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None, deadline=None,
-        eth_usd_source="chainlink", base_lane=True):
+        eth_usd_source="chainlink"):
     """`eth_usd` given by a caller is treated as `eth_usd_source` (tests pass a Chainlink-like quote).
-    Otherwise the price comes from fetch_eth_usd: Chainlink first, DefiLlama internal-only fallback.
-
-    `base_lane` False is the pre-lane walk (ethereum and base share one pass target).
-    The default runs the ETH lane first, unchanged, then the Base lane.
-    """
+    Otherwise the price comes from fetch_eth_usd: Chainlink first, DefiLlama internal-only fallback."""
     _, status_path, units_path, books_path = _paths(data_dir)
     state = load_state(books_path)
     anchor_existed = state["v03_init_at"] is not None
@@ -869,45 +626,18 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
         return details[slug]
 
     detail.usd = eth_usd
-    publish_usd = eth_usd_box["source"] == "chainlink"
-    # 1. ETH pending re-checks first, so a long screen can never starve a unit fill.
-    #    Base pending is served inside the Base lane and counts toward Base's 5.
-    eth_start = client.calls
+    # 1. Pending re-checks first, so a long screen can never starve a unit fill.
     kept, served, deferred, pend_partial = _serve_pending(
         client, state, detail, now, code_sha, quotes, deadline, deadline_flag, caches, new_units, day,
     )
-    # 2. ETH screen. Same target, page depth, and thresholds as the shared walk.
-    #    Base is not in this walk, so filling PASS_TARGET cannot skip it.
+    # 2. Screen until PASS_TARGET pass, or the cap / clock / page depth.
     passing, fresh, list_error, screened, stop = [], [], False, 0, None
-    by_chain = _blank_by_chain()
-    base_http, base_passing = None, []
-    if base_lane:
-        by_chain["ethereum"]["requested"] = True
-        if not pend_partial:
-            passing, fresh, list_error, screened, stop, eth_rows = _screen(
-                client, quotes, detail, now, state, caches, day, deadline=deadline,
-                rejections=rejections, deadline_flag=deadline_flag, flags=flags,
-                chains=("ethereum",),
-            )
-            by_chain["ethereum"] = eth_rows["ethereum"]
-        by_chain["ethereum"]["calls"] = client.calls - eth_start
-        by_chain["ethereum"]["requested"] = True
-        by_chain["base"], base_passing, base_http, _base_state = _base_lane(
-            client, quotes, detail, now, state, caches, day, deadline, code_sha, new_units, publish_usd,
+    by_chain = {chain: {"screened": 0, "passing": 0} for chain in P.CHAINS}
+    if not pend_partial:
+        passing, fresh, list_error, screened, stop, by_chain = _screen(
+            client, quotes, detail, now, state, caches, day, deadline=deadline,
+            rejections=rejections, deadline_flag=deadline_flag, flags=flags,
         )
-    else:
-        if not pend_partial:
-            passing, fresh, list_error, screened, stop, by_chain = _screen(
-                client, quotes, detail, now, state, caches, day, deadline=deadline,
-                rejections=rejections, deadline_flag=deadline_flag, flags=flags,
-            )
-            # Pending reads happen before the walk and belong to the ETH lane.
-            spent = client.calls - eth_start
-            walked = by_chain["ethereum"]["calls"] + by_chain["base"]["calls"]
-            by_chain["ethereum"]["calls"] += spent - walked
-        else:
-            by_chain["ethereum"]["requested"] = True
-            by_chain["ethereum"]["calls"] = client.calls - eth_start
     # Measured = every pending row served and the screen ran to any stop. Partial only for
     # deferred pending or a list error (no eth price / gas failure return earlier).
     partial = pend_partial or list_error
@@ -944,16 +674,6 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
     cutoff = day.toordinal() - 21
     state["passes"] = {k: v for k, v in state["passes"].items() if date_ok(k, cutoff)}
     state["complete_days"] = [d for d in state["complete_days"] if date_ok(d, cutoff)]
-    if base_lane and isinstance(state.get("base"), dict):
-        # Base count starts at v0.4-base on this run. It is not the v0.3 pass list.
-        base_state = state["base"]
-        if base_http is None:
-            bucket = base_state["passes"].setdefault(iso, [])
-            for asset in base_passing:
-                if asset not in bucket:
-                    bucket.append(asset)
-            base_state["run_passes"].append(len(set(base_passing)))
-        base_state["passes"] = {k: v for k, v in base_state["passes"].items() if date_ok(k, cutoff)}
     prior = load_units(units_path)
     _append_units(units_path, new_units, prior)
     pilot = datetime.fromisoformat(state["pilot_start"]).date() if state["pilot_start"] else None
@@ -977,16 +697,12 @@ def run(data_dir, client, now, code_sha, gas_wei, eth_usd=None, fetch_price=None
     # error and no_key are recorded in main. A measured ok run is not recorded.
     if status_name == "partial" and state.get("v03_init_at") is not None:
         _append_outage(state, now, len(state.get("first_runs") or []), reason)
-    elif base_http == 429 and state.get("v03_init_at") is not None:
-        # A Base-lane 429 did not measure Base. ETH already measured, so the run stays ok.
-        _append_outage(state, now, len(state.get("first_runs") or []), "opensea http 429")
     summary["verdict_footnote"] = P.with_outage_footnote(
         summary.get("verdict_footnote"), kill, state.get("outage_at") or [],
         state.get("v03_init_at"), state.get("first_measured_at"),
     )
     if getattr(client, "raw", None) is not None:
         client.raw.clear()
-    public_by_chain(by_chain)
     _dump(books_path, state)
     _dump(status_path, _status(
         code_sha, now, status=status_name, measured=True, partial=partial,
@@ -1270,7 +986,6 @@ def write_summary(status_path, out=None):
     with open(status_path) as fh:
         doc = json.load(fh)
     lines = ["### NFT snapshot DRY_RUN (nothing published)", ""]
-    public_by_chain(doc.get("by_chain"))
     for key in SUMMARY_KEYS:
         lines.append("- %s: `%s`" % (key, json.dumps(doc.get(key), sort_keys=True)))
     text = "\n".join(lines) + "\n"
