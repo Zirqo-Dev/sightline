@@ -50,6 +50,8 @@ class DryRun(unittest.TestCase):
             self.assertTrue((path / "trades.jsonl").is_file())
             self.assertTrue((path / "equity.jsonl").is_file())
             self.assertFalse((path / "config.lock.json").exists())
+            trades = [json.loads(line) for line in (path / "trades.jsonl").read_text(encoding="utf-8").splitlines()]
+            self.assertTrue(any(row.get("wallet") == "R1" for row in trades))
         self.assertEqual(len(runs), 2)
         names = ("R1", "R2", "R3", "R4", "SOL", "R5")
         for row in runs:
@@ -61,6 +63,14 @@ class DryRun(unittest.TestCase):
         self.assertNotIn("winner", json.dumps(summary).lower())
         self.assertIn("avg_pct_deployed", summary["wallets"][0])
         self.assertEqual(positions["schema_version"], 1)
+        from races.scrub import scrub
+        leaked = "RaceMint11111111111111111111111111111111"
+        cleaned = scrub({"wallet": leaked, "note": "kept"}, set())
+        self.assertNotIn("wallet", cleaned)
+        self.assertEqual(cleaned.get("note"), "kept")
+        self.assertNotIn(leaked, json.dumps(cleaned))
+        self.assertEqual(scrub({"wallet": "R1"}, set())["wallet"], "R1")
+        self.assertEqual(scrub({"wallet": "SOL_HOLD"}, set())["wallet"], "SOL_HOLD")
 
 
 class Isolation(unittest.TestCase):
