@@ -13,18 +13,32 @@
     const html = api.assetLogo(key, key, false);
     return html.indexOf("<img") === 0 ? html.replace("<img ", '<img onerror="this.remove()" ') : html;
   }
+  const NOT_LOGGED = {
+    kill: "kill distance not logged",
+    whale: "no whale flow logged",
+    holders: "holders not logged"
+  };
   function risk(row) {
     const r = (row && row.risk) || {};
-    const swarm = r.swarm ? `<span class="rk bad">swarm</span>` : "";
-    return `<div class="sig">${swarm}<span class="rk ${esc(r.kill_cls || "mu")}">${esc(r.kill || "kill distance not logged")}</span><span class="rk">${esc(r.whale || "no whale flow logged")}</span><span class="rk">${esc(r.holders || "holders not logged")}</span></div>`;
+    const chips = [];
+    if (r.swarm) chips.push(`<span class="rk bad">swarm</span>`);
+    const kill = r.kill || "";
+    if (kill && kill !== NOT_LOGGED.kill) chips.push(`<span class="rk ${esc(r.kill_cls || "mu")}">${esc(kill)}</span>`);
+    const whale = r.whale || "";
+    if (whale && whale !== NOT_LOGGED.whale) chips.push(`<span class="rk">${esc(whale)}</span>`);
+    const holders = r.holders || "";
+    if (holders && holders !== NOT_LOGGED.holders) chips.push(`<span class="rk">${esc(holders)}</span>`);
+    if (!chips.length) return "";
+    return `<div class="sig">${chips.join("")}</div>`;
   }
-  function pk(api, row, first) {
+  function pk(api, row, first, showRisk) {
     if (!row) return "";
-    return `<div class="row pk${first ? " f" : ""}">${logo(api, row.logo || row.ticker)}<div class="gr"><div class="nm">${esc(row.ticker)} ${pill(row.pill, row.pill_cls)}</div><div class="why"><b>WHY</b> ${esc(row.why)}</div><div class="chg"><b>CHANGE MY MIND</b> ${esc(row.change)}</div>${risk(row)}</div><div class="r m ${row.right_cls || "mu"}">${esc(row.right || "–")}</div></div>`;
+    const riskHtml = showRisk === false ? "" : risk(row);
+    return `<div class="row pk${first ? " f" : ""}">${logo(api, row.logo || row.ticker)}<div class="gr"><div class="nm">${esc(row.ticker)} ${pill(row.pill, row.pill_cls)}</div><div class="why"><b>WHY</b> ${esc(row.why)}</div><div class="chg"><b>CHANGE MY MIND</b> ${esc(row.change)}</div>${riskHtml}</div><div class="r m ${row.right_cls || "mu"}">${esc(row.right || "–")}</div></div>`;
   }
-  function more(rows, api, label) {
+  function more(rows, api, label, showRisk) {
     if (!rows || !rows.length) return "";
-    return `<details><summary>+${rows.length} ${esc(label || "more")}</summary>${rows.map(r => pk(api, r, false)).join("")}</details>`;
+    return `<details><summary>+${rows.length} ${esc(label || "more")}</summary>${rows.map(r => pk(api, r, false, showRisk)).join("")}</details>`;
   }
   function legend(doc) {
     return `<div class="legend">${esc(doc.legend || "")}</div>`;
@@ -58,10 +72,10 @@
       + (sw || `<p class="sub">No SW-01 near-miss on this chain.</p>`);
     return card("Paper test status · " + esc(chain), "research · paper only", body, "paper span");
   }
-  function head(rows, api, n) {
+  function head(rows, api, n, showRisk) {
     const shown = (rows || []).slice(0, n);
     const rest = (rows || []).slice(n);
-    return shown.map((r, i) => pk(api, r, i === 0)).join("") + more(rest, api);
+    return shown.map((r, i) => pk(api, r, i === 0, showRisk)).join("") + more(rest, api, undefined, showRisk);
   }
 
   function home(doc, api) {
@@ -73,12 +87,9 @@
     const sol = (books.solada || {});
     const nftTop = (n.rows || []).find(r => r.right && r.right !== "floor n/a") || (n.rows || [])[0];
     const brief = (doc.briefs || []).map((b, i) => `<div class="row${i ? "" : " f"}" style="align-items:flex-start;padding:8px 0"><div class="gr"><div class="lab">${esc(b.desk)} · ${esc(b.date)}</div><p class="t" style="margin-top:2px">${esc(b.headline)}</p></div></div>`).join("");
-    return paperCard("Cardano", c.paper_status)
-      + paperCard("Solana", s.paper_status)
-      + paperCard("NFT", n.paper_status)
-      + card("Cardano", "Sentinel", `<div class="lab">Sentinel pick</div><div class="big">None</div><div class="sub">${esc((sol.open || 0) + " open · " + (sol.closed || 0) + " closed · " + (sol.pnl == null ? "–" : sol.pnl) + " ₳ paper")}</div>${head(c.runners, api, 1)}${more((c.established || []).slice(0, 3), api, "more watch")}<a class="a" href="#/cardano">Open Cardano →</a>`)
-      + card("Solana", "day-14 verdict", `<div class="lab">F book · per trade</div><div class="big ${f.exp_pct < 0 ? "dn" : ""}">${esc(f.exp_pct == null ? "–" : (f.exp_pct < 0 ? "−" : "+") + Math.abs(f.exp_pct).toFixed(1) + "%")}</div><div class="sub">${esc((f.n || 0) + " closes · rule " + (f.rule || "–") + " · " + (s.verdict || "NOT_FINAL") + " until Nov 11, 10:00 AM ET")}</div>${head(s.opens, api, 1)}<a class="a" href="#/solana">Open Solana →</a>`)
-      + card("NFT · KING", "floors in USD", `<div class="lab">Top floor</div><div class="big">${esc(nftTop ? nftTop.right : "–")}</div><div class="sub">${esc(nftTop ? nftTop.ticker + " · no KING pick" : "No names in the pulse")}</div>${head(n.rows, api, 1)}<a class="a" href="#/nft">Open NFT →</a>`)
+    return card("Cardano", "Sentinel", `<div class="lab">Sentinel pick</div><div class="big">None</div><div class="sub">${esc((sol.open || 0) + " open · " + (sol.closed || 0) + " closed · " + (sol.pnl == null ? "–" : sol.pnl) + " ₳ paper")}</div>${head(c.runners, api, 1, true)}${more((c.established || []).slice(0, 3), api, "more watch", true)}<a class="a" href="#/cardano">Open Cardano →</a>`)
+      + card("Solana", "day-14 verdict", `<div class="lab">F book · per trade</div><div class="big ${f.exp_pct < 0 ? "dn" : ""}">${esc(f.exp_pct == null ? "–" : (f.exp_pct < 0 ? "−" : "+") + Math.abs(f.exp_pct).toFixed(1) + "%")}</div><div class="sub">${esc((f.n || 0) + " closes · rule " + (f.rule || "–") + " · " + (s.verdict || "NOT_FINAL") + " until Nov 11, 10:00 AM ET")}</div>${head(s.opens, api, 1, false)}<a class="a" href="#/solana">Open Solana →</a>`)
+      + card("NFT · KING", "floors in USD", `<div class="lab">Top floor</div><div class="big">${esc(nftTop ? nftTop.right : "–")}</div><div class="sub">${esc(nftTop ? nftTop.ticker + " · no KING pick" : "No names in the pulse")}</div>${head(n.rows, api, 1, false)}<a class="a" href="#/nft">Open NFT →</a>`)
       + card("Latest briefs", "from the desk log", brief || `<p class="sub">No briefs in the build.</p>`, "span");
   }
 
@@ -115,10 +126,9 @@
     const trades = `<div class="tw"><table><tr><th>Time</th><th>Book · token</th><th>Reason</th><th>Net SOL</th></tr>${(s.trades || []).map(t => `<tr><td>${esc(t.time)}</td><td style="text-align:left">${esc(t.book)} · ${esc(t.ticker)}</td><td style="font-family:Archivo,system-ui,sans-serif;font-size:11.5px;color:#C7CCD3;white-space:normal">${esc(t.reason)}</td><td class="${t.pnl < 0 ? "dn" : t.pnl > 0 ? "up" : ""}">${esc(t.pnl == null ? "–" : (t.pnl < 0 ? "−" : "+") + Math.abs(t.pnl).toFixed(3))}</td></tr>`).join("")}</table></div>`;
     const net = `<div class="two"><div class="box"><div class="lab">Net</div><div class="big dn" style="font-size:22px">${esc(s.net == null ? "–" : (s.net < 0 ? "−" : "+") + Math.abs(s.net).toFixed(2))}</div><div class="sub">SOL after fees + haircut</div></div><div class="box"><div class="lab">Gross</div><div class="big dn" style="font-size:22px">${esc(s.gross == null ? "–" : (s.gross < 0 ? "−" : "+") + Math.abs(s.gross).toFixed(2))}</div><div class="sub">SOL price move only</div></div></div><div class="sub" style="margin-top:8px">${s.costs == null ? "" : "Costs " + esc(String(s.costs)) + " SOL · "}${esc(s.win_pct == null ? "" : s.win_pct + "% win over " + s.fills + " fills")}</div>`;
     const buzz = (s.buzz || []).map((b, i) => `<div class="row${i ? "" : " f"}">${logo(api, b.ticker)}<div class="gr"><div class="nm">${esc(b.ticker)}</div><div class="sub">${esc(b.sub)}</div></div><div class="r m mu">measured</div></div>`).join("");
-    return paperCard("Solana", s.paper_status)
-      + card("Books F / R / S", "day-14 verdict · % per trade", books, "hero span")
+    return card("Books F / R / S", "day-14 verdict · % per trade", books, "hero span")
       + card("Net vs gross", "paper, after costs", net)
-      + card("Open positions", (s.opens || []).length + " in the feed", head(s.opens, api, 3) + legend(doc))
+      + card("Open positions", (s.opens || []).length + " in the feed", head(s.opens, api, 3, false) + legend(doc))
       + card("Trades log", "reason per fill", trades || `<p class="sub">No sells in the feed.</p>`, "span")
       + card("X buzz " + pill("measured, not a score", ""), s.buzz_live ? "live file" : "feed missing", buzz || `<p class="sub">No Solana rows in x_buzz.json. Mentions are logged for a later backtest and are not a score.</p>`, "span");
   }
@@ -127,9 +137,8 @@
     const n = doc.nft || {};
     const px = n.prices || {};
     const note = `Native floors × ${(px.source || "stored prices")} ${px.asof || ""}` + (px.ETH ? ` · ETH $${px.ETH}` : "") + (px.SOL ? ` · SOL $${px.SOL}` : "");
-    return paperCard("NFT", n.paper_status)
-      + card("KING pick", "paper book", `<div class="big">None</div><div class="sub">${esc((n.open || 0) + " open · " + (n.closed || 0) + " closed · " + (n.pnl == null ? "–" : n.pnl))}</div>${head(n.rows, api, 1)}${legend(doc)}`, "hero")
-      + card("Watchlist", esc(note), head(n.rows, api, 4));
+    return card("KING pick", "paper book", `<div class="big">None</div><div class="sub">${esc((n.open || 0) + " open · " + (n.closed || 0) + " closed · " + (n.pnl == null ? "–" : n.pnl))}</div>${head(n.rows, api, 1, false)}${legend(doc)}`, "hero")
+      + card("Watchlist", esc(note), head(n.rows, api, 4, false));
   }
 
   function warn(doc, route) {

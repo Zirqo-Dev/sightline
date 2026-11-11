@@ -5,7 +5,10 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from scripts.score_picks import change_line, est_checks, paper_status, risk_panel, row, sw_checks
+from scripts.score_picks import (
+    change_line, est_checks, paper_status, risk_panel, row, runner_sort_key,
+    solana_open_rows, solana_run_asof, solana_section, sw_checks,
+)
 
 
 ASCEND = {
@@ -92,6 +95,60 @@ class ScorePicksTest(unittest.TestCase):
         self.assertTrue(panel["swarm"])
         self.assertNotIn("score", panel)
         self.assertIn("Grumpy Walrus", panel["whale"])
+
+    def test_runners_sort_by_move_then_watch_then_blank(self):
+        rows = [
+            {"ticker": "B", "right": "–", "pill": "pass"},
+            {"ticker": "W", "right": "–", "pill": "watch"},
+            {"ticker": "A", "right": "+1.5%", "pill": "pass"},
+            {"ticker": "Z", "right": "−4.0%", "pill": "watch"},
+            {"ticker": "M", "right": "+9.0%", "pill": "watch"},
+            {"ticker": "C", "right": "–", "pill": "watch"},
+        ]
+        rows.sort(key=runner_sort_key)
+        self.assertEqual([r["ticker"] for r in rows], ["M", "A", "Z", "C", "W", "B"])
+
+    def test_solana_asof_reads_last_run_utc_only(self):
+        self.assertEqual(solana_run_asof({"last_run_utc": "20261111T1500"}), "2026-11-11T15:00:00Z")
+        self.assertIsNone(solana_run_asof({}))
+        self.assertIsNone(solana_run_asof({"last_run_utc": "2026-11-11T15:00:00Z"}))
+        self.assertIsNone(solana_run_asof({"last_run_utc": "20261340T9999"}))
+
+    def test_solana_opens_merge_same_token_across_books(self):
+        positions = {"books": {
+            "R": {"open": {"1": {"symbol": "DOGE", "entry": 1, "last_mark": 1.1, "why": "open"}}},
+            "F": {"open": {
+                "2": {"symbol": "DOGE", "entry": 2, "last_mark": 1.0, "why": "open"},
+                "3": {"symbol": "CAT", "entry": 1, "last_mark": 1.5, "why": "lead"},
+            }},
+            "S": {"open": {"4": {"symbol": "CAT", "entry": 1, "last_mark": None, "why": "lead"}}},
+        }}
+        by = {r["ticker"]: r for r in solana_open_rows(positions)}
+        self.assertEqual(set(by), {"DOGE", "CAT"})
+        self.assertEqual(by["DOGE"]["pill"], "F · R")
+        self.assertEqual(by["DOGE"]["book"], "F · R")
+        self.assertEqual(by["DOGE"]["right"], "+10.0%")
+        self.assertIn("F −50.0%", by["DOGE"]["why"])
+        self.assertIn("R +10.0%", by["DOGE"]["why"])
+        self.assertEqual(by["CAT"]["pill"], "F · S")
+        self.assertEqual(by["CAT"]["right"], "+50.0%")
+        self.assertIn("S no mark", by["CAT"]["why"])
+        self.assertEqual([r["ticker"] for r in solana_open_rows(positions)], ["CAT", "DOGE"])
+
+    def test_solana_section_asof_comes_from_health_file(self):
+        import json
+        import tempfile
+        with tempfile.TemporaryDirectory() as folder:
+            desk = os.path.join(folder, "solana-desk")
+            os.makedirs(desk)
+            with open(os.path.join(desk, "health.json"), "w", encoding="utf-8") as fh:
+                json.dump({"last_run_utc": "20261111T1500"}, fh)
+            with open(os.path.join(desk, "positions.json"), "w", encoding="utf-8") as fh:
+                json.dump({"books": {}}, fh)
+            section = solana_section(folder, {}, False)
+        self.assertEqual(section["asof"], "2026-11-11T15:00:00Z")
+        self.assertEqual(section["opens"], [])
+        self.assertEqual(section["verdict"], "NOT_FINAL")
 
 
 if __name__ == "__main__":

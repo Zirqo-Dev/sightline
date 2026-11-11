@@ -20,8 +20,9 @@ body[data-layout="mono"] .logo{font:500 20px/1 "DM Mono",ui-monospace,monospace;
 .logo i{font-style:normal;color:var(--sl-wordmark);animation:blink 1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 body[data-layout="mono"] .badge{font:10px "DM Mono",monospace;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--mute);margin-left:6px;vertical-align:3px}
-body[data-layout="mono"] .live{font:10px "DM Mono",monospace;color:var(--mute);text-align:right}
+body[data-layout="mono"] .live{font:10px "DM Mono",monospace;color:var(--mute);text-align:right;line-height:1.35;max-width:min(220px,62%)}
 body[data-layout="mono"] .live b{color:var(--up);font-weight:400}
+body[data-layout="mono"] .live .amb{color:var(--amb)}
 body[data-layout="mono"] .subt{color:var(--mute);font-size:12px;margin-top:2px}
 body[data-layout="mono"] nav{display:flex;gap:4px;margin-top:12px;background:var(--bg);border-radius:8px;padding:3px;width:max-content;max-width:100%}
 body[data-layout="mono"] nav a{font:500 11px "DM Mono",monospace;color:var(--mute);text-decoration:none;padding:5px 10px;border-radius:6px;text-transform:uppercase;letter-spacing:.04em}

@@ -377,6 +377,46 @@ def _pct_24h(text):
     return float(m.group(1).replace("−", "-").replace("+", ""))
 
 
+def move_24h(text):
+    """Numeric 24h move printed on a row, or None when that cell has no reading."""
+    if text in (None, "", "–"):
+        return None
+    raw = str(text).strip().replace("−", "-").replace("%", "").replace("+", "").replace(",", "")
+    if raw in ("", "-", "."):
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+def runner_sort_key(row):
+    """Display order only: a numeric 24h move first (biggest first), then watch pills, then no reading."""
+    move = move_24h((row or {}).get("right"))
+    ticker = str((row or {}).get("ticker") or "")
+    if move is not None:
+        return (0, -move, ticker)
+    if str((row or {}).get("pill") or "") == "watch":
+        return (1, 0, ticker)
+    return (2, 0, ticker)
+
+
+def solana_run_asof(health):
+    """Read-only stamp from health.json last_run_utc (YYYYMMDDTHHMM). Not a verdict input."""
+    raw = str((health or {}).get("last_run_utc") or "") if isinstance(health, dict) else ""
+    match = re.match(r"^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})", raw)
+    if not match:
+        return None
+    try:
+        datetime(
+            int(match.group(1)), int(match.group(2)), int(match.group(3)),
+            int(match.group(4)), int(match.group(5)), tzinfo=timezone.utc,
+        )
+    except ValueError:
+        return None
+    return f"{match.group(1)}-{match.group(2)}-{match.group(3)}T{match.group(4)}:{match.group(5)}:00Z"
+
+
 def _distance(text):
     blob = text or ""
     above = re.search(r"(\d+(?:\.\d+)?)%\s+above\s+(?:the\s+)?(\d[\d,.]*k?)", blob, re.I)
@@ -511,10 +551,10 @@ def cardano_section(data_dir, buzz, buzz_live):
                 established.append(item)
         else:
             runners.append(item)
-    # Keep top-10 order for established, runners by whether they are moving.
+    # Established stays in top-10 order. Runners are display order only.
     rank = {tk: i for i, tk in enumerate(top)}
     established.sort(key=lambda r: (0 if r["pill"] == "watch" else 1, rank.get(r["ticker"], 99)))
-    runners.sort(key=lambda r: (0 if r["right_cls"] == "up" else 1, r["ticker"]))
+    runners.sort(key=runner_sort_key)
     runners = runners[:12]
     established = established[:10]
 
@@ -653,36 +693,86 @@ def solana_books(positions):
     return out, verdict, gap
 
 
-def solana_section(data_dir, buzz, buzz_live):
-    positions = load_json(os.path.join(data_dir, "solana-desk", "positions.json")) or {}
-    books, verdict, gap = solana_books(positions)
-    opens = []
-    for book, blob in ((positions.get("books") or {}).items()):
+SOLANA_BOOK_RANK = {"F": 0, "R": 1, "S": 2}
+
+
+def _mark_pct(entry, mark):
+    try:
+        if entry and float(entry) > 0 and mark is not None:
+            return (float(mark) / float(entry) - 1) * 100
+    except (TypeError, ValueError):
+        return None
+    return None
+
+
+def solana_open_rows(positions):
+    """One display row per token. The pill lists the books, for example F · R."""
+    grouped = {}
+    order = []
+    for book, blob in ((positions or {}).get("books") or {}).items():
         op = (blob or {}).get("open") or {}
         if not isinstance(op, dict):
             continue
         for _id, p in op.items():
+            if not isinstance(p, dict):
+                continue
             symbol = scrub(p.get("symbol") or "")
             if not symbol:
                 continue
-            entry = p.get("entry")
-            mark = p.get("last_mark")
-            pct = None
-            try:
-                if entry and float(entry) > 0 and mark is not None:
-                    pct = (float(mark) / float(entry) - 1) * 100
-            except (TypeError, ValueError):
-                pct = None
-            facts = {
-                "whale": None, "holders": None, "holders_n": None, "above": None, "swarm": False,
-                "why": f"{scrub(str(p.get('why') or 'open').replace('_', ' '))}" + (f"; mark {signed(pct, 1)}%" if pct is not None else ""),
-                "change": "A logged whale, holder, or kill-line print shows up. The day-14 line is not a ticket.",
-                "logo": symbol,
-            }
-            item = row(symbol, facts, "–" if pct is None else signed(pct, 1) + "%", "up" if pct and pct > 0 else "dn" if pct and pct < 0 else "mu", book, "")
-            item["book"] = book
-            opens.append(item)
-    opens.sort(key=lambda r: -(float(r["right"].replace("−", "-").replace("%", "").replace("+", "") or 0) if r["right"] not in ("–",) else -1e9))
+            key = symbol.upper()
+            if key not in grouped:
+                grouped[key] = []
+                order.append(key)
+            grouped[key].append({
+                "book": str(book),
+                "symbol": symbol,
+                "pct": _mark_pct(p.get("entry"), p.get("last_mark")),
+                "why": scrub(str(p.get("why") or "open").replace("_", " ")),
+            })
+    opens = []
+    for key in order:
+        parts = sorted(grouped[key], key=lambda p: (SOLANA_BOOK_RANK.get(p["book"], 99), p["book"]))
+        books = []
+        for part in parts:
+            if part["book"] not in books:
+                books.append(part["book"])
+        books.sort(key=lambda b: (SOLANA_BOOK_RANK.get(b, 99), b))
+        pill = " · ".join(books)
+        pcts = [part["pct"] for part in parts if part["pct"] is not None]
+        pct = max(pcts) if pcts else None
+        why = parts[0]["why"] or "open"
+        if len(parts) == 1:
+            if pct is not None:
+                why = why + f"; mark {signed(pct, 1)}%"
+        else:
+            bits = []
+            for part in parts:
+                bits.append(part["book"] + (" no mark" if part["pct"] is None else f" {signed(part['pct'], 1)}%"))
+            why = why + "; " + " · ".join(bits)
+        symbol = parts[0]["symbol"]
+        facts = {
+            "whale": None, "holders": None, "holders_n": None, "above": None, "swarm": False,
+            "why": why,
+            "change": "A logged whale, holder, or kill-line print shows up. The day-14 line is not a ticket.",
+            "logo": symbol,
+        }
+        item = row(
+            symbol, facts,
+            "–" if pct is None else signed(pct, 1) + "%",
+            "up" if pct and pct > 0 else "dn" if pct and pct < 0 else "mu",
+            pill, "",
+        )
+        item["book"] = pill
+        opens.append(item)
+    opens.sort(key=lambda r: -(move_24h(r["right"]) if move_24h(r["right"]) is not None else -1e9))
+    return opens
+
+
+def solana_section(data_dir, buzz, buzz_live):
+    positions = load_json(os.path.join(data_dir, "solana-desk", "positions.json")) or {}
+    health = load_json(os.path.join(data_dir, "solana-desk", "health.json")) or {}
+    books, verdict, gap = solana_books(positions)
+    opens = solana_open_rows(positions)
     sells = []
     path = os.path.join(data_dir, "solana-desk", "trades.csv")
     net = gross = wins = nsell = 0.0
@@ -738,6 +828,7 @@ def solana_section(data_dir, buzz, buzz_live):
         buzz_rows.append({"ticker": tk, "sub": f"{tok.get('mentions_1h')} posts / 1h" + (f" · {ratio}× prior hour" if ratio is not None else "")})
     costs = round(gross - net, 2) if nsell else None
     return {
+        "asof": solana_run_asof(health),
         "books": books,
         "verdict": verdict,
         "gap_pp": gap,
