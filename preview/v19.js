@@ -79,8 +79,7 @@
       + card("Cardano", "Sentinel", `<div class="lab">Sentinel pick</div><div class="big">None</div><div class="sub">${esc((sol.open || 0) + " open · " + (sol.closed || 0) + " closed · " + (sol.pnl == null ? "–" : sol.pnl) + " ₳ paper")}</div>${head(c.runners, api, 1)}${more((c.established || []).slice(0, 3), api, "more watch")}<a class="a" href="#/cardano">Open Cardano →</a>`)
       + card("Solana", "day-14 verdict", `<div class="lab">F book · per trade</div><div class="big ${f.exp_pct < 0 ? "dn" : ""}">${esc(f.exp_pct == null ? "–" : (f.exp_pct < 0 ? "−" : "+") + Math.abs(f.exp_pct).toFixed(1) + "%")}</div><div class="sub">${esc((f.n || 0) + " closes · rule " + (f.rule || "–") + " · " + (s.verdict || "NOT_FINAL") + " until Nov 11, 10:00 AM ET")}</div>${head(s.opens, api, 1)}<a class="a" href="#/solana">Open Solana →</a>`)
       + card("NFT · KING", "floors in USD", `<div class="lab">Top floor</div><div class="big">${esc(nftTop ? nftTop.right : "–")}</div><div class="sub">${esc(nftTop ? nftTop.ticker + " · no KING pick" : "No names in the pulse")}</div>${head(n.rows, api, 1)}<a class="a" href="#/nft">Open NFT →</a>`)
-      + card("Latest briefs", "from the desk log", brief || `<p class="sub">No briefs in the build.</p>`, "span")
-      + card("Wallet race", "paper · display only", `<p class="t">Display only, untested. A lead in the race is luck until tested.</p><a class="a" href="#/races">Open the race →</a>`, "span");
+      + card("Latest briefs", "from the desk log", brief || `<p class="sub">No briefs in the build.</p>`, "span");
   }
 
   function cardano(doc, api) {

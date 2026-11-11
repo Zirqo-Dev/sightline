@@ -26,4 +26,4 @@ jobs:
       - name: X buzz schema tests
         run: python3 -m unittest discover -s scripts/tests
       - name: Wallet race tests
-        run: python3 -m unittest races.tests.test_r5 races.tests.test_race
+        run: python3 -m unittest races.tests.test_r5 races.tests.test_race races.tests.test_r3_vision

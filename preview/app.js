@@ -16,8 +16,7 @@
     { id: "home", href: "#/", label: "Home", desk: "home" },
     { id: "cardano", href: "#/cardano", label: "Cardano", desk: "solada" },
     { id: "solana", href: "#/solana", label: "Solana", desk: "solana" },
-    { id: "nft", href: "#/nft", label: "NFT", desk: "nft" },
-    { id: "races", href: "#/races", label: "Race", desk: "races" }
+    { id: "nft", href: "#/nft", label: "NFT", desk: "nft" }
   ];
 
   function isDeskData(path) {
@@ -1328,7 +1327,6 @@
     if (path === "cardano" || path === "solada" || path === "desk/solada" || path === "desk/cardano") return NAV[1];
     if (path === "solana" || path === "desk/solana") return NAV[2];
     if (path === "nft" || path === "desk/nft") return NAV[3];
-    if (path === "races" || path === "race") return NAV[4];
     if (path === "briefs") return NAV[0];
     return NAV[0];
   }
@@ -1473,14 +1471,6 @@
     document.body.dataset.desk = route.desk;
     document.title = "Sightline · " + route.label;
     if (nav) nav.innerHTML = navHtml(route.id);
-    if (route.id === "races" && root.SightlineRaces) {
-      view.innerHTML = root.SightlineRaces.page(store.raceSummary);
-      document.title = "Sightline · Race";
-      const sub = document.getElementById("subt");
-      if (sub) sub.textContent = "Wallet race · paper only · display only";
-      if (status) status.innerHTML = "<b>●</b> Paper";
-      return;
-    }
     if (!store.ready) {
       if (document.body.dataset.layout === "mono") return;
       if (status) status.innerHTML = statusPills({ mode: "…", version: "…", fresh: null, failure: null });
@@ -1491,7 +1481,7 @@
     if (document.body.dataset.layout === "mono" && (root.SightlineV19 || root.SightlineMono)) {
       const api = { assetLogo, nftRows, ago, sanitize, tx };
       const sub = document.getElementById("subt");
-      if (sub) sub.textContent = ({ home: "Research desks · Cardano · Solana · NFT · Race", cardano: "Cardano desk · runners and established", solana: "Solana paper desk · F / R / S books", nft: "KING · NFT watchlist in USD", races: "Wallet race · paper only · display only" })[route.id] || "";
+      if (sub) sub.textContent = ({ home: "Research desks · Cardano · Solana · NFT", cardano: "Cardano desk · runners and established", solana: "Solana paper desk · F / R / S books", nft: "KING · NFT watchlist in USD" })[route.id] || "";
       let html = "";
       try {
         html = p.picks && root.SightlineV19 ? root.SightlineV19.page(route.id, p.picks, api) : root.SightlineMono.page(route.id, p, api);
@@ -1629,9 +1619,6 @@
       if (routeOf(location.hash).id === "nft") render(routeOf(location.hash));
     });
     draw();
-    if (root.SightlineRaces) {
-      root.SightlineRaces.load().then(doc => { store.raceSummary = doc; if (routeOf(location.hash).id === "races") draw(); }).catch(() => {});
-    }
     loadPack().then(pack => { store.pack = pack; store.ready = true; draw(); }).catch(() => {
       store.pack = { solanaModel: solanaModel(null, [], null), cardano: {}, cardanoView: cardanoView({}), briefs: [], health: null, nftPulse: null, nftLog: null, buzz: null, buzzHistory: null };
       store.ready = true;

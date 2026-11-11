@@ -7,10 +7,11 @@ import urllib.request
 
 
 class HTTPResult:
-    def __init__(self, status, body, error):
+    def __init__(self, status, body, error, raw=None):
         self.status = status
         self.body = body
         self.error = error
+        self.raw = raw if raw is not None else b""
 
     @property
     def temporary(self):
@@ -45,7 +46,7 @@ class Transport:
                 parsed = json.loads(text)
             except json.JSONDecodeError:
                 parsed = text
-        return HTTPResult(status, parsed, None)
+        return HTTPResult(status, parsed, None, raw=raw or b"")
 
 
 def host_of(url):

@@ -116,20 +116,20 @@ def _prove(ctx, w, cid, symbol):
     if not mint:
         return None
     sym = _binance_symbol(detail.body, symbol)
-    listed = _listing_ms(ctx, w, sym)
+    listed, source, why = _listing(ctx, w, sym)
     if listed is None:
-        ctx.log("R3", "decision", {"action": "exclude", "reason": "listing_date", "symbol": sym, "mint": mint})
+        ctx.log("R3", "decision", {"action": "excluded", "reason": why or "listing_date", "symbol": sym, "mint": mint})
         return None
     limit = datetime.fromisoformat(ASOF.replace("Z", "+00:00")).timestamp() * 1000
     if listed > limit:
-        ctx.log("R3", "decision", {"action": "exclude", "reason": "listing_too_new", "symbol": sym, "mint": mint})
+        ctx.log("R3", "decision", {"action": "excluded", "reason": "listing_too_new", "symbol": sym, "mint": mint})
         return None
     return {
         "mint": mint,
         "symbol": (detail.body.get("symbol") or symbol or "TOKEN").upper(),
         "listed_on": datetime.fromtimestamp(listed / 1000, timezone.utc).strftime("%Y-%m-%d"),
-        "source": "binance_klines" if not str(sym).endswith(":vision") else "binance_vision",
-        "binance_symbol": sym.replace(":vision", ""),
+        "source": source,
+        "binance_symbol": sym,
     }
 
 
@@ -147,49 +147,70 @@ def _binance_symbol(detail, fallback):
     return (str(fallback or "").upper() or "UNKNOWN") + "USDT"
 
 
-def _listing_ms(ctx, w, symbol):
-    sym = symbol.replace(":vision", "")
+def _listing(ctx, w, symbol):
+    """Return (open_time_ms, source, fail_reason). A 451 is not a pass."""
     url = w["binance_klines"] + "?" + urlencode({
-        "symbol": sym, "interval": "1d", "limit": 1, "startTime": 0,
+        "symbol": symbol, "interval": "1d", "limit": 1, "startTime": 0,
     })
     result = _get(ctx, url, "api.binance.com")
     if result and result.status == 200 and isinstance(result.body, list) and result.body:
         try:
-            return int(result.body[0][0])
+            return int(result.body[0][0]), "binance_klines", None
         except (TypeError, ValueError, IndexError):
-            return None
+            return None, None, "listing_date"
     if result is None or result.status in (451, 403) or result.temporary:
-        return _vision_ms(ctx, w, sym)
-    return None
+        return _vision(ctx, w, symbol)
+    return None, None, "listing_date"
 
 
-def _vision_ms(ctx, w, symbol):
+def _vision(ctx, w, symbol):
     prefix = f"data/spot/monthly/klines/{symbol}/1d/"
-    listed = _get(ctx, w["binance_vision"] + "?" + urlencode({"prefix": prefix}), "data.binance.vision")
+    list_base = w.get("binance_vision_list") or "https://s3-ap-northeast-1.amazonaws.com/data.binance.vision"
+    list_url = list_base.rstrip("/") + "?" + urlencode({"prefix": prefix})
+    listed = _get(ctx, list_url, "s3-ap-northeast-1.amazonaws.com")
     if not listed or listed.status != 200:
-        return None
+        return None, None, "vision_list"
     text = listed.body if isinstance(listed.body, str) else ""
-    key = None
-    for part in text.replace("<Key>", "\n").split("\n"):
-        if part.startswith(prefix) and part.split("<", 1)[0].endswith(".zip"):
-            key = part.split("<", 1)[0]
-            break
-    if not key:
-        return None
-    blob = ctx.transport.request("GET", w["binance_vision"] + key, headers={"user-agent": "sightline-races"})
-    if not blob or blob.status != 200 or not isinstance(blob.body, str):
-        # zip bytes are not JSON; the transport may have returned text. Ask for raw via a side channel.
-        return _vision_from_text(blob.body if blob else None)
-    return _vision_from_text(blob.body)
+    if _is_html(text):
+        return None, None, "vision_html"
+    keys = []
+    for part in text.split("<Key>")[1:]:
+        key = part.split("</Key>", 1)[0].strip()
+        if key.startswith(prefix) and key.endswith(".zip"):
+            keys.append(key)
+    if not keys:
+        return None, None, "vision_empty"
+    key = sorted(keys)[0]
+    blob = _get(ctx, w["binance_vision"].rstrip("/") + "/" + key, "data.binance.vision")
+    raw = blob.raw if blob is not None else b""
+    if not blob or blob.status != 200 or not raw:
+        return None, None, "vision_zip"
+    opened = _zip_open_ms(raw)
+    if opened is None:
+        return None, None, "vision_zip"
+    return opened, "binance_vision", None
 
 
-def _vision_from_text(body):
-    if not isinstance(body, str) or not body.strip():
+def _is_html(text):
+    head = text.lstrip()[:300].lower()
+    return head.startswith("<!doctype html") or head.startswith("<html") or "<html" in head
+
+
+def _zip_open_ms(raw):
+    if not isinstance(raw, (bytes, bytearray)):
         return None
-    line = body.strip().splitlines()[0]
-    cell = line.split(",")[0]
     try:
-        return int(float(cell))
+        with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+            names = sorted(n for n in zf.namelist() if n.endswith(".csv"))
+            if not names:
+                return None
+            line = zf.open(names[0]).readline().decode("utf-8", errors="replace").strip()
+    except zipfile.BadZipFile:
+        return None
+    if not line:
+        return None
+    try:
+        return int(float(line.split(",")[0]))
     except ValueError:
         return None
 
