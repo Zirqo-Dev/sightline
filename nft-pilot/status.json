@@ -5,17 +5,17 @@
   "by_chain": {
     "base": {
       "passing": 0,
-      "screened": 49
+      "screened": 0
     },
     "ethereum": {
-      "passing": 9,
-      "screened": 42
+      "passing": 10,
+      "screened": 24
     }
   },
   "commit_sha": "04a1ee7b417b2321628478e8bef7519d4e6770b8",
   "data_branch": "nft-data",
   "distinct_collections": 11,
-  "distinct_per_day_median": 10.0,
+  "distinct_per_day_median": 10.5,
   "early_kill": {
     "backstop": "pending",
     "backstop_measured_days": 2,
@@ -34,9 +34,9 @@
     "gate2_window_hours": 72,
     "result": null
   },
-  "eth_usd": 2060.52642094,
+  "eth_usd": 2058.49338648,
   "eth_usd_runs": {
-    "chainlink": 19,
+    "chainlink": 20,
     "fallback": 0
   },
   "eth_usd_source": "chainlink",
@@ -44,54 +44,54 @@
     "liquid_tail": 0,
     "sales_truncated": 1
   },
-  "floor_passing_this_run": 9,
+  "floor_passing_this_run": 10,
   "kind": "status",
   "measured": true,
-  "median_cost": 0.14593676107007308,
+  "median_cost": 0.14597851493570946,
   "median_cost_seasoned": null,
   "nh04": "not_ready",
   "nh04_ready": false,
   "nh04_verdict": "not_ready",
-  "null_cost_count": 13,
-  "null_cost_share": 0.08125,
+  "null_cost_count": 15,
+  "null_cost_share": 0.08875739644970414,
   "null_cost_share_max": 0.2,
-  "opensea_calls": 480,
+  "opensea_calls": 136,
   "outage_runs": 0,
   "pace_median": null,
   "pace_ready": false,
   "partial": false,
   "passers_footnoted": 2,
-  "pending": 9,
+  "pending": 10,
   "pending_deferred": 0,
   "pending_served": 9,
-  "ran_at": "2026-11-11T08:27:12Z",
+  "ran_at": "2026-11-11T09:27:13Z",
   "rate_limit": {
     "limit": "120",
     "remaining": "119",
-    "reset": "1794386280"
+    "reset": "1794389485"
   },
   "raw": "not_kept",
   "reason": null,
   "rejections": {
-    "bidders": 29,
-    "buyers": 64,
-    "concentration": 75,
-    "contracts": 7,
-    "disabled": 1,
-    "floor": 59,
-    "gas": 38,
-    "listings": 34,
+    "bidders": 1,
+    "buyers": 11,
+    "concentration": 12,
+    "contracts": 3,
+    "disabled": 0,
+    "floor": 28,
+    "gas": 4,
+    "listings": 7,
     "mint": 0,
-    "sales": 69,
-    "shared": 9,
-    "standard": 15
+    "sales": 12,
+    "shared": 3,
+    "standard": 6
   },
   "rule": "v0.3 GET /api/v2/collections order_by=market_cap limit=100 max_list_pages=8 pass_target=10 max_calls=480 chains=ethereum,base pace_per_minute=60 window=7d min_sales=30 min_buyers=10 max_buyer_share=0.20 min_bidders=3 bid_band=0.85 min_listings=5 floor_usd=250 gas_ratio=0.02 min_mint_days=14 event_pages=3 truncated=flag",
   "schema_version": 1,
-  "screened": 91,
+  "screened": 24,
   "status": "ok",
-  "stop": "call_cap",
-  "units": 160,
+  "stop": "pass_target",
+  "units": 169,
   "unsellable_share": 0.0,
-  "verdict_footnote": "27 of 160 units: top seller or one day above 50% of 7d sales"
+  "verdict_footnote": "29 of 169 units: top seller or one day above 50% of 7d sales"
 }
