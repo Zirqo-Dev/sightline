@@ -1,5 +1,5 @@
 {
- "at": "2026-11-11T03:16:17Z",
+ "at": "2026-11-11T05:14:56Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -146,10 +146,9 @@
    "policy_short": "eb7a93eb",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~c9d8143f",
-   "reserve_ada": 1138693.51,
-   "reserve_qty": 1059104941000,
-   "asof": "2026-11-07T22:18:43Z",
-   "stale": true
+   "reserve_ada": 1239687.75,
+   "reserve_qty": 965424511706,
+   "asof": "2026-11-11T05:14:10Z"
   },
   {
    "ticker": "CLOVE",
@@ -268,14 +267,14 @@
    "policy_short": "eb7a93eb",
    "rank": 1,
    "unit_source": "cache",
-   "last_checked": "2026-11-10T17:16:29Z"
+   "last_checked": "2026-11-11T05:14:56Z"
   },
   {
    "ticker": "NIGHT",
    "policy_short": "0691b2fe",
    "rank": 2,
    "unit_source": "cache",
-   "last_checked": "2026-11-10T17:16:29Z"
+   "last_checked": "2026-11-11T05:14:56Z"
   },
   {
    "ticker": "STRIKE",
@@ -334,20 +333,15 @@
   }
  ],
  "coverage": {
-  "MIN": {
-   "read": 0,
-   "complete": false,
-   "pools": 0
-  },
   "ASCEND": {
-   "read": 0,
+   "read": 27,
    "complete": false,
-   "skipped": "budget"
+   "pools": 1
   },
   "NIGHT": {
    "read": 0,
    "complete": false,
-   "skipped": "budget"
+   "pools": 0
   },
   "SNEK": {
    "read": 0,
@@ -378,10 +372,14 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "MIN": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "MIN",
   "ASCEND",
   "NIGHT",
   "SNEK",
@@ -389,9 +387,10 @@
   "COCK",
   "SOLADA",
   "CLOVE",
-  "STRIKE"
+  "STRIKE",
+  "MIN"
  ],
- "koios_calls": 4,
+ "koios_calls": 8,
  "blockfrost_calls": 0,
  "blockfrost_fallbacks": 0,
  "blockfrost_available": true,

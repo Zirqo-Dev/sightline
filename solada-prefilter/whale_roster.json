@@ -5,7 +5,7 @@
   "measured_factor": true,
   "min_sample": 8,
   "dormant_count": 11,
-  "asof": "2026-11-11T03:17:22Z",
+  "asof": "2026-11-11T05:15:58Z",
   "note": "Research tally. A hit is an observed checkpoint where every measured series (price and liquidity) moves the whale's way at +1h, +6h, or +24h. A wrong-way observation is a miss. No observation is unobserved and is not a miss. n_observed is hits plus misses. Rates stay blank under 8 observed checkpoints on that horizon in that tally. scores.live is the forward quote path, or the lead's published private-cache tally. scores.backfill is approximate: nearest desk-data ADA/qty within 20 minutes at 1h, 60 minutes at 6h, and 3 hours at 24h, plus pool ADA when a snapshot is in that window. Backfill never replaces live. eligible_for_active needs at least 25 live observed checkpoints and a live hit rate above 55% at both 6h and 24h. promising_backfill means the approximate tally alone would clear that bar. Nothing is promoted automatically. Not a buy signal.",
   "whales": [
     {
@@ -22,9 +22,9 @@
         "exit": 14,
         "live": {
           "h1": {
-            "n_observed": 337,
-            "hits": 132,
-            "hit_rate": 0.392
+            "n_observed": 345,
+            "hits": 134,
+            "hit_rate": 0.388
           },
           "h6": {
             "n_observed": 337,
@@ -56,10 +56,10 @@
           "approximate": true,
           "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
         },
-        "n_observed_h1": 337,
-        "priced_h1": 337,
-        "hits_h1": 132,
-        "hit_rate_h1": 0.392,
+        "n_observed_h1": 345,
+        "priced_h1": 345,
+        "hits_h1": 134,
+        "hit_rate_h1": 0.388,
         "n_observed_h6": 337,
         "priced_h6": 337,
         "hits_h6": 120,
@@ -528,14 +528,14 @@
       "eligible_reason": "not eligible: live 6h observed 9 (need 25), rate 0.444 (need > 0.55); live 24h observed 13 (need 25), rate 0.077 (need > 0.55); promotion is a manual owner decision",
       "promising_backfill": false,
       "scores": {
-        "events": 49,
-        "accumulate": 18,
+        "events": 50,
+        "accumulate": 19,
         "trim": 31,
         "exit": 0,
         "live": {
           "h1": {
-            "n_observed": 5,
-            "hits": 2,
+            "n_observed": 6,
+            "hits": 3,
             "hit_rate": null
           },
           "h6": {
@@ -568,9 +568,9 @@
           "approximate": true,
           "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
         },
-        "n_observed_h1": 5,
-        "priced_h1": 5,
-        "hits_h1": 2,
+        "n_observed_h1": 6,
+        "priced_h1": 6,
+        "hits_h1": 3,
         "hit_rate_h1": null,
         "n_observed_h6": 9,
         "priced_h6": 9,
