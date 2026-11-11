@@ -18,7 +18,6 @@
     { tag: "D", name: "Best-hours SOL", desc: "Trades SOL only in historically stronger hour-of-day windows. No retunes this cycle.", twin: "random twin, same hours", tradesDay: "—", status: "killed in backtest (Nov 11)", tone: "bad" }
   ];
   var BLOCKED = { tag: "E", name: "Staked-SOL discount", desc: "jitoSOL discount vs SOL. Blocked because CoinGecko price glitches produced the locked-rule pass; clean data since Aug 1 has 0 episodes.", twin: "random twin on the discount", tradesDay: "—", status: "blocked: bad price data", tone: "warn" };
-  var ANATOMY_BOOK = { tag: "EX", name: "Example book", desc: "Book anatomy only. How a tested book would show net excess, a 95% interval, and n against its own twin. This card is not S2 and not a live book.", twin: "its random twin", tradesDay: "example", n: 48, req: 150, unit: "closes", stop: "EXAMPLE stop date", lo: -4.8, mid: 1.6, hi: 8.0, insufficient: true };
   var CYCLE2 = { tag: "C2", name: "Top winners", desc: "Weekly momentum into recent winners. Killed pre-test at 11:49 AM EST Nov 11: at most 9 eligible tokens before 2025 vs the 15 needed.", twin: "—", tradesDay: "—", status: "killed pre-test (too few tokens)", tone: "bad" };
   var WALLETS = [
     { tag: "S2", name: "Survivors", group: "Cycle 1 · tested", purpose: "Meme tokens that survive their early stretch. No tested book is running.", twin: "random twin, same universe", tradesDay: "—", status: S2_STATUS, tone: "warn", note: S2_STATUS },
@@ -33,37 +32,8 @@
   ];
   var GROUPS = ["Cycle 1 · tested", "Killed in backtest (Nov 11)", "Blocked", "Display only", "Cycle 2 · killed pre-test"];
   var DAYS = ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D13", "D14"];
-  var EVO = [
-    { key: "S2", label: "S2", note: "EXAMPLE DATA only. S2 v2 is unworkable before start (owner, Nov 11); v3 redesign after Nov 25. This curve is not a live book.", series: [
-      { name: "S2 Survivors", kind: "book", values: [5, 5.02, 4.95, 4.98, 5.06, 5.01, 4.9, 4.97, 5.08, 5.12, 5.04, 5.1, 5.15, 5.11] },
-      { name: "S2 twin", kind: "twin", values: [5, 4.97, 4.93, 4.96, 4.99, 4.92, 4.86, 4.9, 4.98, 5.03, 4.97, 5.01, 5.04, 5.02] },
-      { name: "SOL hold", kind: "bench", values: [5, 5.05, 5.01, 5.08, 5.12, 5.04, 4.98, 5.06, 5.14, 5.2, 5.12, 5.18, 5.25, 5.24] }
-    ] },
-    { key: "A", label: "A · killed", note: "Killed in backtest (Nov 11). Chart is EXAMPLE DATA only, not a live book. No retunes this cycle.", series: [
-      { name: "A Hour-drop", kind: "book", values: [5, 5.04, 4.99, 5.08, 5.02, 5.11, 5.06, 5.14, 5.09, 5.18, 5.12, 5.2, 5.16, 5.22] },
-      { name: "A twin", kind: "twin", values: [5, 4.98, 5.01, 4.96, 5, 4.95, 4.99, 4.93, 4.97, 5.02, 4.98, 5.04, 5, 5.03] }
-    ] },
-    { key: "B", label: "B · killed", note: "Killed in backtest (Nov 11). Chart is EXAMPLE DATA only, not a live book. No retunes this cycle.", series: [
-      { name: "B Funding", kind: "book", values: [5, 5, 5, 5.07, 5.07, 5.07, 5.04, 5.04, 5.11, 5.11, 5.11, 5.08, 5.08, 5.14] },
-      { name: "B twin", kind: "twin", values: [5, 5, 5, 4.97, 4.97, 4.97, 5.01, 5.01, 4.99, 4.99, 4.99, 5.03, 5.03, 5.01] }
-    ] },
-    { key: "C", label: "C · killed", note: "Killed in backtest (Nov 11). Chart is EXAMPLE DATA only, not a live book. No retunes this cycle.", series: [
-      { name: "C Calm-or-wild", kind: "book", values: [5, 5.03, 5.01, 5.06, 5.08, 5.04, 4.99, 5.05, 5.1, 5.13, 5.08, 5.12, 5.16, 5.15] },
-      { name: "SOL hold (twin)", kind: "bench", values: [5, 5.05, 5.01, 5.08, 5.12, 5.04, 4.98, 5.06, 5.14, 5.2, 5.12, 5.18, 5.25, 5.24] }
-    ] },
-    { key: "D", label: "D · killed", note: "Killed in backtest (Nov 11). Chart is EXAMPLE DATA only, not a live book. No retunes this cycle.", series: [
-      { name: "D Best-hours", kind: "book", values: [5, 5.03, 5.01, 5.05, 5.04, 5.08, 5.06, 5.1, 5.09, 5.13, 5.11, 5.15, 5.14, 5.17] },
-      { name: "D twin", kind: "twin", values: [5, 5.01, 4.98, 5.02, 5, 5.03, 4.99, 5.02, 5.01, 5.04, 5.02, 5.05, 5.03, 5.06] }
-    ] },
-    { key: "DW", label: "DW · untested", note: "Busy S2 (exit variant), display only, untested. It waits for S2 v3. No live curve yet.", series: [
-      { name: "Busy S2 (exit variant)", kind: "book", values: [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5] }
-    ] },
-    { key: "BH", label: "SOL hold", note: "Display-only benchmark. Dashed, never ranked.", series: [
-      { name: "SOL hold", kind: "bench", values: [5, 5.05, 5.01, 5.08, 5.12, 5.04, 4.98, 5.06, 5.14, 5.2, 5.12, 5.18, 5.25, 5.24] }
-    ] }
-  ];
   var DUR = [
-    { tag: "S2 v3", name: "Survivors redesign", mode: "redesign", status: S2_STATUS, tone: "warn", note: S2_STATUS + ". Start, shakedown, check-ins, verdict and hard cap will appear once dates are locked. EXAMPLE / planned — not a live book.", dayLabel: "day — of —", pctLabel: "—%" },
+    { tag: "S2 v3", name: "Survivors redesign", mode: "redesign", status: S2_STATUS, tone: "warn", note: S2_STATUS + ". Start, shakedown, check-ins, verdict and hard cap will appear once dates are locked. Dates are not locked, so there is no day count.", dayLabel: "day — of —", pctLabel: "—%" },
     { tag: "DW", name: "Busy S2 (exit variant)", mode: "waiting", status: "waits for S2 v3", tone: "warn", note: "Display only, untested. No verdict and no hard cap. It waits for S2 v3, so dates stay TBD until that redesign is locked.", dayLabel: "day — of —", pctLabel: "—%" },
     { tag: "BH", name: "SOL buy-and-hold", mode: "display", status: "display only", tone: "accent", note: "Benchmark, not a tested book. No verdict date and no hard cap. Shown for scale only.", dayLabel: "no verdict", pctLabel: "display only" },
     { tag: "v6.5", name: "Frozen F / R / S", mode: "sealed", status: "sealed review Nov 25, 2026", tone: "accent", note: F_STATUS + " Nothing here reads the sealed books.", dayLabel: "review Nov 25", pctLabel: "sealed" },
@@ -78,20 +48,21 @@
     { id: "winning", href: "#/winning", label: "Winning" },
     { id: "wallets", href: "#/wallets", label: "Wallets" },
     { id: "duration", href: "#/duration", label: "Duration" },
-    { id: "evolution", href: "#/evolution", label: "Evolution" },
+    { id: "evolution", href: "#/evolution", label: "Evolve" },
     { id: "trades", href: "#/trades", label: "Trades" },
     { id: "archive", href: "#/archive", label: "Archive" },
-    { id: "fresh", href: "#/freshness", label: "Freshness" }
+    { id: "fresh", href: "#/freshness", label: "Fresh" }
   ];
   var TITLES = {
     desks: "Desks",
-    winning: "Who's winning · EXAMPLE DATA",
+    winning: "Who's winning",
     wallets: "Wallets",
-    duration: "Duration · EXAMPLE DATA",
-    evolution: "Evolution · EXAMPLE DATA",
-    trades: "Ongoing trades · EXAMPLE DATA",
+    duration: "Duration",
+    evolution: "Evolution",
+    trades: "Ongoing trades",
     archive: "Archive",
-    fresh: "Freshness stamps · EXAMPLE DATA"
+    fresh: "Freshness",
+    king2: "KING desk (2)"
   };
 
   function esc(s) {
@@ -136,7 +107,7 @@
     var h = String(location.hash || "#/").replace(/^#/, "") || "/";
     var parts = h.split("/").filter(Boolean);
     var name = parts[0] || "desks";
-    var map = { desks: "desks", winning: "winning", wallets: "wallets", duration: "duration", evolution: "evolution", trades: "trades", archive: "archive", freshness: "fresh", fresh: "fresh" };
+    var map = { desks: "desks", winning: "winning", wallets: "wallets", duration: "duration", evolution: "evolution", trades: "trades", archive: "archive", freshness: "fresh", fresh: "fresh", king2: "king2" };
     return { id: map[name] || "desks", arg: parts[1] ? decodeURIComponent(parts[1]) : "" };
   }
   function fixturesOn() {
@@ -168,7 +139,7 @@
   function bookCard(b) {
     var excess = b.mid != null ? signed(b.mid, 1) + "% / 30d" : "no results yet";
     var band = b.lo != null && b.hi != null
-      ? line("95% interval " + signed(b.lo, 1) + " to " + signed(b.hi, 1) + "% / 30d · EXAMPLE DATA", null, " small muted")
+      ? line("95% interval " + signed(b.lo, 1) + " to " + signed(b.hi, 1) + "% / 30d", null, " small muted")
       : "";
     var sample = b.n != null && b.req != null ? progress(b.n, b.req) : line("n / required n", "not started", " small muted");
     var flags = (b.insufficient ? tag("Insufficient sample", "warn") : "") + (b.status ? tag(b.status, b.statusTone) : "");
@@ -240,8 +211,7 @@
       '<text x="' + k100 + '" y="' + (H - 8) + '" text-anchor="middle" fill="#848E9C" font-size="10">100</text>' +
       '<text x="' + verdict + '" y="' + (H - 8) + '" text-anchor="middle" fill="#848E9C" font-size="10">Verdict</text>' +
       "</svg>" +
-      line("day 18 of ~70", "26% done · EXAMPLE", " small") +
-      line("EXAMPLE anatomy, not a live book and not S2 v3 dates. Kill checks land when n hits 50 and 100 closes, not on fixed calendar days. If entry pace is below the floor, the bar flags at risk during days 8–21.", null, " small muted");
+      line("No day count yet. Marks appear after a book locks its dates.", null, " small muted");
   }
   function equitySvg(points) {
     var W = 340, H = 168, l = 36, r = 10, top = 14, btm = 22;
@@ -293,7 +263,7 @@
       var dash = s.kind === "bench" ? ' stroke-dasharray="5 4"' : "";
       return '<polyline fill="none" stroke="' + color(s.kind) + '" stroke-width="' + (s.kind === "book" ? 2.5 : 2) + '"' + dash + ' points="' + pts + '" />';
     }).join("");
-    return '<svg width="100%" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Example equity">' + grid + days + lines + "</svg>";
+    return '<svg width="100%" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Equity">' + grid + days + lines + "</svg>";
   }
 
   function screenWinning() {
@@ -309,10 +279,10 @@
       '<article class="card dim"><div class="rowtop"><span>SOL buy-and-hold</span>' + tag("benchmark", "accent") + "</div>" +
       line("Display-only benchmark, not a tested book", null, " small muted") +
       line("Trades / day", "0 (hold)", " small") +
-      line("Example return", "no results yet", " small muted") +
+      line("Return", "no results yet", " small muted") +
       "</article>";
     var body = anatomy
-      ? '<p class="warnline">Book anatomy · EXAMPLE. Not a live book and not S2.</p>' + bookCard(ANATOMY_BOOK)
+      ? '<article class="card"><h3>Waiting for first run</h3><p class="muted">A tested book would show net excess, a 95% interval, and n against its twin. No tested book has those figures yet.</p></article>'
       : '<p class="warnline">No tested book is running.</p>' + NOW_BOOKS.map(bookCard).join("");
     return pills + body +
       line("A–D were killed in backtest (Nov 11). E is blocked. Top winners was killed pre-test. Rank never promotes or kills a book.", null, " small muted") +
@@ -374,7 +344,7 @@
   }
   function raceBlock(view, focus) {
     var note = view.source === "fixtures"
-      ? '<p class="warnline">EXAMPLE race file (?fixtures=1). Not a live race.</p>'
+      ? '<p class="warnline">Fixture file (?fixtures=1). Not a live race.</p>'
       : "";
     var lead = view.lead ? line(esc(view.lead.label), null, " small") : line(esc(view.message || R.MESSAGE), null, " small");
     var buttons = view.wallets.map(function (w) {
@@ -422,7 +392,7 @@
     }).join("");
     var head = focusRace
       ? ""
-      : '<p class="warnline">EXAMPLE DATA · no planned wallet has started. A–D killed, E blocked, and cycle-2 Top winners killed pre-test are the real Nov 11 verdicts.</p>';
+      : '<p class="warnline">No planned wallet has started. A–D killed, E blocked, and cycle-2 Top winners killed pre-test are the real Nov 11 verdicts.</p>';
     return head +
       '<p class="kicker">Race wallets · follow the balance</p>' +
       raceBlock(view, focusRace) +
@@ -440,7 +410,7 @@
     var body = "";
     if (state.dur === "how") {
       body = '<article class="card"><h3>Anatomy of a test bar</h3>' +
-        line("Once a book has locked dates, its bar shows all of the marks below. This sample is EXAMPLE only — it is not S2 v3 and uses no calendar dates.", null, " small muted") +
+        line("Once a book has locked dates, its bar shows the marks below. This sample has no dates and no percents. It is not S2 v3.", null, " small muted") +
         anatomy() +
         line("Start date", "left end", " small") +
         line("Today", "bold vertical line", " small") +
@@ -468,45 +438,44 @@
           line(esc(b.dayLabel + " · " + b.pctLabel), null, " small muted") +
           "</div>";
       }).join("") +
-        line("Shared scale: today (Nov 11, 2026, America/Toronto) to Nov 25, then an after zone for dates that are still TBD. EXAMPLE / planned, not live.", null, " small muted");
+        line("Shared scale: today (Nov 11, 2026, America/Toronto) to Nov 25, then an after zone for dates that are still TBD. Planned marks, not a live result.", null, " small muted");
     }
-    return '<p class="warnline">EXAMPLE DATA · planned dates only · no wallet has started. S2 v2 was ruled unworkable before start; the old Nov 12–Jan 8 bar is not shown.</p>' +
+    return '<p class="warnline">No tested book is running. S2 v2 was ruled unworkable before start; the old Nov 12–Jan 8 bar is not shown.</p>' +
       pills + body +
-      '<p class="muted">Killed or blocked books from cycle 1 and cycle 2 (A–E, Top winners) have no forward duration, so they are omitted here. All figures on this screen are examples or planned marks, not live results.</p>';
+      '<p class="muted">Killed or blocked books from cycle 1 and cycle 2 (A–E, Top winners) have no forward duration, so they are omitted here. Bars are planned marks, not live results.</p>';
   }
 
-  function screenEvolution() {
-    var cur = EVO.filter(function (v) { return v.key === state.evo; })[0] || EVO[0];
-    var color = function (k) { return k === "book" ? "#36d6ff" : k === "twin" ? "#B5E853" : "#848E9C"; };
-    var pills = '<div class="pills">' + EVO.map(function (v) {
-      return '<button type="button" data-act="evo" data-v="' + esc(v.key) + '" class="' + (state.evo === v.key ? "on" : "") + '">' + esc(v.label) + "</button>";
-    }).join("") + "</div>";
-    var legend = '<div class="line small secondary">' + cur.series.map(function (s) {
-      return '<span><i style="display:inline-block;width:10px;height:3px;background:' + color(s.kind) + ';margin-right:4px;vertical-align:middle"></i>' + esc(s.name) + "</span>";
-    }).join("") + "</div>";
-    return '<p class="warnline">EXAMPLE DATA · made-up equity curves · no wallet has started</p>' +
-      pills + legend + evoSvg(cur.series) +
-      line("Equity in SOL, starting at 5 SOL each · EXAMPLE DATA", null, " small muted") +
-      line(esc(cur.note), null, " small muted");
+  function screenEvolution(view) {
+    var rows = (view && view.wallets ? view.wallets : []).filter(function (w) { return w.series && w.series.length; });
+    if (!view || view.message || !rows.length) {
+      return '<article class="card"><h3>Waiting for first run</h3><p class="muted">No live equity curve is on races-data yet. Killed books A–D have no curve. S2 has not started. No start date is published.</p></article>';
+    }
+    return rows.map(function (w) {
+      return '<article class="card"><div class="rowtop"><span><h3>' + tag(w.id, "accent") + esc(w.name) + "</h3></span>" + tag(w.role === "benchmark" ? "benchmark" : (w.status || ""), w.role === "benchmark" ? "accent" : "") + "</div>" +
+        line("Started at", esc(level(w.startEquity, "SOL")), " small") +
+        equitySvg(w.series) +
+        "</article>";
+    }).join("") + '<p class="muted">Curves are the race equity file. They are display only.</p>';
   }
 
-  function screenTrades() {
-    var held = 47, holdMax = 120, pct = Math.min(100, (held / holdMax) * 100);
-    return '<p class="warnline">EXAMPLE DATA · no wallet has started · placeholder tokens and links</p>' +
-      '<article class="card"><div class="pos"><div class="logo-dot">EX</div><div class="grow"><div class="rowtop"><strong>EXCAT</strong><span class="up">+18.4%</span></div>' +
-      line("Example Cat", "unrealized", " small muted") +
-      "</div></div><div style=\"margin-top:6px\">" + tag("S2", "accent") + "</div>" +
-      line("Entry", "10:02 AM EST · 0.0000412 SOL", " small") +
-      '<div class="bar"><i class="' + (pct > 80 ? "hot" : "") + '" style="width:' + pct + '%"></i></div>' +
-      line("Held 47 of 120 min", "73 min left", " small muted") +
-      line("EXAMPLE DATA. S2 has not started; this is how an open paper position would look.", null, " small muted") +
-      line("+40% take-profit", "not hit", " small") +
-      line("+100% take-profit", "not hit", " small") +
-      line("25% trail", "peak +22.0%, exits below -8.5%", " small") +
-      line("Stop", "-25% armed", " small") +
-      '<p><a class="link" href="https://dexscreener.com/solana" target="_blank" rel="noreferrer">Open on DexScreener: dexscreener.com/solana/&lt;pair or mint&gt; (placeholder)</a></p>' +
-      "</article>" +
-      '<p class="muted">Logo circle shows the DexScreener token image when one exists; otherwise initials, as here.</p>';
+  function screenTrades(view) {
+    var open = [];
+    (view && view.wallets ? view.wallets : []).forEach(function (w) {
+      (w.positions || []).forEach(function (p) { open.push({ w: w, p: p }); });
+    });
+    if (!open.length) {
+      return '<article class="card"><h3>Waiting for first run</h3><p class="muted">S2 has not started, and the race has no open positions yet. No start date is published.</p></article>';
+    }
+    return '<p class="banner">' + esc(view.banner) + "</p>" + open.map(function (row) {
+      var p = row.p;
+      var pnl = p.upnl != null ? signed(p.upnl, 2) + " SOL" : "—";
+      var pct = p.upnlPct != null ? " · " + signed(p.upnlPct, 1) + "%" : "";
+      return '<article class="card"><div class="rowtop"><strong>' + esc(p.symbol) + "</strong><span class=\"" + cls(p.upnl != null ? p.upnl : p.upnlPct) + "\">" + esc(pnl + pct) + "</span></div>" +
+        line(esc(row.w.id + " · " + row.w.name), "unrealized", " small muted") +
+        line("Size " + (p.size == null ? "—" : p.size.toFixed(2) + " SOL"), null, " small") +
+        line("Entry " + px(p.entry), "Mark " + px(p.mark), " small") +
+        "</article>";
+    }).join("");
   }
 
   function screenArchive() {
@@ -521,17 +490,15 @@
       "</article>";
   }
 
-  function screenFresh() {
+  function screenFresh(stamps) {
     var rows = [
-      ["Solana desk", "updated 4 min ago", "good", "fresh: under 60 min (2 × 30-min scan)"],
-      ["Solana desk", "updated 74 min ago", "warn", "stale: missed 2 scans"],
-      ["NFT (KING)", "updated 38 min ago", "good", "fresh: under 2 h (2 × hourly)"],
-      ["Cardano (Snek)", "paused · last update 6 days ago", "", "paused desks never claim fresh"]
+      ["Solana desk", stamps.sol, "Fresh under 60 min (2 × 30-min scan). Older than that is amber."],
+      ["KING desk", stamps.nft, "Fresh under 2 h (2 × hourly). Older than that is amber."],
+      ["Cardano (Snek)", stamps.ada, "Paused desks never claim fresh."]
     ];
-    return '<p class="warnline">EXAMPLE DATA · these four rows show the stamp rule. The desk screen uses the run file when one is present.</p>' +
-      rows.map(function (r) {
-        return '<div class="trade">' + line(esc(r[0]), tag(r[1], r[2])) + line(esc(r[3]), null, " small muted") + "</div>";
-      }).join("") +
+    return rows.map(function (r) {
+      return '<div class="trade">' + line(esc(r[0]), tag(r[1].text, r[1].tone)) + line(esc(r[2]), null, " small muted") + "</div>";
+    }).join("") +
       '<p class="muted">Stamps replace a Live label. A desk turns amber when its last update is older than twice its normal cadence.</p>';
   }
 
@@ -593,7 +560,94 @@
     });
   }
 
-  function screenDesks(stamps, view) {
+  function initials(name) {
+    var letters = String(name || "").replace(/[^A-Za-z0-9]/g, "");
+    return (letters.slice(0, 2) || "?").toUpperCase();
+  }
+  function logoHtml(row) {
+    if (!row.image) return '<span class="logo-dot">' + esc(initials(row.name)) + "</span>";
+    return '<img class="logo-dot" alt="" src="' + esc(row.image) + '" data-fallback="' + esc(initials(row.name)) + '">';
+  }
+  function volTxt(row) {
+    if (row.volume == null) return "—";
+    var n = row.volume >= 1 ? row.volume.toFixed(2) : row.volume.toFixed(3);
+    return n + " " + row.symbol;
+  }
+  function collRow(row) {
+    var marks = row.rwa ? tag("RWA", "warn") : "";
+    if (row.flagNew && !row.rwa) marks += tag("new", "accent");
+    var inner = logoHtml(row) + '<div class="grow"><div class="rowtop"><strong>' + esc(row.name) + "</strong>" + marks + "</div>" +
+      line("24h volume " + esc(volTxt(row)), "sales " + esc(row.sales == null ? "—" : String(row.sales)), " small muted") + "</div>";
+    if (!row.url) return '<div class="coll">' + inner + "</div>";
+    return '<a class="coll" href="' + esc(row.url) + '" target="_blank" rel="noreferrer">' + inner + "</a>";
+  }
+  function kingCard(hood) {
+    if (!hood || hood.empty) {
+      return '<article class="card"><div class="rowtop"><span><h3>KING desk (2)</h3></span>' + tag("Robinhood Chain", "accent") + "</div>" +
+        '<p class="muted">Couldn\'t load Hoodscout data/nft_discover.json. No volumes are shown.</p></article>';
+    }
+    var age = SightlineHood.ageStamp(hood.generatedAt);
+    var top = hood.top ? esc(hood.top.name) + " is " + esc(hood.shareLabel) : "No ETH volume yet";
+    return '<article class="card"><div class="rowtop"><span><h3>KING desk (2)</h3></span>' + tag("Robinhood Chain", "accent") + "</div>" +
+      line("Display only. Not a trading signal.", null, " small muted") +
+      line(top, null, " small") +
+      (hood.totalLabel ? line(esc(hood.totalLabel), null, " small muted") : "") +
+      (hood.volumeCheck ? line(esc(hood.volumeCheck) + ". " + esc(hood.volumeCheckNote), null, " small") : "") +
+      '<div style="margin-top:6px">' + tag("updated " + age.text, age.tone) + "</div>" +
+      '<p><a class="link" href="#/king2">Open KING desk (2)</a></p></article>';
+  }
+  function uaCard(doc) {
+    if (!doc || !doc.counts) {
+      return '<article class="card dim"><div class="rowtop"><span><h3>UA-F1</h3></span>' + tag("paper", "") + "</div>" +
+        '<p class="muted">Waiting for first run. S1 is due 1 December 2026. The weekly pass is Mondays at 01:00 UTC.</p></article>';
+    }
+    var c = doc.counts;
+    return '<article class="card"><div class="rowtop"><span><h3>UA-F1</h3></span>' + tag(String(doc.status || "paper"), "accent") + "</div>" +
+      line("Registered episodes", esc(c.registered == null ? "—" : String(c.registered)), " small") +
+      line("Usable", esc(c.usable == null ? "—" : String(c.usable)), " small") +
+      line("As of", esc(doc.as_of ? fmtEt(doc.as_of) : "—"), " small muted") +
+      '<p class="muted">Counts only. No mean, t, or win rate.</p></article>';
+  }
+  function screenKing(hood) {
+    var back = '<p><a class="back" href="#/">Back to Desks</a></p>';
+    if (!hood || hood.empty) {
+      return back + '<article class="card"><h3>Couldn\'t load</h3><p class="muted">Couldn\'t load the Hoodscout file. No collections and no volumes are shown.</p></article>';
+    }
+    var news = hood.newcomers.length
+      ? '<p class="kicker">New on the top list</p>' + hood.newcomers.map(collRow).join("")
+      : '<p class="muted">No collection is flagged as newly entered.</p>';
+    var jump = hood.jumpSupported && hood.hot
+      ? line(esc(hood.hot.name) + " has the largest 24h floor change", esc(signed(hood.hot.floorChg, 1) + "%"), " small")
+      : '<p class="muted">No 24h jump is in this file. Floor change is empty, so nothing is marked hot for a jump.</p>';
+    var head = hood.top
+      ? '<article class="card"><div class="rowtop"><span><h3>' + esc(hood.top.name) + "</h3></span>" + tag("top 24h", "accent") + "</div>" +
+        line(esc(hood.shareLabel), esc(hood.totalLabel), " small") +
+        (hood.volumeCheck ? '<p class="warnline">' + esc(hood.volumeCheck) + ". " + esc(hood.volumeCheckNote) + "</p>" : "") +
+        '<p class="muted">RWA rows are left out of this ETH total.</p></article>'
+      : "";
+    var rwa = hood.rwa.length
+      ? '<p class="kicker">RWA · left out of the headline total</p>' + hood.rwa.map(collRow).join("")
+      : "";
+    var age = SightlineHood.ageStamp(hood.generatedAt);
+    return back + '<p class="muted">KING desk (2) · Robinhood Chain · display only, not a trading signal. Logos come from the image URL already in the Hoodscout file.</p>' +
+      '<div style="margin:8px 0">' + tag("data age " + age.text, age.tone) + "</div>" +
+      head + news + jump +
+      '<p class="kicker">Top collections by 24h volume</p>' +
+      hood.rows.filter(function (row) { return !row.rwa; }).map(collRow).join("") +
+      rwa;
+  }
+  function bindLogos(root) {
+    root.querySelectorAll("img[data-fallback]").forEach(function (img) {
+      img.addEventListener("error", function () {
+        var span = document.createElement("span");
+        span.className = "logo-dot";
+        span.textContent = img.getAttribute("data-fallback") || "?";
+        img.replaceWith(span);
+      });
+    });
+  }
+
+  function screenDesks(stamps, view, hood, ua) {
     var sol = stamps.sol, nft = stamps.nft, ada = stamps.ada;
     var raceLine = view.message
       ? esc(view.message)
@@ -611,12 +665,14 @@
       line(raceLine, null, " small") +
       (view.overlap && view.overlap.line ? line(esc(view.overlap.line), null, " small") : "") +
       '<p><a class="link" href="#/wallets">Open the wallet movement</a></p></article>' +
-      '<article class="card"><div class="rowtop"><span><h3>2. NFT (KING)</h3></span>' + tag("Pilot running", "accent") + "</div>" +
-      line("Ethereum + Base lane", null, " small muted") +
-      line("Robinhood Chain focus", null, " small muted") +
+      '<article class="card"><div class="rowtop"><span><h3>KING desk</h3></span>' + tag("Pilot running", "accent") + "</div>" +
+      line("Ethereum + Base lane. Display only.", null, " small muted") +
       line("Snapshot hourly", null, " small muted") +
-      '<div style="margin-top:6px">' + tag(nft.text, nft.tone) + "</div></article>" +
-      '<article class="card dim"><div class="rowtop"><span><h3>3. Cardano (Snek)</h3></span>' + tag("Paused") + "</div>" +
+      '<div style="margin-top:6px">' + tag(nft.text, nft.tone) + "</div>" +
+      '<p><a class="link" href="legacy/index.html#/nft">Open KING desk</a></p></article>' +
+      kingCard(hood) +
+      uaCard(ua) +
+      '<article class="card dim"><div class="rowtop"><span><h3>Cardano (Snek)</h3></span>' + tag("Paused") + "</div>" +
       line("No runs while paused", null, " small muted") +
       line("Restart plan on SPD-121", null, " small muted") +
       '<div style="margin-top:6px">' + tag(ada.text, ada.tone) + "</div></article>" +
@@ -624,20 +680,22 @@
   }
 
   function draw(id, pack) {
-    if (id === "desks") return screenDesks(pack.stamps, pack.race);
+    if (id === "desks") return screenDesks(pack.stamps, pack.race, pack.hood, pack.ua);
     if (id === "winning") return screenWinning();
     if (id === "wallets") return screenWallets(pack.race);
     if (id === "duration") return screenDuration();
-    if (id === "evolution") return screenEvolution();
-    if (id === "trades") return screenTrades();
+    if (id === "evolution") return screenEvolution(pack.race);
+    if (id === "trades") return screenTrades(pack.race);
     if (id === "archive") return screenArchive();
-    return screenFresh();
+    if (id === "king2") return screenKing(pack.hood);
+    return screenFresh(pack.stamps);
   }
 
   function paintNav(id) {
     var nav = document.getElementById("nav");
+    var active = id === "king2" ? "desks" : id;
     nav.innerHTML = NAV.map(function (item) {
-      var on = item.id === id ? ' class="on" aria-current="page"' : "";
+      var on = item.id === active ? ' class="on" aria-current="page"' : "";
       return '<a href="' + item.href + '"' + on + ">" + item.label + "</a>";
     }).join("");
     var r = route();
@@ -655,21 +713,38 @@
     return stampPromise;
   }
 
+  var hoodPromise = null;
+  var uaPromise = null;
+  function ensureHood() {
+    if (new URLSearchParams(location.search).get("hood") === "missing") return Promise.resolve(SightlineHood.parse(null));
+    if (!hoodPromise) hoodPromise = getJson(SightlineHood.SOURCE).then(function (doc) { return SightlineHood.parse(doc); });
+    return hoodPromise;
+  }
+  function ensureUa() {
+    if (!uaPromise) uaPromise = getJson("https://raw.githubusercontent.com/Zirqo-Dev/sightline/ua-f1-data/status.json");
+    return uaPromise;
+  }
+
   var token = 0;
   function render() {
     var r = route();
     paintNav(r.id);
     var view = document.getElementById("view");
     var mine = ++token;
-    var needRace = r.id === "desks" || r.id === "wallets";
-    var needStamps = r.id === "desks";
+    var needRace = r.id === "desks" || r.id === "wallets" || r.id === "evolution" || r.id === "trades";
+    var needStamps = r.id === "desks" || r.id === "fresh";
+    var needHood = r.id === "desks" || r.id === "king2";
+    var needUa = r.id === "desks";
     view.setAttribute("aria-busy", "true");
     Promise.all([
       needRace ? ensureRace() : Promise.resolve(null),
-      needStamps ? ensureStamps() : Promise.resolve(null)
+      needStamps ? ensureStamps() : Promise.resolve(null),
+      needHood ? ensureHood() : Promise.resolve(null),
+      needUa ? ensureUa() : Promise.resolve(null)
     ]).then(function (pair) {
       if (mine !== token) return;
-      view.innerHTML = draw(r.id, { race: pair[0], stamps: pair[1] });
+      view.innerHTML = draw(r.id, { race: pair[0], stamps: pair[1], hood: pair[2], ua: pair[3] });
+      bindLogos(view);
       view.removeAttribute("aria-busy");
     }).catch(function () {
       if (mine !== token) return;
