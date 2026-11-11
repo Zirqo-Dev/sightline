@@ -9,7 +9,7 @@ from fractions import Fraction
 from pathlib import Path
 
 from lst_count.b58 import b58decode
-from lst_count.gecko import largest_sol_pool, pools_url, reserve_ok
+from lst_count.gecko import page1_sol_pools, pools_url, reserve_ok, reserve_total
 from lst_count.http import RPC_URL, Transport, assert_allowed, rpc_body, rpc_result, with_retries
 from lst_count.logic import (
     WINDOW_HOURS,
@@ -406,16 +406,22 @@ def _qualify(data_dir, records, manifest, transport, sleep, chain, now):
             continue
         gecko = _get(transport, sleep, pools_url(cand["mint"]))
         payload = _json_or_none(gecko.raw) if gecko.status == 200 else None
-        pool = largest_sol_pool(payload, cand["mint"], manifest["sol_mint"]) if payload else None
-        if not reserve_ok(pool):
+        pools = page1_sol_pools(payload, cand["mint"], manifest["sol_mint"]) if payload else []
+        entry["pools"] = [
+            {
+                "address": pool["address"],
+                "pair": pool["pair"],
+                "reserve_in_usd": format(pool["reserve_in_usd"], "f"),
+            }
+            for pool in pools
+        ]
+        if pools:
+            entry["reserve_in_usd"] = format(reserve_total(pools), "f")
+        if not reserve_ok(pools):
             entry["included"] = False
-            entry["reason"] = "reserve" if pool is not None else "gecko"
-            if pool is not None:
-                entry["reserve_in_usd"] = format(pool["reserve_in_usd"], "f")
+            entry["reason"] = "reserve" if pools else "gecko"
             log.append(entry)
             continue
-        entry["reserve_in_usd"] = format(pool["reserve_in_usd"], "f")
-        entry["pool_name"] = pool.get("name")
         decimals = _decimals(chain, cand)
         buy, sell = _quote_pair(transport, sleep, manifest, cand, decimals)
         if buy is None:

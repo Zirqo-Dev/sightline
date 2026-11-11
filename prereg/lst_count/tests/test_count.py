@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from lst_count.gecko import largest_sol_pool, reserve_ok
+from lst_count.gecko import page1_sol_pools, reserve_ok, reserve_total
 from lst_count.http import HTTPResult, assert_allowed, with_retries
 from lst_count.logic import (
     WINDOW_HOURS,
@@ -60,25 +60,30 @@ def _quote(out_amount, label="Meteora"):
     return json.dumps(body).encode()
 
 
-def _gecko(mint, reserve="6000000.0"):
-    return json.dumps({
-        "data": [{
-            "attributes": {"reserve_in_usd": reserve, "name": "LST / SOL", "address": "pool"},
-            "relationships": {
-                "base_token": {"data": {"id": "solana_" + mint}},
-                "quote_token": {"data": {"id": "solana_" + SOL}},
-            },
-        }],
-    }).encode()
+def _pool(mint, address, reserve, pair="LST / SOL", quote=SOL):
+    return {
+        "attributes": {"reserve_in_usd": reserve, "name": pair, "address": address},
+        "relationships": {
+            "base_token": {"data": {"id": "solana_" + mint}},
+            "quote_token": {"data": {"id": "solana_" + quote}},
+        },
+    }
+
+
+def _gecko(mint, reserve="6000000.0", extra=None):
+    data = [_pool(mint, "pool", reserve)]
+    data.extend(extra or [])
+    return json.dumps({"data": data}).encode()
 
 
 class FakeTransport:
-    def __init__(self, epoch=1083, jito_out=381759336, msol_out=353000000, reserve="6000000.0", jito_pool=None):
+    def __init__(self, epoch=1083, jito_out=381759336, msol_out=353000000, reserve="6000000.0", jito_pool=None, gecko_body=None):
         self.calls = []
         self.epoch = epoch
         self.jito_out = jito_out
         self.msol_out = msol_out
         self.reserve = reserve
+        self.gecko_body = gecko_body
         self.jito_pool = jito_pool if jito_pool is not None else (FIX / "jitosol_stake_pool.bin").read_bytes()
         self.msol = (FIX / "msol_state.bin").read_bytes()
 
@@ -100,7 +105,8 @@ class FakeTransport:
             return HTTPResult(200, _rpc({"value": _acct(self.msol)}), None)
         if "geckoterminal" in url:
             mint = url.split("/tokens/")[1].split("/")[0]
-            return HTTPResult(200, _gecko(mint, self.reserve), None)
+            raw = self.gecko_body if self.gecko_body is not None else _gecko(mint, self.reserve)
+            return HTTPResult(200, raw, None)
         if "lite-api.jup.ag" in url:
             out = self.jito_out if JITOSOL in url else self.msol_out
             # Sell quotes also carry the LST mint. A sell's output is SOL, so
@@ -175,30 +181,57 @@ class OnsetRules(unittest.TestCase):
         self.assertFalse(previous_missing([{"symbol": "JitoSOL", "slot": 0, "type": "capture"}], "JitoSOL", 1))
 
 
+def _jito_page(sol_reserves):
+    """Page 1 with LST/SOL pools plus a larger LST/USDC pool that must not count."""
+    extra = [
+        _pool(JITOSOL, "usdc-pool", "9000000", pair="JitoSOL / USDC", quote="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
+    ]
+    data = []
+    for index, reserve in enumerate(sol_reserves):
+        data.append(_pool(JITOSOL, "sol-%d" % index, reserve, pair="JitoSOL / SOL"))
+    data.extend(extra)
+    return json.dumps({"data": data}).encode()
+
+
 class GeckoRule(unittest.TestCase):
-    def test_largest_sol_pool_and_the_five_million_line(self):
-        payload = json.loads(_gecko(JITOSOL, "4817876.7958"))
-        pool = largest_sol_pool(payload, JITOSOL, SOL)
-        self.assertEqual(pool["name"], "LST / SOL")
-        self.assertFalse(reserve_ok(pool))
-        payload["data"].append({
-            "attributes": {"reserve_in_usd": "5000000", "name": "LST / SOL", "address": "big"},
-            "relationships": {
-                "base_token": {"data": {"id": "solana_" + JITOSOL}},
-                "quote_token": {"data": {"id": "solana_" + SOL}},
-            },
-        })
-        # A non-SOL pool with a larger reserve is ignored.
-        payload["data"].append({
-            "attributes": {"reserve_in_usd": "9000000", "name": "LST / USDC", "address": "usdc"},
-            "relationships": {
-                "base_token": {"data": {"id": "solana_EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"}},
-                "quote_token": {"data": {"id": "solana_" + JITOSOL}},
-            },
-        })
-        best = largest_sol_pool(payload, JITOSOL, SOL)
-        self.assertEqual(best["address"], "big")
-        self.assertTrue(reserve_ok(best))
+    def test_jitosol_included_when_page1_sol_pools_sum_past_five_million(self):
+        body = _jito_page(("4817876.7958", "200000"))
+        pools = page1_sol_pools(json.loads(body), JITOSOL, SOL)
+        self.assertEqual(len(pools), 2)
+        self.assertLess(max(pool["reserve_in_usd"] for pool in pools), 5000000)
+        self.assertGreaterEqual(reserve_total(pools), 5000000)
+        self.assertTrue(reserve_ok(pools))
+        transport = FakeTransport(gecko_body=body)
+        with tempfile.TemporaryDirectory() as tmp:
+            status = _run(transport, T0, tmp, _manifest("JitoSOL"))
+        self.assertTrue(status["frozen"])
+        self.assertEqual(status["symbols"], ["JitoSOL"])
+        logged = status["freeze_log"][0]["pools"]
+        self.assertEqual(
+            [(row["address"], row["pair"], row["reserve_in_usd"]) for row in logged],
+            [
+                ("sol-0", "JitoSOL / SOL", "4817876.7958"),
+                ("sol-1", "JitoSOL / SOL", "200000"),
+            ],
+        )
+        self.assertNotIn("usdc-pool", json.dumps(logged))
+
+    def test_jitosol_excluded_when_page1_sol_pools_sum_stays_under_five_million(self):
+        body = _jito_page(("4817876.7958", "100000"))
+        pools = page1_sol_pools(json.loads(body), JITOSOL, SOL)
+        self.assertLess(reserve_total(pools), 5000000)
+        self.assertFalse(reserve_ok(pools))
+        transport = FakeTransport(gecko_body=body)
+        with tempfile.TemporaryDirectory() as tmp:
+            status = _run(transport, T0, tmp, _manifest("JitoSOL"))
+        self.assertFalse(status["frozen"])
+        entry = status["freeze_log"][0]
+        self.assertEqual(entry["reason"], "reserve")
+        self.assertEqual(entry["included"], False)
+        self.assertEqual(
+            [(row["address"], row["reserve_in_usd"]) for row in entry["pools"]],
+            [("sol-0", "4817876.7958"), ("sol-1", "100000")],
+        )
 
 
 class BannedSource(unittest.TestCase):
@@ -268,6 +301,12 @@ class ManifestRules(unittest.TestCase):
         self.assertIn("stricter for a PASS", text)
         self.assertIn("no bot reads the onset or d_bps fields", text)
         self.assertIn("status.json only", text)
+        self.assertIn(
+            "§1b addendum (owner approved Nov 11, 2026 3:21 PM EST, before any capture): "
+            "liquidity = sum of reserve_in_usd over all page-1 LST/SOL and LST/WSOL pools >= $5,000,000; "
+            "each pool counted is logged.",
+            text,
+        )
         self.assertEqual(file_sha256(spec_path()), SPEC_SHA256)
         readme = (deviations_path().parent / "README.md").read_text(encoding="utf-8")
         self.assertIn("if: false", readme)

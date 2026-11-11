@@ -18,3 +18,5 @@ Append-only. `lst_count_spec_v1.md` stays locked and is not edited. New lines ar
 ## Process rule (Nov 11, 2026, before any capture)
 
 Until T0+336h, no bot reads the onset or d_bps fields in captures.jsonl. The heartbeat and the weekly review read status.json only.
+
+§1b addendum (owner approved Nov 11, 2026 3:21 PM EST, before any capture): liquidity = sum of reserve_in_usd over all page-1 LST/SOL and LST/WSOL pools >= $5,000,000; each pool counted is logged.
