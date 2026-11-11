@@ -1,0 +1,156 @@
+name: UA-F1
+
+# Research only. Paper only. No trading, no keys, no wallets, no spend.
+# Mondays 01:00 UTC is the target slot. GitHub cron can lag or drop a week;
+# the runner logs the slot it aimed at and the time it actually started,
+# and fills any missed Monday. Outputs go only to ua-f1-data. Never main.
+# Scheduled workflows on GitHub turn themselves off after 60 days without
+# repository activity. Set the repo variable UA_F1_ENABLED to false to stop
+# the job without a code change.
+
+on:
+  schedule:
+    - cron: "0 1 * * 1"
+  workflow_dispatch:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ua-f1
+  cancel-in-progress: false
+
+jobs:
+  test:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify locked prereg
+        working-directory: ua_f1
+        run: |
+          set -euo pipefail
+          sha256sum -c prereg_ua_f1.sha256
+      - name: Verify S0 snapshots
+        working-directory: ua_f1/snapshots
+        run: |
+          set -euo pipefail
+          sha256sum -c S0.sha256
+          sha256sum -c S0_addendum1.sha256
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned numpy
+        run: python3 -m pip install --quiet "numpy==2.5.4"
+      - name: Dry-run and universe tests
+        run: python3 -m unittest discover -s ua_f1/tests -t . -v
+
+  weekly:
+    # Kill switch. A repo variable UA_F1_ENABLED set to the string false skips
+    # the schedule and manual dispatch. Unset, or any other value, leaves it on.
+    if: ${{ github.event_name != 'pull_request' && vars.UA_F1_ENABLED != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - name: Check out main (code only)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: code
+
+      - name: Verify locked prereg
+        # The checksum line names prereg_ua_f1.md, so the check runs in ua_f1/.
+        working-directory: code/ua_f1
+        run: |
+          set -euo pipefail
+          sha256sum -c prereg_ua_f1.sha256
+
+      - name: Verify S0 snapshots
+        working-directory: code/ua_f1/snapshots
+        run: |
+          set -euo pipefail
+          sha256sum -c S0.sha256
+          sha256sum -c S0_addendum1.sha256
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned numpy
+        run: python3 -m pip install --quiet "numpy==2.5.4"
+
+      - name: Prepare ua-f1-data
+        working-directory: code
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin ua-f1-data >/dev/null 2>&1; then
+            git fetch --depth 1 origin ua-f1-data
+            git worktree add "$GITHUB_WORKSPACE/data" FETCH_HEAD
+          else
+            mkdir -p "$GITHUB_WORKSPACE/data"
+            git -C "$GITHUB_WORKSPACE/data" init -b ua-f1-data
+          fi
+
+      - name: Run the weekly paper test
+        working-directory: code
+        run: |
+          set -euo pipefail
+          python3 ua_f1/ua_f1_weekly.py --data-dir "$GITHUB_WORKSPACE/data"
+
+      - name: Privacy guard
+        working-directory: data
+        env:
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          PRIVACY_IDENTITY_HASHES: ${{ secrets.PRIVACY_IDENTITY_HASHES }}
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
+        run: |
+          set -euo pipefail
+          # Same guard as the races workflow. A brand-new ua-f1-data checkout
+          # has no commits yet; the commit step scans that first staged tree.
+          if [ -z "$(git ls-files)" ]; then
+            echo "no tracked files yet"
+            exit 0
+          fi
+          bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"
+
+      - name: Commit to ua-f1-data only
+        working-directory: data
+        env:
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          PRIVACY_IDENTITY_HASHES: ${{ secrets.PRIVACY_IDENTITY_HASHES }}
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
+        run: |
+          set -euo pipefail
+          target=ua-f1-data
+          case "$target" in
+            main|master|desk-data) echo "refusing $target"; exit 1 ;;
+          esac
+          if [ "$target" != "ua-f1-data" ]; then
+            echo "refusing $target"
+            exit 1
+          fi
+          git config user.name "ua-f1"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --name-only | grep -E '^(solana-desk|desk-data)/'; then
+            echo "refusing desk paths"
+            exit 1
+          fi
+          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
+          if ! bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"; then
+            echo "::error::privacy guard failed on ua-f1-data changes; not committing or pushing"
+            git reset -q
+            exit 1
+          fi
+          git commit -q -m "ua-f1 weekly $(date -u +%Y-%m-%dT%H:%MZ)"
+          if [ ! -d .git ] || ! git remote get-url origin >/dev/null 2>&1; then
+            git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git" || true
+          fi
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin "HEAD:${target}"

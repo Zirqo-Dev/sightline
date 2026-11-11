@@ -1,0 +1,1225 @@
+{
+  "snapshot_id": "S0",
+  "taken_at": "2026-11-11T17:48:46Z",
+  "prereg": "prereg_ua_f1.md",
+  "prereg_sha256": "954dd472193c2bd7095225fd18b868a31ba3c6d0808888fd7b387e2ec7ebca95",
+  "sources": {
+    "schedules": "https://defillama-datasets.llama.fi/emissions/<protocol>",
+    "emissionsProtocolsList": "https://defillama-datasets.llama.fi/emissionsProtocolsList",
+    "origin_confirmation": "CoinGecko coins/{id} with market_data=false (asset_platform_id, categories, platforms only); coins/list?include_platform=true (no market data)",
+    "api_llama_fi_used": false,
+    "prices_fetched": false
+  },
+  "rule": "S0 = every protocol in the batch-3 SPL-native list, plus any SPL-native protocol in emissionsProtocolsList at lock. SPL-native = Solana-origin mint confirmed by exchange deposit network or CoinGecko origin platform; no stables, LSTs or wrapped tokens; UXD excluded.",
+  "batch3_spl_native_list": {
+    "n": 18,
+    "protocols": [
+      "arcium",
+      "debridge",
+      "doublezero",
+      "grass",
+      "humidifi",
+      "jito",
+      "jupiter",
+      "kamino",
+      "magic-eden",
+      "melania-meme",
+      "official-trump",
+      "pump",
+      "pyth",
+      "sanctum",
+      "solayer",
+      "stepn",
+      "streamflow",
+      "tensor"
+    ],
+    "source": "batch-3 evidence protocol names only (qualifying protocols minus uxd, plus arcium, confirmed pre-lock). Outcome numbers were not read or copied."
+  },
+  "emissionsProtocolsList_at_lock": {
+    "n": 373,
+    "sha256": "116cef18a1114b37f184bd71d53535a68a020c8b57fe0d20e0d8d192247473d4",
+    "identical_to_batch3_list_file": true
+  },
+  "included": {
+    "n": 29,
+    "protocols": [
+      "arcium",
+      "debridge",
+      "doublezero",
+      "drift",
+      "godl-protocol",
+      "grass",
+      "humidifi",
+      "jade",
+      "jito",
+      "jupiter",
+      "kamino",
+      "magic-eden",
+      "melania-meme",
+      "meteora",
+      "official-trump",
+      "orca",
+      "ore-protocol",
+      "portal",
+      "pudgy-penguins",
+      "pump",
+      "pyth",
+      "raydium",
+      "sanctum",
+      "solayer",
+      "solstice",
+      "stepn",
+      "streamflow",
+      "tensor",
+      "zinc"
+    ],
+    "from_batch3_list": [
+      "arcium",
+      "debridge",
+      "doublezero",
+      "grass",
+      "humidifi",
+      "jito",
+      "jupiter",
+      "kamino",
+      "magic-eden",
+      "melania-meme",
+      "official-trump",
+      "pump",
+      "pyth",
+      "sanctum",
+      "solayer",
+      "stepn",
+      "streamflow",
+      "tensor"
+    ],
+    "additional_from_live_list": [
+      "drift",
+      "godl-protocol",
+      "jade",
+      "meteora",
+      "orca",
+      "ore-protocol",
+      "portal",
+      "pudgy-penguins",
+      "raydium",
+      "solstice",
+      "zinc"
+    ],
+    "files": [
+      {
+        "protocol": "arcium",
+        "bytes": 1045345,
+        "sha256": "abf12232719d0cda4d00bd4b476bb77d40148fc900bf8c386ee97767728cf1ee",
+        "source": "https://defillama-datasets.llama.fi/emissions/arcium"
+      },
+      {
+        "protocol": "debridge",
+        "bytes": 737783,
+        "sha256": "4d40b3db5e3dd10b2c797e30634b99241fb4f3d0a5fbeb25bf7cdc19170ccc98",
+        "source": "https://defillama-datasets.llama.fi/emissions/debridge"
+      },
+      {
+        "protocol": "doublezero",
+        "bytes": 1037848,
+        "sha256": "d0b8a4881a16afe4dfcd20d66ecf5b6b3f2517af2b668117b44a789b07846e7b",
+        "source": "https://defillama-datasets.llama.fi/emissions/doublezero"
+      },
+      {
+        "protocol": "drift",
+        "bytes": 680371,
+        "sha256": "3c555e5b24ef746d769e55fd18b9d173797fe2f3ce1be29258d2c7b5d5832168",
+        "source": "https://defillama-datasets.llama.fi/emissions/drift"
+      },
+      {
+        "protocol": "godl-protocol",
+        "bytes": 43266,
+        "sha256": "0ed71c60facdb6249a6f45b7ac8ce14f0e649113622c60bd3e725feca98622c2",
+        "source": "https://defillama-datasets.llama.fi/emissions/godl-protocol"
+      },
+      {
+        "protocol": "grass",
+        "bytes": 1210452,
+        "sha256": "fb05bacc1878389ead805f0ee3fe8c49fc3f21741bd072603e20e7dbb824f3db",
+        "source": "https://defillama-datasets.llama.fi/emissions/grass"
+      },
+      {
+        "protocol": "humidifi",
+        "bytes": 238142,
+        "sha256": "e73b125f6583431dfff7119849b12633baa42425e47c9ea8329ca3bc622d4164",
+        "source": "https://defillama-datasets.llama.fi/emissions/humidifi"
+      },
+      {
+        "protocol": "jade",
+        "bytes": 22775,
+        "sha256": "24f265184e9928faea6213dfb7334f204732526d1f7de063d1e25bc2ce3c49e0",
+        "source": "https://defillama-datasets.llama.fi/emissions/jade"
+      },
+      {
+        "protocol": "jito",
+        "bytes": 508815,
+        "sha256": "598d39125cbdc638cf90f6462c7f9c3e18a4c843aa325adc8017bbc7b83994a3",
+        "source": "https://defillama-datasets.llama.fi/emissions/jito"
+      },
+      {
+        "protocol": "jupiter",
+        "bytes": 494575,
+        "sha256": "e4f40b3852447913d371002dfa8bd873f34224e45c5355ea24b7d359289adc8e",
+        "source": "https://defillama-datasets.llama.fi/emissions/jupiter"
+      },
+      {
+        "protocol": "kamino",
+        "bytes": 825618,
+        "sha256": "fc442baf286e1d72a62622fa9ef4f4e3e7e789d1df0f776d61c947804dd45d5f",
+        "source": "https://defillama-datasets.llama.fi/emissions/kamino"
+      },
+      {
+        "protocol": "magic-eden",
+        "bytes": 527746,
+        "sha256": "19c1a6d59e5db09355cdbdc867a7e654a1df4e7880d38a9a61961044871bdb2c",
+        "source": "https://defillama-datasets.llama.fi/emissions/magic-eden"
+      },
+      {
+        "protocol": "melania-meme",
+        "bytes": 145037,
+        "sha256": "bcf3cdd6f21232d935714a23b3966091bd845aaa44ac5624664b4095b8824d7a",
+        "source": "https://defillama-datasets.llama.fi/emissions/melania-meme"
+      },
+      {
+        "protocol": "meteora",
+        "bytes": 1827943,
+        "sha256": "53300f3fbf6b8a24b3450f246ee1abc53c7415a99a05795cc8b605065fc88a82",
+        "source": "https://defillama-datasets.llama.fi/emissions/meteora"
+      },
+      {
+        "protocol": "official-trump",
+        "bytes": 788070,
+        "sha256": "e92bc55590c46d27f96f4a128c7e1c311475cec8f3a1c5afaffca4f15a89be91",
+        "source": "https://defillama-datasets.llama.fi/emissions/official-trump"
+      },
+      {
+        "protocol": "orca",
+        "bytes": 1760420,
+        "sha256": "be02ab4af8110a455d382561495cbaee7c18010880b7fd841d6bee3b9df49b4c",
+        "source": "https://defillama-datasets.llama.fi/emissions/orca"
+      },
+      {
+        "protocol": "ore-protocol",
+        "bytes": 56954,
+        "sha256": "8caef7b9bce9ab6359fd4c941e6a163d1e165c5efbbe6920fe7be769d92a715d",
+        "source": "https://defillama-datasets.llama.fi/emissions/ore-protocol"
+      },
+      {
+        "protocol": "portal",
+        "bytes": 997108,
+        "sha256": "cb18d0345892648f941b7ae1e7699e69b6c4fc46c0b4156e6ea61ddf832d496f",
+        "source": "https://defillama-datasets.llama.fi/emissions/portal"
+      },
+      {
+        "protocol": "pudgy-penguins",
+        "bytes": 1067066,
+        "sha256": "0e2d6e83e06c1d6ba789edc02620cfb6becb5f6c1dcd27b7d82bdee6aecacc77",
+        "source": "https://defillama-datasets.llama.fi/emissions/pudgy-penguins"
+      },
+      {
+        "protocol": "pump",
+        "bytes": 913972,
+        "sha256": "c8486d1576acbc2140517c070acbfdd6c1acfacb7c0cd8a7f04eba5542d7a235",
+        "source": "https://defillama-datasets.llama.fi/emissions/pump"
+      },
+      {
+        "protocol": "pyth",
+        "bytes": 528402,
+        "sha256": "99fd58f9f213033ebf1d2fb489661b513a9e8fb25d78f99280ae557fe8b2e317",
+        "source": "https://defillama-datasets.llama.fi/emissions/pyth"
+      },
+      {
+        "protocol": "raydium",
+        "bytes": 553265,
+        "sha256": "68220700283cf6b9978de6e241db9c48fc7b2a2c6828e2bf4a52057c5578bddf",
+        "source": "https://defillama-datasets.llama.fi/emissions/raydium"
+      },
+      {
+        "protocol": "sanctum",
+        "bytes": 563351,
+        "sha256": "68892ac428650943c25d95a279bfbcc222ec91128a07f772cb3d258bdcb0352d",
+        "source": "https://defillama-datasets.llama.fi/emissions/sanctum"
+      },
+      {
+        "protocol": "solayer",
+        "bytes": 770935,
+        "sha256": "f8bee41881f85f847e71b1cf8a002976f0eb8c66bc89945cb50140e2fceb4b25",
+        "source": "https://defillama-datasets.llama.fi/emissions/solayer"
+      },
+      {
+        "protocol": "solstice",
+        "bytes": 506854,
+        "sha256": "5b1b65e0d9065554931b27a99e67c146d2c6745ed89d3e3619df6447e0a14e97",
+        "source": "https://defillama-datasets.llama.fi/emissions/solstice"
+      },
+      {
+        "protocol": "stepn",
+        "bytes": 1671959,
+        "sha256": "54d7409e8182775b6eae1f69c09f71a553e1ac0444f7d7bbc8a5df908672f76c",
+        "source": "https://defillama-datasets.llama.fi/emissions/stepn"
+      },
+      {
+        "protocol": "streamflow",
+        "bytes": 629214,
+        "sha256": "05294a6380f896ecaad5a7b30c92888509987feaf5d3cc01b85a92e9da964fe2",
+        "source": "https://defillama-datasets.llama.fi/emissions/streamflow"
+      },
+      {
+        "protocol": "tensor",
+        "bytes": 580505,
+        "sha256": "8be11f1b765de3f2f8a02776c9384d29dec7a5c0b2352176a1ddb50c6ecbd4ae",
+        "source": "https://defillama-datasets.llama.fi/emissions/tensor"
+      },
+      {
+        "protocol": "zinc",
+        "bytes": 11392,
+        "sha256": "8b7db0ff64e76d590c2cb44c005f588d97eab07b2206ecfe7088a3334a3f24ed",
+        "source": "https://defillama-datasets.llama.fi/emissions/zinc"
+      }
+    ]
+  },
+  "classification_notes": [
+    "A protocol is included if it is on the batch-3 SPL-native list, or if its lock-time emissions token has CoinGecko asset_platform_id == 'solana' and is not excluded below.",
+    "Emissions schedules whose token is an explicit non-Solana chain address (ethereum:, bsc:, etc.) were not treated as SPL-native.",
+    "UXD excluded by prereg (protocol wound down).",
+    "Protocol 'solana' (native SOL) excluded: not an SPL mint; CoinGecko asset_platform_id is null; Layer 1 native coin.",
+    "helium-network excluded: not SPL-native at issuance (documented in batch-3). CoinGecko now reports asset_platform_id=solana after the migration; origin-at-issuance still does not hold.",
+    "backpack left unconfirmed: CoinGecko asset_platform_id is null (solana mint is present in platforms); Coinbase public currency lookup 404; no exchange deposit-network confirmation. Not added to S0.",
+    "bidgrid left unconfirmed: emissions token is a solana mint but there is no gecko_id and CoinGecko contract lookup 404. Not added to S0.",
+    "No stables, LST receipt tokens, or wrapped-token schedules were included. JTO and SANC are governance tokens already on the batch-3 list, not LST receipts.",
+    "No prices were fetched. No episodes were registered or scored. Earliest countable cliff is lock + 30 days (~2026-12-11)."
+  ],
+  "reviewed_not_included": [
+    {
+      "protocol": "uxd",
+      "reason": "explicit UXD exclusion"
+    },
+    {
+      "protocol": "solana",
+      "reason": "native L1 coin, not an SPL mint; asset_platform_id null"
+    },
+    {
+      "protocol": "helium-network",
+      "reason": "not SPL-native at issuance (batch-3); CG asset_platform_id is now solana post-migration"
+    },
+    {
+      "protocol": "backpack",
+      "reason": "unconfirmed: CG asset_platform_id null; no exchange deposit-network confirmation"
+    },
+    {
+      "protocol": "bidgrid",
+      "reason": "unconfirmed: no CoinGecko record for the solana mint"
+    },
+    {
+      "protocol": "peaq",
+      "reason": "CG origin peaq"
+    },
+    {
+      "protocol": "usd-ai",
+      "reason": "CG origin arbitrum-one (gecko id chip-2)"
+    },
+    {
+      "protocol": "billions-network",
+      "reason": "CG origin ethereum"
+    },
+    {
+      "protocol": "delysium",
+      "reason": "CG origin ethereum"
+    },
+    {
+      "protocol": "aethir",
+      "reason": "CG origin ethereum"
+    },
+    {
+      "protocol": "gunz",
+      "reason": "CG origin avalanche"
+    },
+    {
+      "protocol": "virtuals-protocol",
+      "reason": "CG origin ethereum"
+    },
+    {
+      "protocol": "stader",
+      "reason": "CG origin ethereum"
+    },
+    {
+      "protocol": "injective-orderbook",
+      "reason": "CG origin ethereum"
+    },
+    {
+      "protocol": "rhea-finance",
+      "reason": "CG origin near-protocol"
+    }
+  ],
+  "coingecko_origin_at_lock": {
+    "aethir": {
+      "status": 200,
+      "asset_platform_id": "ethereum",
+      "categories": [
+        "Artificial Intelligence (AI)",
+        "Infrastructure",
+        "Solana Ecosystem",
+        "Arbitrum Ecosystem",
+        "Impossible Finance Launchpad",
+        "Ethereum Ecosystem",
+        "DePIN",
+        "Animoca Brands Portfolio",
+        "Binance Alpha Spotlight"
+      ],
+      "id": "aethir",
+      "symbol": "ath",
+      "name": "Aethir",
+      "contract_address": "0xbe0ed4138121ecfc5c0e56b40517da27e6c5226b",
+      "mint": null,
+      "protocol": null
+    },
+    "arcium": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "BNB Chain Ecosystem",
+        "Solana Ecosystem",
+        "Cybersecurity",
+        "Binance Alpha Spotlight",
+        "CoinList Launchpad",
+        "Privacy"
+      ],
+      "id": "arcium",
+      "symbol": "arx",
+      "name": "Arcium",
+      "contract_address": "ARXwZkNAtzPfdcoqQiduJn8EPv9fKiDfGn2KyggyDrFs",
+      "mint": null,
+      "protocol": null
+    },
+    "backpack": {
+      "status": 200,
+      "asset_platform_id": null,
+      "categories": [
+        "Exchange-based Tokens",
+        "Centralized Exchange (CEX) Token",
+        "Solana Ecosystem",
+        "Wallets"
+      ],
+      "id": "backpack",
+      "symbol": "bp",
+      "name": "Backpack",
+      "contract_address": null,
+      "mint": null,
+      "protocol": null
+    },
+    "billions-network": {
+      "status": 200,
+      "asset_platform_id": "ethereum",
+      "categories": [
+        "BNB Chain Ecosystem",
+        "Solana Ecosystem",
+        "Ethereum Ecosystem",
+        "Decentralized Identifier (DID)",
+        "Mantle Ecosystem",
+        "Coinbase Ventures Portfolio",
+        "Quest-to-Earn",
+        "Polychain Capital Portfolio",
+        "Binance Alpha Spotlight"
+      ],
+      "id": "billions-network",
+      "symbol": "bill",
+      "name": "Billions Network",
+      "contract_address": "0xb1110919016846972056ab995054d65560d5f05e",
+      "mint": null,
+      "protocol": null
+    },
+    "chip-2": {
+      "status": 200,
+      "asset_platform_id": "arbitrum-one",
+      "categories": [
+        "Decentralized Finance (DeFi)",
+        "Solana Ecosystem",
+        "Arbitrum Ecosystem",
+        "Ethereum Ecosystem",
+        "Base Ecosystem",
+        "Stablecoin Issuer",
+        "YZi Labs (Prev. Binance Labs) Portfolio",
+        "Binance HODLer Airdrops",
+        "Binance Alpha Spotlight",
+        "Governance",
+        "CoinList Launchpad"
+      ],
+      "id": "chip-2",
+      "symbol": "chip",
+      "name": "USD.AI",
+      "contract_address": "0x0c1c1c109fe34733fca54b82d7b46b75cfb71f6e",
+      "mint": null,
+      "protocol": null
+    },
+    "debridge": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Solana Ecosystem",
+        "Bridge Governance Tokens",
+        "Cross-chain Communication",
+        "Intent",
+        "Governance"
+      ],
+      "id": "debridge",
+      "symbol": "dbr",
+      "name": "deBridge",
+      "contract_address": "DBRiDgJAMsM95moTzJs7M9LnkGErpbv9v6CUR1DXnUu5",
+      "mint": null,
+      "protocol": null
+    },
+    "delysium": {
+      "status": 200,
+      "asset_platform_id": "ethereum",
+      "categories": [
+        "Artificial Intelligence (AI)",
+        "BNB Chain Ecosystem",
+        "Solana Ecosystem",
+        "Ethereum Ecosystem",
+        "AI Agents",
+        "Alameda Research Portfolio"
+      ],
+      "id": "delysium",
+      "symbol": "agi",
+      "name": "Delysium",
+      "contract_address": "0x7da2641000cbb407c329310c461b2cb9c70c3046",
+      "mint": null,
+      "protocol": null
+    },
+    "doublezero": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Infrastructure",
+        "Solana Ecosystem",
+        "Binance Alpha Spotlight",
+        "CoinList Launchpad"
+      ],
+      "id": "doublezero",
+      "symbol": "2z",
+      "name": "DoubleZero",
+      "contract_address": "J6pQQ3FAcJQeWPPGppWRb4nM8jU3wLyYbRrLh7feMfvd",
+      "mint": null,
+      "protocol": null
+    },
+    "drift-protocol": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Decentralized Finance (DeFi)",
+        "Derivatives",
+        "Prediction Markets",
+        "Perpetuals",
+        "Solana Ecosystem",
+        "Binance Alpha Spotlight",
+        "Governance"
+      ],
+      "id": "drift-protocol",
+      "symbol": "drift",
+      "name": "Drift Protocol",
+      "contract_address": "DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7",
+      "mint": null,
+      "protocol": null
+    },
+    "godl-2": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Solana Ecosystem"
+      ],
+      "id": "godl-2",
+      "symbol": "godl",
+      "name": "GODL",
+      "contract_address": "GodL6KZ9uuUoQwELggtVzQkKmU1LfqmDokPibPeDKkhF",
+      "mint": null,
+      "protocol": null
+    },
+    "grass": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Artificial Intelligence (AI)",
+        "Solana Ecosystem",
+        "DePIN",
+        "Polychain Capital Portfolio",
+        "Binance Alpha Spotlight"
+      ],
+      "id": "grass",
+      "symbol": "grass",
+      "name": "Grass",
+      "contract_address": "Grass7B4RdKfBCjTKgSqnXkqjwiGvQyFbuSCUJr3XXjs",
+      "mint": null,
+      "protocol": null
+    },
+    "gunz": {
+      "status": 200,
+      "asset_platform_id": "avalanche",
+      "categories": [
+        "Smart Contract Platform",
+        "Gaming (GameFi)",
+        "Binance Launchpool",
+        "Solana Ecosystem",
+        "Layer 1 (L1)",
+        "Avalanche Ecosystem",
+        "Play To Earn",
+        "Shooting Games",
+        "Coinbase Ventures Portfolio",
+        "Gaming Blockchains",
+        "Avalanche L1",
+        "YZi Labs (Prev. Binance Labs) Portfolio",
+        "Delphi Ventures Portfolio",
+        "Action Games",
+        "GUNZ Ecosystem"
+      ],
+      "id": "gunz",
+      "symbol": "gun",
+      "name": "Gunz",
+      "contract_address": "0x26debd39d5ed069770406fca10a0e4f8d2c743eb",
+      "mint": null,
+      "protocol": null
+    },
+    "helium": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Communication",
+        "Internet of Things (IOT)",
+        "Smart Contract Platform",
+        "Solana Ecosystem",
+        "DePIN",
+        "Multicoin Capital Portfolio",
+        "Proof of Stake (PoS)",
+        "Alameda Research Portfolio",
+        "Pantera Capital Portfolio",
+        "Andreessen Horowitz (a16z) Portfolio",
+        "Made in USA",
+        "Coinbase 50 Index"
+      ],
+      "id": "helium",
+      "symbol": "hnt",
+      "name": "Helium",
+      "contract_address": "hntyVP6YFm1Hg25TN9WGLqM12b8TQmcknKrdu1oxWux",
+      "mint": null,
+      "protocol": null
+    },
+    "humidifi": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Decentralized Exchange (DEX)",
+        "Decentralized Finance (DeFi)",
+        "Automated Market Maker (AMM)",
+        "Solana Ecosystem",
+        "MEV Protection",
+        "Jupiter DTF Launchpad"
+      ],
+      "id": "humidifi",
+      "symbol": "wet",
+      "name": "HumidiFi",
+      "contract_address": "WETZjtprkDMCcUxPi9PfWnowMRZkiGGHDb9rABuRZ2U",
+      "mint": null,
+      "protocol": null
+    },
+    "injective-protocol": {
+      "status": 200,
+      "asset_platform_id": "ethereum",
+      "categories": [
+        "Smart Contract Platform",
+        "Decentralized Finance (DeFi)",
+        "BNB Chain Ecosystem",
+        "Cosmos Ecosystem",
+        "Solana Ecosystem",
+        "Layer 1 (L1)",
+        "Ethereum Ecosystem",
+        "Real World Assets (RWA)",
+        "Binance Launchpad",
+        "Injective Ecosystem",
+        "Osmosis Ecosystem",
+        "Proof of Stake (PoS)",
+        "Pantera Capital Portfolio",
+        "Secret Ecosystem",
+        "GMCI Index",
+        "Privacy Blockchain",
+        "Made in USA",
+        "Coinbase 50 Index",
+        "Quantum-Resistant"
+      ],
+      "id": "injective-protocol",
+      "symbol": "inj",
+      "name": "Injective",
+      "contract_address": "0xe28b3b32b6c345a34ff64674606124dd5aceca30",
+      "mint": null,
+      "protocol": null
+    },
+    "jade-protocol-2": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Decentralized Finance (DeFi)",
+        "Solana Ecosystem",
+        "Mobile Mining"
+      ],
+      "id": "jade-protocol-2",
+      "symbol": "jade",
+      "name": "JADE Protocol",
+      "contract_address": "Cvx1KNrtcSu7nxC26gH2MNNLNXpEqAXni5YEuSStfJfh",
+      "mint": null,
+      "protocol": null
+    },
+    "jito-governance-token": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Decentralized Finance (DeFi)",
+        "Solana Ecosystem",
+        "Liquid Staking Governance Tokens",
+        "Multicoin Capital Portfolio",
+        "Alameda Research Portfolio",
+        "Delphi Ventures Portfolio",
+        "Liquid Staking",
+        "Made in USA"
+      ],
+      "id": "jito-governance-token",
+      "symbol": "jto",
+      "name": "Jito",
+      "contract_address": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+      "mint": null,
+      "protocol": null
+    },
+    "jupiter-exchange-solana": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Decentralized Exchange (DEX)",
+        "Exchange-based Tokens",
+        "Decentralized Finance (DeFi)",
+        "Perpetuals",
+        "Solana Ecosystem",
+        "Launchpad",
+        "GMCI DeFi Index",
+        "Dex Aggregator",
+        "GMCI Index",
+        "Made in USA",
+        "Unichain Ecosystem"
+      ],
+      "id": "jupiter-exchange-solana",
+      "symbol": "jup",
+      "name": "Jupiter",
+      "contract_address": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+      "mint": null,
+      "protocol": null
+    },
+    "kamino": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Decentralized Finance (DeFi)",
+        "Lending/Borrowing Protocols",
+        "Solana Ecosystem",
+        "Binance Alpha Spotlight"
+      ],
+      "id": "kamino",
+      "symbol": "kmno",
+      "name": "Kamino",
+      "contract_address": "KMNo3nJsBXfcpJTVhZcXLW7RmTwTt4GVFE7suUBo9sS",
+      "mint": null,
+      "protocol": null
+    },
+    "magic-eden": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "NFT",
+        "Solana Ecosystem",
+        "NFT Marketplace",
+        "Paradigm Portfolio",
+        "Sequoia Capital Portfolio"
+      ],
+      "id": "magic-eden",
+      "symbol": "me",
+      "name": "Magic Eden",
+      "contract_address": "MEFNBXixkEbait3xn9bkm8WsJzXtVsaJEn4c8Sam21u",
+      "mint": null,
+      "protocol": null
+    },
+    "melania-meme": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Solana Ecosystem",
+        "Meme",
+        "Solana Meme",
+        "PolitiFi",
+        "Made in USA",
+        "Trump-Affiliated"
+      ],
+      "id": "melania-meme",
+      "symbol": "melania",
+      "name": "Melania Meme",
+      "contract_address": "FUAfBo2jgks6gB4Z4LfZkqSZgzNucisEHqnNebaRxM1P",
+      "mint": null,
+      "protocol": null
+    },
+    "meteora": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Decentralized Exchange (DEX)",
+        "Exchange-based Tokens",
+        "Decentralized Finance (DeFi)",
+        "Solana Ecosystem",
+        "Launchpad",
+        "Binance Alpha Spotlight"
+      ],
+      "id": "meteora",
+      "symbol": "met",
+      "name": "Meteora",
+      "contract_address": "METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL",
+      "mint": null,
+      "protocol": null
+    },
+    "official-trump": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Solana Ecosystem",
+        "Meme",
+        "Solana Meme",
+        "PolitiFi",
+        "Made in USA",
+        "Trump-Affiliated"
+      ],
+      "id": "official-trump",
+      "symbol": "trump",
+      "name": "Official Trump",
+      "contract_address": "6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN",
+      "mint": null,
+      "protocol": null
+    },
+    "orca": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Decentralized Exchange (DEX)",
+        "Exchange-based Tokens",
+        "Decentralized Finance (DeFi)",
+        "Yield Farming",
+        "Automated Market Maker (AMM)",
+        "Solana Ecosystem",
+        "Coinbase Ventures Portfolio",
+        "DeFiance Capital Portfolio",
+        "Made in USA"
+      ],
+      "id": "orca",
+      "symbol": "orca",
+      "name": "Orca",
+      "contract_address": "orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE",
+      "mint": null,
+      "protocol": null
+    },
+    "ore": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Decentralized Finance (DeFi)",
+        "Solana Ecosystem",
+        "Mobile Mining"
+      ],
+      "id": "ore",
+      "symbol": "ore",
+      "name": "ORE",
+      "contract_address": "oreoU2P8bN6jkk3jbaiVxYnG1dCXcYxwhwyK9jSybcp",
+      "mint": null,
+      "protocol": null
+    },
+    "peaq-2": {
+      "status": 200,
+      "asset_platform_id": "peaq",
+      "categories": [
+        "Smart Contract Platform",
+        "BNB Chain Ecosystem",
+        "Solana Ecosystem",
+        "Layer 1 (L1)",
+        "Ethereum Ecosystem",
+        "DePIN",
+        "Base Ecosystem",
+        "Outlier Ventures Portfolio",
+        "Binance Alpha Spotlight",
+        "Peaq Ecosystem",
+        "Robotics",
+        "x402 Ecosystem",
+        "CoinList Launchpad"
+      ],
+      "id": "peaq-2",
+      "symbol": "peaq",
+      "name": "peaq",
+      "contract_address": "0x0000000000000000000000000000000000000809",
+      "mint": null,
+      "protocol": null
+    },
+    "pudgy-penguins": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "BNB Chain Ecosystem",
+        "Solana Ecosystem",
+        "Meme",
+        "Ethereum Ecosystem",
+        "Solana Meme",
+        "Hyperliquid Ecosystem",
+        "Binance HODLer Airdrops",
+        "Airdropped Tokens by NFT Projects",
+        "Abstract Ecosystem",
+        "Made in USA",
+        "HyperEVM Ecosystem",
+        "IP Meme",
+        "Robinhood Ecosystem"
+      ],
+      "id": "pudgy-penguins",
+      "symbol": "pengu",
+      "name": "Pudgy Penguins",
+      "contract_address": "2zMMhcVQEXDtdE6vsFS7S7D5oUodfJHE8vd1gnBouauv",
+      "mint": null,
+      "protocol": null
+    },
+    "pump-fun": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Decentralized Exchange (DEX)",
+        "Exchange-based Tokens",
+        "SocialFi",
+        "Decentralized Finance (DeFi)",
+        "Automated Market Maker (AMM)",
+        "Solana Ecosystem",
+        "Launchpad",
+        "Meme",
+        "CoinList Launchpad"
+      ],
+      "id": "pump-fun",
+      "symbol": "pump",
+      "name": "Pump.fun",
+      "contract_address": "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn",
+      "mint": null,
+      "protocol": null
+    },
+    "pyth-network": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Infrastructure",
+        "Decentralized Finance (DeFi)",
+        "Oracle",
+        "Analytics",
+        "Solana Ecosystem",
+        "Neon Ecosystem",
+        "Manta Network Ecosystem",
+        "Multicoin Capital Portfolio",
+        "GMCI DeFi Index",
+        "Delphi Ventures Portfolio",
+        "GMCI Index"
+      ],
+      "id": "pyth-network",
+      "symbol": "pyth",
+      "name": "Pyth Network",
+      "contract_address": "HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3",
+      "mint": null,
+      "protocol": null
+    },
+    "raydium": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Decentralized Exchange (DEX)",
+        "Exchange-based Tokens",
+        "Decentralized Finance (DeFi)",
+        "Yield Farming",
+        "Automated Market Maker (AMM)",
+        "Perpetuals",
+        "Solana Ecosystem",
+        "Launchpad",
+        "GMCI DeFi Index",
+        "GMCI Index"
+      ],
+      "id": "raydium",
+      "symbol": "ray",
+      "name": "Raydium",
+      "contract_address": "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R",
+      "mint": null,
+      "protocol": null
+    },
+    "rhea-2": {
+      "status": 200,
+      "asset_platform_id": "near-protocol",
+      "categories": [
+        "Decentralized Exchange (DEX)",
+        "Exchange-based Tokens",
+        "Decentralized Finance (DeFi)",
+        "BNB Chain Ecosystem",
+        "Solana Ecosystem",
+        "Near Protocol Ecosystem",
+        "BTCfi Protocol",
+        "Binance Alpha Spotlight"
+      ],
+      "id": "rhea-2",
+      "symbol": "rhea",
+      "name": "RHEA",
+      "contract_address": "token.rhealab.near",
+      "mint": null,
+      "protocol": null
+    },
+    "sanctum-2": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Decentralized Finance (DeFi)",
+        "Solana Ecosystem",
+        "Liquid Staking Governance Tokens",
+        "LSDFi",
+        "Liquid Staking",
+        "Governance"
+      ],
+      "id": "sanctum-2",
+      "symbol": "sanc",
+      "name": "Sanctum",
+      "contract_address": "CLoUDKc4Ane7HeQcPpE3YHnznRxhMimJ4MyaUqyHFzAu",
+      "mint": null,
+      "protocol": null
+    },
+    "solana": {
+      "status": 200,
+      "asset_platform_id": null,
+      "categories": [
+        "Smart Contract Platform",
+        "Solana Ecosystem",
+        "Layer 1 (L1)",
+        "FTX Holdings",
+        "Multicoin Capital Portfolio",
+        "Proof of Stake (PoS)",
+        "Alameda Research Portfolio",
+        "Andreessen Horowitz (a16z) Portfolio",
+        "GMCI Layer 1 Index",
+        "GMCI 30 Index",
+        "Delphi Ventures Portfolio",
+        "GMCI Index",
+        "Polychain Capital Portfolio",
+        "Made in USA",
+        "Coinbase 50 Index",
+        "CoinList Launchpad"
+      ],
+      "id": "solana",
+      "symbol": "sol",
+      "name": "Solana",
+      "contract_address": null,
+      "mint": null,
+      "protocol": null
+    },
+    "solayer": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Decentralized Finance (DeFi)",
+        "Solana Ecosystem",
+        "LSDFi",
+        "Restaking",
+        "Stablecoin Issuer",
+        "YZi Labs (Prev. Binance Labs) Portfolio",
+        "Binance HODLer Airdrops",
+        "Polychain Capital Portfolio",
+        "Buidlpad Launchpad"
+      ],
+      "id": "solayer",
+      "symbol": "layer",
+      "name": "Solayer",
+      "contract_address": "LAYER4xPpTCb3QL8S9u41EAhAX7mhBn8Q6xMTwY2Yzc",
+      "mint": null,
+      "protocol": null
+    },
+    "solstice": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Decentralized Finance (DeFi)",
+        "Yield Farming",
+        "BNB Chain Ecosystem",
+        "Solana Ecosystem",
+        "Binance Alpha Spotlight",
+        "Governance"
+      ],
+      "id": "solstice",
+      "symbol": "slx",
+      "name": "Solstice",
+      "contract_address": "SLXdx4BUt2v9uJQNzWqSfzTJ9UKLUDsvxHFMEEdrfgq",
+      "mint": null,
+      "protocol": null
+    },
+    "stader": {
+      "status": 200,
+      "asset_platform_id": "ethereum",
+      "categories": [
+        "BNB Chain Ecosystem",
+        "Solana Ecosystem",
+        "Polygon Ecosystem",
+        "Fantom Ecosystem",
+        "Ethereum Ecosystem",
+        "Liquid Staking Governance Tokens",
+        "Animoca Brands Portfolio",
+        "Coinbase Ventures Portfolio",
+        "Pantera Capital Portfolio",
+        "Liquid Staking",
+        "Binance Alpha Spotlight",
+        "CoinList Launchpad"
+      ],
+      "id": "stader",
+      "symbol": "sd",
+      "name": "Stader",
+      "contract_address": "0x30d20208d987713f46dfd34ef128bb16c404d10f",
+      "mint": null,
+      "protocol": null
+    },
+    "stepn": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Gaming (GameFi)",
+        "NFT",
+        "BNB Chain Ecosystem",
+        "Solana Ecosystem",
+        "Polygon Ecosystem",
+        "Play To Earn",
+        "Move To Earn",
+        "Ethereum Ecosystem",
+        "Binance Launchpad",
+        "Gaming Governance Token",
+        "Sports Games",
+        "Alameda Research Portfolio",
+        "YZi Labs (Prev. Binance Labs) Portfolio",
+        "Sequoia Capital Portfolio"
+      ],
+      "id": "stepn",
+      "symbol": "gmt",
+      "name": "GMT",
+      "contract_address": "7i5KKsX2weiTkry7jA4ZwSuXGhs5eJBEjY8vVxR4pfRx",
+      "mint": null,
+      "protocol": null
+    },
+    "streamflow": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Decentralized Finance (DeFi)",
+        "Solana Ecosystem"
+      ],
+      "id": "streamflow",
+      "symbol": "stream",
+      "name": "Streamflow",
+      "contract_address": "STREAMribRwybYpMmSYoCsQUdr6MZNXEqHgm7p1gu9M",
+      "mint": null,
+      "protocol": null
+    },
+    "tensor": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "NFT",
+        "Solana Ecosystem",
+        "NFT Marketplace"
+      ],
+      "id": "tensor",
+      "symbol": "tnsr",
+      "name": "Tensor",
+      "contract_address": "TNSRxcUxoT9xBG3de7PiJyTDYu7kskLqcpddxnEJAS6",
+      "mint": null,
+      "protocol": null
+    },
+    "uxd-protocol-token": {
+      "status": 404,
+      "asset_platform_id": null,
+      "categories": null,
+      "id": null,
+      "symbol": null,
+      "name": null,
+      "contract_address": null,
+      "mint": null,
+      "protocol": null
+    },
+    "virtual-protocol": {
+      "status": 200,
+      "asset_platform_id": "ethereum",
+      "categories": [
+        "Artificial Intelligence (AI)",
+        "Solana Ecosystem",
+        "Launchpad",
+        "Ethereum Ecosystem",
+        "Base Ecosystem",
+        "AI Agents",
+        "Virtuals Protocol Ecosystem",
+        "AI Agent Launchpad",
+        "Binance Alpha Spotlight",
+        "AI Framework",
+        "Robotics",
+        "Base Native",
+        "Arc Ecosystem",
+        "Robinhood Ecosystem"
+      ],
+      "id": "virtual-protocol",
+      "symbol": "virtual",
+      "name": "Virtuals Protocol",
+      "contract_address": "0x44ff8620b8ca30902395a7bd3f2407e1a091bf73",
+      "mint": null,
+      "protocol": null
+    },
+    "wormhole": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Solana Ecosystem",
+        "Arbitrum Ecosystem",
+        "Ethereum Ecosystem",
+        "Interoperability",
+        "Base Ecosystem",
+        "Multicoin Capital Portfolio",
+        "Cross-chain Communication",
+        "Made in USA",
+        "Governance",
+        "Base Native"
+      ],
+      "id": "wormhole",
+      "symbol": "w",
+      "name": "Wormhole",
+      "contract_address": "85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ",
+      "mint": null,
+      "protocol": null
+    },
+    "zinc-2": {
+      "status": 200,
+      "asset_platform_id": "solana",
+      "categories": [
+        "Decentralized Finance (DeFi)",
+        "Solana Ecosystem"
+      ],
+      "id": "zinc-2",
+      "symbol": "zinc",
+      "name": "ZINC",
+      "contract_address": "zinc155BS4mSPk8GXQj4R5hkVDQXcW253pTYq5SGyfi",
+      "mint": null,
+      "protocol": null
+    },
+    "contract:bidgrid": {
+      "status": 404,
+      "asset_platform_id": null,
+      "categories": null,
+      "id": null,
+      "symbol": null,
+      "name": null,
+      "contract_address": null,
+      "mint": "vfF1NjPmzGgV9ZoC5CWT5W5RpxhHA5TL1DisbShbdgr",
+      "protocol": "bidgrid"
+    }
+  }
+}
