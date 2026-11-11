@@ -7,18 +7,13 @@
      summary.json
      equity.jsonl
      positions.json
-     trades/{id}.jsonl          one append-only file per wallet
+     trades.jsonl               one append-only file; each row has wallet
 
-   summary.json leaderboard row (official read; the page does not rank on equity):
-     id, name, role, status, net_pct, n, interval_lo, interval_hi,
-     avg_deployed_pct, equity_sol, last_run_ts
-   R5 is "pending lock" until summary.json lists it, and then may add
-     meme_n, non_meme_n, overlap_k, overlap_n
-   (overlap is "R5 holdings also in R3: k of n").
-
-   equity.jsonl:   ts, wallet, equity_sol, net_pct
-   trades/{id}.jsonl: ts, wallet, action, symbol, mint, fill_price, size_sol, cost_bps, pnl, exit_reason
-   positions.json: a list, or { "positions": [ ... ] }, same wallet fields as a trade plus entry, mark, upnl, upnl_pct
+   Ranking reads the summary row in this order (first key wins, even when null):
+     official_net_pct, then n_trades, then ci95_low / ci95_high.
+   equity.jsonl net_pct is the since-start percent. It is not the rank.
+   r5_overlap and r5_split sit on the summary, not on a wallet row.
+   R5 reads "awaiting first run" until summary.json lists it.
 
    Every wallet starts at 5.0 SOL. That is the label, not a made-up current balance.
    A lead uses the official net_pct only. The benchmark is not a lead.
@@ -27,14 +22,14 @@
 (function (root) {
   var BANNER = "Display only, untested. A lead in the race is luck until tested.";
   var MESSAGE = "race starting soon";
-  var PENDING = "pending lock";
+  var PENDING = "awaiting first run";
   var START_EQUITY = 5.0;
   var RAW = "https://raw.githubusercontent.com/Zirqo-Dev/sightline/races-data/";
   var FILES = {
     summary: "summary.json",
     equity: "equity.jsonl",
     positions: "positions.json",
-    trades: "trades/{id}.jsonl"
+    trades: "trades.jsonl"
   };
   var WALLET_IDS = ["R1", "R2", "R3", "R4", "R5", "SOL"];
   var FIELDS = {
@@ -43,23 +38,23 @@
     role: ["role", "kind"],
     status: ["status", "run_status", "state"],
     updated: ["last_run_ts", "updated_at", "updated", "asof", "ts", "t", "time", "at"],
-    netPct: ["net_pct", "net_percent", "official_net_pct", "net"],
-    n: ["n", "sample_n", "closes"],
-    lo: ["interval_lo", "ci_lo", "lo"],
-    hi: ["interval_hi", "ci_hi", "hi"],
-    avgDeployed: ["avg_deployed_pct", "avg_pct_deployed", "deployed_pct"],
+    netPct: ["official_net_pct", "net_pct", "net_percent", "net"],
+    n: ["n_trades", "n", "sample_n", "closes"],
+    lo: ["ci95_low", "interval_lo", "ci_lo", "lo"],
+    hi: ["ci95_high", "interval_hi", "ci_hi", "hi"],
+    avgDeployed: ["avg_pct_deployed", "avg_deployed_pct", "deployed_pct"],
     equity: ["equity_sol", "equity", "balance", "nav"],
     action: ["action", "side"],
     symbol: ["symbol", "sym", "ticker", "token"],
     mint: ["mint", "token_mint"],
-    price: ["fill_price", "price", "fill", "px", "quote_px"],
+    price: ["fill_price_sol", "fill_price", "price", "fill", "px", "quote_px"],
     size: ["size_sol", "size", "qty", "quantity", "amount"],
     costBps: ["cost_bps", "cost", "fee_bps"],
-    pnl: ["pnl", "pnl_sol", "realized", "realized_pnl"],
+    pnl: ["pnl_sol", "pnl", "realized", "realized_pnl"],
     exitReason: ["exit_reason", "reason", "exit"],
-    entry: ["entry", "entry_px", "entry_price"],
-    mark: ["mark", "mark_px", "last", "last_mark"],
-    upnl: ["upnl", "unrealized", "unrealized_pnl", "u_pnl"],
+    entry: ["entry_price_sol", "entry", "entry_px", "entry_price"],
+    mark: ["mark_price_sol", "mark", "mark_px", "last", "last_mark"],
+    upnl: ["unrealized_pnl_sol", "upnl", "unrealized", "unrealized_pnl", "u_pnl"],
     upnlPct: ["upnl_pct", "unrealized_pct", "u_pnl_pct"],
     closed: ["closed", "flat"],
     memeN: ["meme_n", "meme", "meme_count"],
@@ -83,6 +78,13 @@
       if (v != null && v !== "") return v;
     }
     return undefined;
+  }
+  function pickRank(obj, keys) {
+    if (!obj || typeof obj !== "object") return undefined;
+    if (Object.prototype.hasOwnProperty.call(obj, keys[0])) {
+      return obj[keys[0]] === "" ? undefined : obj[keys[0]];
+    }
+    return pick(obj, keys.slice(1));
   }
   function num(v) {
     if (typeof v === "number") return isFinite(v) ? v : null;
@@ -203,7 +205,9 @@
     var sample = top[0];
     var extra = "";
     if (sample.n != null) extra += " · n=" + sample.n;
-    if (sample.lo != null && sample.hi != null) extra += " · 95% interval " + pctText(sample.lo) + " to " + pctText(sample.hi);
+    extra += sample.lo != null && sample.hi != null
+      ? " · 95% interval " + pctText(sample.lo) + " to " + pctText(sample.hi)
+      : " · 95% interval —";
     return { ids: ids, netPct: max, n: sample.n, lo: sample.lo, hi: sample.hi, label: head + extra };
   }
   function applySummary(byId, summary) {
@@ -226,27 +230,41 @@
       w.status = status ? String(status).toLowerCase() : "running";
       var updated = pointTime(row);
       if (updated) w.updatedAt = updated;
-      var net = num(pick(row, FIELDS.netPct));
+      var net = num(pickRank(row, FIELDS.netPct));
       if (net != null) w.netPct = net;
-      var n = num(pick(row, FIELDS.n));
+      var n = num(pickRank(row, FIELDS.n));
       if (n != null) w.n = n;
-      var lo = num(pick(row, FIELDS.lo));
-      var hi = num(pick(row, FIELDS.hi));
-      if (lo != null) w.lo = lo;
-      if (hi != null) w.hi = hi;
-      var deployed = num(pick(row, FIELDS.avgDeployed));
+      if (Object.prototype.hasOwnProperty.call(row, FIELDS.lo[0]) || Object.prototype.hasOwnProperty.call(row, FIELDS.hi[0])) {
+        w.lo = num(row[FIELDS.lo[0]]);
+        w.hi = num(row[FIELDS.hi[0]]);
+      } else {
+        var lo = num(pick(row, FIELDS.lo.slice(1)));
+        var hi = num(pick(row, FIELDS.hi.slice(1)));
+        if (lo != null) w.lo = lo;
+        if (hi != null) w.hi = hi;
+      }
+      var deployed = num(pickRank(row, FIELDS.avgDeployed));
       if (deployed != null) w.avgDeployed = deployed;
       var eq = num(pick(row, FIELDS.equity));
       if (eq != null) w.equity = eq;
-      var meme = num(pick(row, FIELDS.memeN));
-      var other = num(pick(row, FIELDS.nonMemeN));
-      var k = num(pick(row, FIELDS.overlapK));
-      var kn = num(pick(row, FIELDS.overlapN));
-      if (meme != null) w.memeN = meme;
-      if (other != null) w.nonMemeN = other;
-      if (k != null) w.overlapK = k;
-      if (kn != null) w.overlapN = kn;
     });
+  }
+  function readOverlap(summary) {
+    var raw = summary && summary.r5_overlap;
+    if (!raw || typeof raw !== "object") return null;
+    var k = num(raw.k);
+    var n = num(raw.n);
+    return {
+      k: k,
+      n: n,
+      line: raw.line || (k != null && n != null ? "R5 holdings also in R3: " + k + " of " + n : ""),
+      note: raw.note || ""
+    };
+  }
+  function readSplit(summary) {
+    var raw = summary && summary.r5_split;
+    if (!raw || typeof raw !== "object") return null;
+    return raw;
   }
   function buildView(summary, extra, opts) {
     var opt = opts || {};
@@ -355,8 +373,10 @@
       status: runStatus || (anyListed ? "running" : "starting"),
       updatedAt: runUpdated,
       message: summary ? "" : MESSAGE,
-      banner: BANNER,
+      banner: (summary && summary.banner) || BANNER,
       lead: lead,
+      overlap: summary ? readOverlap(summary) : null,
+      split: summary ? readSplit(summary) : null,
       startEquity: START_EQUITY,
       wallets: wallets
     };
@@ -368,25 +388,15 @@
       return res.text();
     }).catch(function () { return null; });
   }
-  function loadBundle(fetchFn, prefix) {
+  function loadBundle(fetchFn, prefix, names) {
+    var file = names || FILES;
     return Promise.all([
-      getText(fetchFn, prefix + FILES.summary),
-      getText(fetchFn, prefix + FILES.equity),
-      getText(fetchFn, prefix + FILES.positions),
-      Promise.all(WALLET_IDS.map(function (id) {
-        var path = FILES.trades.replace("{id}", id);
-        return getText(fetchFn, prefix + path).then(function (text) {
-          var pair = {};
-          pair[id] = text || "";
-          return pair;
-        });
-      }))
+      getText(fetchFn, prefix + file.summary),
+      getText(fetchFn, prefix + file.equity),
+      getText(fetchFn, prefix + file.positions),
+      getText(fetchFn, prefix + file.trades)
     ]).then(function (parts) {
-      var trades = {};
-      parts[3].forEach(function (pair) {
-        Object.keys(pair).forEach(function (id) { trades[id] = pair[id]; });
-      });
-      return { summaryText: parts[0], equity: parts[1] || "", positions: parts[2] || "", trades: trades };
+      return { summaryText: parts[0], equity: parts[1] || "", positions: parts[2] || "", trades: parts[3] || "" };
     });
   }
   function fromBundle(bundle, source) {
@@ -400,7 +410,12 @@
   function load(fetchFn, opts) {
     var opt = opts || {};
     if (opt.fixtures) {
-      return loadBundle(fetchFn, "revamp/fixtures/").then(function (bundle) {
+      return loadBundle(fetchFn, "revamp/fixtures/", {
+        summary: "races-summary.json",
+        equity: FILES.equity,
+        positions: FILES.positions,
+        trades: FILES.trades
+      }).then(function (bundle) {
         return fromBundle(bundle, "fixtures") || emptyView("fixtures-missing");
       });
     }

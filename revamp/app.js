@@ -344,11 +344,15 @@
         "</div>";
     }).join("") : '<p class="muted">No buys or sells yet.</p>';
     var split = "";
-    if (w.memeN != null || w.nonMemeN != null) {
-      split = line("Meme vs non-meme", esc((w.memeN == null ? "—" : w.memeN) + " / " + (w.nonMemeN == null ? "—" : w.nonMemeN)), " small");
+    if (w.id === "R5" && view.split) {
+      ["meme", "non_meme", "untagged"].forEach(function (key) {
+        var side = view.split[key] || {};
+        var net = side.net_pct == null ? "—" : signed(side.net_pct, 2) + "%";
+        split += line(key.replace("_", "-") + " n=" + (side.n == null ? "—" : side.n), esc(net), " small");
+      });
     }
-    if (w.id === "R5" && w.overlapK != null && w.overlapN != null) {
-      split += line("R5 holdings also in R3: " + w.overlapK + " of " + w.overlapN, null, " small");
+    if (w.id === "R5" && view.overlap && view.overlap.line) {
+      split += line(esc(view.overlap.line), null, " small");
     }
     var official = w.pendingLock ? "" :
       line("Official net", esc(w.netPct == null ? "—" : signed(w.netPct, 2) + "%"), " small") +
@@ -357,7 +361,7 @@
       line("Avg % deployed", esc(w.avgDeployed == null ? "—" : w.avgDeployed.toFixed(0) + "%"), " small");
     return '<article class="card"><div class="rowtop"><span><h3>' + tag(w.id, "accent") + esc(w.name) + "</h3></span>" + tag(w.status || "starting", w.status === "running" ? "good" : "warn") + "</div>" +
       lead +
-      (w.pendingLock ? line(esc(R.PENDING) + ". No equity until summary.json lists this wallet.", null, " small muted") : "") +
+      (w.pendingLock ? line(esc(R.PENDING) + ". No equity until summary.json lists R5.", null, " small muted") : "") +
       line("Last updated", esc(w.updatedAt ? fmtEt(w.updatedAt) : "—"), " small") +
       line("Run status", esc(w.status || "starting"), " small") +
       line("Started at", esc(level(w.startEquity, "SOL")), " small") +
@@ -386,7 +390,9 @@
       view.wallets.forEach(function (w) { if (w.id === focus) picked = w; });
       detail = picked ? movement(picked, view) : '<article class="card"><p>That wallet is not on the race list.</p></article>';
     }
-    return note + '<p class="banner">' + esc(view.banner) + "</p>" + lead +
+    var overlap = view.overlap && view.overlap.line ? line(esc(view.overlap.line), null, " small") : "";
+    var note2 = view.overlap && view.overlap.note ? line(esc(view.overlap.note), null, " small muted") : "";
+    return note + '<p class="banner">' + esc(view.banner) + "</p>" + lead + overlap + note2 +
       (view.updatedAt ? line("File updated", esc(fmtEt(view.updatedAt)), " small muted") : "") +
       detail + buttons;
   }
@@ -603,6 +609,7 @@
       '<article class="card"><p class="banner">' + esc(view.banner) + "</p>" +
       line("Race wallets R1–R5, plus the SOL-hold benchmark", null, " small") +
       line(raceLine, null, " small") +
+      (view.overlap && view.overlap.line ? line(esc(view.overlap.line), null, " small") : "") +
       '<p><a class="link" href="#/wallets">Open the wallet movement</a></p></article>' +
       '<article class="card"><div class="rowtop"><span><h3>2. NFT (KING)</h3></span>' + tag("Pilot running", "accent") + "</div>" +
       line("Ethereum + Base lane", null, " small muted") +
