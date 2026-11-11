@@ -64,13 +64,21 @@ class DryRun(unittest.TestCase):
         self.assertIn("avg_pct_deployed", summary["wallets"][0])
         self.assertEqual(positions["schema_version"], 1)
         from races.scrub import scrub
-        leaked = "RaceMint11111111111111111111111111111111"
-        cleaned = scrub({"wallet": leaked, "note": "kept"}, set())
-        self.assertNotIn("wallet", cleaned)
-        self.assertEqual(cleaned.get("note"), "kept")
-        self.assertNotIn(leaked, json.dumps(cleaned))
-        self.assertEqual(scrub({"wallet": "R1"}, set())["wallet"], "R1")
-        self.assertEqual(scrub({"wallet": "SOL_HOLD"}, set())["wallet"], "SOL_HOLD")
+        leaked = "1" * 44
+        kept = {"symbol": "MEME", "action": "buy", "mint": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"}
+        for good in ("R1", "SOL_HOLD"):
+            cleaned = scrub({"wallet": good, **kept}, {kept["mint"]})
+            self.assertEqual(cleaned["wallet"], good)
+            self.assertEqual(cleaned["symbol"], "MEME")
+            self.assertEqual(cleaned["action"], "buy")
+            self.assertEqual(cleaned["mint"], kept["mint"])
+        for bad in ("R1\n", "r1", "R6", leaked):
+            cleaned = scrub({"wallet": bad, **kept}, {kept["mint"]})
+            self.assertNotIn("wallet", cleaned)
+            self.assertNotIn(bad, json.dumps(cleaned))
+            self.assertEqual(cleaned["symbol"], "MEME")
+            self.assertEqual(cleaned["action"], "buy")
+            self.assertEqual(cleaned["mint"], kept["mint"])
 
 
 class Isolation(unittest.TestCase):

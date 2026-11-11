@@ -6,8 +6,7 @@ Token mints and pool ids that the caller marks as public may stay.
 import re
 
 _B58 = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
-# Slot ids, not addresses. SOL is this writer's benchmark id; SOL_HOLD is the same slot.
-_SLOT = re.compile(r"^(R[1-5]|SOL|SOL_HOLD)$")
+# fullmatch, not `$`: `$` also matches before a trailing newline.
 _DROP_KEYS = {
     "dev", "twitter", "telegram", "instagram", "owner", "holder", "holders",
     "creator", "deployer", "authority", "user", "wallet", "address", "pubkey",
@@ -26,7 +25,7 @@ def scrub(value, allow):
         if isinstance(node, dict):
             out = {}
             for k, v in node.items():
-                if k == "wallet" and isinstance(v, str) and _SLOT.fullmatch(v):
+                if k == "wallet" and isinstance(v, str) and re.fullmatch(r"(R[1-5]|SOL_HOLD)", v):
                     out[k] = v
                     continue
                 if k in _DROP_KEYS and k not in ("mint", "pool_id"):
