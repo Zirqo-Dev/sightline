@@ -62,6 +62,16 @@
         workflows: [row("Daily status", "amber", 60 * 20, stamp)]
       };
     }
+    if (kind === "stale") {
+      return {
+        generated_at: iso(stamp - 8 * 60 * 60 * 1000),
+        status: "green",
+        workflows: [
+          row("Solana desk scan", "green", 12, stamp),
+          row("wallet races", "green", 18, stamp)
+        ]
+      };
+    }
     return null;
   }
   function empty() {
@@ -72,6 +82,9 @@
     if (!doc || typeof doc !== "object" || !STATUSES[doc.status] || !Array.isArray(doc.workflows)) {
       return empty();
     }
+    var generated = Date.parse(doc.generated_at);
+    var stale = isFinite(generated) && (now - generated) > 6 * 60 * 60 * 1000;
+    var overall = stale ? "red" : doc.status;
     var chips = doc.workflows.filter(function (item) {
       return item && STATUSES[item.status] && item.name;
     }).map(function (item) {
@@ -82,12 +95,17 @@
         '<span class="age">' + esc(ageLabel(item.last_run_at, now)) + "</span>" +
         "</div></li>";
     }).join("");
+    var note = "";
+    if (stale) {
+      var hours = Math.round((now - generated) / 3600000);
+      note = '<p class="health-stale">health check stale, last ' + hours + "h ago</p>";
+    }
     var body = chips
       ? '<ul class="health-strip">' + chips + "</ul>"
       : '<p class="health-empty">No workflow rows in this health file.</p>';
     return '<section id="pipeline-health" class="health" aria-label="Pipeline health">' +
-      '<p class="health-overall">Pipeline <strong class="is-' + esc(doc.status) + '">' + esc(doc.status) + "</strong></p>" +
-      body + "</section>";
+      '<p class="health-overall">Pipeline <strong class="is-' + esc(overall) + '">' + esc(overall) + "</strong></p>" +
+      note + body + "</section>";
   }
 
   root.SightlineHealth = { render: render, sample: sample, URL: URL, empty: empty };

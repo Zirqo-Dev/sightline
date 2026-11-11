@@ -87,7 +87,7 @@ a.coll{
 a.link{font:12px "DM Mono",monospace;color:var(--accent)}
 svg text{font-family:"DM Mono",ui-monospace,monospace}
 .health{margin:0 0 10px;max-width:100%}
-.health-overall,.health-empty,.health-chip{font-size:14px;line-height:1.35}
+.health-overall,.health-empty,.health-stale,.health-chip{font-size:14px;line-height:1.35}
 .health-overall{margin:0 0 6px}
 .health-overall .is-green,.health-chip.is-green .st{color:var(--up)}
 .health-overall .is-amber,.health-chip.is-amber .st{color:var(--amb)}
@@ -104,10 +104,11 @@ svg text{font-family:"DM Mono",ui-monospace,monospace}
 .health-chip.is-red{border-color:rgba(246,70,93,.7)}
 .health-chip .st,.health-chip .age{flex:none;white-space:nowrap}
 .health-chip .nm{flex:1;min-width:0;overflow-wrap:anywhere}
-.health-empty{
+.health-empty,.health-stale{
   display:flex;align-items:center;min-height:44px;margin:0;padding:8px 10px;
   border:1px dashed var(--line);border-radius:10px;color:var(--mute);
 }
+.health-stale{margin-bottom:6px}
 @media (prefers-reduced-motion:reduce){
   .logo i{animation:none}
 }

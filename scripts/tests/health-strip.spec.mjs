@@ -28,7 +28,7 @@ async function assertFit(page, strip) {
   });
   expect(fit.page).toBeLessThanOrEqual(1);
   expect(fit.strip).toBeLessThanOrEqual(1);
-  const targets = strip.locator(".health-chip, .health-empty");
+  const targets = strip.locator(".health-chip, .health-empty, .health-stale");
   const count = await targets.count();
   expect(count).toBeGreaterThan(0);
   for (let i = 0; i < count; i++) {
@@ -44,7 +44,7 @@ async function assertFit(page, strip) {
   }
 }
 
-for (const state of ["green", "red", "empty"]) {
+for (const state of ["green", "red", "stale", "empty"]) {
   test("health strip " + state + " at 360x800", async ({ page }) => {
     const strip = await openStrip(page, state);
     if (state === "empty") {
@@ -52,6 +52,10 @@ for (const state of ["green", "red", "empty"]) {
       await expect(strip.locator(".health-chip")).toHaveCount(0);
       const text = await strip.innerText();
       expect(text).not.toMatch(/\d/);
+    } else if (state === "stale") {
+      await expect(strip.locator(".health-stale")).toContainText("health check stale, last 8h ago");
+      await expect(strip.locator(".health-overall")).toContainText("red");
+      await expect(strip.locator(".health-chip").first()).toBeVisible();
     } else {
       await expect(strip.locator(".health-overall")).toContainText(state);
       await expect(strip.locator(".health-chip").first()).toBeVisible();

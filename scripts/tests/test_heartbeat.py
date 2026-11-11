@@ -29,8 +29,10 @@ def spec(path, name, crons, branch=None):
     return {"file": path, "name": name, "crons": list(crons), "data_branch": branch}
 
 
-def health(workflows, runs, commits=None):
-    return heartbeat.build_health(workflows, runs, commits or {}, NOW)
+def health(workflows, runs, commits=None, main_age=timedelta(hours=-1)):
+    return heartbeat.build_health(
+        workflows, runs, commits or {}, NOW, main_commit_at=NOW + main_age,
+    )
 
 
 class Cron(unittest.TestCase):
@@ -86,6 +88,7 @@ class Cases(unittest.TestCase):
         )
         row = doc["workflows"][0]
         self.assertTrue(row["missed_slot"])
+        self.assertGreaterEqual(row["missed_count"], 2)
         self.assertEqual(row["consecutive_failures"], 0)
         self.assertEqual(row["status"], "red")
         self.assertEqual(doc["status"], "red")
@@ -116,25 +119,39 @@ class Cases(unittest.TestCase):
         self.assertFalse(row["missed_slot"])
         self.assertEqual(row["status"], "red")
 
-    def test_near_auto_disable(self):
-        quiet = spec(".github/workflows/pages.yml", "pages", [])
+    def test_hourly_runs_do_not_reset_disable_when_main_is_quiet(self):
+        hourly = spec(".github/workflows/desk-data-guard.yml", "desk-data-guard", ["17 * * * *"])
         doc = health(
-            [quiet],
-            {quiet["file"]: [{"at": at(timedelta(days=-51)), "conclusion": "success", "event": "push"}]},
+            [hourly],
+            {hourly["file"]: [run(-30), run(-90), run(-150)]},
+            main_age=timedelta(days=-52),
         )
         row = doc["workflows"][0]
-        self.assertEqual(row["days_until_disable"], 9)
-        self.assertTrue(row["disable_red"])
         self.assertFalse(row["missed_slot"])
-        self.assertIsNone(row["data_branch"])
+        self.assertEqual(row["days_until_disable"], 8)
+        self.assertTrue(row["disable_red"])
         self.assertEqual(row["status"], "red")
         self.assertEqual(doc["status"], "red")
+
+    def test_disabled_state_is_red(self):
+        item = spec(DESK, "Solana desk scan", ["*/30 * * * *"], "desk-data")
+        for state in ("disabled_inactivity", "disabled_manually"):
+            item["state"] = state
+            doc = health(
+                [item],
+                {DESK: [run(-5), run(-35)]},
+                {"desk-data": at(timedelta(minutes=-4))},
+            )
+            row = doc["workflows"][0]
+            self.assertEqual(row["state"], state)
+            self.assertEqual(row["status"], "red")
 
     def test_disable_warning_is_amber_before_the_red_window(self):
         quiet = spec(".github/workflows/pages.yml", "pages", [])
         doc = health(
             [quiet],
-            {quiet["file"]: [{"at": at(timedelta(days=-45)), "conclusion": "success", "event": "push"}]},
+            {quiet["file"]: [run(-30, "success", "push")]},
+            main_age=timedelta(days=-45),
         )
         row = doc["workflows"][0]
         self.assertEqual(row["days_until_disable"], 15)
@@ -142,15 +159,57 @@ class Cases(unittest.TestCase):
         self.assertEqual(row["status"], "amber")
         self.assertEqual(doc["status"], "amber")
 
-    def test_aging_data_branch_is_amber(self):
+    def test_data_branch_is_amber_past_interval_plus_grace(self):
         doc = health(
             [spec(DESK, "Solana desk scan", ["*/30 * * * *"], "desk-data")],
             {DESK: [run(-5), run(-35)]},
-            {"desk-data": at(timedelta(minutes=-25))},
+            {"desk-data": at(timedelta(minutes=-50))},
         )
         row = doc["workflows"][0]
         self.assertFalse(row["data_branch"]["stale"])
         self.assertEqual(row["status"], "amber")
+
+    def test_one_short_miss_is_amber_and_two_are_red(self):
+        self.assertEqual(heartbeat.miss_level(1, 30, False), "amber")
+        self.assertEqual(heartbeat.miss_level(2, 30, False), "red")
+        self.assertEqual(heartbeat.miss_level(1, 24 * 60, False), "red")
+        self.assertEqual(heartbeat.miss_level(1, 30, True), "red")
+        one = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"], "desk-data")],
+            {DESK: [run(-45)]},
+            {"desk-data": at(timedelta(minutes=-4))},
+        )
+        # 12:00 is still inside its 15-minute grace, so the due slot is 11:30.
+        # A run at 11:15 covers 11:00 and leaves 11:30 missed once.
+        self.assertEqual(one["workflows"][0]["missed_count"], 1)
+        self.assertEqual(one["workflows"][0]["status"], "amber")
+        two = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"], "desk-data")],
+            {DESK: [run(-75)]},
+            {"desk-data": at(timedelta(minutes=-4))},
+        )
+        self.assertGreaterEqual(two["workflows"][0]["missed_count"], 2)
+        self.assertEqual(two["workflows"][0]["status"], "red")
+
+    def test_one_daily_miss_stays_red(self):
+        daily = spec(".github/workflows/daily-status.yml", "Daily status", ["40 0 * * *"])
+        doc = health(
+            [daily],
+            {daily["file"]: [{"at": at(timedelta(days=-1, minutes=50)), "conclusion": "success", "event": "schedule"}]},
+        )
+        row = doc["workflows"][0]
+        self.assertEqual(row["missed_count"], 1)
+        self.assertEqual(row["status"], "red")
+
+    def test_zero_runs_is_red_after_grace(self):
+        doc = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"])],
+            {DESK: []},
+        )
+        row = doc["workflows"][0]
+        self.assertGreaterEqual(row["missed_count"], 1)
+        self.assertTrue(row["missed_slot"])
+        self.assertEqual(row["status"], "red")
 
     def test_shared_branch_uses_each_workflow_interval(self):
         daily = spec(".github/workflows/daily-status.yml", "Daily status", ["40 0 * * *"], "desk-data")
@@ -240,6 +299,8 @@ class LiveFiles(unittest.TestCase):
         self.assertEqual(by[RACES]["crons"], ["12,42 * * * *"])
         self.assertEqual(by[RACES]["data_branch"], "races-data")
         self.assertEqual(by[UA]["data_branch"], "ua-f1-data")
+        self.assertTrue(by[UA]["noop_commit"])
+        self.assertFalse(by[DESK]["noop_commit"])
         self.assertEqual(by[UA]["crons"], ["0 1 * * 1", "0 0 1 * *", "23 0 1 * *", "23 3 1 * *"])
         self.assertIsNone(by[".github/workflows/desk-data-guard.yml"]["data_branch"])
         self.assertEqual(by[".github/workflows/desk-data-guard.yml"]["crons"], ["17 * * * *"])
@@ -249,12 +310,21 @@ class LiveFiles(unittest.TestCase):
         for item in specs:
             self.assertIn(item["data_branch"], (None, "desk-data", "races-data", "ua-f1-data"))
 
-    def test_weekly_data_branch_stale_after_its_own_interval(self):
+    def test_ua_f1_noop_commit_follows_the_last_success(self):
         ua = heartbeat.load_workflow_files(os.path.join(ROOT, ".github", "workflows"))
         ua = [item for item in ua if item["file"] == UA][0]
-        fresh = health([ua], {UA: [run(-60)]}, {"ua-f1-data": at(timedelta(days=-3))})
-        stale = health([ua], {UA: [run(-60)]}, {"ua-f1-data": at(timedelta(days=-8))})
-        self.assertFalse(fresh["workflows"][0]["data_branch"]["stale"])
+        self.assertTrue(ua["noop_commit"])
+        # A successful run with nothing new skips the commit. The branch can sit still.
+        quiet = health(
+            [ua],
+            {UA: [run(-60)]},
+            {"ua-f1-data": at(timedelta(days=-20))},
+        )
+        self.assertFalse(quiet["workflows"][0]["data_branch"]["stale"])
+        self.assertEqual(quiet["workflows"][0]["status"], "green")
+        # No later success: the old branch and the old run are both past 2x interval + grace.
+        old_run = {"at": at(timedelta(days=-20)), "conclusion": "success", "event": "schedule"}
+        stale = health([ua], {UA: [old_run]}, {"ua-f1-data": at(timedelta(days=-20))})
         self.assertTrue(stale["workflows"][0]["data_branch"]["stale"])
         self.assertEqual(stale["workflows"][0]["status"], "red")
 
@@ -264,6 +334,8 @@ class LiveFiles(unittest.TestCase):
         self.assertIn('cron: "7 */3 * * *"', text)
         self.assertIn("workflow_dispatch:", text)
         self.assertIn("actions: read", text)
+        self.assertIn("ubuntu-24.04", text)
+        self.assertNotIn("ubuntu-latest", text)
         self.assertIn("git push origin HEAD:health-data", text)
         for forbidden in ("HEAD:main", "HEAD:desk-data", "HEAD:races-data", "HEAD:ua-f1-data"):
             self.assertNotIn("git push origin " + forbidden, text)

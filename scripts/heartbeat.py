@@ -6,15 +6,20 @@ workflow names, times, and statuses only. The publish target is health-data.
 main, desk-data, races-data, and ua-f1-data are refused.
 
 Status, worst wins:
-  red   missed cron slot, any consecutive failure, a stale data branch,
-        or 10 or fewer days until GitHub's 60-day schedule auto-disable
-  amber data branch older than 3/4 of its expected interval, or 11 to 20
-        days left before that auto-disable
+  red   two missed cron slots in a row (or one, when the cadence is a day
+        or longer, or the workflow has never run), any consecutive failure,
+        a data branch older than twice its interval plus grace, a workflow
+        state of disabled_inactivity or disabled_manually, or 10 or fewer
+        days until GitHub's 60-day schedule auto-disable
+  amber one missed slot on a cadence under a day, a data branch older than
+        its interval plus grace, or 11 to 20 days left before auto-disable
   green otherwise
 
-The expected interval is the longest gap between scheduled fires. Grace
-before a slot counts as missed is max(15 minutes, one quarter of that
-interval). A workflow with no cron is not checked for a missed slot.
+The auto-disable clock is the last commit on main. Runs do not reset it,
+and commits on data branches do not either. The expected interval is the
+longest gap between scheduled fires. Grace is max(15 minutes, one quarter
+of that interval). ua-f1-data can skip a commit when a run has nothing new,
+so that branch is judged from the later of its tip and its last success.
 """
 
 from __future__ import annotations
@@ -41,7 +46,9 @@ FAILURES = {"failure", "timed_out", "startup_failure"}
 IGNORED_CONCLUSIONS = {"cancelled", "skipped", "neutral", "stale"}
 CONCLUSIONS = FAILURES | IGNORED_CONCLUSIONS | {"success", "action_required", "in_progress"}
 SLOT_SKEW = timedelta(minutes=2)
-AGING_FRACTION = 0.75
+DAY_MINUTES = 24 * 60
+DISABLED_STATES = {"disabled_inactivity", "disabled_manually"}
+_STATES = DISABLED_STATES | {"active", "disabled_fork", "deleted"}
 
 _CRON_LINE = re.compile(
     r"""^[ \t]*(?:-\s*)?cron:\s*(?:'([^']+)'|"([^"]+)"|(\S+))\s*(?:#.*)?$"""
@@ -79,9 +86,11 @@ _WF_KEYS = {
     "interval_minutes",
     "grace_minutes",
     "missed_slot",
+    "missed_count",
     "consecutive_failures",
     "days_until_disable",
     "disable_red",
+    "state",
     "data_branch",
 }
 _BRANCH_KEYS = {"name", "last_commit_at", "stale"}
@@ -177,11 +186,14 @@ def load_workflow_files(directory):
         with open(path, encoding="utf-8") as handle:
             text = handle.read()
         rel = ".github/workflows/" + name
+        branch = data_branch_of(text)
         specs.append({
             "file": rel,
             "name": workflow_name(text, name),
             "crons": crons_in(text),
-            "data_branch": data_branch_of(text),
+            "data_branch": branch,
+            # ua-f1 exits 0 without a commit when the tree is unchanged.
+            "noop_commit": branch == "ua-f1-data" and "nothing to commit" in text,
         })
     return specs
 
@@ -329,28 +341,54 @@ def consecutive_failures(runs):
     return streak
 
 
-def missed_slot(crons, runs, now):
+def _schedule_at(run):
+    if run.get("event") != "schedule":
+        return None
+    return parse_time(run.get("at"))
+
+
+def _slot_covered(slot, newer, runs):
+    """A schedule run covers this slot and not the newer one."""
+    start = slot - SLOT_SKEW
+    end = None if newer is None else newer - SLOT_SKEW
+    for run in runs:
+        at = _schedule_at(run)
+        if at is None or at < start:
+            continue
+        if end is not None and at >= end:
+            continue
+        return True
+    return False
+
+
+def missed_count(crons, runs, now):
+    """How many newest due slots have no schedule run."""
     if not crons:
-        return False
+        return 0
     interval = interval_minutes(crons)
     grace = grace_minutes(interval)
     if grace is None:
-        return False
-    slots = recent_slots(crons, now, 2)
-    if not slots:
-        return False
-    slot = slots[0]
-    if now <= slot + timedelta(minutes=grace):
-        if len(slots) < 2:
-            return False
-        slot = slots[1]
-    for run in runs:
-        if run.get("event") != "schedule":
+        return 0
+    slots = recent_slots(crons, now, 6)
+    grace_td = timedelta(minutes=grace)
+    count = 0
+    for index, slot in enumerate(slots):
+        if now <= slot + grace_td:
             continue
-        at = parse_time(run.get("at"))
-        if at is not None and at >= slot - SLOT_SKEW:
-            return False
-    return True
+        newer = slots[index - 1] if index else None
+        if _slot_covered(slot, newer, runs):
+            break
+        count += 1
+    return count
+
+
+def miss_level(count, interval, zero_runs):
+    """One short miss is amber. A long miss, a double miss, or no runs is red."""
+    if count <= 0:
+        return None
+    if zero_runs or (interval is not None and interval >= DAY_MINUTES) or count >= 2:
+        return "red"
+    return "amber"
 
 
 def _sort_runs(runs):
@@ -389,34 +427,58 @@ def public_run(row):
     }
 
 
-def _branch_row(name, commit_at, interval, now):
-    stale = False
-    aging = False
-    if interval is not None:
-        if commit_at is None:
-            stale = True
-        else:
-            age = (now - commit_at).total_seconds() / 60.0
-            stale = age > interval
-            aging = (not stale) and age > interval * AGING_FRACTION
-    return {
-        "name": name,
-        "last_commit_at": iso(commit_at),
-        "stale": stale,
-    }, aging
+def _last_success(runs):
+    for run in _sort_runs(runs):
+        if run.get("conclusion") == "success":
+            return parse_time(run.get("at"))
+    return None
 
 
-def _status(missed, failures, stale, disable_red, aging, days):
-    if missed or failures >= 1 or stale or disable_red:
+def _freshness(commit_at, runs, use_success):
+    """ua-f1 may skip the commit. A later success still counts as fresh."""
+    if not use_success:
+        return commit_at
+    success = _last_success(runs)
+    stamps = [stamp for stamp in (commit_at, success) if stamp is not None]
+    if not stamps:
+        return None
+    return max(stamps)
+
+
+def _branch_level(age_minutes, interval, grace):
+    """ok, amber past interval+grace, red past twice the interval plus grace."""
+    if interval is None:
+        return "ok"
+    if age_minutes is None:
+        return "red"
+    grace = grace or 0
+    if age_minutes > (2 * interval) + grace:
+        return "red"
+    if age_minutes > interval + grace:
+        return "amber"
+    return "ok"
+
+
+def _clean_state(value):
+    if value in _STATES:
+        return value
+    return None
+
+
+def _status(miss, branch_level, failures, disable_red, days, state):
+    if state in DISABLED_STATES or miss == "red" or branch_level == "red" or failures >= 1 or disable_red:
         return "red"
     warn_disable = days is not None and RED_WITHIN_DAYS < days <= AMBER_WITHIN_DAYS
-    if aging or warn_disable:
+    if miss == "amber" or branch_level == "amber" or warn_disable:
         return "amber"
     return "green"
 
 
-def build_health(workflows, runs_by_file, branch_commits, now):
+def build_health(workflows, runs_by_file, branch_commits, now, main_commit_at=None):
     now = now.astimezone(timezone.utc)
+    # Repo activity is the tip of main. Data-branch commits do not count.
+    days = days_until_disable(parse_time(main_commit_at) if not isinstance(main_commit_at, datetime) else main_commit_at, now)
+    disable_red = days is not None and days <= RED_WITHIN_DAYS
     rows = []
     ordered = sorted(workflows, key=lambda item: item["file"])
     for spec in ordered:
@@ -426,34 +488,42 @@ def build_health(workflows, runs_by_file, branch_commits, now):
         grace = grace_minutes(interval)
         latest = runs[0] if runs else None
         last_at = parse_time(latest.get("at")) if latest else None
-        days = days_until_disable(last_at, now)
         branch_name = spec.get("data_branch")
-        aging = False
         branch = None
+        branch_level = "ok"
         if branch_name:
             commit_at = parse_time((branch_commits or {}).get(branch_name))
-            branch, aging = _branch_row(branch_name, commit_at, interval, now)
+            fresh_at = _freshness(commit_at, runs, bool(spec.get("noop_commit")))
+            age = None if fresh_at is None else (now - fresh_at).total_seconds() / 60.0
+            branch_level = _branch_level(age, interval, grace)
+            branch = {
+                "name": branch_name,
+                "last_commit_at": iso(commit_at),
+                "stale": branch_level == "red",
+            }
         failures = consecutive_failures(runs)
-        missed = missed_slot(crons, runs, now)
-        disable_red = days is not None and days <= RED_WITHIN_DAYS
-        stale = bool(branch and branch["stale"])
+        missed = missed_count(crons, runs, now)
+        level = miss_level(missed, interval, not runs)
+        state = _clean_state(spec.get("state"))
         name = spec.get("name") or spec["file"]
         if not _NAME_OK.match(name):
             name = os.path.splitext(os.path.basename(spec["file"]))[0]
         rows.append({
             "name": name,
             "file": spec["file"],
-            "status": _status(missed, failures, stale, disable_red, aging, days),
+            "status": _status(level, branch_level, failures, disable_red, days, state),
             "last_run_at": iso(last_at),
             "last_conclusion": _clean_conclusion(latest.get("conclusion")) if latest else None,
             "last_event": _clean_event(latest.get("event")) if latest else None,
             "crons": crons,
             "interval_minutes": interval,
             "grace_minutes": grace,
-            "missed_slot": missed,
+            "missed_slot": missed > 0,
+            "missed_count": missed,
             "consecutive_failures": failures,
             "days_until_disable": days,
             "disable_red": disable_red,
+            "state": state,
             "data_branch": branch,
         })
     rank = {"green": 0, "amber": 1, "red": 2}
@@ -526,6 +596,10 @@ def assert_public(doc):
                 _reject("has a bad interval")
         if not isinstance(row["missed_slot"], bool) or not isinstance(row["disable_red"], bool):
             _reject("has a bad flag")
+        if not isinstance(row["missed_count"], int) or isinstance(row["missed_count"], bool) or row["missed_count"] < 0:
+            _reject("has a bad miss count")
+        if row["state"] is not None and row["state"] not in _STATES:
+            _reject("has a bad workflow state")
         if not isinstance(row["consecutive_failures"], int) or isinstance(row["consecutive_failures"], bool):
             _reject("has a bad failure count")
         days = row["days_until_disable"]
@@ -562,7 +636,7 @@ def _api_get(url, token):
         raise SystemExit("GitHub API HTTP %s for %s" % (exc.code, host))
 
 
-def _workflow_ids(api, repo, token):
+def _workflow_meta(api, repo, token):
     url = api.rstrip("/") + "/repos/" + repo + "/actions/workflows?per_page=100"
     payload = _api_get(url, token)
     if not isinstance(payload, dict):
@@ -570,9 +644,9 @@ def _workflow_ids(api, repo, token):
     found = {}
     for row in payload.get("workflows") or []:
         path = row.get("path")
-        ident = row.get("id")
-        if path and ident:
-            found[str(path)] = ident
+        if not path:
+            continue
+        found[str(path)] = {"id": row.get("id"), "state": _clean_state(row.get("state"))}
     return found
 
 
@@ -598,24 +672,27 @@ def _commit_time(api, repo, token, branch):
 
 
 def collect(workflows, repo, token, api):
-    ids = _workflow_ids(api, repo, token)
+    meta = _workflow_meta(api, repo, token)
     runs = {}
     for spec in workflows:
-        ident = ids.get(spec["file"])
+        info = meta.get(spec["file"]) or {}
+        spec["state"] = info.get("state")
+        ident = info.get("id")
         runs[spec["file"]] = _runs_for(api, repo, token, ident) if ident else []
     commits = {}
     for name in DATA_BRANCHES:
         if any(spec.get("data_branch") == name for spec in workflows):
             commits[name] = _commit_time(api, repo, token, name)
-    return runs, commits
+    # Last commit on main only. Data-branch bot commits are not activity.
+    return runs, commits, _commit_time(api, repo, token, "main")
 
 
 def write_health(workflows_dir, dest, now=None, repo=None, token=None, api=None):
     workflows = load_workflow_files(workflows_dir)
     if not token or not repo:
         raise SystemExit("GITHUB_TOKEN and GITHUB_REPOSITORY are required")
-    runs, commits = collect(workflows, repo, token, api or "https://api.github.com")
-    doc = build_health(workflows, runs, commits, now or datetime.now(timezone.utc))
+    runs, commits, main_at = collect(workflows, repo, token, api or "https://api.github.com")
+    doc = build_health(workflows, runs, commits, now or datetime.now(timezone.utc), main_commit_at=main_at)
     assert_public(doc)
     text = json.dumps(doc, indent=2) + "\n"
     parent = os.path.dirname(dest)
