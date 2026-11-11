@@ -23,12 +23,12 @@ def _cfg():
     }}}
 
 
-def _zip_bytes():
+def _zip_bytes(open_time=OPEN_MS, stem="BONKUSDT-1d-2023-11"):
     # Same columns as a Binance spot 1d kline row. Open time is the first field.
-    row = f"{OPEN_MS},0.00001234,0.00001300,0.00001100,0.00001250,1000000,1700006399999,12.5,100,500000,6.2,0"
+    row = f"{open_time},0.00001234,0.00001300,0.00001100,0.00001250,1000000,1700006399999,12.5,100,500000,6.2,0"
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
-        zf.writestr("BONKUSDT-1d-2023-11.csv", row + "\n")
+        zf.writestr(stem + ".csv", row + "\n")
     return buf.getvalue()
 
 
@@ -42,8 +42,10 @@ def _xml():
 
 
 class _Transport:
-    def __init__(self, listing):
+    def __init__(self, listing, klines_open=None, zip_open=None):
         self.listing = listing
+        self.klines_open = klines_open
+        self.zip_open = OPEN_MS if zip_open is None else zip_open
         self.urls = []
 
     def request(self, method, url, headers=None, body=None):
@@ -55,6 +57,8 @@ class _Transport:
                 "tickers": [{"market": {"name": "Binance"}, "target": "USDT", "base": "BONK"}],
             }, None)
         if "api.binance.com/api/v3/klines" in url:
+            if self.klines_open is not None:
+                return HTTPResult(200, [[self.klines_open, "1", "1", "1", "1", "1"]], None)
             return HTTPResult(451, {"code": 0, "msg": "Service unavailable from a restricted location."}, None)
         if "s3-ap-northeast-1.amazonaws.com/data.binance.vision" in url:
             if self.listing == "html":
@@ -63,7 +67,7 @@ class _Transport:
             xml = _xml()
             return HTTPResult(200, xml, None, raw=xml.encode())
         if url.startswith("https://data.binance.vision/data/spot/monthly/klines/") and url.endswith(".zip"):
-            raw = _zip_bytes()
+            raw = _zip_bytes(self.zip_open)
             return HTTPResult(200, None, None, raw=raw)
         return HTTPResult(404, None, None)
 
@@ -100,3 +104,31 @@ class Vision(unittest.TestCase):
         self.assertTrue(hit)
         self.assertEqual(hit[0]["reason"], "vision_html")
         self.assertNotIn("winner", json.dumps(hit).lower())
+
+
+class ListingCutoff(unittest.TestCase):
+    def test_microsecond_zip_2025_01_19_is_accepted(self):
+        # TRUMPUSDT vision open time is microseconds from 2025-01-01.
+        transport = _Transport("xml", zip_open=1737244800000000)
+        proved = _prove(_ctx(transport), _cfg()["wallets"]["R3"], "bonk", "bonk")
+        self.assertIsNotNone(proved)
+        self.assertEqual(proved["listed_on"], "2025-01-19")
+        self.assertEqual(proved["source"], "binance_vision")
+
+    def test_ms_2025_11_12_is_listing_too_new(self):
+        opened = int(datetime(2025, 11, 12, tzinfo=timezone.utc).timestamp() * 1000)
+        transport = _Transport("xml", klines_open=opened)
+        ctx = _ctx(transport)
+        proved = _prove(ctx, _cfg()["wallets"]["R3"], "bonk", "bonk")
+        self.assertIsNone(proved)
+        reasons = [row[2].get("reason") for row in ctx.logs if len(row) > 2 and isinstance(row[2], dict)]
+        self.assertIn("listing_too_new", reasons)
+
+    def test_2026_03_01_is_listing_too_new(self):
+        opened = int(datetime(2026, 3, 1, tzinfo=timezone.utc).timestamp() * 1000)
+        transport = _Transport("xml", klines_open=opened)
+        ctx = _ctx(transport)
+        proved = _prove(ctx, _cfg()["wallets"]["R3"], "bonk", "bonk")
+        self.assertIsNone(proved)
+        reasons = [row[2].get("reason") for row in ctx.logs if len(row) > 2 and isinstance(row[2], dict)]
+        self.assertIn("listing_too_new", reasons)

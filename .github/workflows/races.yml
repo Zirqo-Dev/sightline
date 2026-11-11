@@ -1,6 +1,7 @@
 name: wallet races
 
 # Paper only. Display race. No keys, no signing, no real trades.
+# Solana forensics smoke, accept, and forensics skip on this PR because of job ifs, not paths-ignore: smoke only when the head branch is cursor/sol-forensics-v01-6802, accept only on a push to that branch, and forensics only on schedule or workflow_dispatch.
 # Single toggle: set the job `if` below to false to disable the schedule and manual runs.
 
 on:

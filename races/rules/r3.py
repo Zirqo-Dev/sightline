@@ -13,6 +13,7 @@ from races.http import host_of
 from races.impact import buy_impact_bps
 
 ASOF = "2026-11-11T23:59:59Z"
+LISTING_LIMIT = "2025-11-11T23:59:59Z"
 
 
 def on_run(ctx):
@@ -120,7 +121,7 @@ def _prove(ctx, w, cid, symbol):
     if listed is None:
         ctx.log("R3", "decision", {"action": "excluded", "reason": why or "listing_date", "symbol": sym, "mint": mint})
         return None
-    limit = datetime.fromisoformat(ASOF.replace("Z", "+00:00")).timestamp() * 1000
+    limit = datetime.fromisoformat(LISTING_LIMIT.replace("Z", "+00:00")).timestamp() * 1000
     if listed > limit:
         ctx.log("R3", "decision", {"action": "excluded", "reason": "listing_too_new", "symbol": sym, "mint": mint})
         return None
@@ -155,7 +156,7 @@ def _listing(ctx, w, symbol):
     result = _get(ctx, url, "api.binance.com")
     if result and result.status == 200 and isinstance(result.body, list) and result.body:
         try:
-            return int(result.body[0][0]), "binance_klines", None
+            return _as_ms(result.body[0][0]), "binance_klines", None
         except (TypeError, ValueError, IndexError):
             return None, None, "listing_date"
     if result is None or result.status in (451, 403) or result.temporary:
@@ -210,9 +211,17 @@ def _zip_open_ms(raw):
     if not line:
         return None
     try:
-        return int(float(line.split(",")[0]))
+        return _as_ms(line.split(",")[0])
     except ValueError:
         return None
+
+
+def _as_ms(value):
+    """Binance spot files switched to microseconds on 2025-01-01."""
+    value = int(float(value))
+    if value > 10**14:
+        value //= 1000
+    return value
 
 
 def _rank(ctx, st, w):
