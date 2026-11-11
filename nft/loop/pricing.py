@@ -75,10 +75,19 @@ PACE_PER_MINUTE = 60
 RATE_RESERVE = 24
 # Eight minutes of paced reads (480 / 60). The run stops at 11 minutes; the job timeout is 15.
 MAX_CALLS = PACE_PER_MINUTE * 8
+# The 480 reads are split so Base always has a lane. ETH (pending re-checks plus
+# its own screen) stops at 280. Base then gets whatever ETH left, up to 200.
+# Walking ETH to the global cap first spends all 480 when ETH misses 10 passes,
+# and the Base lane never starts. Per-collection cost is unchanged.
+ETH_MAX_CALLS = 280
+BASE_PASS_TARGET = 5
+BASE_MAX_CALLS = 200
 DATA_BRANCH = "nft-data"
 AVOIDS_BRANCH = "desk-data"
 # books.json clock. A mismatch drops the pre-fix pilot_start, complete_days, and passes.
+# Base has its own clock. A Base mismatch must not clear the v0.3 one.
 STATE_VERSION = "v0.3"
+BASE_STATE_VERSION = "v0.4-base"
 REJECTION_REASONS = (
     "contracts", "shared", "standard", "mint", "disabled", "floor", "gas",
     "listings", "sales", "buyers", "bidders", "concentration",
@@ -95,6 +104,11 @@ RULE = (
     f"min_listings={MIN_LISTINGS} floor_usd={FLOOR_USD} gas_ratio={GAS_RATIO} "
     f"min_mint_days={MIN_MINT_DAYS} event_pages={EVENT_MAX_PAGES} truncated=flag"
 )
+# Same thresholds as RULE. summarize() keeps only RULE, so a run that stopped on
+# the ETH ceiling, and every Base unit, stay out of the uncapped v0.3 pool.
+_RULE_BODY = RULE.split(" ", 1)[1]
+ETH_CAPPED_RULE = "v0.3-eth280 " + _RULE_BODY
+BASE_RULE = "v0.4-base " + _RULE_BODY
 ATTRIBUTION = (
     "Market data from OpenSea (https://opensea.io). Published as summaries only: aggregates, "
     "computed costs, and SHA-256 digests of order hashes; no per-order prices or raw order data. "

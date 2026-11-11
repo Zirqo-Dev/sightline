@@ -545,8 +545,12 @@ class NH04Tests(unittest.TestCase):
         self.assertEqual(books["first_runs"], [4])
         self.assertEqual(len(books["passes"]["2026-11-09"]), 4)
         self.assertEqual(books["pilot_start"], "2026-11-09")
-        self.assertEqual(status["by_chain"]["ethereum"], {"screened": 7, "passing": 4})
-        self.assertEqual(status["by_chain"]["base"], {"screened": 0, "passing": 0})
+        self.assertEqual(status["by_chain"]["ethereum"], {
+            "screened": 7, "passing": 4, "requested": True, "pages": 1, "calls": 30, "stop": "call_cap",
+        })
+        self.assertEqual(status["by_chain"]["base"], {
+            "screened": 0, "passing": 0, "requested": True, "pages": 0, "calls": 0, "stop": "not_run_budget",
+        })
         import jsonschema
         jsonschema.validate(status, json.load(open(os.path.join(ROOT, "schema", "nft-snapshot.schema.json"))))
 
@@ -1553,10 +1557,12 @@ class NH04Tests(unittest.TestCase):
         self.assertEqual(snapshot.fail_on_published_status(path), 0)
         self.assertNotIn("outage_at", books)
         self.assertEqual(set(books), {
-            "complete_days", "early_distinct", "first_measured_at", "first_runs", "gas",
+            "base", "complete_days", "early_distinct", "first_measured_at", "first_runs", "gas",
             "measured_days", "offers", "passes", "pending", "pilot_start", "seen",
             "state_version", "usd_runs", "v03_init_at",
         })
+        self.assertEqual(books["base"]["version"], "v0.4-base")
+        self.assertEqual(books["state_version"], "v0.3")
         self.assertEqual(set(status) - {"outage_runs"}, {
             "attribution", "avoids_branch", "buyer_fee_eth", "by_chain", "commit_sha", "data_branch",
             "distinct_collections", "distinct_per_day_median", "early_kill", "eth_usd", "eth_usd_runs",
