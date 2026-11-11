@@ -5,7 +5,7 @@
   "measured_factor": true,
   "min_sample": 8,
   "dormant_count": 11,
-  "asof": "2026-11-11T11:17:10Z",
+  "asof": "2026-11-11T13:15:51Z",
   "note": "Research tally. A hit is an observed checkpoint where every measured series (price and liquidity) moves the whale's way at +1h, +6h, or +24h. A wrong-way observation is a miss. No observation is unobserved and is not a miss. n_observed is hits plus misses. Rates stay blank under 8 observed checkpoints on that horizon in that tally. scores.live is the forward quote path, or the lead's published private-cache tally. scores.backfill is approximate: nearest desk-data ADA/qty within 20 minutes at 1h, 60 minutes at 6h, and 3 hours at 24h, plus pool ADA when a snapshot is in that window. Backfill never replaces live. eligible_for_active needs at least 25 live observed checkpoints and a live hit rate above 55% at both 6h and 24h. promising_backfill means the approximate tally alone would clear that bar. Nothing is promoted automatically. Not a buy signal.",
   "whales": [
     {
@@ -13,11 +13,11 @@
       "role": "lead",
       "status": "active",
       "eligible_for_active": false,
-      "eligible_reason": "not eligible: live 6h observed 349, rate 0.361 (need > 0.55); live 24h observed 299, rate 0.355 (need > 0.55); promotion is a manual owner decision",
+      "eligible_reason": "not eligible: live 6h observed 349, rate 0.361 (need > 0.55); live 24h observed 310, rate 0.377 (need > 0.55); promotion is a manual owner decision",
       "promising_backfill": false,
       "scores": {
-        "events": 1585,
-        "accumulate": 1571,
+        "events": 1592,
+        "accumulate": 1578,
         "trim": 0,
         "exit": 14,
         "live": {
@@ -32,9 +32,9 @@
             "hit_rate": 0.361
           },
           "h24": {
-            "n_observed": 299,
-            "hits": 106,
-            "hit_rate": 0.355
+            "n_observed": 310,
+            "hits": 117,
+            "hit_rate": 0.377
           }
         },
         "backfill": {
@@ -64,10 +64,10 @@
         "priced_h6": 349,
         "hits_h6": 126,
         "hit_rate_h6": 0.361,
-        "n_observed_h24": 299,
-        "priced_h24": 299,
-        "hits_h24": 106,
-        "hit_rate_h24": 0.355,
+        "n_observed_h24": 310,
+        "priced_h24": 310,
+        "hits_h24": 117,
+        "hit_rate_h24": 0.377,
         "small_sample": false,
         "social_moves_matched": null
       }
@@ -561,9 +561,9 @@
             "hit_rate": 0.308
           },
           "h24": {
-            "n_observed": 29,
-            "hits": 14,
-            "hit_rate": 0.483
+            "n_observed": 30,
+            "hits": 15,
+            "hit_rate": 0.5
           },
           "approximate": true,
           "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
