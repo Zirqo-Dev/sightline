@@ -6,9 +6,9 @@
     "base": {
       "calls": 200,
       "pages": 1,
-      "passing": 2,
+      "passing": 0,
       "requested": true,
-      "screened": 42,
+      "screened": 41,
       "stop": "call_cap"
     },
     "ethereum": {
@@ -16,11 +16,11 @@
       "pages": 2,
       "passing": 9,
       "requested": true,
-      "screened": 44,
+      "screened": 51,
       "stop": "call_cap"
     }
   },
-  "commit_sha": "85fcb490bf4bda4a9b7d680a8bf42e9b9bf6afc1",
+  "commit_sha": "f78f5febd60204933397d8d057eae9a9e4433023",
   "data_branch": "nft-data",
   "distinct_collections": 11,
   "distinct_per_day_median": 10.5,
@@ -42,9 +42,9 @@
     "gate2_window_hours": 72,
     "result": null
   },
-  "eth_usd": 2089.37454375,
+  "eth_usd": 2075.0282522,
   "eth_usd_runs": {
-    "chainlink": 29,
+    "chainlink": 30,
     "fallback": 0
   },
   "eth_usd_source": "chainlink",
@@ -72,31 +72,31 @@
   "pending": 9,
   "pending_deferred": 0,
   "pending_served": 9,
-  "ran_at": "2026-11-11T18:27:14Z",
+  "ran_at": "2026-11-11T19:27:11Z",
   "rate_limit": {
     "limit": "120",
-    "remaining": "119",
-    "reset": "1794422314"
+    "remaining": "0",
+    "reset": "1794425659"
   },
   "raw": "not_kept",
   "reason": null,
   "rejections": {
-    "bidders": 4,
-    "buyers": 21,
-    "concentration": 29,
+    "bidders": 3,
+    "buyers": 29,
+    "concentration": 37,
     "contracts": 9,
     "disabled": 1,
-    "floor": 50,
-    "gas": 42,
-    "listings": 23,
+    "floor": 41,
+    "gas": 23,
+    "listings": 17,
     "mint": 0,
-    "sales": 28,
+    "sales": 35,
     "shared": 12,
-    "standard": 11
+    "standard": 8
   },
   "rule": "v0.3-eth280 GET /api/v2/collections order_by=market_cap limit=100 max_list_pages=8 pass_target=10 max_calls=480 chains=ethereum,base pace_per_minute=60 window=7d min_sales=30 min_buyers=10 max_buyer_share=0.20 min_bidders=3 bid_band=0.85 min_listings=5 floor_usd=250 gas_ratio=0.02 min_mint_days=14 event_pages=3 truncated=flag",
   "schema_version": 1,
-  "screened": 44,
+  "screened": 51,
   "status": "ok",
   "stop": "call_cap",
   "units": 219,
