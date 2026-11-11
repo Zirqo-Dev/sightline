@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import datetime
+import io
 import json
+import re
 import socket
+import subprocess
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
 
@@ -173,11 +177,82 @@ class TestRunner(_Restore):
         def boom(*_args, **_kwargs):
             raise AssertionError("network call")
 
-        dec = datetime.date(2026, 12, 2)
+        dec = datetime.datetime(2026, 12, 2, 3, 0, tzinfo=datetime.timezone.utc)
         with mock.patch.object(weekly._OPENER, "open", boom), \
-             mock.patch.object(weekly, "today_utc", lambda: dec):
-            sid = weekly.take_monthly_snapshot(dry_run=True)
+             mock.patch.object(weekly, "current_utc", lambda: dec):
+            sid = weekly.take_monthly_snapshot(dry_run=True, now=dec)
         self.assertEqual(sid, "S1")
+
+    def test_first_of_month_trigger_takes_snapshot_and_sha(self):
+        started = datetime.datetime(2026, 12, 1, 0, 4, 30, tzinfo=datetime.timezone.utc)
+        calls = []
+
+        def fake_http(url, dest=None, timeout=60, retries=4):
+            calls.append(url)
+            if url.endswith("emissionsProtocolsList"):
+                body = b'["fixture"]'
+            else:
+                body = b'{"name":"fixture","documentedData":{}}'
+            if dest is not None:
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_bytes(body)
+            return body, {"url": url, "ok": True, "status": 200, "bytes": len(body)}
+
+        before = self._tree_stamp()
+        with tempfile.TemporaryDirectory() as tmp:
+            data = Path(tmp)
+            with mock.patch.object(weekly, "current_utc", lambda: started), \
+                 mock.patch.object(weekly, "http_get", fake_http):
+                rc = weekly.main(["--monthly-snapshot", "--data-dir", str(data)])
+            self.assertEqual(rc, 0)
+            manifest = json.loads((data / "snapshots" / "S1" / "manifest.json").read_text())
+            self.assertEqual(manifest["snapshot_id"], "S1")
+            self.assertEqual(manifest["taken_at"], "2026-12-01T00:04:30Z")
+            self.assertNotEqual(manifest["taken_at"], "2026-12-01T00:00:00Z")
+            sha = data / "snapshots" / "S1.sha256"
+            self.assertTrue(sha.is_file())
+            proc = subprocess.run(
+                ["sha256sum", "-c", "S1.sha256"],
+                cwd=data / "snapshots",
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+            self.assertNotIn("FAILED", proc.stdout)
+            note = (data / "deviations.md").read_text()
+            self.assertIn("2026-12-01T00:00:00Z", note)
+            self.assertIn("2026-12-01T00:04:30Z", note)
+            self.assertIn("270s late", note)
+            self.assertNotIn("\n# UA-F1 deviations\n\n# UA-F1 deviations\n", note)
+            log = (data / "run_log.jsonl").read_text()
+            self.assertIn('"actual_start": "2026-12-01T00:04:30Z"', log)
+            self.assertFalse((data / "episodes.jsonl").exists())
+            self.assertTrue(calls)
+            self.assertTrue(all("defillama-datasets.llama.fi" in url for url in calls))
+            self.assertFalse(any("geckoterminal" in url or "binance" in url for url in calls))
+        self.assertEqual(self._tree_stamp(), before)
+
+    def test_monday_trigger_takes_no_snapshot_when_none_is_due(self):
+        # 7 Dec 2026 is a Monday, six days after S1's due time.
+        monday = datetime.datetime(2026, 12, 7, 1, 2, tzinfo=datetime.timezone.utc)
+        self.assertEqual(monday.weekday(), 0)
+        self.assertFalse(weekly.weekly_monthly_snapshot_due(monday))
+
+        def boom(*_args, **_kwargs):
+            raise AssertionError("monthly snapshot is not due")
+
+        before = self._tree_stamp()
+        with tempfile.TemporaryDirectory() as tmp:
+            buf = io.StringIO()
+            with mock.patch.object(weekly, "current_utc", lambda: monday), \
+                 mock.patch.object(weekly, "take_monthly_snapshot", boom), \
+                 redirect_stdout(buf):
+                rc = weekly.main(["--dry-run", "--data-dir", tmp])
+            self.assertEqual(rc, 0)
+            self.assertIn("no monthly snapshot is due on this weekly run", buf.getvalue())
+            self.assertNotIn("would take monthly snapshot", buf.getvalue())
+            self.assertFalse((Path(tmp) / "snapshots").exists())
+        self.assertEqual(self._tree_stamp(), before)
 
     def test_judge_refuses_before_30_usable(self):
         before = self._tree_stamp()
@@ -218,7 +293,10 @@ class TestRunner(_Restore):
     def test_workflow_gates(self):
         text = (REPO / ".github" / "workflows" / "ua-f1.yml").read_text()
         self.assertIn('cron: "0 1 * * 1"', text)
+        self.assertIn('cron: "0 0 1 * *"', text)
         self.assertIn("workflow_dispatch:", text)
+        self.assertIn("contents: write", text)
+        self.assertIn("--monthly-snapshot", text)
         self.assertIn("pull_request:", text)
         self.assertIn("vars.UA_F1_ENABLED != 'false'", text)
         self.assertIn('numpy==2.5.4', text)
@@ -230,6 +308,35 @@ class TestRunner(_Restore):
         self.assertIn("main|master|desk-data", text)
         self.assertNotIn("git push origin HEAD:main", text)
         self.assertNotIn("git push origin main", text)
+
+    def test_steps_that_reference_github_token_map_it(self):
+        text = (REPO / ".github" / "workflows" / "ua-f1.yml").read_text()
+        blocks = _workflow_steps(text)
+        used = []
+        for block in blocks:
+            if not re.search(r"\$\{GITHUB_TOKEN\}|(?<!\{)\$GITHUB_TOKEN\b", block):
+                continue
+            used.append(block)
+            self.assertRegex(
+                block,
+                r"(?m)^[ ]*GITHUB_TOKEN:\s*\$\{\{\s*secrets\.GITHUB_TOKEN\s*\}\}\s*$",
+            )
+        self.assertTrue(used, "the push step should reference GITHUB_TOKEN")
+
+
+def _workflow_steps(text: str) -> list[str]:
+    lines = text.splitlines()
+    starts = [i for i, line in enumerate(lines) if re.match(r"^      - ", line)]
+    blocks = []
+    for n, start in enumerate(starts):
+        end = starts[n + 1] if n + 1 < len(starts) else len(lines)
+        chunk = []
+        for line in lines[start:end]:
+            if chunk and re.match(r"^ {0,5}\S", line):
+                break
+            chunk.append(line)
+        blocks.append("\n".join(chunk))
+    return blocks
 
 
 if __name__ == "__main__":

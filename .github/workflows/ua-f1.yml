@@ -1,9 +1,10 @@
 name: UA-F1
 
 # Research only. Paper only. No trading, no keys, no wallets, no spend.
-# Mondays 01:00 UTC is the target slot. GitHub cron can lag or drop a week;
+# Mondays 01:00 UTC is the weekly target slot. GitHub cron can lag or drop a week;
 # the runner logs the slot it aimed at and the time it actually started,
-# and fills any missed Monday. Outputs go only to ua-f1-data. Never main.
+# and fills any missed Monday. The 1st of the month at 00:00 UTC is a separate
+# run that takes only that month's snapshot. Outputs go only to ua-f1-data. Never main.
 # Scheduled workflows on GitHub turn themselves off after 60 days without
 # repository activity. Set the repo variable UA_F1_ENABLED to false to stop
 # the job without a code change.
@@ -11,6 +12,7 @@ name: UA-F1
 on:
   schedule:
     - cron: "0 1 * * 1"
+    - cron: "0 0 1 * *"
   workflow_dispatch:
   pull_request:
 
@@ -55,6 +57,8 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
+    env:
+      UA_F1_SCHEDULE: ${{ github.event.schedule }}
     steps:
       - name: Check out main (code only)
         uses: actions/checkout@v4
@@ -95,11 +99,17 @@ jobs:
             git -C "$GITHUB_WORKSPACE/data" init -b ua-f1-data
           fi
 
-      - name: Run the weekly paper test
+      - name: Run the paper test
         working-directory: code
         run: |
           set -euo pipefail
-          python3 ua_f1/ua_f1_weekly.py --data-dir "$GITHUB_WORKSPACE/data"
+          args=(--data-dir "$GITHUB_WORKSPACE/data")
+          # 00:00 UTC on the 1st takes the monthly snapshot only.
+          # The Monday cron stays on the weekly path.
+          if [ "${UA_F1_SCHEDULE}" = "0 0 1 * *" ]; then
+            args+=(--monthly-snapshot)
+          fi
+          python3 ua_f1/ua_f1_weekly.py "${args[@]}"
 
       - name: Privacy guard
         working-directory: data
@@ -121,6 +131,7 @@ jobs:
       - name: Commit to ua-f1-data only
         working-directory: data
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
           PRIVACY_IDENTITY_HASHES: ${{ secrets.PRIVACY_IDENTITY_HASHES }}
           SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}

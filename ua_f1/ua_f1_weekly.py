@@ -142,12 +142,16 @@ USDT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
 PREFERRED_QUOTES = {WSOL.lower(), USDC.lower(), USDT.lower(), "sol", "wsol", "usdc", "usdt"}
 
 
+def current_utc() -> datetime.datetime:
+    return datetime.datetime.now(datetime.timezone.utc)
+
+
 def utcnow() -> str:
-    return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return current_utc().strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def today_utc() -> datetime.date:
-    return datetime.datetime.now(datetime.timezone.utc).date()
+    return current_utc().date()
 
 
 def log(event: str, **kw) -> None:
@@ -481,30 +485,78 @@ def sha_snapshot(sid: str) -> Path:
     return sha_path
 
 
-def take_monthly_snapshot(dry_run: bool = False) -> str | None | bool:
-    """Take Sn if this month has no snapshot.
+def _as_utc(now: datetime.datetime) -> datetime.datetime:
+    if now.tzinfo is None:
+        return now.replace(tzinfo=datetime.timezone.utc)
+    return now.astimezone(datetime.timezone.utc)
 
-    Weekly cadence is Mondays 01:00 UTC, so when the 1st is not a Monday the
-    snapshot is taken on the first run of the month (best effort). S1 is due
-    00:00 UTC on 1 Dec 2026; a run on or after that date takes it.
-    Returns the new id, None when no snapshot is due, or False on a failed fetch.
-    """
-    today = today_utc()
-    month_tag = today.strftime("%Y-%m")
+
+def _stamp(now: datetime.datetime) -> str:
+    return _as_utc(now).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def month_has_snapshot(now: datetime.datetime) -> bool:
+    month_tag = _as_utc(now).strftime("%Y-%m")
     for sid in snapshot_ids():
         if sid == "S0":
             continue
-        man = load_manifest(sid)
-        taken = (man.get("taken_at") or "")[:7]
+        taken = (load_manifest(sid).get("taken_at") or "")[:7]
         if taken == month_tag:
-            return None
+            return True
+    return False
+
+
+def weekly_monthly_snapshot_due(now: datetime.datetime) -> bool:
+    """A Monday run takes a monthly snapshot only when one is due.
+
+    Due means this UTC day is the 1st, the lock month (November 2026) has
+    passed, and this month has no snapshot yet. A later Monday does not
+    backfill a missed 1st. The 00:00 cron on the 1st owns that snapshot.
+    """
+    now = _as_utc(now)
+    if now.day != 1:
+        return False
+    if (now.year, now.month) <= (2026, 11):
+        return False
+    return not month_has_snapshot(now)
+
+
+def take_monthly_snapshot(dry_run: bool = False, now: datetime.datetime | None = None) -> str | None | bool:
+    """Take this month's snapshot. The 1st at 00:00 UTC is the due time.
+
+    The manifest is labeled with the run's actual start, not the due time.
+    A late start is appended to deviations.md before the fetch. S0 already
+    covers November 2026, so this returns None in that month.
+    Returns the new id, None when no snapshot is due, or False on a failed fetch.
+    """
+    now = _as_utc(now or current_utc())
+    today = now.date()
+    month_tag = today.strftime("%Y-%m")
+    if month_has_snapshot(now):
+        return None
     # S0 is the lock snapshot (November 2026). Later months get S1, S2, ...
-    if today.year == 2026 and today.month == 11:
+    if (today.year, today.month) <= (2026, 11):
         return None
     sid = next_snapshot_id()
+    due = datetime.datetime(today.year, today.month, 1, 0, 0, tzinfo=datetime.timezone.utc)
+    actual = _stamp(now)
+    late_seconds = int((now - due).total_seconds())
     if dry_run:
-        print(f"dry-run: would take monthly snapshot {sid} for {month_tag}")
+        print(f"dry-run: would take monthly snapshot {sid} for {month_tag} at {actual}")
         return sid
+    # Prereg §1: append the deviation before acting on it.
+    if late_seconds > 0:
+        append_deviation(
+            f"Monthly snapshot {sid} was due at {_stamp(due)}. "
+            f"This run started at {actual}, {late_seconds}s late. "
+            "The snapshot is labeled with the actual start time, not the due time."
+        )
+    log(
+        "monthly_snapshot_start",
+        actual_start=actual,
+        scheduled_due=_stamp(due),
+        late_seconds=max(late_seconds, 0),
+    )
 
     # Confirm the datasets bucket is still keyless HTTP 200, then refresh
     # schedules for the manifest universe only.
@@ -552,7 +604,7 @@ def take_monthly_snapshot(dry_run: bool = False) -> str | None | bool:
 
     manifest = {
         "snapshot_id": sid,
-        "taken_at": utcnow(),
+        "taken_at": actual,
         "prereg_sha256": PREREG_HASH,
         "prices_fetched": False,
         "included": {"n": len(universe), "protocols": list(universe)},
@@ -1512,6 +1564,31 @@ def _integrity(dry_run: bool) -> int:
 # Main
 # ---------------------------------------------------------------------------
 
+def cmd_monthly(dry_run: bool = False) -> int:
+    """1st of the month, 00:00 UTC. Snapshot and its sha256 only. No weekly pass."""
+    if dry_run:
+        disable_network()
+    if _integrity(dry_run) != 0:
+        return 1
+    if not dry_run:
+        seed_run_log()
+    now = current_utc()
+    actual = _stamp(now)
+    print(f"monthly snapshot actual start {actual}")
+    if not dry_run:
+        log("monthly_start", actual_start=actual, note="Due 00:00 UTC on the 1st. This is the actual start.")
+    if dry_run:
+        print("dry-run: monthly snapshot only; no weekly registration or price fetch.")
+        take_monthly_snapshot(dry_run=True, now=now)
+        return 0
+    snap = take_monthly_snapshot(dry_run=False, now=now)
+    if snap is False:
+        write_status("RUNNING", note="Counts only. Monthly snapshot fetch failed.")
+        return 1
+    write_status("RUNNING", note="Counts only. Monthly snapshot run. No episode scoring.")
+    return 0
+
+
 def cmd_weekly(dry_run: bool = False) -> int:
     if dry_run:
         disable_network()
@@ -1519,7 +1596,7 @@ def cmd_weekly(dry_run: bool = False) -> int:
         return 1
     if not dry_run:
         seed_run_log()
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = current_utc()
     plan = plan_slots(now, RUN_LOG if RUN_LOG.is_file() else None)
     print(
         f"scheduled slot {plan['scheduled_slot']} actual start {plan['actual_start']}"
@@ -1531,7 +1608,10 @@ def cmd_weekly(dry_run: bool = False) -> int:
         print(f"no UA-F1 slot is due yet; first slot is {slot_stamp(first_scheduled_slot())}")
     if dry_run:
         print("dry-run: no files will be written, no fetches will be made.")
-        take_monthly_snapshot(dry_run=True)
+        if weekly_monthly_snapshot_due(now):
+            take_monthly_snapshot(dry_run=True, now=now)
+        else:
+            print("dry-run: no monthly snapshot is due on this weekly run")
         register_due_episodes(dry_run=True)
         flag_schedule_changes(dry_run=True)
         cache_for_registered(dry_run=True)
@@ -1552,13 +1632,14 @@ def cmd_weekly(dry_run: bool = False) -> int:
             "Gaps are logged, never interpolated."
         ),
     )
-    snap = take_monthly_snapshot(dry_run=False)
-    if snap is False:
-        write_status(
-            "RUNNING",
-            note="Counts only. Monthly snapshot fetch failed; this slot stays open for catch-up.",
-        )
-        return 1
+    if weekly_monthly_snapshot_due(now):
+        snap = take_monthly_snapshot(dry_run=False, now=now)
+        if snap is False:
+            write_status(
+                "RUNNING",
+                note="Counts only. Monthly snapshot fetch failed; this slot stays open for catch-up.",
+            )
+            return 1
     register_due_episodes(dry_run=False)
     flag_schedule_changes(dry_run=False)
     cache_for_registered(dry_run=False)
@@ -1587,6 +1668,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--dry-run", action="store_true", help="Plan the run; no writes and no fetches.")
     p.add_argument("--judge", action="store_true", help="Attempt §7 judgment (refuses until 30 usable).")
     p.add_argument(
+        "--monthly-snapshot",
+        action="store_true",
+        help="1st-of-month run: take the monthly snapshot and its sha256 only.",
+    )
+    p.add_argument(
         "--data-dir",
         default=None,
         help="Writable output directory (the ua-f1-data worktree). Locked S0 stays next to this script.",
@@ -1600,6 +1686,8 @@ def main(argv: list[str] | None = None) -> int:
         if _integrity(args.dry_run) != 0:
             return 1
         return cmd_judge(dry_run=args.dry_run)
+    if args.monthly_snapshot:
+        return cmd_monthly(dry_run=args.dry_run)
     return cmd_weekly(dry_run=args.dry_run)
 
 
