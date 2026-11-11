@@ -73,3 +73,12 @@ for (const state of ["green", "red", "stale", "empty"]) {
     });
   });
 }
+
+test("missing or unparseable generated_at is stale", async ({ page }) => {
+  for (const state of ["nodate", "badtime"]) {
+    const strip = await openStrip(page, state);
+    await expect(strip.locator(".health-overall strong")).toHaveText("red");
+    await expect(strip.locator(".health-stale")).toHaveText("health check stale");
+    await assertFit(page, strip);
+  }
+});

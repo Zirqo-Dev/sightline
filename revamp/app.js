@@ -718,7 +718,7 @@
     if (!H) return Promise.resolve(null);
     var q = new URLSearchParams(location.search).get("health");
     if (q === "empty" || q === "missing") return Promise.resolve(null);
-    if (q === "green" || q === "red" || q === "amber" || q === "stale") return Promise.resolve(H.sample(q, Date.now()));
+    if (q === "green" || q === "red" || q === "amber" || q === "stale" || q === "nodate" || q === "badtime") return Promise.resolve(H.sample(q, Date.now()));
     return getJson(H.URL);
   }
   function ensureHealth() {

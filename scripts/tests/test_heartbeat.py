@@ -211,6 +211,30 @@ class Cases(unittest.TestCase):
         self.assertTrue(row["missed_slot"])
         self.assertEqual(row["status"], "red")
 
+    def test_created_after_last_slot_is_not_a_miss(self):
+        ua = spec(UA, "UA-F1", ["0 1 * * 1", "0 0 1 * *", "23 0 1 * *", "23 3 1 * *"], "ua-f1-data")
+        ua["noop_commit"] = True
+        # Monday Nov 9 01:00 is the last slot before noon. Created at 11:00, no run yet.
+        ua["created_at"] = "2026-11-11T11:00:00Z"
+        doc = health([ua], {UA: []}, {"ua-f1-data": at(timedelta(minutes=-4))})
+        row = doc["workflows"][0]
+        self.assertEqual(row["missed_count"], 0)
+        self.assertFalse(row["missed_slot"])
+        self.assertNotEqual(row["status"], "red")
+        self.assertEqual(row["status"], "amber")
+        self.assertEqual(row["detail"], "waiting for first scheduled run")
+        self.assertEqual(doc["status"], "amber")
+
+    def test_races_slots_after_creation_stay_red(self):
+        races = spec(RACES, "wallet races", ["12,42 * * * *"], "races-data")
+        races["created_at"] = at(timedelta(hours=-6))
+        doc = health([races], {RACES: []}, {"races-data": at(timedelta(minutes=-4))})
+        row = doc["workflows"][0]
+        self.assertGreaterEqual(row["missed_count"], 2)
+        self.assertTrue(row["missed_slot"])
+        self.assertIsNone(row["detail"])
+        self.assertEqual(row["status"], "red")
+
     def test_shared_branch_uses_each_workflow_interval(self):
         daily = spec(".github/workflows/daily-status.yml", "Daily status", ["40 0 * * *"], "desk-data")
         scan = spec(DESK, "Solana desk scan", ["*/30 * * * *"], "desk-data")

@@ -72,6 +72,19 @@
         ]
       };
     }
+    if (kind === "nodate") {
+      return {
+        status: "green",
+        workflows: [row("Solana desk scan", "green", 12, stamp)]
+      };
+    }
+    if (kind === "badtime") {
+      return {
+        generated_at: "not-a-time",
+        status: "green",
+        workflows: [row("Solana desk scan", "green", 12, stamp)]
+      };
+    }
     return null;
   }
   function empty() {
@@ -83,22 +96,27 @@
       return empty();
     }
     var generated = Date.parse(doc.generated_at);
-    var stale = isFinite(generated) && (now - generated) > 6 * 60 * 60 * 1000;
+    var known = isFinite(generated);
+    var stale = !known || (now - generated) > 6 * 60 * 60 * 1000;
     var overall = stale ? "red" : doc.status;
     var chips = doc.workflows.filter(function (item) {
       return item && STATUSES[item.status] && item.name;
     }).map(function (item) {
-      var label = item.status + " " + item.name + " " + ageLabel(item.last_run_at, now);
+      var label = item.status + " " + item.name + " " + (item.detail || ageLabel(item.last_run_at, now));
+      var wait = item.detail ? '<span class="wait">' + esc(item.detail) + "</span>" : "";
       return '<li><div class="health-chip is-' + esc(item.status) + '" role="group" aria-label="' + esc(label) + '">' +
         '<span class="st">' + esc(item.status) + "</span>" +
         '<span class="nm">' + esc(item.name) + "</span>" +
-        '<span class="age">' + esc(ageLabel(item.last_run_at, now)) + "</span>" +
+        '<span class="age">' + esc(item.detail ? "" : ageLabel(item.last_run_at, now)) + "</span>" +
+        wait +
         "</div></li>";
     }).join("");
     var note = "";
-    if (stale) {
+    if (stale && known) {
       var hours = Math.round((now - generated) / 3600000);
       note = '<p class="health-stale">health check stale, last ' + hours + "h ago</p>";
+    } else if (stale) {
+      note = '<p class="health-stale">health check stale</p>';
     }
     var body = chips
       ? '<ul class="health-strip">' + chips + "</ul>"
