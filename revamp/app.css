@@ -86,6 +86,28 @@ a.coll{
 .trade:first-child{border-top:0}
 a.link{font:12px "DM Mono",monospace;color:var(--accent)}
 svg text{font-family:"DM Mono",ui-monospace,monospace}
+.health{margin:0 0 10px;max-width:100%}
+.health-overall,.health-empty,.health-chip{font-size:14px;line-height:1.35}
+.health-overall{margin:0 0 6px}
+.health-overall .is-green,.health-chip.is-green .st{color:var(--up)}
+.health-overall .is-amber,.health-chip.is-amber .st{color:var(--amb)}
+.health-overall .is-red,.health-chip.is-red .st{color:var(--dn)}
+.health-strip{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-width:100%}
+.health-strip li{margin:0;padding:0;max-width:100%}
+.health-chip{
+  display:flex;align-items:center;gap:8px;width:100%;max-width:100%;min-width:0;min-height:44px;
+  padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);
+  text-align:left;
+}
+.health-chip.is-green{border-color:rgba(14,203,129,.55)}
+.health-chip.is-amber{border-color:rgba(240,185,11,.7)}
+.health-chip.is-red{border-color:rgba(246,70,93,.7)}
+.health-chip .st,.health-chip .age{flex:none;white-space:nowrap}
+.health-chip .nm{flex:1;min-width:0;overflow-wrap:anywhere}
+.health-empty{
+  display:flex;align-items:center;min-height:44px;margin:0;padding:8px 10px;
+  border:1px dashed var(--line);border-radius:10px;color:var(--mute);
+}
 @media (prefers-reduced-motion:reduce){
   .logo i{animation:none}
 }
