@@ -1,48 +1,64 @@
 {
- "at": "2026-11-12T09:10:34Z",
+ "at": "2026-11-12T11:10:41Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
- "new": [],
- "recent": [
+ "new": [
+  {
+   "kind": "coordinated_buys",
+   "ticker": "GABOON",
+   "wallets": [
+    "w-002dffc2",
+    "w-79620ea4",
+    "w-85e94d97",
+    "w-d8f6462b"
+   ],
+   "window_s": 120,
+   "at": "2026-11-12T11:10:41Z"
+  },
   {
    "kind": "repeat_early_buyer",
-   "wallet": "w-f7844f67",
+   "wallet": "w-79620ea4",
    "launches": [
-    "DIPPY",
-    "EXPLODE",
-    "GEORGE",
-    "HEREWEGO",
-    "ORBIT",
-    "PEAK",
-    "PRT",
-    "RHASH",
-    "SOLTRACK",
-    "TRUMPDUL"
+    "GABOON",
+    "HOLD",
+    "MUBBO",
+    "OWLS",
+    "PINCHE",
+    "STEVE",
+    "TRASH",
+    "VEYL",
+    "WEALTH",
+    "YY"
    ],
-   "at": "2026-11-09T23:11:28Z"
+   "at": "2026-11-12T11:10:41Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-d8f6462b",
+   "launches": [
+    "ACT",
+    "CHIPS",
+    "DACITYCO",
+    "DOPE",
+    "GABOON",
+    "MUBBO",
+    "OWLS",
+    "PINCHE",
+    "QUACKY",
+    "YY"
+   ],
+   "at": "2026-11-12T11:10:41Z"
   },
   {
    "kind": "sniper_full_exit",
-   "ticker": "DIPPY",
-   "wallet": "w-abcba72c",
+   "ticker": "GABOON",
+   "wallet": "w-85e94d97",
    "tags": [],
-   "at": "2026-11-09T23:11:28Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "HEREWEGO",
-   "wallet": "w-f5e6bbd1",
-   "tags": [],
-   "at": "2026-11-09T23:11:28Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "HEREWEGO",
-   "wallet": "w-4c98cdba",
-   "tags": [],
-   "at": "2026-11-09T23:11:28Z"
-  },
+   "at": "2026-11-12T11:10:41Z"
+  }
+ ],
+ "recent": [
   {
    "kind": "sniper_full_exit",
    "ticker": "HEREWEGO",
@@ -3505,10 +3521,64 @@
    "wallet": "w-19b20cf1",
    "tags": [],
    "at": "2026-11-12T01:10:51Z"
+  },
+  {
+   "kind": "coordinated_buys",
+   "ticker": "GABOON",
+   "wallets": [
+    "w-002dffc2",
+    "w-79620ea4",
+    "w-85e94d97",
+    "w-d8f6462b"
+   ],
+   "window_s": 120,
+   "at": "2026-11-12T11:10:41Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-79620ea4",
+   "launches": [
+    "GABOON",
+    "HOLD",
+    "MUBBO",
+    "OWLS",
+    "PINCHE",
+    "STEVE",
+    "TRASH",
+    "VEYL",
+    "WEALTH",
+    "YY"
+   ],
+   "at": "2026-11-12T11:10:41Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-d8f6462b",
+   "launches": [
+    "ACT",
+    "CHIPS",
+    "DACITYCO",
+    "DOPE",
+    "GABOON",
+    "MUBBO",
+    "OWLS",
+    "PINCHE",
+    "QUACKY",
+    "YY"
+   ],
+   "at": "2026-11-12T11:10:41Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "GABOON",
+   "wallet": "w-85e94d97",
+   "tags": [],
+   "at": "2026-11-12T11:10:41Z"
   }
  ],
  "api_calls": {
-  "koios": 2
+  "blockfrost": 1,
+  "koios": 5
  },
  "thresholds": {
   "enabled": true,
