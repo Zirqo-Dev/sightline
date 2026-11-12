@@ -1,37 +1,38 @@
 {
  "day": "2026-11-12",
  "loop_ran": true,
- "runs": 1,
+ "runs": 2,
  "expected_runs": 48,
- "checks": 12,
+ "checks": 24,
  "error_rate": 0.0,
  "data_failure_rate": 0.0,
  "void_day": false,
  "ai": false,
- "eligibility_skips": 3,
+ "eligibility_skips": 4,
  "mode": "fill",
  "cfg_version": "v1-v6.5",
  "frozen": true,
- "last_run_utc": "20261112T0000",
+ "last_run_utc": "20261112T0030",
  "leads_this_run": 12,
  "runner": "github-actions",
  "notes": [],
  "run_times_utc": [
-  "2026-11-12T00:00:32Z"
+  "2026-11-12T00:00:32Z",
+  "2026-11-12T00:30:30Z"
  ],
- "max_gap_min": 0.0,
+ "max_gap_min": 30.0,
  "trigger": "workflow_dispatch",
  "fill": {
   "opened": 4,
   "void": [],
   "open": {
-   "F": 2,
-   "R": 2,
+   "F": 3,
+   "R": 3,
    "S": 0
   },
   "equity": {
-   "F": 2.868,
-   "R": 2.801,
+   "F": 2.3913,
+   "R": 2.3264,
    "S": 0.3626
   }
  },
