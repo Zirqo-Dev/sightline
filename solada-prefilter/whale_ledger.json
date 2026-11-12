@@ -1,11 +1,11 @@
 {
- "at": "2026-11-12T03:12:37Z",
+ "at": "2026-11-12T05:12:55Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14189254,
+ "height": 14189722,
  "baseline_at": "2026-10-27T04:15:01Z",
- "ada_balance": 2277.772479,
+ "ada_balance": 2206.772479,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 308000572407,
@@ -17,7 +17,7 @@
   "BHOLEArmy1": 1,
   "BLUE BULL": 175000000,
   "BMEPE": 69420000000,
-  "BOLT": 20428579233294,
+  "BOLT": 20881229602110,
   "BOMEPE": 69420000000,
   "BOO": 7000000,
   "BRO": 9126979259604,
@@ -130,7 +130,7 @@
   "BHOLEArmy1": 1,
   "BLUE BULL": 175000000,
   "BMEPE": 69420000000,
-  "BOLT": 20428579233294,
+  "BOLT": 20881229602110,
   "BOMEPE": 69420000000,
   "BOO": 7000000,
   "BRO": 9126979259604,
@@ -286,7 +286,7 @@
   {
    "token": "BOLT",
    "policy": "14628c26",
-   "qty": 20428579233294
+   "qty": 20881229602110
   },
   {
    "token": "BOMEPE",
@@ -16028,10 +16028,14 @@
    "token": "ADA",
    "qty_raw": 73000000,
    "ada": 73.0,
-   "status": "open",
+   "status": "filled",
    "opened_tx": "17b2ce96eb",
    "opened_at": "2026-11-12T02:18:38Z",
-   "own_stake": true
+   "own_stake": true,
+   "closed_tx": "b20d6ab50d",
+   "closed_at": "2026-11-12T04:55:54Z",
+   "filled_token": "BOLT",
+   "filled_qty": 452650368816
   },
   "fa39bc08a2#0": {
    "ref_short": "fa39bc08a2#0",
@@ -16098,17 +16102,6 @@
   }
  },
  "rows": [
-  {
-   "time": "2026-10-28T18:59:40Z",
-   "tx_short": "5635c57e53",
-   "kind": "order_fill",
-   "token": "MEPE",
-   "qty": 2000000000000,
-   "ada_leg": 248.904222,
-   "counterparty_tag": null,
-   "order_ref_short": "8f934d5c42#0",
-   "order_status": "filled"
-  },
   {
    "time": "2026-10-28T18:59:56Z",
    "tx_short": "643e100ac1",
@@ -47681,6 +47674,18 @@
    "ada_leg": 454.624301,
    "counterparty_tag": null,
    "order_status": "filled_untracked"
+  },
+  {
+   "time": "2026-11-12T04:55:54Z",
+   "tx_short": "b20d6ab50d",
+   "kind": "order_fill",
+   "token": "BOLT",
+   "qty": 452650368816,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "17b2ce96eb#0",
+   "order_status": "filled",
+   "sold": "ADA"
   }
  ],
  "capped": false,
@@ -47691,7 +47696,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 10,
+ "koios_calls": 8,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
