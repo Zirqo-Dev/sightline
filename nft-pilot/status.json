@@ -14,9 +14,9 @@
     "ethereum": {
       "calls": 280,
       "pages": 2,
-      "passing": 6,
+      "passing": 8,
       "requested": true,
-      "screened": 28,
+      "screened": 34,
       "stop": "call_cap"
     }
   },
@@ -42,9 +42,9 @@
     "gate2_window_hours": 72,
     "result": null
   },
-  "eth_usd": 1992.56266414,
+  "eth_usd": 1996.38032671,
   "eth_usd_runs": {
-    "chainlink": 48,
+    "chainlink": 49,
     "fallback": 0
   },
   "eth_usd_source": "chainlink",
@@ -52,7 +52,7 @@
     "liquid_tail": 0,
     "sales_truncated": 1
   },
-  "floor_passing_this_run": 6,
+  "floor_passing_this_run": 8,
   "kind": "status",
   "measured": true,
   "median_cost": 0.14690835156893522,
@@ -68,35 +68,35 @@
   "pace_median": null,
   "pace_ready": false,
   "partial": false,
-  "passers_footnoted": 1,
-  "pending": 6,
+  "passers_footnoted": 2,
+  "pending": 8,
   "pending_deferred": 0,
-  "pending_served": 7,
-  "ran_at": "2026-11-12T14:27:14Z",
+  "pending_served": 6,
+  "ran_at": "2026-11-12T15:27:14Z",
   "rate_limit": {
     "limit": "120",
     "remaining": "119",
-    "reset": "1794494275"
+    "reset": "1794497877"
   },
   "raw": "not_kept",
   "reason": null,
   "rejections": {
     "bidders": 3,
-    "buyers": 13,
-    "concentration": 18,
+    "buyers": 16,
+    "concentration": 21,
     "contracts": 12,
-    "disabled": 0,
-    "floor": 55,
-    "gas": 98,
-    "listings": 27,
+    "disabled": 1,
+    "floor": 53,
+    "gas": 77,
+    "listings": 24,
     "mint": 0,
-    "sales": 18,
+    "sales": 21,
     "shared": 16,
     "standard": 13
   },
   "rule": "v0.3-eth280 GET /api/v2/collections order_by=market_cap limit=100 max_list_pages=8 pass_target=10 max_calls=480 chains=ethereum,base pace_per_minute=60 window=7d min_sales=30 min_buyers=10 max_buyer_share=0.20 min_bidders=3 bid_band=0.85 min_listings=5 floor_usd=250 gas_ratio=0.02 min_mint_days=14 event_pages=3 truncated=flag",
   "schema_version": 1,
-  "screened": 28,
+  "screened": 34,
   "status": "ok",
   "stop": "call_cap",
   "units": 219,
