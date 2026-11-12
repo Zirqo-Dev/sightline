@@ -16,7 +16,7 @@
       "pages": 2,
       "passing": 7,
       "requested": true,
-      "screened": 41,
+      "screened": 53,
       "stop": "call_cap"
     }
   },
@@ -42,12 +42,12 @@
     "gate2_window_hours": 72,
     "result": null
   },
-  "eth_usd": 2010.61,
+  "eth_usd": null,
   "eth_usd_runs": {
     "chainlink": 51,
-    "fallback": 0
+    "fallback": 1
   },
-  "eth_usd_source": "chainlink",
+  "eth_usd_source": "fallback",
   "flags": {
     "liquid_tail": 0,
     "sales_truncated": 1
@@ -71,35 +71,35 @@
   "passers_footnoted": 1,
   "pending": 7,
   "pending_deferred": 0,
-  "pending_served": 6,
-  "ran_at": "2026-11-12T17:27:15Z",
+  "pending_served": 7,
+  "ran_at": "2026-11-12T18:27:11Z",
   "rate_limit": {
     "limit": "120",
     "remaining": "119",
-    "reset": "1794505117"
+    "reset": "1794508751"
   },
   "raw": "not_kept",
   "reason": null,
   "rejections": {
-    "bidders": 1,
-    "buyers": 21,
-    "concentration": 28,
-    "contracts": 11,
+    "bidders": 5,
+    "buyers": 31,
+    "concentration": 39,
+    "contracts": 8,
     "disabled": 1,
-    "floor": 51,
-    "gas": 52,
-    "listings": 21,
+    "floor": 40,
+    "gas": 17,
+    "listings": 14,
     "mint": 0,
-    "sales": 26,
-    "shared": 14,
-    "standard": 11
+    "sales": 35,
+    "shared": 11,
+    "standard": 8
   },
   "rule": "v0.3-eth280 GET /api/v2/collections order_by=market_cap limit=100 max_list_pages=8 pass_target=10 max_calls=480 chains=ethereum,base pace_per_minute=60 window=7d min_sales=30 min_buyers=10 max_buyer_share=0.20 min_bidders=3 bid_band=0.85 min_listings=5 floor_usd=250 gas_ratio=0.02 min_mint_days=14 event_pages=3 truncated=flag",
   "schema_version": 1,
-  "screened": 41,
+  "screened": 53,
   "status": "ok",
   "stop": "call_cap",
   "units": 219,
   "unsellable_share": 0.0,
-  "verdict_footnote": "39 of 219 units: top seller or one day above 50% of 7d sales"
+  "verdict_footnote": "39 of 219 units: top seller or one day above 50% of 7d sales; ETH/USD source on measured runs: 51 Chainlink, 1 fallback (fallback USD not published; costs are ETH-only)"
 }
