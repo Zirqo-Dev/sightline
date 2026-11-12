@@ -5,7 +5,7 @@
   "measured_factor": true,
   "min_sample": 8,
   "dormant_count": 0,
-  "asof": "2026-11-12T19:07:39Z",
+  "asof": "2026-11-12T21:07:45Z",
   "note": "Research tally. A hit is an observed checkpoint where every measured series (price and liquidity) moves the whale's way at +1h, +6h, or +24h. A wrong-way observation is a miss. No observation is unobserved and is not a miss. n_observed is hits plus misses. Rates stay blank under 8 observed checkpoints on that horizon in that tally. scores.live is the forward quote path, or the lead's published private-cache tally. scores.backfill is approximate: nearest desk-data ADA/qty within 20 minutes at 1h, 60 minutes at 6h, and 3 hours at 24h, plus pool ADA when a snapshot is in that window. Backfill never replaces live. eligible_for_active needs at least 25 live observed checkpoints and a live hit rate above 55% at both 6h and 24h. promising_backfill means the approximate tally alone would clear that bar. Nothing is promoted automatically. Not a buy signal.",
   "whales": [
     {
@@ -28,7 +28,7 @@
           },
           "h6": {
             "n_observed": 1,
-            "hits": 0,
+            "hits": 1,
             "hit_rate": null
           },
           "h24": {
@@ -62,7 +62,7 @@
         "hit_rate_h1": null,
         "n_observed_h6": 1,
         "priced_h6": 1,
-        "hits_h6": 0,
+        "hits_h6": 1,
         "hit_rate_h6": null,
         "n_observed_h24": 0,
         "priced_h24": 0,
