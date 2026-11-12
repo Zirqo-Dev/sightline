@@ -6,7 +6,7 @@
     "base": {
       "calls": 200,
       "pages": 1,
-      "passing": 1,
+      "passing": 0,
       "requested": true,
       "screened": 42,
       "stop": "call_cap"
@@ -16,7 +16,7 @@
       "pages": 2,
       "passing": 8,
       "requested": true,
-      "screened": 52,
+      "screened": 53,
       "stop": "call_cap"
     }
   },
@@ -42,9 +42,9 @@
     "gate2_window_hours": 72,
     "result": null
   },
-  "eth_usd": 2041.04,
+  "eth_usd": 2049.1,
   "eth_usd_runs": {
-    "chainlink": 39,
+    "chainlink": 40,
     "fallback": 0
   },
   "eth_usd_source": "chainlink",
@@ -72,23 +72,23 @@
   "pending": 8,
   "pending_deferred": 0,
   "pending_served": 8,
-  "ran_at": "2026-11-12T05:27:13Z",
+  "ran_at": "2026-11-12T06:27:12Z",
   "rate_limit": {
     "limit": "120",
     "remaining": "119",
-    "reset": "1794461906"
+    "reset": "1794465404"
   },
   "raw": "not_kept",
   "reason": null,
   "rejections": {
-    "bidders": 3,
-    "buyers": 29,
-    "concentration": 39,
+    "bidders": 4,
+    "buyers": 30,
+    "concentration": 40,
     "contracts": 8,
     "disabled": 1,
-    "floor": 40,
+    "floor": 41,
     "gas": 17,
-    "listings": 17,
+    "listings": 15,
     "mint": 0,
     "sales": 34,
     "shared": 11,
@@ -96,7 +96,7 @@
   },
   "rule": "v0.3-eth280 GET /api/v2/collections order_by=market_cap limit=100 max_list_pages=8 pass_target=10 max_calls=480 chains=ethereum,base pace_per_minute=60 window=7d min_sales=30 min_buyers=10 max_buyer_share=0.20 min_bidders=3 bid_band=0.85 min_listings=5 floor_usd=250 gas_ratio=0.02 min_mint_days=14 event_pages=3 truncated=flag",
   "schema_version": 1,
-  "screened": 52,
+  "screened": 53,
   "status": "ok",
   "stop": "call_cap",
   "units": 219,
