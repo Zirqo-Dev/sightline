@@ -1,5 +1,5 @@
 {
- "at": "2026-11-12T07:12:34Z",
+ "at": "2026-11-12T09:12:25Z",
  "phase": 1,
  "window_h": 24,
  "keep_h": 72,
@@ -9,38 +9,6 @@
  },
  "note": "Research data for Snek. next_hop is phase 2 (null). ada = the mover's net ADA when it is the only token against ADA in the tx (ada_basis tx), else qty x price (ada_basis price). LP = liquidity token.",
  "moves": [
-  {
-   "tag": "m-8d3b7f11",
-   "ticker": "SOLADA",
-   "direction": "in",
-   "ada": 0.0,
-   "qty": 7912,
-   "qty_basis": "raw",
-   "tx_short": "2ad21c620e",
-   "time": "2026-11-09T08:35:02Z",
-   "window_ada": 1322.75,
-   "pool_pct": 27.5,
-   "lp": false,
-   "unit_short": "e7c77b2784",
-   "ada_basis": "none",
-   "next_hop": null
-  },
-  {
-   "tag": "m-bd51a21b",
-   "ticker": "SOLADA",
-   "direction": "out",
-   "ada": 770.76,
-   "qty": 399345,
-   "qty_basis": "raw",
-   "tx_short": "bfa8a9995c",
-   "time": "2026-11-09T09:11:12Z",
-   "window_ada": 770.76,
-   "pool_pct": 15.7,
-   "lp": false,
-   "unit_short": "e7c77b2784",
-   "ada_basis": "tx",
-   "next_hop": null
-  },
   {
    "tag": "m-5d810602",
    "ticker": "SOLADA",
@@ -3450,6 +3418,22 @@
    "next_hop": null
   },
   {
+   "tag": "m-d72ebd3d",
+   "ticker": "SOLADA",
+   "direction": "in",
+   "ada": 0.0,
+   "qty": 2684,
+   "qty_basis": "raw",
+   "tx_short": "9275198f3e",
+   "time": "2026-11-11T11:32:39Z",
+   "window_ada": 2009.67,
+   "pool_pct": 20.1,
+   "lp": false,
+   "unit_short": "e7c77b2784",
+   "ada_basis": "none",
+   "next_hop": null
+  },
+  {
    "tag": "m-7dd6aa15",
    "ticker": "SOLADA",
    "direction": "in",
@@ -3491,7 +3475,7 @@
    "tx_short": "acb26daa65",
    "time": "2026-11-11T12:58:46Z",
    "window_ada": 2100.03,
-   "pool_pct": 12.0,
+   "pool_pct": 11.9,
    "lp": false,
    "unit_short": "c1b89ed48d",
    "ada_basis": "price",
@@ -3507,7 +3491,7 @@
    "tx_short": "8f5e28eda7",
    "time": "2026-11-11T13:09:50Z",
    "window_ada": 2100.03,
-   "pool_pct": 12.0,
+   "pool_pct": 11.9,
    "lp": false,
    "unit_short": "c1b89ed48d",
    "ada_basis": "price",
@@ -3690,6 +3674,22 @@
    "next_hop": null
   },
   {
+   "tag": "m-d72ebd3d",
+   "ticker": "SOLADA",
+   "direction": "in",
+   "ada": 977.06,
+   "qty": 494823,
+   "qty_basis": "raw",
+   "tx_short": "726753f84b",
+   "time": "2026-11-11T16:09:13Z",
+   "window_ada": 2009.67,
+   "pool_pct": 20.1,
+   "lp": false,
+   "unit_short": "e7c77b2784",
+   "ada_basis": "tx",
+   "next_hop": null
+  },
+  {
    "tag": "m-4278346c",
    "ticker": "SOLADA",
    "direction": "in",
@@ -3794,8 +3794,8 @@
    "qty_basis": "raw",
    "tx_short": "7b254bd131",
    "time": "2026-11-11T18:50:01Z",
-   "window_ada": 2217.57,
-   "pool_pct": 22.2,
+   "window_ada": 3220.13,
+   "pool_pct": 32.2,
    "lp": false,
    "unit_short": "e7c77b2784",
    "ada_basis": "tx",
@@ -4104,29 +4104,56 @@
    "unit_short": "e7c77b2784",
    "ada_basis": "tx",
    "next_hop": null
+  },
+  {
+   "tag": "m-d72ebd3d",
+   "ticker": "SOLADA",
+   "direction": "in",
+   "ada": 1032.62,
+   "qty": 494844,
+   "qty_basis": "raw",
+   "tx_short": "2e41e43e7d",
+   "time": "2026-11-12T08:19:53Z",
+   "window_ada": 2009.67,
+   "pool_pct": 20.1,
+   "lp": false,
+   "unit_short": "e7c77b2784",
+   "ada_basis": "tx",
+   "next_hop": null
+  },
+  {
+   "tag": "m-10e56d9e",
+   "ticker": "SOLADA",
+   "direction": "in",
+   "ada": 1002.57,
+   "qty": 469898,
+   "qty_basis": "raw",
+   "tx_short": "e0ea2409d2",
+   "time": "2026-11-12T08:46:14Z",
+   "window_ada": 3220.13,
+   "pool_pct": 32.2,
+   "lp": false,
+   "unit_short": "e7c77b2784",
+   "ada_basis": "tx",
+   "next_hop": null
   }
  ],
  "units_scanned": 12,
- "txs_read": 36,
+ "txs_read": 27,
  "capped": [],
  "coverage": {
-  "SHARKY": {
-   "read": 3,
-   "complete": true,
-   "pages": 1
-  },
   "SOLADA": {
-   "read": 6,
+   "read": 7,
    "complete": true,
    "pages": 1
   },
   "FEED": {
-   "read": 2,
+   "read": 1,
    "complete": true,
    "pages": 1
   },
   "HIVE": {
-   "read": 1,
+   "read": 2,
    "complete": true,
    "pages": 1
   },
@@ -4136,7 +4163,7 @@
    "pages": 1
   },
   "BEAST": {
-   "read": 2,
+   "read": 1,
    "complete": true,
    "pages": 1
   },
@@ -4156,20 +4183,25 @@
    "pages": 1
   },
   "COCK": {
-   "read": 11,
+   "read": 7,
    "complete": true,
    "pages": 1
   },
   "BOLT": {
-   "read": 4,
+   "read": 3,
    "complete": true,
    "pages": 1
   },
   "CLOVE": {
-   "read": 3,
+   "read": 1,
+   "complete": true,
+   "pages": 1
+  },
+  "SHARKY": {
+   "read": 1,
    "complete": true,
    "pages": 1
   }
  },
- "koios_calls": 25
+ "koios_calls": 26
 }
