@@ -7,87 +7,9 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-11-12T03:30:29Z",
+ "generated_at": "2026-11-12T04:00:32Z",
  "cfg_version": "v1-v6.5",
- "open": [
-  {
-   "id": "R-20261112T0200-9Sungrok",
-   "ticker": "GROKIE",
-   "mint": "9Sunhg3DWCxnjcN1UzBY3X8W46v9DXhesBhuJLDtgrok",
-   "book": "R",
-   "status": "open",
-   "size": 0.5,
-   "cost_model": "v3-exit-aware",
-   "cost_model_started_at": "2026-10-29T00:30:25Z",
-   "opened_at": "2026-11-12T02:00:31Z",
-   "window_ends_at": "2026-11-12T04:00:31Z",
-   "entry": {
-    "px": 0.001066293989874547
-   },
-   "frac": 1.0,
-   "last_mark": 0.001017153688467784,
-   "thesis": "random_match",
-   "result": {
-    "pnl": 0.0,
-    "pct": -4.61,
-    "unit": "SOL",
-    "net_pnl": 0.0,
-    "gross_pnl": 0.0
-   },
-   "obs_v": 1,
-   "entry_sol_reserve": 119.6595,
-   "entry_token_reserve": 131542013.0,
-   "entry_k": 15740251504.5735,
-   "entry_reserve_error": null,
-   "last_sol_reserve": 120.5155,
-   "last_token_reserve": 133243604.0,
-   "last_k": 16057919557.862,
-   "last_reserve_error": null,
-   "reserve_snaps": [
-    {
-     "t": "2026-11-12T02:00:31Z",
-     "sol": 119.6595,
-     "token": 131542013.0,
-     "k": 15740251504.5735,
-     "pool": "8Kw8aeQ28o9PqpXYtLJssKAiKQCMJPgheAREJy4ZkCeb"
-    },
-    {
-     "t": "2026-11-12T02:30:27Z",
-     "sol": 109.5098,
-     "token": 142945385.0,
-     "k": 15653920522.273,
-     "pool": "8Kw8aeQ28o9PqpXYtLJssKAiKQCMJPgheAREJy4ZkCeb"
-    },
-    {
-     "t": "2026-11-12T03:00:31Z",
-     "sol": 116.7821,
-     "token": 136098306.0,
-     "k": 15893845981.1226,
-     "pool": "8Kw8aeQ28o9PqpXYtLJssKAiKQCMJPgheAREJy4ZkCeb"
-    },
-    {
-     "t": "2026-11-12T03:30:29Z",
-     "sol": 120.5155,
-     "token": 133243604.0,
-     "k": 16057919557.862,
-     "pool": "8Kw8aeQ28o9PqpXYtLJssKAiKQCMJPgheAREJy4ZkCeb"
-    }
-   ],
-   "entry_pool": "8Kw8aeQ28o9PqpXYtLJssKAiKQCMJPgheAREJy4ZkCeb",
-   "pool_created_at": "2026-11-12T00:55:41Z",
-   "pool_age_at_entry_s": 3890.0,
-   "graduated_pump": true,
-   "boost_window": false,
-   "entry_quote_out": 468913831221,
-   "entry_quote_px": 0.001066293989874547,
-   "entry_quote_impact": 0.01490474527380273,
-   "entry_quote_error": null,
-   "max_price_held": 0.001066293989874547,
-   "min_price_held": 0.0009354626794816439,
-   "max_price_held_pct": 0.0,
-   "min_price_held_pct": -12.2697
-  }
- ],
+ "open": [],
  "closed": [
   {
    "id": "F-20261028T1330-96AUWRAY",
@@ -22382,6 +22304,104 @@
    "min_price_held_pct": -84.2803
   },
   {
+   "id": "R-20261112T0200-9Sungrok",
+   "ticker": "GROKIE",
+   "mint": "9Sunhg3DWCxnjcN1UzBY3X8W46v9DXhesBhuJLDtgrok",
+   "book": "R",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-11-12T02:00:31Z",
+   "closed_at": "2026-11-12T04:00:32Z",
+   "entry": {
+    "px": 0.001066293989874547
+   },
+   "exit": {
+    "px": 2.354500606487027e-05
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": -0.492740216,
+    "pct": -97.86,
+    "unit": "SOL",
+    "net_pnl": -0.492740216,
+    "net_pct": -97.86,
+    "gross_pnl": -0.488959421,
+    "gross_pct": -97.79
+   },
+   "thesis": "random_match",
+   "obs_v": 1,
+   "entry_sol_reserve": 119.6595,
+   "entry_token_reserve": 131542013.0,
+   "entry_k": 15740251504.5735,
+   "entry_reserve_error": null,
+   "exit_sol_reserve": 3.4516,
+   "exit_token_reserve": 879330874.0,
+   "exit_k": 3035098444.6984,
+   "exit_reserve_error": null,
+   "last_sol_reserve": 3.4516,
+   "last_token_reserve": 879330874.0,
+   "last_k": 3035098444.6984,
+   "last_reserve_error": null,
+   "reserve_snaps": [
+    {
+     "t": "2026-11-12T02:00:31Z",
+     "sol": 119.6595,
+     "token": 131542013.0,
+     "k": 15740251504.5735,
+     "pool": "8Kw8aeQ28o9PqpXYtLJssKAiKQCMJPgheAREJy4ZkCeb"
+    },
+    {
+     "t": "2026-11-12T02:30:27Z",
+     "sol": 109.5098,
+     "token": 142945385.0,
+     "k": 15653920522.273,
+     "pool": "8Kw8aeQ28o9PqpXYtLJssKAiKQCMJPgheAREJy4ZkCeb"
+    },
+    {
+     "t": "2026-11-12T03:00:31Z",
+     "sol": 116.7821,
+     "token": 136098306.0,
+     "k": 15893845981.1226,
+     "pool": "8Kw8aeQ28o9PqpXYtLJssKAiKQCMJPgheAREJy4ZkCeb"
+    },
+    {
+     "t": "2026-11-12T03:30:29Z",
+     "sol": 120.5155,
+     "token": 133243604.0,
+     "k": 16057919557.862,
+     "pool": "8Kw8aeQ28o9PqpXYtLJssKAiKQCMJPgheAREJy4ZkCeb"
+    },
+    {
+     "t": "2026-11-12T04:00:32Z",
+     "sol": 3.4516,
+     "token": 879330874.0,
+     "k": 3035098444.6984,
+     "pool": "8Kw8aeQ28o9PqpXYtLJssKAiKQCMJPgheAREJy4ZkCeb"
+    }
+   ],
+   "entry_pool": "8Kw8aeQ28o9PqpXYtLJssKAiKQCMJPgheAREJy4ZkCeb",
+   "exit_pool": "8Kw8aeQ28o9PqpXYtLJssKAiKQCMJPgheAREJy4ZkCeb",
+   "same_pool": true,
+   "pool_created_at": "2026-11-12T00:55:41Z",
+   "pool_age_at_entry_s": 3890.0,
+   "graduated_pump": true,
+   "boost_window": false,
+   "entry_quote_out": 468913831221,
+   "entry_quote_px": 0.001066293989874547,
+   "entry_quote_impact": 0.01490474527380273,
+   "entry_quote_error": null,
+   "exit_quote_out": 11040579,
+   "exit_quote_px": 2.354500606487027e-05,
+   "exit_quote_impact": 0.0010307877956379692,
+   "exit_quote_error": null,
+   "max_price_held": 0.001066293989874547,
+   "min_price_held": 2.354500606487027e-05,
+   "max_price_held_pct": 0.0,
+   "min_price_held_pct": -97.7919
+  },
+  {
    "id": "S-20261028T1330-5Zjdpump",
    "ticker": "X TOKEN ",
    "mint": "5ZjdToZE9mEtjQ5AMQhn3Sb12i5u3qcpiCcN189Spump",
@@ -26468,11 +26488,11 @@
    "realized_gross_pnl": -9.850715928
   },
   "R": {
-   "cash": 0.603339934,
-   "equity": 1.076955576,
-   "realized_pnl": -13.693799097,
-   "open": 1,
-   "closed": 131,
+   "cash": 0.61412986,
+   "equity": 0.61412986,
+   "realized_pnl": -14.186539313,
+   "open": 0,
+   "closed": 132,
    "fills_today": 7,
    "would_halt": [
     {
@@ -26506,7 +26526,7 @@
      "drawdown": 0.6409
     }
    ],
-   "realized_gross_pnl": -10.846078065
+   "realized_gross_pnl": -11.335037486
   },
   "S": {
    "cash": 0.362628687,
@@ -26574,16 +26594,16 @@
   "started_at": "2026-10-29T00:30:25Z",
   "windows": {
    "7": {
-    "counted_closes": 208,
-    "net_pnl": -12.651124982,
+    "counted_closes": 206,
+    "net_pnl": -12.879910289,
     "wins": 98,
     "older_closes": 0,
     "older_net_pnl": 0,
     "older_labels": {}
    },
    "28": {
-    "counted_closes": 428,
-    "net_pnl": -36.763376715,
+    "counted_closes": 429,
+    "net_pnl": -37.256116931,
     "wins": 183,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
