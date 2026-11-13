@@ -7,9 +7,122 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-11-12T23:30:27Z",
+ "generated_at": "2026-11-13T00:00:18Z",
  "cfg_version": "v1-v6.5",
- "open": [],
+ "open": [
+  {
+   "id": "F-20261113T0000-EZyMpump",
+   "ticker": "Humpback",
+   "mint": "EZyMpc1477jpZfRh8c8HrRzVFhwq7uKXxBT54cpepump",
+   "book": "F",
+   "status": "open",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-11-13T00:00:18Z",
+   "window_ends_at": "2026-11-13T02:00:18Z",
+   "entry": {
+    "px": 0.001227404902456683
+   },
+   "frac": 1.0,
+   "last_mark": 0.001227404902456683,
+   "thesis": "pass",
+   "result": {
+    "pnl": 0.0,
+    "pct": 0.0,
+    "unit": "SOL",
+    "net_pnl": 0.0,
+    "gross_pnl": 0.0
+   },
+   "obs_v": 1,
+   "entry_sol_reserve": 13.9368,
+   "entry_token_reserve": 12058781.0,
+   "entry_k": 168060819.0408,
+   "entry_reserve_error": null,
+   "last_sol_reserve": 13.9368,
+   "last_token_reserve": 12058781.0,
+   "last_k": 168060819.0408,
+   "last_reserve_error": null,
+   "reserve_snaps": [
+    {
+     "t": "2026-11-13T00:00:18Z",
+     "sol": 13.9368,
+     "token": 12058781.0,
+     "k": 168060819.0408,
+     "pool": "6GPgPnx7QkZfiAda96FvnfSsctkKMJSU3iJp1A8qjmo9"
+    }
+   ],
+   "entry_pool": "6GPgPnx7QkZfiAda96FvnfSsctkKMJSU3iJp1A8qjmo9",
+   "pool_created_at": "2026-11-12T23:40:43Z",
+   "pool_age_at_entry_s": 1175.0,
+   "graduated_pump": false,
+   "boost_window": false,
+   "entry_quote_out": 407363535048,
+   "entry_quote_px": 0.001227404902456683,
+   "entry_quote_impact": 0.0032743595238390534,
+   "entry_quote_error": null,
+   "max_price_held": 0.001227404902456683,
+   "min_price_held": 0.001227404902456683,
+   "max_price_held_pct": 0.0,
+   "min_price_held_pct": 0.0
+  },
+  {
+   "id": "R-20261113T0000-EZyMpump",
+   "ticker": "Humpback",
+   "mint": "EZyMpc1477jpZfRh8c8HrRzVFhwq7uKXxBT54cpepump",
+   "book": "R",
+   "status": "open",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-11-13T00:00:18Z",
+   "window_ends_at": "2026-11-13T02:00:18Z",
+   "entry": {
+    "px": 0.001227404902456683
+   },
+   "frac": 1.0,
+   "last_mark": 0.001227404902456683,
+   "thesis": "random_match",
+   "result": {
+    "pnl": 0.0,
+    "pct": 0.0,
+    "unit": "SOL",
+    "net_pnl": 0.0,
+    "gross_pnl": 0.0
+   },
+   "obs_v": 1,
+   "entry_sol_reserve": 13.9368,
+   "entry_token_reserve": 12058781.0,
+   "entry_k": 168060819.0408,
+   "entry_reserve_error": null,
+   "last_sol_reserve": 13.9368,
+   "last_token_reserve": 12058781.0,
+   "last_k": 168060819.0408,
+   "last_reserve_error": null,
+   "reserve_snaps": [
+    {
+     "t": "2026-11-13T00:00:18Z",
+     "sol": 13.9368,
+     "token": 12058781.0,
+     "k": 168060819.0408,
+     "pool": "6GPgPnx7QkZfiAda96FvnfSsctkKMJSU3iJp1A8qjmo9"
+    }
+   ],
+   "entry_pool": "6GPgPnx7QkZfiAda96FvnfSsctkKMJSU3iJp1A8qjmo9",
+   "pool_created_at": "2026-11-12T23:40:43Z",
+   "pool_age_at_entry_s": 1175.0,
+   "graduated_pump": false,
+   "boost_window": false,
+   "entry_quote_out": 407363535048,
+   "entry_quote_px": 0.001227404902456683,
+   "entry_quote_impact": 0.0032743595238390534,
+   "entry_quote_error": null,
+   "max_price_held": 0.001227404902456683,
+   "min_price_held": 0.001227404902456683,
+   "max_price_held_pct": 0.0,
+   "min_price_held_pct": 0.0
+  }
+ ],
  "closed": [
   {
    "id": "F-20261028T1330-96AUWRAY",
@@ -26447,19 +26560,13 @@
  ],
  "books": {
   "F": {
-   "cash": 0.879376254,
-   "equity": 0.879376254,
+   "cash": 0.37203704,
+   "equity": 0.864697826,
    "realized_pnl": -13.648813441,
-   "open": 0,
+   "open": 1,
    "closed": 126,
-   "fills_today": 8,
+   "fills_today": 1,
    "would_halt": [
-    {
-     "day": "2026-11-06",
-     "ts": "2026-11-06T02:30:26Z",
-     "book": "F",
-     "drawdown": 0.336
-    },
     {
      "day": "2026-11-09",
      "ts": "2026-11-09T00:30:28Z",
@@ -26483,24 +26590,24 @@
      "ts": "2026-11-12T00:00:32Z",
      "book": "F",
      "drawdown": 0.5196
+    },
+    {
+     "day": "2026-11-13",
+     "ts": "2026-11-13T00:00:18Z",
+     "book": "F",
+     "drawdown": 0.8551
     }
    ],
    "realized_gross_pnl": -9.850715928
   },
   "R": {
-   "cash": 0.61412986,
-   "equity": 0.61412986,
+   "cash": 0.106790646,
+   "equity": 0.599451432,
    "realized_pnl": -14.186539313,
-   "open": 0,
+   "open": 1,
    "closed": 132,
-   "fills_today": 7,
+   "fills_today": 1,
    "would_halt": [
-    {
-     "day": "2026-11-08",
-     "ts": "2026-11-08T02:00:32Z",
-     "book": "R",
-     "drawdown": 0.3
-    },
     {
      "day": "2026-11-09",
      "ts": "2026-11-09T00:00:34Z",
@@ -26524,6 +26631,12 @@
      "ts": "2026-11-12T00:00:32Z",
      "book": "R",
      "drawdown": 0.6409
+    },
+    {
+     "day": "2026-11-13",
+     "ts": "2026-11-13T00:00:18Z",
+     "book": "R",
+     "drawdown": 0.9231
     }
    ],
    "realized_gross_pnl": -11.335037486
@@ -26536,12 +26649,6 @@
    "closed": 75,
    "fills_today": 0,
    "would_halt": [
-    {
-     "day": "2026-11-08",
-     "ts": "2026-11-08T00:00:36Z",
-     "book": "S",
-     "drawdown": 0.9275
-    },
     {
      "day": "2026-11-09",
      "ts": "2026-11-09T00:00:34Z",
@@ -26563,6 +26670,12 @@
     {
      "day": "2026-11-12",
      "ts": "2026-11-12T00:00:32Z",
+     "book": "S",
+     "drawdown": 0.9275
+    },
+    {
+     "day": "2026-11-13",
+     "ts": "2026-11-13T00:00:18Z",
      "book": "S",
      "drawdown": 0.9275
     }
@@ -26688,11 +26801,6 @@
    "note": "data_failures_over_10pct"
   },
   {
-   "at": "2026-11-10T00:00:36Z",
-   "type": "would_halt",
-   "note": "F drawdown 56.6%"
-  },
-  {
    "at": "2026-11-11T00:00:33Z",
    "type": "would_halt",
    "note": "F drawdown 56.1%"
@@ -26703,9 +26811,9 @@
    "note": "F drawdown 52.0%"
   },
   {
-   "at": "2026-11-10T00:00:36Z",
+   "at": "2026-11-13T00:00:18Z",
    "type": "would_halt",
-   "note": "R drawdown 74.5%"
+   "note": "F drawdown 85.5%"
   },
   {
    "at": "2026-11-11T00:00:33Z",
@@ -26718,9 +26826,9 @@
    "note": "R drawdown 64.1%"
   },
   {
-   "at": "2026-11-10T00:00:36Z",
+   "at": "2026-11-13T00:00:18Z",
    "type": "would_halt",
-   "note": "S drawdown 92.8%"
+   "note": "R drawdown 92.3%"
   },
   {
    "at": "2026-11-11T00:00:33Z",
@@ -26729,6 +26837,11 @@
   },
   {
    "at": "2026-11-12T00:00:32Z",
+   "type": "would_halt",
+   "note": "S drawdown 92.8%"
+  },
+  {
+   "at": "2026-11-13T00:00:18Z",
    "type": "would_halt",
    "note": "S drawdown 92.8%"
   }

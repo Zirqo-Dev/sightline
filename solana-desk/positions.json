@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1794526227,
+ "last_run_ts": 1794528018,
  "voids": [
   {
    "ts": "2026-10-31T02:00:29Z",
@@ -404,10 +404,65 @@
  ],
  "books": {
   "F": {
-   "cash": 0.8793762539715122,
-   "open": {},
-   "fills_day": "2026-11-12",
-   "fills_today": 8,
+   "cash": 0.37203703974121194,
+   "open": {
+    "F-20261113T0000-EZyMpump": {
+     "entry": 0.001227404902456683,
+     "peak": 0.001227404902456683,
+     "steps": 0,
+     "liq0": 13.9368,
+     "opened": 1794528018,
+     "frac": 1.0,
+     "last_mark": 0.001227404902456683,
+     "stale": 0,
+     "no_route_count": 0,
+     "mint": "EZyMpc1477jpZfRh8c8HrRzVFhwq7uKXxBT54cpepump",
+     "symbol": "Humpback",
+     "tokens": 407363535048,
+     "run_id": "20261113T0000",
+     "why": "pass",
+     "book": "F",
+     "pnl": 0.0,
+     "gross_pnl": 0.0,
+     "entry_haircut": 0.014658428460600685,
+     "entry_cost": 0.5073392142303003,
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z",
+     "obs_v": 1,
+     "entry_sol_reserve": 13.9368,
+     "entry_token_reserve": 12058781.0,
+     "entry_k": 168060819.0408,
+     "entry_reserve_error": null,
+     "last_sol_reserve": 13.9368,
+     "last_token_reserve": 12058781.0,
+     "last_k": 168060819.0408,
+     "last_reserve_error": null,
+     "reserve_snaps": [
+      {
+       "t": "2026-11-13T00:00:18Z",
+       "sol": 13.9368,
+       "token": 12058781.0,
+       "k": 168060819.0408,
+       "pool": "6GPgPnx7QkZfiAda96FvnfSsctkKMJSU3iJp1A8qjmo9"
+      }
+     ],
+     "entry_pool": "6GPgPnx7QkZfiAda96FvnfSsctkKMJSU3iJp1A8qjmo9",
+     "pool_created_at": "2026-11-12T23:40:43Z",
+     "pool_age_at_entry_s": 1175.0,
+     "graduated_pump": false,
+     "boost_window": false,
+     "entry_quote_out": 407363535048,
+     "entry_quote_px": 0.001227404902456683,
+     "entry_quote_impact": 0.0032743595238390534,
+     "entry_quote_error": null,
+     "max_price_held": 0.001227404902456683,
+     "min_price_held": 0.001227404902456683,
+     "max_price_held_pct": 0.0,
+     "min_price_held_pct": 0.0
+    }
+   },
+   "fills_day": "2026-11-13",
+   "fills_today": 1,
    "realized_pnl": -13.648813441467016,
    "closed": [
     {
@@ -9725,16 +9780,77 @@
      "ts": "2026-11-12T00:00:32Z",
      "book": "F",
      "drawdown": 0.5196
+    },
+    {
+     "day": "2026-11-13",
+     "ts": "2026-11-13T00:00:18Z",
+     "book": "F",
+     "drawdown": 0.8551
     }
    ],
    "peak_equity": 5.969415457384406,
    "realized_gross": -9.850715928195113
   },
   "R": {
-   "cash": 0.6141298604593131,
-   "open": {},
-   "fills_day": "2026-11-12",
-   "fills_today": 7,
+   "cash": 0.1067906462290128,
+   "open": {
+    "R-20261113T0000-EZyMpump": {
+     "entry": 0.001227404902456683,
+     "peak": 0.001227404902456683,
+     "steps": 0,
+     "liq0": 13.9368,
+     "opened": 1794528018,
+     "frac": 1.0,
+     "last_mark": 0.001227404902456683,
+     "stale": 0,
+     "no_route_count": 0,
+     "mint": "EZyMpc1477jpZfRh8c8HrRzVFhwq7uKXxBT54cpepump",
+     "symbol": "Humpback",
+     "tokens": 407363535048,
+     "run_id": "20261113T0000",
+     "why": "random_match",
+     "book": "R",
+     "pnl": 0.0,
+     "gross_pnl": 0.0,
+     "entry_haircut": 0.014658428460600685,
+     "entry_cost": 0.5073392142303003,
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z",
+     "obs_v": 1,
+     "entry_sol_reserve": 13.9368,
+     "entry_token_reserve": 12058781.0,
+     "entry_k": 168060819.0408,
+     "entry_reserve_error": null,
+     "last_sol_reserve": 13.9368,
+     "last_token_reserve": 12058781.0,
+     "last_k": 168060819.0408,
+     "last_reserve_error": null,
+     "reserve_snaps": [
+      {
+       "t": "2026-11-13T00:00:18Z",
+       "sol": 13.9368,
+       "token": 12058781.0,
+       "k": 168060819.0408,
+       "pool": "6GPgPnx7QkZfiAda96FvnfSsctkKMJSU3iJp1A8qjmo9"
+      }
+     ],
+     "entry_pool": "6GPgPnx7QkZfiAda96FvnfSsctkKMJSU3iJp1A8qjmo9",
+     "pool_created_at": "2026-11-12T23:40:43Z",
+     "pool_age_at_entry_s": 1175.0,
+     "graduated_pump": false,
+     "boost_window": false,
+     "entry_quote_out": 407363535048,
+     "entry_quote_px": 0.001227404902456683,
+     "entry_quote_impact": 0.0032743595238390534,
+     "entry_quote_error": null,
+     "max_price_held": 0.001227404902456683,
+     "min_price_held": 0.001227404902456683,
+     "max_price_held_pct": 0.0,
+     "min_price_held_pct": 0.0
+    }
+   },
+   "fills_day": "2026-11-13",
+   "fills_today": 1,
    "realized_pnl": -14.186539313063683,
    "closed": [
     {
@@ -19759,6 +19875,12 @@
      "ts": "2026-11-12T00:00:32Z",
      "book": "R",
      "drawdown": 0.6409
+    },
+    {
+     "day": "2026-11-13",
+     "ts": "2026-11-13T00:00:18Z",
+     "book": "R",
+     "drawdown": 0.9231
     }
    ],
    "peak_equity": 7.799829585082849,
@@ -19767,7 +19889,7 @@
   "S": {
    "cash": 0.36262868670275306,
    "open": {},
-   "fills_day": "2026-11-12",
+   "fills_day": "2026-11-13",
    "fills_today": 0,
    "realized_pnl": -14.235201613134743,
    "closed": [
@@ -22946,6 +23068,12 @@
     {
      "day": "2026-11-12",
      "ts": "2026-11-12T00:00:32Z",
+     "book": "S",
+     "drawdown": 0.9275
+    },
+    {
+     "day": "2026-11-13",
+     "ts": "2026-11-13T00:00:18Z",
      "book": "S",
      "drawdown": 0.9275
     }
