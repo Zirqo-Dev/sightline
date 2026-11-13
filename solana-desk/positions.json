@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1794582035,
+ "last_run_ts": 1794583831,
  "voids": [
   {
    "ts": "2026-10-31T02:00:29Z",
@@ -404,66 +404,11 @@
  ],
  "books": {
   "F": {
-   "cash": 0.1085505206798516,
-   "open": {
-    "F-20261113T1500-t8Eppump": {
-     "entry": 0.0015031776371319506,
-     "peak": 0.0015031776371319506,
-     "steps": 0,
-     "liq0": 179.2196,
-     "opened": 1794582035,
-     "frac": 1.0,
-     "last_mark": 0.0015031776371319506,
-     "stale": 0,
-     "no_route_count": 0,
-     "mint": "t8EpNatS8hu2youjp4JBCUbJSF9c3Xzy47GZkyApump",
-     "symbol": "UwU",
-     "tokens": 332628684494,
-     "run_id": "20261113T1500",
-     "why": "pass",
-     "book": "F",
-     "pnl": 0.0,
-     "gross_pnl": 0.0,
-     "entry_haircut": 0.006695527922385761,
-     "entry_cost": 0.5033577639611928,
-     "cost_model": "v3-exit-aware",
-     "cost_model_started_at": "2026-10-29T00:30:25Z",
-     "obs_v": 1,
-     "entry_sol_reserve": 179.2196,
-     "entry_token_reserve": 109131263.0,
-     "entry_k": 19558461302.3548,
-     "entry_reserve_error": null,
-     "last_sol_reserve": 179.2196,
-     "last_token_reserve": 109131263.0,
-     "last_k": 19558461302.3548,
-     "last_reserve_error": null,
-     "reserve_snaps": [
-      {
-       "t": "2026-11-13T15:00:35Z",
-       "sol": 179.2196,
-       "token": 109131263.0,
-       "k": 19558461302.3548,
-       "pool": "7dfjWnJqcvwk4AHCfsedjAYfCxzbhX78FmsnREFWLpAJ"
-      }
-     ],
-     "entry_pool": "7dfjWnJqcvwk4AHCfsedjAYfCxzbhX78FmsnREFWLpAJ",
-     "pool_created_at": "2026-11-13T14:38:17Z",
-     "pool_age_at_entry_s": 1338.0,
-     "graduated_pump": true,
-     "boost_window": false,
-     "entry_quote_out": 332628684494,
-     "entry_quote_px": 0.0015031776371319506,
-     "entry_quote_impact": 0.025788001961323734,
-     "entry_quote_error": null,
-     "max_price_held": 0.0015031776371319506,
-     "min_price_held": 0.0015031776371319506,
-     "max_price_held_pct": 0.0,
-     "min_price_held_pct": 0.0
-    }
-   },
+   "cash": 0.11493968389757454,
+   "open": {},
    "fills_day": "2026-11-13",
    "fills_today": 4,
-   "realized_pnl": -13.916281410797485,
+   "realized_pnl": -14.413250011540955,
    "closed": [
     {
      "id": "F-20261028T1330-96AUWRAY",
@@ -10132,6 +10077,71 @@
      "min_price_held": 0.0028894367561885727,
      "max_price_held_pct": 0.0,
      "min_price_held_pct": -36.5004
+    },
+    {
+     "id": "F-20261113T1500-t8Eppump",
+     "mint": "t8EpNatS8hu2youjp4JBCUbJSF9c3Xzy47GZkyApump",
+     "symbol": "UwU",
+     "opened": 1794582035,
+     "closed": 1794583831,
+     "entry": 0.0015031776371319506,
+     "exit_px": 1.9667338702167773e-05,
+     "why": "liquidity_pulled",
+     "pnl": -0.496968601,
+     "gross_pnl": -0.493458079,
+     "pct": -98.73,
+     "gross_pct": -98.69,
+     "why_entered": "pass",
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z",
+     "obs_v": 1,
+     "entry_sol_reserve": 179.2196,
+     "entry_token_reserve": 109131263.0,
+     "entry_k": 19558461302.3548,
+     "entry_reserve_error": null,
+     "exit_sol_reserve": 1.9831,
+     "exit_token_reserve": 982145786.0,
+     "exit_k": 1947693308.2166002,
+     "exit_reserve_error": null,
+     "last_sol_reserve": 1.9831,
+     "last_token_reserve": 982145786.0,
+     "last_k": 1947693308.2166002,
+     "last_reserve_error": null,
+     "reserve_snaps": [
+      {
+       "t": "2026-11-13T15:00:35Z",
+       "sol": 179.2196,
+       "token": 109131263.0,
+       "k": 19558461302.3548,
+       "pool": "7dfjWnJqcvwk4AHCfsedjAYfCxzbhX78FmsnREFWLpAJ"
+      },
+      {
+       "t": "2026-11-13T15:30:31Z",
+       "sol": 1.9831,
+       "token": 982145786.0,
+       "k": 1947693308.2166002,
+       "pool": "7dfjWnJqcvwk4AHCfsedjAYfCxzbhX78FmsnREFWLpAJ"
+      }
+     ],
+     "entry_pool": "7dfjWnJqcvwk4AHCfsedjAYfCxzbhX78FmsnREFWLpAJ",
+     "exit_pool": "7dfjWnJqcvwk4AHCfsedjAYfCxzbhX78FmsnREFWLpAJ",
+     "same_pool": true,
+     "pool_created_at": "2026-11-13T14:38:17Z",
+     "pool_age_at_entry_s": 1338.0,
+     "graduated_pump": true,
+     "boost_window": false,
+     "entry_quote_out": 332628684494,
+     "entry_quote_px": 0.0015031776371319506,
+     "entry_quote_impact": 0.025788001961323734,
+     "entry_quote_error": null,
+     "exit_quote_out": 6541921,
+     "exit_quote_px": 1.9667338702167773e-05,
+     "exit_quote_impact": 0.009688706693542956,
+     "exit_quote_error": null,
+     "max_price_held": 0.0015031776371319506,
+     "min_price_held": 1.9667338702167773e-05,
+     "max_price_held_pct": 0.0,
+     "min_price_held_pct": -98.6916
     }
    ],
    "would_halt": [
@@ -10173,7 +10183,7 @@
     }
    ],
    "peak_equity": 5.969415457384406,
-   "realized_gross": -10.068600805195112
+   "realized_gross": -10.562058884195112
   },
   "R": {
    "cash": 0.3950259893090128,

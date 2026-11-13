@@ -7,66 +7,9 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-11-13T15:00:35Z",
+ "generated_at": "2026-11-13T15:30:31Z",
  "cfg_version": "v1-v6.5",
- "open": [
-  {
-   "id": "F-20261113T1500-t8Eppump",
-   "ticker": "UwU",
-   "mint": "t8EpNatS8hu2youjp4JBCUbJSF9c3Xzy47GZkyApump",
-   "book": "F",
-   "status": "open",
-   "size": 0.5,
-   "cost_model": "v3-exit-aware",
-   "cost_model_started_at": "2026-10-29T00:30:25Z",
-   "opened_at": "2026-11-13T15:00:35Z",
-   "window_ends_at": "2026-11-13T17:00:35Z",
-   "entry": {
-    "px": 0.0015031776371319506
-   },
-   "frac": 1.0,
-   "last_mark": 0.0015031776371319506,
-   "thesis": "pass",
-   "result": {
-    "pnl": 0.0,
-    "pct": 0.0,
-    "unit": "SOL",
-    "net_pnl": 0.0,
-    "gross_pnl": 0.0
-   },
-   "obs_v": 1,
-   "entry_sol_reserve": 179.2196,
-   "entry_token_reserve": 109131263.0,
-   "entry_k": 19558461302.3548,
-   "entry_reserve_error": null,
-   "last_sol_reserve": 179.2196,
-   "last_token_reserve": 109131263.0,
-   "last_k": 19558461302.3548,
-   "last_reserve_error": null,
-   "reserve_snaps": [
-    {
-     "t": "2026-11-13T15:00:35Z",
-     "sol": 179.2196,
-     "token": 109131263.0,
-     "k": 19558461302.3548,
-     "pool": "7dfjWnJqcvwk4AHCfsedjAYfCxzbhX78FmsnREFWLpAJ"
-    }
-   ],
-   "entry_pool": "7dfjWnJqcvwk4AHCfsedjAYfCxzbhX78FmsnREFWLpAJ",
-   "pool_created_at": "2026-11-13T14:38:17Z",
-   "pool_age_at_entry_s": 1338.0,
-   "graduated_pump": true,
-   "boost_window": false,
-   "entry_quote_out": 332628684494,
-   "entry_quote_px": 0.0015031776371319506,
-   "entry_quote_impact": 0.025788001961323734,
-   "entry_quote_error": null,
-   "max_price_held": 0.0015031776371319506,
-   "min_price_held": 0.0015031776371319506,
-   "max_price_held_pct": 0.0,
-   "min_price_held_pct": 0.0
-  }
- ],
+ "open": [],
  "closed": [
   {
    "id": "F-20261028T1330-96AUWRAY",
@@ -11293,6 +11236,83 @@
    "min_price_held": 0.0028894367561885727,
    "max_price_held_pct": 0.0,
    "min_price_held_pct": -36.5004
+  },
+  {
+   "id": "F-20261113T1500-t8Eppump",
+   "ticker": "UwU",
+   "mint": "t8EpNatS8hu2youjp4JBCUbJSF9c3Xzy47GZkyApump",
+   "book": "F",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-11-13T15:00:35Z",
+   "closed_at": "2026-11-13T15:30:31Z",
+   "entry": {
+    "px": 0.0015031776371319506
+   },
+   "exit": {
+    "px": 1.9667338702167773e-05
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": -0.496968601,
+    "pct": -98.73,
+    "unit": "SOL",
+    "net_pnl": -0.496968601,
+    "net_pct": -98.73,
+    "gross_pnl": -0.493458079,
+    "gross_pct": -98.69
+   },
+   "thesis": "pass",
+   "obs_v": 1,
+   "entry_sol_reserve": 179.2196,
+   "entry_token_reserve": 109131263.0,
+   "entry_k": 19558461302.3548,
+   "entry_reserve_error": null,
+   "exit_sol_reserve": 1.9831,
+   "exit_token_reserve": 982145786.0,
+   "exit_k": 1947693308.2166002,
+   "exit_reserve_error": null,
+   "last_sol_reserve": 1.9831,
+   "last_token_reserve": 982145786.0,
+   "last_k": 1947693308.2166002,
+   "last_reserve_error": null,
+   "reserve_snaps": [
+    {
+     "t": "2026-11-13T15:00:35Z",
+     "sol": 179.2196,
+     "token": 109131263.0,
+     "k": 19558461302.3548,
+     "pool": "7dfjWnJqcvwk4AHCfsedjAYfCxzbhX78FmsnREFWLpAJ"
+    },
+    {
+     "t": "2026-11-13T15:30:31Z",
+     "sol": 1.9831,
+     "token": 982145786.0,
+     "k": 1947693308.2166002,
+     "pool": "7dfjWnJqcvwk4AHCfsedjAYfCxzbhX78FmsnREFWLpAJ"
+    }
+   ],
+   "entry_pool": "7dfjWnJqcvwk4AHCfsedjAYfCxzbhX78FmsnREFWLpAJ",
+   "exit_pool": "7dfjWnJqcvwk4AHCfsedjAYfCxzbhX78FmsnREFWLpAJ",
+   "same_pool": true,
+   "pool_created_at": "2026-11-13T14:38:17Z",
+   "pool_age_at_entry_s": 1338.0,
+   "graduated_pump": true,
+   "boost_window": false,
+   "entry_quote_out": 332628684494,
+   "entry_quote_px": 0.0015031776371319506,
+   "entry_quote_impact": 0.025788001961323734,
+   "entry_quote_error": null,
+   "exit_quote_out": 6541921,
+   "exit_quote_px": 1.9667338702167773e-05,
+   "exit_quote_impact": 0.009688706693542956,
+   "exit_quote_error": null,
+   "max_price_held": 0.0015031776371319506,
+   "min_price_held": 1.9667338702167773e-05,
+   "max_price_held_pct": 0.0,
+   "min_price_held_pct": -98.6916
   },
   {
    "id": "R-20261028T1400-Cd5npump",
@@ -27001,11 +27021,11 @@
  ],
  "books": {
   "F": {
-   "cash": 0.108550521,
-   "equity": 0.605192757,
-   "realized_pnl": -13.916281411,
-   "open": 1,
-   "closed": 129,
+   "cash": 0.114939684,
+   "equity": 0.114939684,
+   "realized_pnl": -14.413250012,
+   "open": 0,
+   "closed": 130,
    "fills_today": 4,
    "would_halt": [
     {
@@ -27039,7 +27059,7 @@
      "drawdown": 0.8551
     }
    ],
-   "realized_gross_pnl": -10.068600805
+   "realized_gross_pnl": -10.562058884
   },
   "R": {
    "cash": 0.395025989,
@@ -27148,16 +27168,16 @@
   "started_at": "2026-10-29T00:30:25Z",
   "windows": {
    "7": {
-    "counted_closes": 149,
-    "net_pnl": -8.989662738,
+    "counted_closes": 150,
+    "net_pnl": -9.486631339,
     "wins": 73,
     "older_closes": 0,
     "older_net_pnl": 0,
     "older_labels": {}
    },
    "28": {
-    "counted_closes": 434,
-    "net_pnl": -37.742688771,
+    "counted_closes": 435,
+    "net_pnl": -38.239657372,
     "wins": 185,
     "older_closes": 35,
     "older_net_pnl": -4.814437439,
