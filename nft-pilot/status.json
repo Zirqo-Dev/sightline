@@ -16,7 +16,7 @@
       "pages": 2,
       "passing": 8,
       "requested": true,
-      "screened": 49,
+      "screened": 39,
       "stop": "call_cap"
     }
   },
@@ -42,9 +42,9 @@
     "gate2_window_hours": 72,
     "result": null
   },
-  "eth_usd": 1923.51503411,
+  "eth_usd": 1929.33,
   "eth_usd_runs": {
-    "chainlink": 62,
+    "chainlink": 63,
     "fallback": 1
   },
   "eth_usd_source": "chainlink",
@@ -68,38 +68,38 @@
   "pace_median": null,
   "pace_ready": false,
   "partial": false,
-  "passers_footnoted": 2,
+  "passers_footnoted": 3,
   "pending": 8,
   "pending_deferred": 0,
-  "pending_served": 9,
-  "ran_at": "2026-11-13T05:27:12Z",
+  "pending_served": 8,
+  "ran_at": "2026-11-13T06:27:11Z",
   "rate_limit": {
     "limit": "120",
     "remaining": "119",
-    "reset": "1794548175"
+    "reset": "1794551771"
   },
   "raw": "not_kept",
   "reason": null,
   "rejections": {
-    "bidders": 5,
-    "buyers": 27,
-    "concentration": 35,
-    "contracts": 9,
+    "bidders": 1,
+    "buyers": 19,
+    "concentration": 25,
+    "contracts": 11,
     "disabled": 1,
-    "floor": 43,
-    "gas": 29,
-    "listings": 23,
+    "floor": 52,
+    "gas": 59,
+    "listings": 27,
     "mint": 0,
-    "sales": 34,
-    "shared": 12,
-    "standard": 8
+    "sales": 25,
+    "shared": 14,
+    "standard": 11
   },
   "rule": "v0.3-eth280 GET /api/v2/collections order_by=market_cap limit=100 max_list_pages=8 pass_target=10 max_calls=480 chains=ethereum,base pace_per_minute=60 window=7d min_sales=30 min_buyers=10 max_buyer_share=0.20 min_bidders=3 bid_band=0.85 min_listings=5 floor_usd=250 gas_ratio=0.02 min_mint_days=14 event_pages=3 truncated=flag",
   "schema_version": 1,
-  "screened": 49,
+  "screened": 39,
   "status": "ok",
   "stop": "call_cap",
   "units": 219,
   "unsellable_share": 0.0,
-  "verdict_footnote": "39 of 219 units: top seller or one day above 50% of 7d sales; ETH/USD source on measured runs: 62 Chainlink, 1 fallback (fallback USD not published; costs are ETH-only)"
+  "verdict_footnote": "39 of 219 units: top seller or one day above 50% of 7d sales; ETH/USD source on measured runs: 63 Chainlink, 1 fallback (fallback USD not published; costs are ETH-only)"
 }
