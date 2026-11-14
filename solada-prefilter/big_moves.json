@@ -1,5 +1,5 @@
 {
- "at": "2026-11-14T17:13:27Z",
+ "at": "2026-11-14T19:11:42Z",
  "phase": 1,
  "window_h": 24,
  "keep_h": 72,
@@ -9,54 +9,6 @@
  },
  "note": "Research data for Snek. next_hop is phase 2 (null). ada = the mover's net ADA when it is the only token against ADA in the tx (ada_basis tx), else qty x price (ada_basis price). LP = liquidity token.",
  "moves": [
-  {
-   "tag": "m-10e56d9e",
-   "ticker": "SOLADA",
-   "direction": "in",
-   "ada": 2217.57,
-   "qty": 990966,
-   "qty_basis": "raw",
-   "tx_short": "7b254bd131",
-   "time": "2026-11-11T18:50:01Z",
-   "window_ada": 3220.13,
-   "pool_pct": 32.9,
-   "lp": false,
-   "unit_short": "e7c77b2784",
-   "ada_basis": "tx",
-   "next_hop": null
-  },
-  {
-   "tag": "m-7dd6aa15",
-   "ticker": "SOLADA",
-   "direction": "in",
-   "ada": 324.0,
-   "qty": 149321,
-   "qty_basis": "raw",
-   "tx_short": "dd5acf7b92",
-   "time": "2026-11-11T18:50:34Z",
-   "window_ada": 1998.98,
-   "pool_pct": 20.4,
-   "lp": false,
-   "unit_short": "e7c77b2784",
-   "ada_basis": "tx",
-   "next_hop": null
-  },
-  {
-   "tag": "m-7dd6aa15",
-   "ticker": "SOLADA",
-   "direction": "out",
-   "ada": 332.87,
-   "qty": 149321,
-   "qty_basis": "raw",
-   "tx_short": "815afcae56",
-   "time": "2026-11-11T18:50:34Z",
-   "window_ada": 2036.46,
-   "pool_pct": 20.8,
-   "lp": false,
-   "unit_short": "e7c77b2784",
-   "ada_basis": "tx",
-   "next_hop": null
-  },
   {
    "tag": "m-d72ebd3d",
    "ticker": "SOLADA",
@@ -781,25 +733,20 @@
  "units_scanned": 12,
  "txs_read": 0,
  "capped": [
-  "COCK",
   "BOLT",
   "CLOVE",
   "SHARKY",
   "SOLADA",
   "FERRET",
-  "FEED",
   "BEAST",
+  "FEED",
   "HIVE",
   "VAMP",
   "SER",
-  "HOWDY"
+  "HOWDY",
+  "COCK"
  ],
  "coverage": {
-  "COCK": {
-   "read": 0,
-   "complete": false,
-   "skipped": "budget/deadline"
-  },
   "BOLT": {
    "read": 0,
    "complete": false,
@@ -825,12 +772,12 @@
    "complete": false,
    "skipped": "budget/deadline"
   },
-  "FEED": {
+  "BEAST": {
    "read": 0,
    "complete": false,
    "skipped": "budget/deadline"
   },
-  "BEAST": {
+  "FEED": {
    "read": 0,
    "complete": false,
    "skipped": "budget/deadline"
@@ -851,6 +798,11 @@
    "skipped": "budget/deadline"
   },
   "HOWDY": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget/deadline"
+  },
+  "COCK": {
    "read": 0,
    "complete": false,
    "skipped": "budget/deadline"
