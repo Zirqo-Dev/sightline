@@ -1,7 +1,10 @@
 """Caps, costs, dry-run files, and the first two run call counts."""
 
+import hashlib
 import json
+import os
 import re
+import subprocess
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -219,3 +222,148 @@ class WorkflowToken(unittest.TestCase):
         for path in sorted(root.glob("*.yml")):
             bad = unmapped_github_token(path.read_text(encoding="utf-8"))
             self.assertEqual(bad, [], "%s: %s" % (path.name, bad))
+
+
+def _step_named(text, name):
+    for step in _workflow_steps(text):
+        if step.lstrip().startswith("- name: %s" % name):
+            return step
+    raise AssertionError("missing step %s" % name)
+
+
+def _guard_env(workspace):
+    """Wallet checks still run. The digest is synthetic and matches nothing here."""
+    env = os.environ.copy()
+    for key in (
+        "PRIVACY_GUARD_PATTERNS",
+        "PRIVACY_IDENTITY_KEY",
+        "PRIVACY_IDENTITY_REQUIRE",
+        "SIGHTLINE_PRIVATE_TOKEN",
+        "SIGHTLINE_PRIVATE_REPO",
+        "RUGGER_ID_PEPPER",
+        "GITHUB_ACTIONS",
+    ):
+        env.pop(key, None)
+    env["PRIVACY_IDENTITY_HASHES"] = hashlib.sha256(b"zzsynthetic zzphrase").hexdigest() + "\n"
+    env["GITHUB_WORKSPACE"] = str(workspace)
+    env["GIT_AUTHOR_NAME"] = "sightline-races"
+    env["GIT_AUTHOR_EMAIL"] = "41898282+github-actions[bot]@users.noreply.github.com"
+    env["GIT_COMMITTER_NAME"] = env["GIT_AUTHOR_NAME"]
+    env["GIT_COMMITTER_EMAIL"] = env["GIT_AUTHOR_EMAIL"]
+    return env
+
+
+def _bash(script, cwd, env):
+    return subprocess.run(
+        ["bash", "-c", script],
+        cwd=cwd,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+
+class EmptyBranchGuard(unittest.TestCase):
+    """First races-data checkout: stage the slot file, then scan it."""
+
+    def _scripts(self):
+        text = (ROOT / ".github" / "workflows" / "races.yml").read_text(encoding="utf-8")
+        guard = _run_script(_step_named(text, "Privacy guard"))
+        commit = _run_script(_step_named(text, "Commit to races-data only"))
+        commit_step = _step_named(text, "Commit to races-data only")
+        return guard, commit, commit_step
+
+    def test_workflow_stages_the_first_tree_before_the_guard(self):
+        guard, commit, commit_step = self._scripts()
+        self.assertLess(guard.index('git ls-files'), guard.index("privacy-guard.sh"))
+        self.assertIn('if [ -z "$(git ls-files)" ]', guard)
+        self.assertIn("no tracked files yet", guard)
+        add_at = commit.index("git add -A")
+        guard_at = commit.index("privacy-guard.sh")
+        commit_at = commit.index("git commit")
+        self.assertLess(add_at, guard_at)
+        self.assertLess(guard_at, commit_at)
+        for key in (
+            "PRIVACY_GUARD_PATTERNS",
+            "PRIVACY_IDENTITY_HASHES",
+            "SIGHTLINE_PRIVATE_TOKEN",
+            "RUGGER_ID_PEPPER",
+        ):
+            self.assertIn("secrets.%s" % key, commit_step)
+
+    def test_empty_branch_dry_run_guards_after_stage(self):
+        guard_script, commit_script, _step = self._scripts()
+        prefix = commit_script.split("git commit", 1)[0]
+        self.assertNotIn("git push", prefix)
+        self.assertNotIn("git commit", prefix)
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            data = workspace / "data"
+            data.mkdir()
+            os.symlink(ROOT, workspace / "code")
+            env = _guard_env(workspace)
+            subprocess.check_call(["git", "init", "-q", "-b", "races-data"], cwd=data)
+            (data / "state.json").write_text('{"slot":"2026-11-14T13:42:00Z"}\n', encoding="utf-8")
+
+            direct = _bash(
+                'bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"',
+                data,
+                env,
+            )
+            self.assertNotEqual(direct.returncode, 0, direct.stderr)
+            self.assertIn("no tracked files found under --root", direct.stderr)
+
+            early = _bash(guard_script, data, env)
+            self.assertEqual(early.returncode, 0, early.stderr)
+            self.assertIn("no tracked files yet", early.stdout)
+
+            staged = _bash(prefix, data, env)
+            self.assertEqual(staged.returncode, 0, staged.stderr)
+            self.assertIn("privacy-guard: OK", staged.stdout)
+            listed = subprocess.check_output(["git", "diff", "--cached", "--name-only"], cwd=data, text=True)
+            self.assertIn("state.json", listed)
+            self.assertIn("NOTES.md", listed)
+            head = subprocess.run(["git", "rev-parse", "--verify", "HEAD"], cwd=data, capture_output=True)
+            self.assertNotEqual(head.returncode, 0)
+
+    def test_staged_leak_still_fails_closed(self):
+        _guard_script, commit_script, _step = self._scripts()
+        prefix = commit_script.split("git commit", 1)[0]
+        stake = "stake1" + ("u" * 53)
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            data = workspace / "data"
+            data.mkdir()
+            os.symlink(ROOT, workspace / "code")
+            env = _guard_env(workspace)
+            subprocess.check_call(["git", "init", "-q", "-b", "races-data"], cwd=data)
+            (data / "state.json").write_text(stake + "\n", encoding="utf-8")
+            leaked = _bash(prefix, data, env)
+            self.assertNotEqual(leaked.returncode, 0, leaked.stdout)
+            self.assertIn("match a private pattern", leaked.stderr)
+            self.assertIn("not committing or pushing", leaked.stdout)
+            self.assertNotIn(stake, leaked.stdout + leaked.stderr)
+            listed = subprocess.run(
+                ["git", "diff", "--cached", "--name-only"],
+                cwd=data, capture_output=True, text=True, check=True,
+            )
+            self.assertEqual(listed.stdout.strip(), "")
+            head = subprocess.run(["git", "rev-parse", "--verify", "HEAD"], cwd=data, capture_output=True)
+            self.assertNotEqual(head.returncode, 0)
+
+    def test_staged_tree_without_digests_still_fails_closed(self):
+        _guard_script, commit_script, _step = self._scripts()
+        prefix = commit_script.split("git commit", 1)[0]
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            data = workspace / "data"
+            data.mkdir()
+            os.symlink(ROOT, workspace / "code")
+            env = _guard_env(workspace)
+            env["PRIVACY_IDENTITY_HASHES"] = "\n"
+            subprocess.check_call(["git", "init", "-q", "-b", "races-data"], cwd=data)
+            (data / "state.json").write_text('{"slot":"2026-11-14T13:42:00Z"}\n', encoding="utf-8")
+            blocked = _bash(prefix, data, env)
+            self.assertNotEqual(blocked.returncode, 0, blocked.stdout)
+            self.assertIn("identity hash list is empty (PRIVACY_IDENTITY_HASHES)", blocked.stderr)
+            self.assertNotIn("privacy-guard: OK", blocked.stdout)

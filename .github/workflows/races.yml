@@ -76,13 +76,27 @@ jobs:
           PRIVACY_IDENTITY_HASHES: ${{ secrets.PRIVACY_IDENTITY_HASHES }}
           SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
           RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
-        run: bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"
+        run: |
+          set -euo pipefail
+          # A brand-new races-data repo has no commits yet. The guard treats
+          # that empty index as a failure, so the branch is never created.
+          # The commit step stages this first tree and scans it before the push.
+          # An existing branch is scanned here, same as ua-f1.yml.
+          if [ -z "$(git ls-files)" ]; then
+            echo "no tracked files yet"
+            exit 0
+          fi
+          bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"
 
       - name: Commit to races-data only
         if: ${{ github.event_name == 'schedule' || github.event.inputs.mode == 'live' }}
         working-directory: data
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          PRIVACY_IDENTITY_HASHES: ${{ secrets.PRIVACY_IDENTITY_HASHES }}
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
         run: |
           set -euo pipefail
           target=races-data
@@ -98,6 +112,11 @@ jobs:
             exit 1
           fi
           git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
+          if ! bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"; then
+            echo "::error::privacy guard failed on races-data changes; not committing or pushing"
+            git reset -q
+            exit 1
+          fi
           git commit -q -m "race run $(date -u +%Y-%m-%dT%H:%MZ)"
           if [ ! -d .git ] || ! git remote get-url origin >/dev/null 2>&1; then
             git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git" || true
