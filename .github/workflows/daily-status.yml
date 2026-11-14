@@ -50,13 +50,16 @@ jobs:
       - name: Commit to desk-data
         working-directory: data
         env:
-          # The guard applies these two lists directly. It does not need
-          # SIGHTLINE_PRIVATE_TOKEN (that only fetches a private hash file, and
-          # the guard warns and continues when the token is unset) or
-          # RUGGER_ID_PEPPER (that only adds r- ids on top of the w- ids already
-          # derived from PRIVACY_GUARD_PATTERNS). The status JSON has no rugger ids.
+          # Identity digests: CI leaves PRIVACY_IDENTITY_HASHES blank. Passing
+          # workflows (desk-data-guard, the Solana desk scan) also pass
+          # SIGHTLINE_PRIVATE_TOKEN, which loads identities/blocked.sha256 from
+          # the private repo. A blank list with no token fails closed. The
+          # token does not turn that failure into a pass when the private file
+          # is missing. RUGGER_ID_PEPPER is not a digest source. The status
+          # JSON has no rugger ids. Wallet patterns still apply.
           PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
           PRIVACY_IDENTITY_HASHES: ${{ secrets.PRIVACY_IDENTITY_HASHES }}
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
         run: |
           git config user.name "daily-status-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
