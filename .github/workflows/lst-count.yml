@@ -1,0 +1,107 @@
+name: lst count
+
+# Count only. No returns, no P&L, no keys, no wallet, no identities.
+# Hourly at minute 17 UTC. Output goes only to lst-count-data.
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sightline-lst-count
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    # Once the verdict is in, a follow-up PR sets this job to `if: false`.
+    # Runs after the verdict are no-ops until that PR.
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out main (code only)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: code
+
+      - name: Prepare lst-count-data
+        working-directory: code
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin lst-count-data >/dev/null 2>&1; then
+            git fetch --depth 1 origin lst-count-data
+            git worktree add "$GITHUB_WORKSPACE/data" FETCH_HEAD
+          else
+            mkdir -p "$GITHUB_WORKSPACE/data"
+            git -C "$GITHUB_WORKSPACE/data" init -b lst-count-data
+          fi
+
+      - name: Capture
+        working-directory: code
+        run: |
+          set -euo pipefail
+          PYTHONPATH=prereg python3 -m lst_count --data-dir "$GITHUB_WORKSPACE/data"
+
+      - name: Privacy guard
+        working-directory: data
+        env:
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          PRIVACY_IDENTITY_HASHES: ${{ secrets.PRIVACY_IDENTITY_HASHES }}
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
+        run: |
+          set -euo pipefail
+          if [ -z "$(git ls-files)" ]; then
+            echo "no tracked files yet"
+            exit 0
+          fi
+          bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"
+
+      - name: Commit to lst-count-data only
+        working-directory: data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          PRIVACY_IDENTITY_HASHES: ${{ secrets.PRIVACY_IDENTITY_HASHES }}
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
+        run: |
+          set -euo pipefail
+          target=lst-count-data
+          case "$target" in
+            main|master|desk-data|races-data|ua-f1-data) echo "refusing $target"; exit 1 ;;
+          esac
+          if [ "$target" != "lst-count-data" ]; then
+            echo "refusing $target"
+            exit 1
+          fi
+          git config user.name "sightline-lst-count"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          files=()
+          [ -f captures.jsonl ] && files+=(captures.jsonl)
+          [ -f status.json ] && files+=(status.json)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "nothing to commit"
+            exit 0
+          fi
+          git add -- "${files[@]}"
+          if git diff --cached --name-only | grep -E '^(solana-desk|desk-data|races|ua_f1)/'; then
+            echo "refusing other paths"
+            exit 1
+          fi
+          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
+          if ! bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"; then
+            echo "::error::privacy guard failed on lst-count-data changes; not committing or pushing"
+            git reset -q
+            exit 1
+          fi
+          git commit -q -m "lst count $(date -u +%Y-%m-%dT%H:%MZ)"
+          if [ ! -d .git ] || ! git remote get-url origin >/dev/null 2>&1; then
+            git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git" || true
+          fi
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin "HEAD:${target}"
