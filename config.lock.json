@@ -1,0 +1,216 @@
+{
+  "banners": {
+    "leader": "leading so far",
+    "r3_r5_note": "R3 and R5 will move together in a meme rally; two leads there are one bet, not two.",
+    "standing": "Display only, untested. A lead in the race is luck until tested."
+  },
+  "costs": {
+    "base_bps": 60,
+    "cap_bps": 600,
+    "impact_weight": 0.25,
+    "stop_extra_bps": 150
+  },
+  "death": {
+    "failed_sell_quotes": 3
+  },
+  "discovery": {
+    "dex_batch_max": 30,
+    "dex_batch_url": "https://api.dexscreener.com/latest/dex/pairs/solana/",
+    "dex_pages_per_list": 6,
+    "dex_token_url": "https://api.dexscreener.com/latest/dex/tokens/",
+    "eligible_dex_ids": [
+      "pumpswap",
+      "letsbonk-fun"
+    ],
+    "gecko_accept": "application/json;version=20230203",
+    "gecko_letsbonk": "https://api.geckoterminal.com/api/v2/networks/solana/dexes/letsbonk-fun/pools",
+    "gecko_new_pools": "https://api.geckoterminal.com/api/v2/networks/solana/new_pools",
+    "gecko_pumpswap": "https://api.geckoterminal.com/api/v2/networks/solana/dexes/pumpswap/pools",
+    "max_age_seconds": 21600,
+    "metadata_program": "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s",
+    "min_age_seconds": 3600,
+    "min_sol_reserve": 50,
+    "new_pool_pages": 2,
+    "pool_base_vault_offset": 139,
+    "pool_quote_vault_offset": 171,
+    "pumpfun_program": "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
+    "pumpswap_program": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+    "rpc_urls": [
+      "https://api.mainnet-beta.solana.com"
+    ]
+  },
+  "extension_note": "A later wallet is a new wallets entry plus one races.rules module. Caps must sum to total_cap. R5 is the owner-approved book after the v1 pre-registration. Do not reserve unused calls.",
+  "gecko_interval_seconds": 6,
+  "http_timeout_seconds": 8,
+  "jupiter": {
+    "base": "https://lite-api.jup.ag",
+    "caps": {
+      "R1": 14,
+      "R2": 14,
+      "R3": 7,
+      "R4": 3,
+      "R5": 5,
+      "SOL": 2
+    },
+    "quote_path": "/swap/v1/quote",
+    "total_cap": 45
+  },
+  "prereg": {
+    "file": "prereg_races_v2.md",
+    "sha256_expected": "5f52f68845e93c7338c08b1a898e29d6a96560c5f108916000e53e708f578e66",
+    "sha256_v1": "97c0114aefe4f986d6c453be6fd2e2b23b7b51bdbacccc2ecf51b985ee6118f3"
+  },
+  "quote_slippage_bps": 50,
+  "schema_version": 1,
+  "sol_usdc_scale": 10,
+  "starting_sol": 5.0,
+  "stats": {
+    "bootstrap_draws": 10000,
+    "bootstrap_seed": 20261111,
+    "min_closes_for_interval": 5,
+    "period_days": 30
+  },
+  "ticket_lamports": 500000000,
+  "ticket_sol": 0.5,
+  "usdc_decimals": 6,
+  "usdc_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "wallets": {
+    "R1": {
+      "label": "close variant of v6.5 R; random among discoverable graduates (coverage logged)",
+      "max_fills_per_day": 10,
+      "module": "races.rules.r1",
+      "name": "Random meme picker",
+      "note": "Close in style to the frozen test's meme books. This race cannot change that test.",
+      "time_stop_hours": 4
+    },
+    "R2": {
+      "hard_stop": -0.2,
+      "label": "close variant of v6.5 F",
+      "max_dev_pct": 0.1,
+      "max_fills_per_day": 10,
+      "max_top10_pct": 0.3,
+      "min_sells_h1": 1,
+      "module": "races.rules.r2",
+      "name": "Filtered meme flipper",
+      "note": "Close in style to the frozen test's meme books. This race cannot change that test.",
+      "take_profit": 0.25,
+      "time_stop_hours": 4
+    },
+    "R3": {
+      "asof": "2026-11-11T23:59:59Z",
+      "basket": 5,
+      "binance_klines": "https://api.binance.com/api/v3/klines",
+      "binance_vision": "https://data.binance.vision/",
+      "binance_vision_list": "https://s3-ap-northeast-1.amazonaws.com/data.binance.vision",
+      "coingecko_coin": "https://api.coingecko.com/api/v3/coins/",
+      "coingecko_markets": "https://api.coingecko.com/api/v3/coins/markets",
+      "details_per_run": 12,
+      "label": "Established meme basket",
+      "module": "races.rules.r3",
+      "name": "Big meme basket",
+      "note": "",
+      "pages_per_run": 1,
+      "rebalance_day": 1
+    },
+    "R4": {
+      "detail_url": "https://api-manager.upbit.com/api/v1/announcements/",
+      "entry_delay_seconds": 900,
+      "exclude_titles": [
+        "\uc720\uc758",
+        "\uc885\ub8cc",
+        "\uc911\ub2e8",
+        "Investment Warning",
+        "Delist",
+        "Trading Support Termination",
+        "Suspension"
+      ],
+      "history_pages": 10,
+      "include_titles": [
+        "\ub514\uc9c0\ud138 \uc790\uc0b0 \ucd94\uac00",
+        "\uc2e0\uaddc \uac70\ub798\uc9c0\uc6d0",
+        "Market Support for",
+        "Trading Support for"
+      ],
+      "label": "Listing bounce",
+      "list_url": "https://api-manager.upbit.com/api/v1/announcements",
+      "markets_url": "https://api.upbit.com/v1/market/all?isDetails=true",
+      "module": "races.rules.r4",
+      "name": "Listing bounce",
+      "note": "",
+      "time_stop_hours": 24,
+      "wallet_url": "https://api.upbit.com/v1/status/wallet"
+    },
+    "R5": {
+      "coingecko_contract": "https://api.coingecko.com/api/v3/coins/solana/contract/",
+      "cooldown_days": 7,
+      "denylist_symbols": [
+        "SOL",
+        "wSOL",
+        "ETH",
+        "cbBTC",
+        "WBTC",
+        "ZEC",
+        "HYPE",
+        "JLP",
+        "CASH"
+      ],
+      "hard_stop": -0.15,
+      "label": "R5 Established breakout (memes included) \u2014 close variant of killed Trend/momentum (time-series breakout); display only, untested",
+      "liq_floor_usd": 500000,
+      "list_limit": 100,
+      "max_entries_per_day": 1,
+      "max_open": 5,
+      "meme_launchpads": [
+        "pump.fun",
+        "pumpswap",
+        "letsbonk",
+        "letsbonk.fun",
+        "believe",
+        "moonshot"
+      ],
+      "min_age_days": 90,
+      "min_liquidity_usd": 1000000,
+      "min_mcap_fdv": 0.3,
+      "min_mcap_usd": 25000000,
+      "min_organic_buy_ratio": 0.05,
+      "min_organic_score": 50,
+      "min_universe": 8,
+      "module": "races.rules.r5",
+      "name": "Established breakout (memes included)",
+      "note": "Evidence weak. Not C. Cannot revive Trend/momentum.",
+      "organic_url": "https://lite-api.jup.ag/tokens/v2/toporganicscore/24h",
+      "price_24h_max": 60,
+      "price_24h_min": 12,
+      "price_6h_gt": 0,
+      "reject_tags": [
+        "stable",
+        "lst",
+        "original-lst",
+        "xstocks",
+        "stocks",
+        "prestocks",
+        "equities",
+        "rwa",
+        "yb",
+        "jup-lend-earn"
+      ],
+      "search_url": "https://lite-api.jup.ag/tokens/v2/search",
+      "symbol_substrings": [
+        "USD",
+        "EUR"
+      ],
+      "time_stop_days": 10,
+      "toptraded_url": "https://lite-api.jup.ag/tokens/v2/toptraded/24h",
+      "trail_arm": 0.1,
+      "trail_giveback": 0.15,
+      "volume_change_min": 100
+    },
+    "SOL": {
+      "label": "Benchmark. Official net % in SOL is 0.",
+      "module": "races.rules.sol",
+      "name": "SOL hold",
+      "note": "USDC is a companion column only."
+    }
+  },
+  "wsol_mint": "So11111111111111111111111111111111111111112"
+}
