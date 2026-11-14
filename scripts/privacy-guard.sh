@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Privacy guard: fail if owner wallet data or identity wording appears in files to be published.
-# Usage: scripts/privacy-guard.sh [--root DIR] [files...]   (no args = staged files, or all tracked files if none staged)
+# Usage: scripts/privacy-guard.sh [--root DIR] [files...]   (no args = staged files, or all tracked files if none staged; --root also includes untracked files that are not ignored)
 #   --root DIR: scan the git checkout at DIR (e.g. a desk-data worktree) with this script's rules.
 # Extra private wallet patterns (one ERE per line): env PRIVACY_GUARD_PATTERNS and/or gitignored .privacy-patterns
 # Identity wording is not listed in this file. scripts/privacy_identity.py hashes tokens and
@@ -116,8 +116,20 @@ for line in sys.stdin:
 if [ $# -gt 0 ]; then
   files=("$@")
 else
-  mapfile -t files < <(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null)
-  [ ${#files[@]} -eq 0 ] && mapfile -t files < <(git ls-files)
+  # Staged paths are the commit. When nothing is staged, scan tracked
+  # files. --root also scans untracked files that are not ignored: a first
+  # races-data init has no commits, so the slot files exist only there.
+  # An empty --root still fails closed below.
+  mapfile -t files < <(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null || true)
+  if [ ${#files[@]} -eq 0 ]; then
+    mapfile -t files < <(git ls-files 2>/dev/null || true)
+    if [ -n "${root_mode:-}" ]; then
+      mapfile -t untracked < <(git ls-files --others --exclude-standard 2>/dev/null || true)
+      if [ ${#untracked[@]} -gt 0 ]; then
+        files+=("${untracked[@]}")
+      fi
+    fi
+  fi
 fi
 
 # desk-data publishes solada-prefilter/dev_checks.json, liquidity_moves.json and vetoes.json.

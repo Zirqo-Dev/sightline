@@ -1,7 +1,10 @@
 """Caps, costs, dry-run files, and the first two run call counts."""
 
+import hashlib
 import json
+import os
 import re
+import subprocess
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -219,3 +222,95 @@ class WorkflowToken(unittest.TestCase):
         for path in sorted(root.glob("*.yml")):
             bad = unmapped_github_token(path.read_text(encoding="utf-8"))
             self.assertEqual(bad, [], "%s: %s" % (path.name, bad))
+
+
+def _guard_env():
+    env = dict(os.environ)
+    for key in (
+        "PRIVACY_GUARD_PATTERNS",
+        "PRIVACY_IDENTITY_HASHES",
+        "SIGHTLINE_PRIVATE_TOKEN",
+        "PRIVACY_IDENTITY_REQUIRE",
+        "PRIVACY_IDENTITY_KEY",
+        "RUGGER_ID_PEPPER",
+        "GITHUB_ACTIONS",
+        "SIGHTLINE_PRIVATE_REPO",
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+    ):
+        env.pop(key, None)
+    env["PRIVACY_IDENTITY_HASHES"] = hashlib.sha256(b"zzsynthetic identityblocktoken").hexdigest()
+    return env
+
+
+def _run_guard(root, env):
+    return subprocess.run(
+        ["bash", str(ROOT / "scripts" / "privacy-guard.sh"), "--root", str(root)],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+
+class FirstRunGuard(unittest.TestCase):
+    def test_a_branch_with_no_commits_is_scanned_and_still_fails_closed(self):
+        wf = (ROOT / ".github" / "workflows" / "races.yml").read_text(encoding="utf-8")
+        self.assertIn('cron: "12,42 * * * *"', wf)
+        guard_step = next(
+            step for step in _workflow_steps(wf) if step.lstrip().startswith("- name: Privacy guard")
+        )
+        script = _run_script(guard_step)
+        self.assertLess(script.find("NOTES.md"), script.find("privacy-guard.sh"))
+        self.assertNotIn("exit 0", script)
+        self.assertNotIn("no tracked files yet", script)
+
+        # Built at runtime so this source does not contain the guard's pattern.
+        marker = '"' + "wallet" + "_snapshot" + '"'
+        env = _guard_env()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init", "-q", "-b", "races-data"], cwd=root, check=True, env=env)
+            empty = _run_guard(root, env)
+            self.assertNotEqual(empty.returncode, 0, empty.stderr)
+            self.assertIn("no tracked files found under --root", empty.stderr)
+            self.assertNotIn("privacy-guard: OK", empty.stdout)
+
+            (root / "summary.json").write_text(
+                '{"schema_version": 1, "banner": "display only"}\n', encoding="utf-8"
+            )
+            (root / "NOTES.md").write_text("Display only.\n", encoding="utf-8")
+            clean = _run_guard(root, env)
+            self.assertEqual(clean.returncode, 0, clean.stderr)
+            self.assertIn("privacy-guard: OK (2 file(s) checked)", clean.stdout)
+            self.assertNotIn("no tracked files", clean.stderr)
+
+            (root / "slot.json").write_text("{" + marker + ": true}\n", encoding="utf-8")
+            hit = _run_guard(root, env)
+            self.assertNotEqual(hit.returncode, 0, hit.stdout)
+            self.assertNotIn("privacy-guard: OK", hit.stdout)
+            self.assertIn("match a private pattern", hit.stderr)
+            self.assertIn("owner wallet data must not be committed", hit.stderr)
+            self.assertNotIn("no tracked files", hit.stderr)
+            self.assertNotIn(marker, hit.stderr)
+
+            (root / "slot.json").unlink()
+            subprocess.run(["git", "add", "summary.json", "NOTES.md"], cwd=root, check=True, env=env)
+            subprocess.run(
+                [
+                    "git", "-c", "user.email=test@example.com", "-c", "user.name=race-test",
+                    "commit", "-q", "-m", "seed",
+                ],
+                cwd=root, check=True, env=env,
+            )
+            tracked = _run_guard(root, env)
+            self.assertEqual(tracked.returncode, 0, tracked.stderr)
+            self.assertIn("privacy-guard: OK (2 file(s) checked)", tracked.stdout)
+
+            (root / "slot.json").write_text("{" + marker + ": true}\n", encoding="utf-8")
+            again = _run_guard(root, env)
+            self.assertNotEqual(again.returncode, 0, again.stdout)
+            self.assertIn("match a private pattern", again.stderr)
+            self.assertNotIn("privacy-guard: OK", again.stdout)
+            self.assertNotIn(marker, again.stderr)

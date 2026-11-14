@@ -76,7 +76,12 @@ jobs:
           PRIVACY_IDENTITY_HASHES: ${{ secrets.PRIVACY_IDENTITY_HASHES }}
           SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
           RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
-        run: bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"
+        run: |
+          set -euo pipefail
+          # NOTES.md is part of the races-data commit. Copy it before the scan
+          # so a branch with no commits yet still has it checked with the slot files.
+          cp "$GITHUB_WORKSPACE/code/races/NOTES.md" NOTES.md
+          bash "$GITHUB_WORKSPACE/code/scripts/privacy-guard.sh" --root "$GITHUB_WORKSPACE/data"
 
       - name: Commit to races-data only
         if: ${{ github.event_name == 'schedule' || github.event.inputs.mode == 'live' }}
