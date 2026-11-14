@@ -214,6 +214,8 @@ class WorkflowToken(unittest.TestCase):
 
     def test_live_workflows_map_github_token_on_the_step(self):
         root = ROOT / ".github" / "workflows"
+        names = sorted(path.name for path in root.glob("*.yml"))
+        self.assertIn("heartbeat.yml", names)
         for path in sorted(root.glob("*.yml")):
             bad = unmapped_github_token(path.read_text(encoding="utf-8"))
             self.assertEqual(bad, [], "%s: %s" % (path.name, bad))

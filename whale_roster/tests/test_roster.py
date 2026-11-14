@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, ROOT)
@@ -269,9 +270,10 @@ class RosterTests(unittest.TestCase):
                     {"ticker": "ASCEND", "wallets": ["w-aaaaaaaa", "w-bbbbbbbb"]},
                     {"ticker": "STRIKE", "wallets": ["w-aaaaaaaa", "w-bbbbbbbb"]},
                 ]}}, fh)
+            recent = datetime.now(timezone.utc) - timedelta(days=2)
             with open(os.path.join(data, "solada-prefilter", "whale_ledger.json"), "w") as fh:
                 json.dump({"whale_tag": "w-f3186187", "rows": [
-                    {"time": "2026-10-29T15:00:00Z", "tx_short": "abc", "kind": "swap", "token": "ASCEND", "qty": 2, "ada_leg": 10}
+                    {"time": recent.strftime("%Y-%m-%dT%H:%M:%SZ"), "tx_short": "abc", "kind": "swap", "token": "ASCEND", "qty": 2, "ada_leg": 10}
                 ]}, fh)
             with open(os.path.join(data, "solada-prefilter", "liquidity_moves.json"), "w") as fh:
                 json.dump({"moves": []}, fh)
@@ -280,7 +282,7 @@ class RosterTests(unittest.TestCase):
                 moves.append({
                     "tag": "w-aaaaaaaa", "ticker": "ASCEND" if i % 2 == 0 else "STRIKE",
                     "direction": "in", "ada": 300, "tx_short": "m%02d" % i,
-                    "time": "2026-10-29T15:%02d:00Z" % i, "ada_basis": "tx", "qty_basis": "whole", "qty": 1,
+                    "time": (recent + timedelta(minutes=i)).strftime("%Y-%m-%dT%H:%M:%SZ"), "ada_basis": "tx", "qty_basis": "whole", "qty": 1,
                 })
             with open(os.path.join(data, "solada-prefilter", "big_moves.json"), "w") as fh:
                 json.dump({"moves": moves, "coverage": {"ASCEND": {}, "STRIKE": {}}}, fh)

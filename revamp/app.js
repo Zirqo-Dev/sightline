@@ -5,6 +5,7 @@
   var state = { phase: "now", evo: "S2", dur: "all" };
   var racePromise = null;
   var stampPromise = null;
+  var healthPromise = null;
 
   var S2_STATUS = "unworkable before start (owner, Nov 11); v3 redesign after Nov 25";
   var F_STATUS = "F stopped early on Nov 11, 2026 under its pre-set rule (Day-14 check). Sealed review Nov 25, 2026.";
@@ -712,6 +713,22 @@
     if (!stampPromise) stampPromise = loadStamps();
     return stampPromise;
   }
+  function loadHealth() {
+    var H = window.SightlineHealth;
+    if (!H) return Promise.resolve(null);
+    var q = new URLSearchParams(location.search).get("health");
+    if (q === "empty" || q === "missing") return Promise.resolve(null);
+    if (q === "green" || q === "red" || q === "amber" || q === "stale" || q === "nodate" || q === "badtime") return Promise.resolve(H.sample(q, Date.now()));
+    return getJson(H.URL);
+  }
+  function ensureHealth() {
+    if (!healthPromise) healthPromise = loadHealth();
+    return healthPromise;
+  }
+  function healthHtml(doc) {
+    if (!window.SightlineHealth) return "";
+    return window.SightlineHealth.render(doc, Date.now());
+  }
 
   var hoodPromise = null;
   var uaPromise = null;
@@ -740,10 +757,11 @@
       needRace ? ensureRace() : Promise.resolve(null),
       needStamps ? ensureStamps() : Promise.resolve(null),
       needHood ? ensureHood() : Promise.resolve(null),
-      needUa ? ensureUa() : Promise.resolve(null)
+      needUa ? ensureUa() : Promise.resolve(null),
+      ensureHealth()
     ]).then(function (pair) {
       if (mine !== token) return;
-      view.innerHTML = draw(r.id, { race: pair[0], stamps: pair[1], hood: pair[2], ua: pair[3] });
+      view.innerHTML = healthHtml(pair[4]) + draw(r.id, { race: pair[0], stamps: pair[1], hood: pair[2], ua: pair[3] });
       bindLogos(view);
       view.removeAttribute("aria-busy");
     }).catch(function () {
