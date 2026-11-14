@@ -342,8 +342,11 @@ class DailyStatusTest(unittest.TestCase):
         self.assertIn("desk-data", text)
         self.assertIn("cron:", text)
         self.assertNotIn("founder", text.lower())
-        self.assertNotIn("secrets.SIGHTLINE_PRIVATE_TOKEN", text)
-        self.assertNotIn("secrets.RUGGER_ID_PEPPER", text)
+        self.assertIn("secrets.PRIVACY_GUARD_PATTERNS", text)
+        self.assertIn("secrets.PRIVACY_IDENTITY_HASHES", text)
+        self.assertIn("secrets.SIGHTLINE_PRIVATE_TOKEN", text)
+        self.assertIn("secrets.RUGGER_ID_PEPPER", text)
+        self.assertNotIn("does not need", text)
 
 
 if __name__ == "__main__":
