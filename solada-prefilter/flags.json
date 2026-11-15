@@ -1,49 +1,27 @@
 {
- "at": "2026-11-15T01:11:10Z",
+ "at": "2026-11-15T03:10:53Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
- "new": [],
+ "new": [
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "FERRET",
+   "wallet": "w-9575676a",
+   "tags": [],
+   "at": "2026-11-15T03:10:53Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "BEAST",
+   "top_addr_pct": 26.1,
+   "top_cluster_pct": 26.1,
+   "top_cluster": "w-ed98e661",
+   "basis": "ex-fe819d",
+   "at": "2026-11-15T03:10:53Z"
+  }
+ ],
  "recent": [
-  {
-   "kind": "watch_tags_early_buyers",
-   "ticker": "BELIEVE",
-   "tags": [
-    "uxz6fvju"
-   ],
-   "roles": [
-    "first_block_sniper"
-   ],
-   "at": "2026-11-10T17:11:12Z"
-  },
-  {
-   "kind": "coordinated_buys",
-   "ticker": "BELIEVE",
-   "wallets": [
-    "w-23d4671d",
-    "w-2ebea9dd",
-    "w-54387fce",
-    "w-5581ddfe",
-    "w-66184c8d",
-    "w-6cf07d1d",
-    "w-759ff942",
-    "w-76af7f1b",
-    "w-79620ea4",
-    "w-8001b7d0",
-    "w-8e9bfa6f",
-    "w-9188b3f2",
-    "w-9337d76e",
-    "w-a16bf6e2",
-    "w-b0f4a1a5",
-    "w-b780a75a",
-    "w-c38dedb4",
-    "w-e18ae92d",
-    "w-e87d53fa",
-    "w-f5e6bbd1"
-   ],
-   "window_s": 120,
-   "at": "2026-11-10T17:11:12Z"
-  },
   {
    "kind": "fresh_wallet_swarm",
    "ticker": "BELIEVE",
@@ -3406,10 +3384,26 @@
    "value_basis": "ada_leg",
    "pct": 0.1,
    "at": "2026-11-14T23:11:16Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "FERRET",
+   "wallet": "w-9575676a",
+   "tags": [],
+   "at": "2026-11-15T03:10:53Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "BEAST",
+   "top_addr_pct": 26.1,
+   "top_cluster_pct": 26.1,
+   "top_cluster": "w-ed98e661",
+   "basis": "ex-fe819d",
+   "at": "2026-11-15T03:10:53Z"
   }
  ],
  "api_calls": {
-  "koios": 2
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,
