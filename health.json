@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-14T22:15:40Z",
+  "generated_at": "2026-11-15T06:08:56Z",
   "status": "red",
   "disable_after_days": 60,
   "red_within_days": 10,
@@ -25,7 +25,7 @@
       "detail": null,
       "data_branch": {
         "name": "desk-data",
-        "last_commit_at": "2026-11-14T22:01:06Z",
+        "last_commit_at": "2026-11-15T06:01:02Z",
         "stale": false
       }
     },
@@ -33,7 +33,7 @@
       "name": "desk-data-guard",
       "file": ".github/workflows/desk-data-guard.yml",
       "status": "red",
-      "last_run_at": "2026-11-14T21:37:03Z",
+      "last_run_at": "2026-11-15T05:37:04Z",
       "last_conclusion": "success",
       "last_event": "workflow_dispatch",
       "crons": [
@@ -42,7 +42,7 @@
       "interval_minutes": 60,
       "grace_minutes": 15,
       "missed_slot": true,
-      "missed_count": 4,
+      "missed_count": 3,
       "consecutive_failures": 0,
       "days_until_disable": 60,
       "disable_red": false,
@@ -72,8 +72,8 @@
     {
       "name": "Pipeline heartbeat",
       "file": ".github/workflows/heartbeat.yml",
-      "status": "green",
-      "last_run_at": "2026-11-14T22:15:15Z",
+      "status": "red",
+      "last_run_at": "2026-11-15T06:08:32Z",
       "last_conclusion": "in_progress",
       "last_event": "schedule",
       "crons": [
@@ -81,8 +81,8 @@
       ],
       "interval_minutes": 180,
       "grace_minutes": 45,
-      "missed_slot": false,
-      "missed_count": 0,
+      "missed_slot": true,
+      "missed_count": 2,
       "consecutive_failures": 0,
       "days_until_disable": 60,
       "disable_red": false,
@@ -93,17 +93,17 @@
     {
       "name": "lst count",
       "file": ".github/workflows/lst-count.yml",
-      "status": "green",
-      "last_run_at": "2026-11-14T21:32:37Z",
+      "status": "red",
+      "last_run_at": "2026-11-15T05:17:05Z",
       "last_conclusion": "success",
-      "last_event": "schedule",
+      "last_event": "workflow_dispatch",
       "crons": [
         "17 * * * *"
       ],
       "interval_minutes": 60,
       "grace_minutes": 15,
-      "missed_slot": false,
-      "missed_count": 0,
+      "missed_slot": true,
+      "missed_count": 4,
       "consecutive_failures": 0,
       "days_until_disable": 60,
       "disable_red": false,
@@ -115,7 +115,7 @@
       "name": "NFT snapshot",
       "file": ".github/workflows/nft-snapshot.yml",
       "status": "green",
-      "last_run_at": "2026-11-14T21:27:05Z",
+      "last_run_at": "2026-11-15T05:27:04Z",
       "last_conclusion": "success",
       "last_event": "workflow_dispatch",
       "crons": [],
@@ -134,7 +134,7 @@
       "name": "pages",
       "file": ".github/workflows/pages.yml",
       "status": "green",
-      "last_run_at": "2026-11-14T16:32:57Z",
+      "last_run_at": "2026-11-15T02:16:32Z",
       "last_conclusion": "success",
       "last_event": "push",
       "crons": [],
@@ -153,7 +153,7 @@
       "name": "privacy-guard",
       "file": ".github/workflows/privacy-guard.yml",
       "status": "green",
-      "last_run_at": "2026-11-14T16:32:58Z",
+      "last_run_at": "2026-11-15T02:16:32Z",
       "last_conclusion": "success",
       "last_event": "push",
       "crons": [],
@@ -172,7 +172,7 @@
       "name": "wallet races",
       "file": ".github/workflows/races.yml",
       "status": "red",
-      "last_run_at": "2026-11-14T19:07:36Z",
+      "last_run_at": "2026-11-15T02:37:19Z",
       "last_conclusion": "success",
       "last_event": "schedule",
       "crons": [
@@ -181,7 +181,7 @@
       "interval_minutes": 30,
       "grace_minutes": 15,
       "missed_slot": true,
-      "missed_count": 5,
+      "missed_count": 6,
       "consecutive_failures": 0,
       "days_until_disable": 60,
       "disable_red": false,
@@ -189,7 +189,7 @@
       "detail": null,
       "data_branch": {
         "name": "races-data",
-        "last_commit_at": "2026-11-14T19:09:16Z",
+        "last_commit_at": "2026-11-15T02:39:06Z",
         "stale": true
       }
     },
@@ -197,7 +197,7 @@
       "name": "Solana forensics",
       "file": ".github/workflows/run-forensics.yml",
       "status": "green",
-      "last_run_at": "2026-11-14T16:27:40Z",
+      "last_run_at": "2026-11-15T02:10:39Z",
       "last_conclusion": "success",
       "last_event": "pull_request",
       "crons": [
@@ -214,7 +214,7 @@
       "detail": null,
       "data_branch": {
         "name": "desk-data",
-        "last_commit_at": "2026-11-14T22:01:06Z",
+        "last_commit_at": "2026-11-15T06:01:02Z",
         "stale": false
       }
     },
@@ -260,7 +260,7 @@
       "name": "schema-check",
       "file": ".github/workflows/schema-check.yml",
       "status": "green",
-      "last_run_at": "2026-11-14T16:32:57Z",
+      "last_run_at": "2026-11-15T02:16:32Z",
       "last_conclusion": "success",
       "last_event": "push",
       "crons": [],
@@ -279,7 +279,7 @@
       "name": "Solada prefilter",
       "file": ".github/workflows/solada-prefilter.yml",
       "status": "green",
-      "last_run_at": "2026-11-14T21:07:05Z",
+      "last_run_at": "2026-11-15T05:07:05Z",
       "last_conclusion": "success",
       "last_event": "workflow_dispatch",
       "crons": [],
@@ -294,7 +294,7 @@
       "detail": null,
       "data_branch": {
         "name": "desk-data",
-        "last_commit_at": "2026-11-14T22:01:06Z",
+        "last_commit_at": "2026-11-15T06:01:02Z",
         "stale": false
       }
     },
@@ -302,7 +302,7 @@
       "name": "Solana desk scan",
       "file": ".github/workflows/solana-desk-scan.yml",
       "status": "red",
-      "last_run_at": "2026-11-14T22:00:22Z",
+      "last_run_at": "2026-11-15T06:00:20Z",
       "last_conclusion": "success",
       "last_event": "workflow_dispatch",
       "crons": [
@@ -311,7 +311,7 @@
       "interval_minutes": 30,
       "grace_minutes": 15,
       "missed_slot": true,
-      "missed_count": 3,
+      "missed_count": 5,
       "consecutive_failures": 0,
       "days_until_disable": 60,
       "disable_red": false,
@@ -319,7 +319,7 @@
       "detail": null,
       "data_branch": {
         "name": "desk-data",
-        "last_commit_at": "2026-11-14T22:01:06Z",
+        "last_commit_at": "2026-11-15T06:01:02Z",
         "stale": false
       }
     },
@@ -327,7 +327,7 @@
       "name": "UA-F1",
       "file": ".github/workflows/ua-f1.yml",
       "status": "green",
-      "last_run_at": "2026-11-14T16:27:40Z",
+      "last_run_at": "2026-11-15T02:10:39Z",
       "last_conclusion": "success",
       "last_event": "pull_request",
       "crons": [
