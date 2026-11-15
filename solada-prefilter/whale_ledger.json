@@ -1,11 +1,11 @@
 {
- "at": "2026-11-15T19:12:46Z",
+ "at": "2026-11-15T21:12:34Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14205139,
+ "height": 14205369,
  "baseline_at": "2026-11-14T17:13:24Z",
- "ada_balance": 444.466116,
+ "ada_balance": 221.388731,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 313797016744,
@@ -38,7 +38,7 @@
   "CHEESE": 5000000499592,
   "CLOVE-3": 10000000424693,
   "CNET": 31327824482276,
-  "COCK": 52332221,
+  "COCK": 52302221,
   "COCKLOCK": 50000000,
   "CORE-2": 7656000,
   "CSWAP": 394,
@@ -103,7 +103,7 @@
   "WJB": 100131421,
   "cock-whale": 1,
   "cockwhale": 1,
-  "f5808c+f7db6b52": 90299440,
+  "f5808c+f7db6b52": 90719661,
   "fADA~47c42d": 4639030549,
   "fADA~daa59d": 4639030549,
   "tappy0352": 1,
@@ -149,7 +149,7 @@
   "CHEESE": 5000000499592,
   "CLOVE-3": 10000000424693,
   "CNET": 31327824482276,
-  "COCK": 52332221,
+  "COCK": 52302221,
   "COCKLOCK": 50000000,
   "CORE-2": 7656000,
   "CSWAP": 394,
@@ -214,7 +214,7 @@
   "WJB": 100131421,
   "cock-whale": 1,
   "cockwhale": 1,
-  "f5808c+f7db6b52": 90299440,
+  "f5808c+f7db6b52": 90719661,
   "fADA~47c42d": 4639030549,
   "fADA~daa59d": 4639030549,
   "tappy0352": 1,
@@ -387,7 +387,7 @@
   {
    "token": "COCK",
    "policy": "49e42316",
-   "qty": 52332221
+   "qty": 52302221
   },
   {
    "token": "COCKLOCK",
@@ -712,7 +712,7 @@
   {
    "token": "f5808c+f7db6b52",
    "policy": "f5808c2c",
-   "qty": 90299440
+   "qty": 90719661
   },
   {
    "token": "fADA~47c42d",
@@ -1765,6 +1765,30 @@
    "opened_at": "2026-11-15T18:55:48Z",
    "own_stake": true,
    "closed_at": "2026-11-15T19:12:46Z"
+  },
+  "ba4df3fa26#0": {
+   "ref_short": "ba4df3fa26#0",
+   "token": "COCK",
+   "qty_raw": 30000,
+   "ada": 122.656447,
+   "status": "closed_elsewhere",
+   "opened_tx": "ba4df3fa26",
+   "opened_at": "2026-11-15T20:12:13Z",
+   "own_stake": true,
+   "closed_at": "2026-11-15T21:12:34Z"
+  },
+  "d615fb4ed8#0": {
+   "ref_short": "d615fb4ed8#0",
+   "token": "ADA",
+   "qty_raw": 104000000,
+   "ada": 104.0,
+   "status": "filled",
+   "opened_tx": "d615fb4ed8",
+   "opened_at": "2026-11-15T20:13:20Z",
+   "own_stake": true,
+   "closed_tx": "d98416a770",
+   "closed_at": "2026-11-15T20:13:20Z",
+   "filled_ada": -102.0
   }
  },
  "rows": [
@@ -4120,6 +4144,57 @@
    "counterparty_tag": null,
    "order_ref_short": "71d32d0a3e#0",
    "order_status": "open"
+  },
+  {
+   "time": "2026-11-15T20:12:13Z",
+   "tx_short": "3d43533599",
+   "kind": "lp_add",
+   "token": "LP:minswap_v2",
+   "qty": 296547,
+   "ada_leg": 120.656447,
+   "counterparty_tag": null
+  },
+  {
+   "time": "2026-11-15T20:12:13Z",
+   "tx_short": "ba4df3fa26",
+   "kind": "order_open",
+   "token": "COCK",
+   "qty": 30000,
+   "ada_leg": 122.656447,
+   "counterparty_tag": null,
+   "order_ref_short": "ba4df3fa26#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-15T20:13:20Z",
+   "tx_short": "d615fb4ed8",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 104000000,
+   "ada_leg": 104.0,
+   "counterparty_tag": null,
+   "order_ref_short": "d615fb4ed8#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-15T20:13:20Z",
+   "tx_short": "d98416a770",
+   "kind": "order_fill",
+   "token": "ADA",
+   "qty": 104000000,
+   "ada_leg": -102.0,
+   "counterparty_tag": null,
+   "order_ref_short": "d615fb4ed8#0",
+   "order_status": "filled"
+  },
+  {
+   "time": "2026-11-15T20:13:20Z",
+   "tx_short": "d98416a770",
+   "kind": "lp_add",
+   "token": "LP:minswap_v2",
+   "qty": 123674,
+   "ada_leg": 102.0,
+   "counterparty_tag": null
   }
  ],
  "capped": false,
@@ -4130,7 +4205,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 8,
+ "koios_calls": 7,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
