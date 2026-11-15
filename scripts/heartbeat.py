@@ -18,7 +18,9 @@ Status, worst wins:
 The auto-disable clock is the last commit on main. Runs do not reset it,
 and commits on data branches do not either. The expected interval is the
 longest gap between scheduled fires. Grace is max(15 minutes, one quarter
-of that interval). Slots earlier than a workflow's created_at are ignored.
+of that interval). A due slot is filled by a successful schedule or
+workflow_dispatch run. Slots earlier than the later of the workflow's
+created_at and the commit that added its file to main are ignored.
 ua-f1-data can skip a commit when a run has nothing new, so that branch is
 judged from the later of its tip and its last success.
 """
@@ -45,6 +47,8 @@ FORBIDDEN_TARGETS = ("main", "master", "desk-data", "races-data", "ua-f1-data")
 PUBLISH_BRANCH = "health-data"
 FAILURES = {"failure", "timed_out", "startup_failure"}
 IGNORED_CONCLUSIONS = {"cancelled", "skipped", "neutral", "stale"}
+# workflow_dispatch fills the same slot a GitHub schedule run would.
+_FILLING_EVENTS = frozenset({"schedule", "workflow_dispatch"})
 CONCLUSIONS = FAILURES | IGNORED_CONCLUSIONS | {"success", "action_required", "in_progress"}
 SLOT_SKEW = timedelta(minutes=2)
 DAY_MINUTES = 24 * 60
@@ -344,18 +348,24 @@ def consecutive_failures(runs):
     return streak
 
 
-def _schedule_at(run):
-    if run.get("event") != "schedule":
+def _filling_run_at(run):
+    """Time of a successful schedule or workflow_dispatch run.
+
+    Other events do not fill a slot. A run that did not succeed does not either.
+    """
+    if run.get("event") not in _FILLING_EVENTS:
+        return None
+    if run.get("conclusion") != "success":
         return None
     return parse_time(run.get("at"))
 
 
 def _slot_covered(slot, newer, runs):
-    """A schedule run covers this slot and not the newer one."""
+    """A successful schedule or workflow_dispatch run covers this slot, not the newer one."""
     start = slot - SLOT_SKEW
     end = None if newer is None else newer - SLOT_SKEW
     for run in runs:
-        at = _schedule_at(run)
+        at = _filling_run_at(run)
         if at is None or at < start:
             continue
         if end is not None and at >= end:
@@ -372,10 +382,27 @@ def _as_utc(value):
     return parse_time(value)
 
 
-def missed_count(crons, runs, now, created_at=None):
-    """How many newest due slots have no schedule run.
+def _slot_baseline(created_at, main_added_at):
+    """Later of workflow created_at and the commit that added the file to main.
 
-    Slots earlier than the workflow's created_at are ignored. A file that
+    GitHub records created_at when the file first appears, including on a
+    pull-request branch. Slots before the file is on main are not expected.
+    """
+    stamps = []
+    for value in (created_at, main_added_at):
+        stamp = _as_utc(value)
+        if stamp is not None:
+            stamps.append(stamp)
+    if not stamps:
+        return None
+    return max(stamps)
+
+
+def missed_count(crons, runs, now, created_at=None):
+    """How many newest due slots have no successful schedule or workflow_dispatch run.
+
+    Slots earlier than created_at are ignored. Callers pass the slot baseline:
+    the later of the workflow created_at and the main add-commit. A file that
     merged today must not be blamed for last Monday.
     """
     if not crons:
@@ -520,11 +547,13 @@ def build_health(workflows, runs_by_file, branch_commits, now, main_commit_at=No
                 "stale": branch_level == "red",
             }
         failures = consecutive_failures(runs)
-        created = _as_utc(spec.get("created_at"))
-        missed = missed_count(crons, runs, now, created)
+        # created_at can be the pull-request branch. Expect slots only from
+        # the later of that time and the commit that added the file to main.
+        baseline = _slot_baseline(spec.get("created_at"), spec.get("main_added_at"))
+        missed = missed_count(crons, runs, now, baseline)
         level = miss_level(missed, interval, not runs)
-        # No run yet, and no slot has come due since the workflow was created.
-        waiting = bool(crons) and not runs and created is not None and missed == 0
+        # No run yet, and no slot has come due since the baseline.
+        waiting = bool(crons) and not runs and baseline is not None and missed == 0
         state = _clean_state(spec.get("state"))
         name = spec.get("name") or spec["file"]
         if not _NAME_OK.match(name):
@@ -688,15 +717,51 @@ def _runs_for(api, repo, token, workflow_id):
     return [public_run(row) for row in payload.get("workflow_runs") or []]
 
 
+def _commit_stamp(row):
+    """Committer time only. Author name, email, and message stay out."""
+    if not isinstance(row, dict):
+        return None
+    commit = row.get("commit") or {}
+    stamp = (commit.get("committer") or {}).get("date")
+    return iso(parse_time(stamp))
+
+
 def _commit_time(api, repo, token, branch):
     quoted = urllib.parse.quote(branch)
     url = "%s/repos/%s/commits?sha=%s&per_page=1" % (api.rstrip("/"), repo, quoted)
     payload = _api_get(url, token)
     if not isinstance(payload, list) or not payload:
         return None
-    commit = (payload[0].get("commit") or {})
-    stamp = ((commit.get("committer") or {}).get("date"))
-    return iso(parse_time(stamp))
+    return _commit_stamp(payload[0])
+
+
+def _main_added_at(api, repo, token, path):
+    """When this file first landed on main.
+
+    The oldest commit on main that touches the path. A workflow opened on a
+    pull-request branch is not expected to fill slots before that commit.
+    """
+    quoted = urllib.parse.quote(path)
+    oldest = None
+    seen = None
+    page = 1
+    while page <= 20:
+        url = "%s/repos/%s/commits?sha=main&path=%s&per_page=100&page=%d" % (
+            api.rstrip("/"), repo, quoted, page,
+        )
+        payload = _api_get(url, token)
+        if not isinstance(payload, list) or not payload:
+            break
+        last = payload[-1]
+        sha = last.get("sha") if isinstance(last, dict) else None
+        if sha and sha == seen:
+            break
+        seen = sha
+        oldest = last
+        if len(payload) < 100:
+            break
+        page += 1
+    return _commit_stamp(oldest)
 
 
 def collect(workflows, repo, token, api):
@@ -706,6 +771,7 @@ def collect(workflows, repo, token, api):
         info = meta.get(spec["file"]) or {}
         spec["state"] = info.get("state")
         spec["created_at"] = info.get("created_at")
+        spec["main_added_at"] = _main_added_at(api, repo, token, spec["file"])
         ident = info.get("id")
         runs[spec["file"]] = _runs_for(api, repo, token, ident) if ident else []
     commits = {}
