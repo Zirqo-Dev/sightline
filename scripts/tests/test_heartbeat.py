@@ -21,8 +21,11 @@ def at(delta):
     return (NOW + delta).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def run(minutes, conclusion="success", event="schedule"):
-    return {"at": at(timedelta(minutes=minutes)), "conclusion": conclusion, "event": event}
+def run(minutes, conclusion="success", event="schedule", head_branch=None):
+    row = {"at": at(timedelta(minutes=minutes)), "conclusion": conclusion, "event": event}
+    if head_branch is not None:
+        row["head_branch"] = head_branch
+    return row
 
 
 def spec(path, name, crons, branch=None):
@@ -97,13 +100,13 @@ class Cases(unittest.TestCase):
         self.assertFalse(row["disable_red"])
 
     def test_workflow_dispatch_runs_fill_slots(self):
-        # Every recent due slot is a successful workflow_dispatch. No schedule run.
+        # Every recent due slot is a successful workflow_dispatch on main. No schedule run.
         doc = health(
             [spec(DESK, "Solana desk scan", ["*/30 * * * *"], "desk-data")],
             {DESK: [
-                run(-10, "success", "workflow_dispatch"),
-                run(-40, "success", "workflow_dispatch"),
-                run(-70, "success", "workflow_dispatch"),
+                run(-10, "success", "workflow_dispatch", "main"),
+                run(-40, "success", "workflow_dispatch", "main"),
+                run(-70, "success", "workflow_dispatch", "main"),
             ]},
             {"desk-data": at(timedelta(minutes=-4))},
         )
@@ -114,6 +117,26 @@ class Cases(unittest.TestCase):
         self.assertEqual(row["missed_count"], 0)
         self.assertEqual(row["status"], "green")
         self.assertEqual(doc["status"], "green")
+
+    def test_workflow_dispatch_off_main_does_not_fill_slots(self):
+        # A successful workflow_dispatch on a non-main branch does not fill a slot.
+        doc = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"], "desk-data")],
+            {DESK: [
+                run(-10, "success", "workflow_dispatch", "feature"),
+                run(-40, "success", "workflow_dispatch", "feature"),
+                run(-70, "success", "workflow_dispatch", "feature"),
+            ]},
+            {"desk-data": at(timedelta(minutes=-4))},
+        )
+        row = doc["workflows"][0]
+        self.assertEqual(row["last_event"], "workflow_dispatch")
+        self.assertEqual(row["last_conclusion"], "success")
+        self.assertTrue(row["missed_slot"])
+        self.assertGreaterEqual(row["missed_count"], 2)
+        self.assertEqual(row["consecutive_failures"], 0)
+        self.assertEqual(row["status"], "red")
+        self.assertEqual(doc["status"], "red")
 
     def test_pr_add_before_main_is_not_red_until_two_slots(self):
         # Hourly at :17. At noon the due slots are 11:17 and 10:17 (15 min grace).
@@ -326,12 +349,15 @@ class Privacy(unittest.TestCase):
             "run_started_at": "2026-11-11T11:00:00Z",
             "conclusion": "success",
             "event": "schedule",
+            "head_branch": "main",
+            "head_sha": "abc123",
             "actor": {"login": "octocat"},
             "triggering_actor": {"login": "octocat"},
             "head_commit": {"message": "hello", "author": {"email": "person@example.com", "name": "Pat"}},
             "html_url": "https://github.com/example/example/actions/runs/1",
         })
-        self.assertEqual(set(cleaned), {"at", "conclusion", "event"})
+        self.assertEqual(set(cleaned), {"at", "conclusion", "event", "head_branch"})
+        self.assertEqual(cleaned["head_branch"], "main")
         blob = json.dumps(cleaned)
         self.assertNotIn("octocat", blob)
         self.assertNotIn("example.com", blob)

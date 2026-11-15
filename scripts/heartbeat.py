@@ -18,9 +18,10 @@ Status, worst wins:
 The auto-disable clock is the last commit on main. Runs do not reset it,
 and commits on data branches do not either. The expected interval is the
 longest gap between scheduled fires. Grace is max(15 minutes, one quarter
-of that interval). A due slot is filled by a successful schedule or
-workflow_dispatch run. Slots earlier than the later of the workflow's
-created_at and the commit that added its file to main are ignored.
+of that interval). A due slot is filled by a successful schedule run, or by
+a successful workflow_dispatch whose head_branch is main. Slots earlier
+than the later of the workflow's created_at and the commit that added its
+file to main are ignored.
 ua-f1-data can skip a commit when a run has nothing new, so that branch is
 judged from the later of its tip and its last success.
 """
@@ -47,7 +48,8 @@ FORBIDDEN_TARGETS = ("main", "master", "desk-data", "races-data", "ua-f1-data")
 PUBLISH_BRANCH = "health-data"
 FAILURES = {"failure", "timed_out", "startup_failure"}
 IGNORED_CONCLUSIONS = {"cancelled", "skipped", "neutral", "stale"}
-# workflow_dispatch fills the same slot a GitHub schedule run would.
+# A successful workflow_dispatch fills a slot only when head_branch is main.
+# Schedule runs fill a slot on any branch.
 _FILLING_EVENTS = frozenset({"schedule", "workflow_dispatch"})
 CONCLUSIONS = FAILURES | IGNORED_CONCLUSIONS | {"success", "action_required", "in_progress"}
 SLOT_SKEW = timedelta(minutes=2)
@@ -349,19 +351,24 @@ def consecutive_failures(runs):
 
 
 def _filling_run_at(run):
-    """Time of a successful schedule or workflow_dispatch run.
+    """Time of a successful schedule run, or a successful workflow_dispatch on main.
 
     Other events do not fill a slot. A run that did not succeed does not either.
+    A workflow_dispatch fills a slot only when head_branch is main. Schedule
+    runs are not filtered by branch.
     """
-    if run.get("event") not in _FILLING_EVENTS:
+    event = run.get("event")
+    if event not in _FILLING_EVENTS:
         return None
     if run.get("conclusion") != "success":
+        return None
+    if event == "workflow_dispatch" and run.get("head_branch") != "main":
         return None
     return parse_time(run.get("at"))
 
 
 def _slot_covered(slot, newer, runs):
-    """A successful schedule or workflow_dispatch run covers this slot, not the newer one."""
+    """A filling run covers this slot and not the newer one."""
     start = slot - SLOT_SKEW
     end = None if newer is None else newer - SLOT_SKEW
     for run in runs:
@@ -399,7 +406,10 @@ def _slot_baseline(created_at, main_added_at):
 
 
 def missed_count(crons, runs, now, created_at=None):
-    """How many newest due slots have no successful schedule or workflow_dispatch run.
+    """How many newest due slots have no filling run.
+
+    A filling run is a successful schedule run, or a successful
+    workflow_dispatch whose head_branch is main.
 
     Slots earlier than created_at are ignored. Callers pass the slot baseline:
     the later of the workflow created_at and the main add-commit. A file that
@@ -462,14 +472,22 @@ def _clean_event(value):
 
 
 def public_run(row):
-    """Keep time, conclusion, and event. Drop actors, commits, and urls."""
+    """Keep time, conclusion, event, and head_branch. Drop actors, commits, and urls.
+
+    head_branch is the branch name the run used. Slot filling reads it for
+    workflow_dispatch and ignores it for schedule. It is not written to health.json.
+    """
     if not isinstance(row, dict):
         raise ValueError("run is not an object")
-    return {
+    cleaned = {
         "at": row.get("run_started_at") or row.get("created_at") or row.get("at"),
         "conclusion": row.get("conclusion"),
         "event": row.get("event"),
     }
+    branch = row.get("head_branch")
+    if isinstance(branch, str):
+        cleaned["head_branch"] = branch
+    return cleaned
 
 
 def _last_success(runs):
