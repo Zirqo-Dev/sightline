@@ -78,21 +78,73 @@ class Cases(unittest.TestCase):
         heartbeat.assert_public(doc)
 
     def test_missed_slot(self):
+        # No schedule run and no workflow_dispatch run. A push does not fill a slot.
         doc = health(
             [spec(DESK, "Solana desk scan", ["*/30 * * * *"], "desk-data")],
             {DESK: [
-                run(-10, "success", "workflow_dispatch"),
-                run(-120, "success", "schedule"),
+                run(-10, "success", "push"),
+                run(-40, "success", "pull_request"),
             ]},
             {"desk-data": at(timedelta(minutes=-4))},
         )
         row = doc["workflows"][0]
+        self.assertEqual(row["last_event"], "push")
         self.assertTrue(row["missed_slot"])
         self.assertGreaterEqual(row["missed_count"], 2)
         self.assertEqual(row["consecutive_failures"], 0)
         self.assertEqual(row["status"], "red")
         self.assertEqual(doc["status"], "red")
         self.assertFalse(row["disable_red"])
+
+    def test_workflow_dispatch_runs_fill_slots(self):
+        # Every recent due slot is a successful workflow_dispatch. No schedule run.
+        doc = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"], "desk-data")],
+            {DESK: [
+                run(-10, "success", "workflow_dispatch"),
+                run(-40, "success", "workflow_dispatch"),
+                run(-70, "success", "workflow_dispatch"),
+            ]},
+            {"desk-data": at(timedelta(minutes=-4))},
+        )
+        row = doc["workflows"][0]
+        self.assertEqual(row["last_event"], "workflow_dispatch")
+        self.assertEqual(row["last_conclusion"], "success")
+        self.assertFalse(row["missed_slot"])
+        self.assertEqual(row["missed_count"], 0)
+        self.assertEqual(row["status"], "green")
+        self.assertEqual(doc["status"], "green")
+
+    def test_pr_add_before_main_is_not_red_until_two_slots(self):
+        # Hourly at :17. At noon the due slots are 11:17 and 10:17 (15 min grace).
+        # The workflow object existed on a PR two days ago. A pull_request run
+        # does not fill a cron slot, so the old created_at clock is red.
+        item = spec(".github/workflows/lst-count.yml", "lst count", ["17 * * * *"])
+        item["created_at"] = at(timedelta(days=-2))
+        pr_run = run(-30, "success", "pull_request")
+        runs = {item["file"]: [pr_run]}
+        early = health([item], runs)
+        self.assertGreaterEqual(early["workflows"][0]["missed_count"], 2)
+        self.assertEqual(early["workflows"][0]["status"], "red")
+
+        # Added to main at 11:00, after 10:17 and before 11:17. One due slot.
+        item["main_added_at"] = at(timedelta(hours=-1))
+        one = health([item], runs)
+        self.assertEqual(one["workflows"][0]["missed_count"], 1)
+        self.assertEqual(one["workflows"][0]["status"], "amber")
+
+        # Added to main at 10:00, so 10:17 and 11:17 are both due.
+        item["main_added_at"] = at(timedelta(hours=-2))
+        two = health([item], runs)
+        self.assertGreaterEqual(two["workflows"][0]["missed_count"], 2)
+        self.assertEqual(two["workflows"][0]["status"], "red")
+
+        # A later created_at still wins over an earlier main add.
+        item["created_at"] = at(timedelta(minutes=-30))
+        item["main_added_at"] = at(timedelta(hours=-2))
+        later = health([item], runs)
+        self.assertEqual(later["workflows"][0]["missed_count"], 0)
+        self.assertEqual(later["workflows"][0]["status"], "green")
 
     def test_failed(self):
         doc = health(
@@ -103,7 +155,9 @@ class Cases(unittest.TestCase):
         row = doc["workflows"][0]
         self.assertEqual(row["consecutive_failures"], 2)
         self.assertEqual(row["last_conclusion"], "failure")
-        self.assertFalse(row["missed_slot"])
+        # A failed run does not fill its slot. The row is still red from the streak.
+        self.assertTrue(row["missed_slot"])
+        self.assertGreaterEqual(row["missed_count"], 2)
         self.assertEqual(row["status"], "red")
 
     def test_stale_data_branch(self):
