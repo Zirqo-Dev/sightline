@@ -1,11 +1,11 @@
 {
- "at": "2026-11-16T01:13:11Z",
+ "at": "2026-11-16T03:12:47Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14206256,
+ "height": 14206393,
  "baseline_at": "2026-11-14T17:13:24Z",
- "ada_balance": 2643.707669,
+ "ada_balance": 786.499861,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 312000016744,
@@ -73,7 +73,7 @@
   "MISS": 8375000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1370000824255,
+  "NIGHT": 1375957219743,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -184,7 +184,7 @@
   "MISS": 8375000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1370000824255,
+  "NIGHT": 1375957219743,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -562,7 +562,7 @@
   {
    "token": "NIGHT",
    "policy": "0691b2fe",
-   "qty": 1370000824255
+   "qty": 1375957219743
   },
   {
    "token": "NIKY",
@@ -1946,6 +1946,19 @@
    "opened_at": "2026-11-16T01:11:24Z",
    "own_stake": true,
    "closed_at": "2026-11-16T01:13:11Z"
+  },
+  "ad93b8ed9f#0": {
+   "ref_short": "ad93b8ed9f#0",
+   "token": "ADA",
+   "qty_raw": 1303280000,
+   "ada": 1303.28,
+   "status": "filled",
+   "opened_tx": "ad93b8ed9f",
+   "opened_at": "2026-11-16T01:34:40Z",
+   "closed_tx": "5e1db2afdf",
+   "closed_at": "2026-11-16T01:35:03Z",
+   "filled_token": "NIGHT",
+   "filled_qty": 4186779229
   }
  },
  "rows": [
@@ -4675,6 +4688,58 @@
    "counterparty_tag": null,
    "order_ref_short": "9b698aba88#0",
    "order_status": "open"
+  },
+  {
+   "time": "2026-11-16T01:34:40Z",
+   "tx_short": "ad93b8ed9f",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 1303280000,
+   "ada_leg": 1303.28,
+   "counterparty_tag": null,
+   "order_ref_short": "ad93b8ed9f#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-16T01:35:03Z",
+   "tx_short": "5e1db2afdf",
+   "kind": "order_fill",
+   "token": "NIGHT",
+   "qty": 4186779229,
+   "ada_leg": 1303.28,
+   "counterparty_tag": null,
+   "order_ref_short": "ad93b8ed9f#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-16T01:36:13Z",
+   "tx_short": "a3e35474db",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 115137921,
+   "ada_leg": 354.122653,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-16T01:36:22Z",
+   "tx_short": "0fdb84ccb4",
+   "kind": "transfer_in",
+   "token": "NIGHT",
+   "qty": 1015337683,
+   "ada_leg": null,
+   "counterparty_tag": "w-8b9d6b2c"
+  },
+  {
+   "time": "2026-11-16T01:58:52Z",
+   "tx_short": "24e9975669",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 639140655,
+   "ada_leg": 202.31981,
+   "counterparty_tag": null,
+   "direction": "buy"
   }
  ],
  "capped": false,
@@ -4685,7 +4750,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 7,
+ "koios_calls": 6,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
