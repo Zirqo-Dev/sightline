@@ -1,11 +1,11 @@
 {
- "at": "2026-11-16T13:13:06Z",
+ "at": "2026-11-16T16:06:28Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14208336,
+ "height": 14208689,
  "baseline_at": "2026-11-14T17:13:24Z",
- "ada_balance": 4197.858887,
+ "ada_balance": 2181.214514,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 312000016744,
@@ -73,7 +73,7 @@
   "MISS": 8375000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1381838029092,
+  "NIGHT": 1388711587314,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -185,7 +185,7 @@
   "MISS": 8375000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1381838029092,
+  "NIGHT": 1388711587314,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -564,7 +564,7 @@
   {
    "token": "NIGHT",
    "policy": "0691b2fe",
-   "qty": 1381838029092
+   "qty": 1388711587314
   },
   {
    "token": "NIKY",
@@ -2015,6 +2015,19 @@
    "closed_at": "2026-11-16T12:20:28Z",
    "filled_token": "NIGHT",
    "filled_qty": 480003372
+  },
+  "bf3a9fa6b8#0": {
+   "ref_short": "bf3a9fa6b8#0",
+   "token": "ADA",
+   "qty_raw": 253900000,
+   "ada": 253.9,
+   "status": "filled",
+   "opened_tx": "bf3a9fa6b8",
+   "opened_at": "2026-11-16T14:30:19Z",
+   "closed_tx": "957fec5036",
+   "closed_at": "2026-11-16T14:31:29Z",
+   "filled_token": "NIGHT",
+   "filled_qty": 854047623
   }
  },
  "rows": [
@@ -4977,6 +4990,99 @@
    "ada_leg": 501.853948,
    "counterparty_tag": null,
    "direction": "buy"
+  },
+  {
+   "time": "2026-11-16T13:52:45Z",
+   "tx_short": "02cf2c6057",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 864722656,
+   "ada_leg": 251.905482,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-16T13:58:00Z",
+   "tx_short": "b4d564cc16",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 864278926,
+   "ada_leg": 251.905482,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-16T14:00:44Z",
+   "tx_short": "8a1261fbd5",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 863857787,
+   "ada_leg": 251.905482,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-16T14:05:26Z",
+   "tx_short": "da8dd2f870",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 863437033,
+   "ada_leg": 251.905482,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-16T14:07:16Z",
+   "tx_short": "b250ad2dd1",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 863018844,
+   "ada_leg": 252.377358,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-16T14:12:10Z",
+   "tx_short": "f0a2f8bc4e",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 854928966,
+   "ada_leg": 252.052631,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-16T14:30:19Z",
+   "tx_short": "bf3a9fa6b8",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 253900000,
+   "ada_leg": 253.9,
+   "counterparty_tag": null,
+   "order_ref_short": "bf3a9fa6b8#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-16T14:31:29Z",
+   "tx_short": "957fec5036",
+   "kind": "order_fill",
+   "token": "NIGHT",
+   "qty": 854047623,
+   "ada_leg": 253.9,
+   "counterparty_tag": null,
+   "order_ref_short": "bf3a9fa6b8#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-16T14:43:25Z",
+   "tx_short": "0d7f415dc8",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 845266387,
+   "ada_leg": 251.658783,
+   "counterparty_tag": null,
+   "direction": "buy"
   }
  ],
  "capped": false,
@@ -4987,7 +5093,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 7,
+ "koios_calls": 6,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
