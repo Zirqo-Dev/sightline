@@ -1,18 +1,18 @@
 {
  "day": "2026-11-16",
  "loop_ran": true,
- "runs": 27,
+ "runs": 28,
  "expected_runs": 48,
- "checks": 324,
- "error_rate": 0.0031,
- "data_failure_rate": 0.0031,
+ "checks": 336,
+ "error_rate": 0.006,
+ "data_failure_rate": 0.006,
  "void_day": false,
  "ai": false,
- "eligibility_skips": 28,
+ "eligibility_skips": 29,
  "mode": "fill",
  "cfg_version": "v1-v6.5",
  "frozen": true,
- "last_run_utc": "20261116T1300",
+ "last_run_utc": "20261116T1330",
  "leads_this_run": 12,
  "runner": "github-actions",
  "notes": [],
@@ -43,7 +43,8 @@
   "2026-11-16T11:30:40Z",
   "2026-11-16T12:00:42Z",
   "2026-11-16T12:30:30Z",
-  "2026-11-16T13:00:35Z"
+  "2026-11-16T13:00:35Z",
+  "2026-11-16T13:30:42Z"
  ],
  "max_gap_min": 45.6,
  "trigger": "workflow_dispatch",
@@ -68,12 +69,12 @@
   "sync": "ok"
  },
  "data_fail_by_source": {
-  "rugcheck": 1,
-  "jupiter": 1,
+  "rugcheck": 2,
+  "jupiter": 2,
   "dexscreener": 0
  },
  "data_fail_by_reason": {
-  "jupiter:400": 1,
-  "rugcheck:400": 1
+  "jupiter:400": 2,
+  "rugcheck:400": 2
  }
 }
