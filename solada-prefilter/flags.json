@@ -1,76 +1,50 @@
 {
- "at": "2026-11-16T03:11:05Z",
+ "at": "2026-11-16T05:11:12Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "whale_move",
-   "ticker": "NIGHT",
-   "tag": "w-f3186187",
-   "delta": 5956395488,
-   "decimals": 6,
-   "qty": 5956.3955,
-   "ada_equiv": 4394,
-   "value_basis": "ada_leg_rate",
-   "pct": 0.4,
-   "at": "2026-11-16T03:11:05Z"
-  }
- ],
- "recent": [
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-94d26135",
-   "launches": [
-    "HEREWEGO",
-    "JEANPHIL",
-    "MACCA",
-    "MONKE",
-    "MUBBO",
-    "NIHAO",
-    "STEVE",
-    "TRASH",
-    "WEALTH",
-    "YY"
+   "kind": "coordinated_buys",
+   "ticker": "MHOSKY",
+   "wallets": [
+    "w-03f22a75",
+    "w-97373b3f",
+    "w-a63fd8a9",
+    "w-dc1a62e4",
+    "w-fb139001"
    ],
-   "at": "2026-11-11T01:12:37Z"
+   "window_s": 120,
+   "at": "2026-11-16T05:11:12Z"
   },
   {
    "kind": "repeat_early_buyer",
-   "wallet": "w-d8f6462b",
+   "wallet": "w-03f22a75",
    "launches": [
-    "ACT",
-    "CHIPS",
-    "DACITYCO",
-    "MUBBO",
-    "YY"
+    "3NATIVE",
+    "KURO",
+    "MHOSKY",
+    "TEMP"
    ],
-   "at": "2026-11-11T01:12:37Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-f7844f67",
-   "launches": [
-    "EXPLODE",
-    "HEREWEGO",
-    "JEANPHIL",
-    "MUBBO",
-    "NIHAO",
-    "ORBIT",
-    "RHASH",
-    "SOLTRACK",
-    "STEVE",
-    "WEALTH"
-   ],
-   "at": "2026-11-11T01:12:37Z"
+   "at": "2026-11-16T05:11:12Z"
   },
   {
    "kind": "sniper_full_exit",
-   "ticker": "CHUB",
-   "wallet": "w-cd4dc552",
+   "ticker": "FLY",
+   "wallet": "w-9e14bd16",
    "tags": [],
-   "at": "2026-11-11T01:12:37Z"
+   "at": "2026-11-16T05:11:12Z"
   },
+  {
+   "kind": "whale_move",
+   "ticker": "NIGHTSNEK",
+   "tag": "w-f3186187",
+   "delta": 69,
+   "new_position": true,
+   "at": "2026-11-16T05:11:12Z"
+  }
+ ],
+ "recent": [
   {
    "kind": "sniper_full_exit",
    "ticker": "JEANPHIL",
@@ -3114,10 +3088,50 @@
    "value_basis": "ada_leg_rate",
    "pct": 0.4,
    "at": "2026-11-16T03:11:05Z"
+  },
+  {
+   "kind": "coordinated_buys",
+   "ticker": "MHOSKY",
+   "wallets": [
+    "w-03f22a75",
+    "w-97373b3f",
+    "w-a63fd8a9",
+    "w-dc1a62e4",
+    "w-fb139001"
+   ],
+   "window_s": 120,
+   "at": "2026-11-16T05:11:12Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-03f22a75",
+   "launches": [
+    "3NATIVE",
+    "KURO",
+    "MHOSKY",
+    "TEMP"
+   ],
+   "at": "2026-11-16T05:11:12Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "FLY",
+   "wallet": "w-9e14bd16",
+   "tags": [],
+   "at": "2026-11-16T05:11:12Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "NIGHTSNEK",
+   "tag": "w-f3186187",
+   "delta": 69,
+   "new_position": true,
+   "at": "2026-11-16T05:11:12Z"
   }
  ],
  "api_calls": {
-  "koios": 1
+  "blockfrost": 1,
+  "koios": 6
  },
  "thresholds": {
   "enabled": true,

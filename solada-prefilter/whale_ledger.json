@@ -1,11 +1,11 @@
 {
- "at": "2026-11-16T03:12:47Z",
+ "at": "2026-11-16T05:13:05Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14206393,
+ "height": 14206823,
  "baseline_at": "2026-11-14T17:13:24Z",
- "ada_balance": 786.499861,
+ "ada_balance": 787.663561,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 312000016744,
@@ -77,6 +77,7 @@
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
+  "NightSnek": 69,
   "PAMP": 15227761,
   "PAWS-2": 20000000795084,
   "PBANK": 1,
@@ -188,6 +189,7 @@
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
+  "NightSnek": 69,
   "PAMP": 15227761,
   "PAWS-2": 20000000795084,
   "PBANK": 1,
@@ -578,6 +580,11 @@
    "token": "NightBringer",
    "policy": "05608299",
    "qty": 11158478
+  },
+  {
+   "token": "NightSnek",
+   "policy": "86072b6d",
+   "qty": 69
   },
   {
    "token": "PAMP",
@@ -4740,6 +4747,15 @@
    "ada_leg": 202.31981,
    "counterparty_tag": null,
    "direction": "buy"
+  },
+  {
+   "time": "2026-11-16T04:28:44Z",
+   "tx_short": "be4344b303",
+   "kind": "transfer_in",
+   "token": "NightSnek",
+   "qty": 69,
+   "ada_leg": null,
+   "counterparty_tag": "w-5f11ce45"
   }
  ],
  "capped": false,
