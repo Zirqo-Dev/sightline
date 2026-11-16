@@ -6,10 +6,10 @@
   "experimental": true,
   "disclaimer": "Experimental research. Flags are uncalibrated hypotheses, not trading signals. No trading, no signing, no keys.",
   "mint": "Ceuu7uQHwhtHuMhPWrWL9dgri3FaGJZFkTy6FoDow7NA",
-  "symbol": null,
-  "symbol_source": null,
-  "run_at": "2026-11-15T15:45:59Z",
-  "run_at_unix": 1794757559,
+  "symbol": "QBITS",
+  "symbol_source": "dexscreener",
+  "run_at": "2026-11-16T18:44:44Z",
+  "run_at_unix": 1794854684,
   "creation_slot": 458581711,
   "creation_time": 1792358369,
   "creation_time_iso": "2026-10-18T21:19:29Z",
@@ -951,6 +951,47 @@
           }
         ]
       }
+    },
+    {
+      "token_account": "w-f891f1ca",
+      "owner": "w-9245ce13",
+      "amount_raw": "3947123043",
+      "pct_supply": 0.0004,
+      "label": null,
+      "source": "holder",
+      "funding": {
+        "status": "old_wallet",
+        "hops": [
+          {
+            "hop": 1,
+            "wallet": "w-9245ce13",
+            "status": "old_wallet",
+            "funder": "w-f04e7303",
+            "asset": "SOL",
+            "amount_raw": "5000000",
+            "kind": "system.transfer",
+            "funded_at": 1689126214,
+            "signature": "taM4AfzKNQE1ayG2y8En6x9EhwMcemHy9Vk4dLFUq8L3DT7higz3gp48gkaXFKsB17LhGKbo4MrmBTG3kXkqzQU",
+            "label": null,
+            "reached_oldest": true,
+            "wallet_age_seconds": 103232155
+          },
+          {
+            "hop": 2,
+            "wallet": "w-f04e7303",
+            "status": "unresolved_busy",
+            "funder": null,
+            "asset": null,
+            "amount_raw": null,
+            "kind": null,
+            "funded_at": null,
+            "signature": null,
+            "label": null,
+            "reached_oldest": false,
+            "wallet_age_seconds": null
+          }
+        ]
+      }
     }
   ],
   "clusters": [
@@ -1081,15 +1122,15 @@
     "history_too_deep": false,
     "calls_used": {
       "getTokenSupply": 1,
-      "getSignaturesForAddress": 72,
-      "getTransaction": 37,
-      "getTokenAccountsByOwner": 23,
+      "getSignaturesForAddress": 74,
+      "getTransaction": 38,
+      "getTokenAccountsByOwner": 24,
       "getTokenLargestAccounts": 1,
-      "getAccountInfo": 20
+      "getAccountInfo": 22
     },
-    "calls_total": 154,
+    "calls_total": 160,
     "budget": 5000,
-    "wallets_skipped_old": 4,
+    "wallets_skipped_old": 5,
     "wallets_unresolved_busy": 8,
     "cache_hits": 19,
     "version_unsupported": 0,
