@@ -1,81 +1,9 @@
 {
- "at": "2026-11-17T11:11:24Z",
+ "at": "2026-11-17T13:11:26Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
- "new": [
-  {
-   "kind": "coordinated_buys",
-   "ticker": "MIDHOSKY",
-   "wallets": [
-    "w-271c9cde",
-    "w-391e7b1c",
-    "w-697ccf62",
-    "w-79620ea4",
-    "w-8ae9d37b",
-    "w-ad416f77",
-    "w-d7aba018"
-   ],
-   "window_s": 120,
-   "at": "2026-11-17T11:11:24Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-391e7b1c",
-   "launches": [
-    "10",
-    "3NATIVE",
-    "KURO",
-    "MIDHOSKY"
-   ],
-   "at": "2026-11-17T11:11:24Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-697ccf62",
-   "launches": [
-    "3NATIVE",
-    "MIDHOSKY",
-    "SCRAW"
-   ],
-   "at": "2026-11-17T11:11:24Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-79620ea4",
-   "launches": [
-    "BLACKOUT",
-    "BULL",
-    "DARK",
-    "FERRET",
-    "FLY",
-    "GTADA",
-    "HOSKIM",
-    "KURO",
-    "MIDHOSKY",
-    "TEMP"
-   ],
-   "at": "2026-11-17T11:11:24Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-8ae9d37b",
-   "launches": [
-    "3NATIVE",
-    "KURO",
-    "MIDHOSKY",
-    "TEMP"
-   ],
-   "at": "2026-11-17T11:11:24Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "MIDHOSKY",
-   "wallet": "w-8ae9d37b",
-   "tags": [],
-   "at": "2026-11-17T11:11:24Z"
-  }
- ],
+ "new": [],
  "recent": [
   {
    "kind": "repeat_early_buyer",
@@ -3120,8 +3048,7 @@
   }
  ],
  "api_calls": {
-  "blockfrost": 1,
-  "koios": 6
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,

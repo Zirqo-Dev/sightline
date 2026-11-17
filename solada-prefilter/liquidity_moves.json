@@ -1,5 +1,5 @@
 {
- "at": "2026-11-17T11:16:05Z",
+ "at": "2026-11-17T13:18:33Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -146,10 +146,9 @@
    "policy_short": "e7c77b27",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~d494ef2a",
-   "reserve_ada": 9293.37,
-   "reserve_qty": 5252255,
-   "asof": "2026-11-14T20:50:35Z",
-   "stale": true
+   "reserve_ada": 9940.86,
+   "reserve_qty": 4939846,
+   "asof": "2026-11-17T13:18:30Z"
   },
   {
    "ticker": "STRIKE",
@@ -201,7 +200,7 @@
    "policy_short": "29d222ce",
    "rank": 4,
    "unit_source": "cache",
-   "last_checked": "2026-11-16T21:15:46Z"
+   "last_checked": "2026-11-17T13:18:33Z"
   },
   {
    "ticker": "SNEK",
@@ -229,7 +228,7 @@
    "policy_short": "e7c77b27",
    "rank": 9,
    "unit_source": "listed",
-   "last_checked": "2026-11-16T19:14:46Z"
+   "last_checked": "2026-11-17T13:18:33Z"
   },
   {
    "ticker": "CLOVE",
@@ -246,20 +245,15 @@
   }
  ],
  "coverage": {
-  "STRIKE": {
-   "read": 0,
-   "complete": false,
-   "pools": 0
-  },
   "SOLADA": {
-   "read": 0,
+   "read": 27,
    "complete": false,
-   "skipped": "budget"
+   "pools": 1
   },
   "MIN": {
    "read": 0,
    "complete": false,
-   "skipped": "budget"
+   "pools": 0
   },
   "CLOVE": {
    "read": 0,
@@ -290,10 +284,14 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "STRIKE": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "STRIKE",
   "SOLADA",
   "MIN",
   "CLOVE",
@@ -301,9 +299,10 @@
   "IAG",
   "COCK",
   "ASCEND",
-  "NIGHT"
+  "NIGHT",
+  "STRIKE"
  ],
- "koios_calls": 4,
+ "koios_calls": 8,
  "blockfrost_calls": 0,
  "blockfrost_fallbacks": 0,
  "blockfrost_available": true,
