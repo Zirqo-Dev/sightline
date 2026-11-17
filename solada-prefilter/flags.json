@@ -1,17 +1,20 @@
 {
- "at": "2026-11-17T05:10:58Z",
+ "at": "2026-11-17T07:10:56Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
- "new": [],
- "recent": [
+ "new": [
   {
-   "kind": "sniper_full_exit",
-   "ticker": "OWLS",
-   "wallet": "w-79620ea4",
-   "tags": [],
-   "at": "2026-11-11T19:11:26Z"
-  },
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 85.6,
+   "top_cluster_pct": 85.6,
+   "top_cluster": "w-13d53c47",
+   "basis": "ex-fe819d",
+   "at": "2026-11-17T07:10:56Z"
+  }
+ ],
+ "recent": [
   {
    "kind": "sniper_full_exit",
    "ticker": "OWLS",
@@ -3037,6 +3040,15 @@
    "ada_equiv": 1,
    "value_basis": "decimals_x_price",
    "at": "2026-11-17T03:11:45Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 85.6,
+   "top_cluster_pct": 85.6,
+   "top_cluster": "w-13d53c47",
+   "basis": "ex-fe819d",
+   "at": "2026-11-17T07:10:56Z"
   }
  ],
  "api_calls": {
