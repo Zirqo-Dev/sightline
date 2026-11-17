@@ -3,7 +3,7 @@
   "as_of": {
     "reason": null,
     "source": "solana-desk/positions.json last_run_ts",
-    "value": "2026-11-16T07:00:35Z"
+    "value": "2026-11-17T08:00:35Z"
   },
   "books": {
     "F": {
@@ -396,7 +396,7 @@
       "days": {
         "reason": null,
         "source": "report date to the UTC date of CUTOFF_DEFAULT",
-        "value": -5
+        "value": -6
       },
       "label": "day-14 verdict"
     },
@@ -414,12 +414,12 @@
       "days": {
         "reason": null,
         "source": "report date to the UTC date of DAY28_AT",
-        "value": 9
+        "value": 8
       },
       "label": "day-28 checkpoint"
     }
   },
-  "date": "2026-11-16",
+  "date": "2026-11-17",
   "date_reason": null,
   "exit_program": {
     "exits_source": "solana-desk/desk/exits.py",
@@ -483,7 +483,7 @@
       }
     ],
     "solada_prefilter": {
-      "at": "2026-11-16T05:15:24Z",
+      "at": "2026-11-17T07:15:17Z",
       "data_failures": {
         "match": 5,
         "webhook": 1
@@ -494,23 +494,23 @@
       "absent": [],
       "fields": {
         "ai": false,
-        "checks": 180,
+        "checks": 204,
         "data_fail_by_source": {
           "dexscreener": 0,
-          "jupiter": 0,
+          "jupiter": 8,
           "rugcheck": 0
         },
-        "data_failure_rate": 0.0,
-        "day": "2026-11-16",
-        "eligibility_skips": 23,
-        "error_rate": 0.0,
+        "data_failure_rate": 0.0147,
+        "day": "2026-11-17",
+        "eligibility_skips": 22,
+        "error_rate": 0.0392,
         "expected_runs": 48,
-        "last_run_utc": "20261116T0700",
+        "last_run_utc": "20261117T0800",
         "leads_this_run": 12,
         "loop_ran": true,
         "max_gap_min": 30.1,
         "mode": "fill",
-        "runs": 15,
+        "runs": 17,
         "void_day": false
       },
       "source": "solana-desk/health.json"
@@ -527,10 +527,10 @@
     }
   },
   "freshness": {
-    "desk_as_of": "2026-11-16T07:00:35Z",
+    "desk_as_of": "2026-11-17T08:00:35Z",
     "desk_as_of_source": "solana-desk/positions.json last_run_ts",
-    "expected_evening": "2026-11-16T00:00:00Z",
-    "expected_evening_local": "2026-11-15T19:00:00-05:00",
+    "expected_evening": "2026-11-17T00:00:00Z",
+    "expected_evening_local": "2026-11-16T19:00:00-05:00",
     "reason": null,
     "rule": "stale when the newest Solana desk timestamp is older than 19:00 America/Toronto on the Toronto date of 00:40 UTC on the report date",
     "source": "scripts/status/daily_status.py expected evening; Solana desk files for the timestamp",
@@ -937,7 +937,7 @@
     {
       "path": "solada-prefilter/last-run.json",
       "root": "data",
-      "sha256": "644737cbcf1155a9be64f2b7e8dc83f2328bd0f803040198e46f2c8dbaa5aa37",
+      "sha256": "9504d84913e2ca6e712315ba096221eaa44c704e705dba7343ba65ca6bb457a9",
       "used": true
     },
     {
@@ -973,19 +973,19 @@
     {
       "path": "solana-desk/health.json",
       "root": "data",
-      "sha256": "fd3de2db05aace82aef5938dfe31caa5fef15bde84d247fbd45e9cb87f5bec25",
+      "sha256": "a92aa830f23fcc869427538c8f6942ec82578d34e145e75305b5fb481e25d7b0",
       "used": true
     },
     {
       "path": "solana-desk/paper.json",
       "root": "data",
-      "sha256": "837550ab20432e0446ab5cebeeea6105d1bc987489b7b6bb17f25975cac04562",
+      "sha256": "fd4cd6db1a4322a1dd913941ee08d1ddc32f8e1c0f554710d48a1fca08d0524f",
       "used": true
     },
     {
       "path": "solana-desk/positions.json",
       "root": "data",
-      "sha256": "01d46af57f684b5ce18996618f626bbb892418209becc2929e497e9b98f9a518",
+      "sha256": "b69292b7cca9ae41df50a757781ed92fb57777ba30e86dfe4c4e59bf8b5effdf",
       "used": true
     },
     {
