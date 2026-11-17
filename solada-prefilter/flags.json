@@ -1,75 +1,82 @@
 {
- "at": "2026-11-17T09:11:12Z",
+ "at": "2026-11-17T11:11:24Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
- "new": [],
- "recent": [
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "OWLS",
-   "wallet": "w-bcbc6b9e",
-   "tags": [],
-   "at": "2026-11-11T19:11:26Z"
-  },
-  {
-   "kind": "ada_side_drop",
-   "ticker": "OWLS",
-   "from": 410,
-   "to": 72,
-   "at": "2026-11-11T19:11:26Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "NIGHT",
-   "tag": "w-f3186187",
-   "delta": 42644560211,
-   "decimals": 6,
-   "qty": 42644.5602,
-   "ada_equiv": 11457,
-   "value_basis": "ada_leg_rate",
-   "pct": 3.5,
-   "at": "2026-11-11T19:11:26Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "ASCEND",
-   "tag": "w-f3186187",
-   "delta": -3144000000,
-   "decimals": 6,
-   "qty": -3144.0,
-   "ada_equiv": 3935,
-   "value_basis": "decimals_x_price",
-   "pct": 1.0,
-   "at": "2026-11-11T19:11:26Z"
-  },
+ "new": [
   {
    "kind": "coordinated_buys",
-   "ticker": "QUACKY",
+   "ticker": "MIDHOSKY",
    "wallets": [
-    "w-0f2bbf54",
-    "w-516c412c",
-    "w-5f2b303f",
-    "w-6c525b07",
-    "w-9c0b34a9",
-    "w-ca90fb14",
-    "w-d8f6462b"
+    "w-271c9cde",
+    "w-391e7b1c",
+    "w-697ccf62",
+    "w-79620ea4",
+    "w-8ae9d37b",
+    "w-ad416f77",
+    "w-d7aba018"
    ],
    "window_s": 120,
-   "at": "2026-11-11T21:10:28Z"
+   "at": "2026-11-17T11:11:24Z"
   },
   {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "QUACKY",
-   "wallets": [
-    "w-516c412c",
-    "w-5f2b303f",
-    "w-6c525b07",
-    "w-d8f6462b"
+   "kind": "repeat_early_buyer",
+   "wallet": "w-391e7b1c",
+   "launches": [
+    "10",
+    "3NATIVE",
+    "KURO",
+    "MIDHOSKY"
    ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-11T21:10:28Z"
+   "at": "2026-11-17T11:11:24Z"
   },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-697ccf62",
+   "launches": [
+    "3NATIVE",
+    "MIDHOSKY",
+    "SCRAW"
+   ],
+   "at": "2026-11-17T11:11:24Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-79620ea4",
+   "launches": [
+    "BLACKOUT",
+    "BULL",
+    "DARK",
+    "FERRET",
+    "FLY",
+    "GTADA",
+    "HOSKIM",
+    "KURO",
+    "MIDHOSKY",
+    "TEMP"
+   ],
+   "at": "2026-11-17T11:11:24Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-8ae9d37b",
+   "launches": [
+    "3NATIVE",
+    "KURO",
+    "MIDHOSKY",
+    "TEMP"
+   ],
+   "at": "2026-11-17T11:11:24Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "MIDHOSKY",
+   "wallet": "w-8ae9d37b",
+   "tags": [],
+   "at": "2026-11-17T11:11:24Z"
+  }
+ ],
+ "recent": [
   {
    "kind": "repeat_early_buyer",
    "wallet": "w-9c0b34a9",
@@ -3039,10 +3046,82 @@
    "top_cluster": "w-13d53c47",
    "basis": "ex-fe819d",
    "at": "2026-11-17T07:10:56Z"
+  },
+  {
+   "kind": "coordinated_buys",
+   "ticker": "MIDHOSKY",
+   "wallets": [
+    "w-271c9cde",
+    "w-391e7b1c",
+    "w-697ccf62",
+    "w-79620ea4",
+    "w-8ae9d37b",
+    "w-ad416f77",
+    "w-d7aba018"
+   ],
+   "window_s": 120,
+   "at": "2026-11-17T11:11:24Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-391e7b1c",
+   "launches": [
+    "10",
+    "3NATIVE",
+    "KURO",
+    "MIDHOSKY"
+   ],
+   "at": "2026-11-17T11:11:24Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-697ccf62",
+   "launches": [
+    "3NATIVE",
+    "MIDHOSKY",
+    "SCRAW"
+   ],
+   "at": "2026-11-17T11:11:24Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-79620ea4",
+   "launches": [
+    "BLACKOUT",
+    "BULL",
+    "DARK",
+    "FERRET",
+    "FLY",
+    "GTADA",
+    "HOSKIM",
+    "KURO",
+    "MIDHOSKY",
+    "TEMP"
+   ],
+   "at": "2026-11-17T11:11:24Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-8ae9d37b",
+   "launches": [
+    "3NATIVE",
+    "KURO",
+    "MIDHOSKY",
+    "TEMP"
+   ],
+   "at": "2026-11-17T11:11:24Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "MIDHOSKY",
+   "wallet": "w-8ae9d37b",
+   "tags": [],
+   "at": "2026-11-17T11:11:24Z"
   }
  ],
  "api_calls": {
-  "koios": 1
+  "blockfrost": 1,
+  "koios": 6
  },
  "thresholds": {
   "enabled": true,
