@@ -1,5 +1,5 @@
 {
- "at": "2026-11-18T03:16:10Z",
+ "at": "2026-11-18T05:15:44Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -69,10 +69,9 @@
    "policy_short": "c1b89ed4",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~511d5cf7",
-   "reserve_ada": 14005.72,
-   "reserve_qty": 169288454790080,
-   "asof": "2026-11-17T05:39:49Z",
-   "stale": true
+   "reserve_ada": 13277.92,
+   "reserve_qty": 178757021654645,
+   "asof": "2026-11-17T22:43:53Z"
   },
   {
    "ticker": "COCK",
@@ -146,10 +145,9 @@
    "policy_short": "e7c77b27",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~d494ef2a",
-   "reserve_ada": 9940.86,
-   "reserve_qty": 4939846,
-   "asof": "2026-11-17T13:18:30Z",
-   "stale": true
+   "reserve_ada": 10229.83,
+   "reserve_qty": 4794107,
+   "asof": "2026-11-15T20:58:33Z"
   },
   {
    "ticker": "STRIKE",
@@ -229,14 +227,14 @@
    "policy_short": "e7c77b27",
    "rank": 9,
    "unit_source": "listed",
-   "last_checked": "2026-11-17T13:18:33Z"
+   "last_checked": "2026-11-18T05:15:44Z"
   },
   {
    "ticker": "CLOVE",
    "policy_short": "c1b89ed4",
    "rank": 10,
    "unit_source": "listed",
-   "last_checked": "2026-11-17T15:17:04Z"
+   "last_checked": "2026-11-18T05:15:44Z"
   }
  ],
  "skipped": [
@@ -246,25 +244,20 @@
   }
  ],
  "coverage": {
-  "MIN": {
-   "read": 0,
-   "complete": false,
-   "pools": 0
-  },
   "SOLADA": {
-   "read": 0,
+   "read": 15,
    "complete": false,
-   "skipped": "budget"
+   "pools": 1
   },
   "CLOVE": {
-   "read": 0,
+   "read": 15,
    "complete": false,
-   "skipped": "budget"
+   "pools": 1
   },
   "SNEK": {
    "read": 0,
    "complete": false,
-   "skipped": "budget"
+   "pools": 0
   },
   "IAG": {
    "read": 0,
@@ -290,10 +283,14 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "MIN": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "MIN",
   "SOLADA",
   "CLOVE",
   "SNEK",
@@ -301,9 +298,10 @@
   "ASCEND",
   "NIGHT",
   "COCK",
-  "STRIKE"
+  "STRIKE",
+  "MIN"
  ],
- "koios_calls": 4,
+ "koios_calls": 9,
  "blockfrost_calls": 0,
  "blockfrost_fallbacks": 0,
  "blockfrost_available": true,
