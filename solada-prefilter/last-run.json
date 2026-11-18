@@ -1,5 +1,5 @@
 {
- "at": "2026-11-17T23:16:36Z",
+ "at": "2026-11-18T01:15:49Z",
  "basis": "blockfrost",
  "dry_run": false,
  "baseline": false,
@@ -16,7 +16,7 @@
   "min_ada_side": 25000.0
  },
  "market_age_min": 0.0,
- "ada_usd": 0.15492,
+ "ada_usd": 0.153709,
  "whale": {
   "tag": "w-f3186187",
   "lp_moves": [
@@ -24,30 +24,11 @@
     "asset": "LP",
     "lp": true,
     "dex": "minswap_v2",
-    "delta": 2198402
+    "delta": 1518998
    }
   ],
-  "ada_delta": 1616,
-  "moves": [
-   {
-    "asset": "SNEKGIRL",
-    "delta": 1034273438,
-    "new_position": true,
-    "decimals": 0,
-    "qty": 1034273438.0,
-    "ada_equiv": 354,
-    "value_basis": "ada_leg"
-   },
-   {
-    "asset": "ASCEND",
-    "delta": -2500000000,
-    "decimals": 6,
-    "qty": -2500.0,
-    "ada_equiv": 3171,
-    "value_basis": "ada_leg",
-    "pct": 0.8
-   }
-  ]
+  "ada_delta": -307,
+  "moves": []
  },
  "first_block_hits": [],
  "triggers": [
@@ -1689,21 +1670,48 @@
    "name": "Grumpy Walrus"
   },
   {
+   "kind": "whale_move",
+   "metrics": {
+    "moves": [
+     {
+      "ada_equiv": 354,
+      "asset": "SNEKGIRL",
+      "decimals": 0,
+      "delta": 1034273438,
+      "new_position": true,
+      "qty": 1034273438.0,
+      "value_basis": "ada_leg"
+     },
+     {
+      "ada_equiv": 3171,
+      "asset": "ASCEND",
+      "decimals": 6,
+      "delta": -2500000000,
+      "pct": 0.8,
+      "qty": -2500.0,
+      "value_basis": "ada_leg"
+     }
+    ],
+    "tag": "w-f3186187"
+   },
+   "name": "Grumpy Walrus"
+  },
+  {
    "kind": "kill_line",
    "name": "BOLT",
    "metrics": {
-    "ada_side": 17909,
-    "mcap_ada": 111009,
-    "holders": 231,
-    "vol_h24_ada": 3191,
-    "price_ada": 0.0001110094597,
+    "ada_side": 17004,
+    "mcap_ada": 100802,
+    "holders": 230,
+    "vol_h24_ada": 4373,
+    "price_ada": 0.0001008015492,
     "decimals": 6,
     "pool_basis": "geckoterminal",
     "ada_basis": "geckoterminal",
     "mcap_basis": "geckoterminal",
     "crossed": [
-     "holders 231 < 265",
-     "mcap 111009 < 400000"
+     "holders 230 < 265",
+     "mcap 100802 < 400000"
     ],
     "why": [
      "mcap 25%+ deeper"
@@ -1714,17 +1722,17 @@
    "kind": "kill_line",
    "name": "CLOVE",
    "metrics": {
-    "ada_side": 13840,
-    "mcap_ada": 80396,
-    "holders": 281,
-    "vol_h24_ada": 2325,
-    "price_ada": 8.039580313e-05,
+    "ada_side": 13138,
+    "mcap_ada": 73129,
+    "holders": 280,
+    "vol_h24_ada": 3076,
+    "price_ada": 7.312908889e-05,
     "decimals": 6,
     "pool_basis": "geckoterminal",
     "ada_basis": "geckoterminal",
     "mcap_basis": "geckoterminal",
     "crossed": [
-     "mcap 80396 < 160000"
+     "mcap 73129 < 160000"
     ],
     "why": [
      "mcap 25%+ deeper"
@@ -1756,7 +1764,7 @@
    "kind": "kill_line",
    "name": "JUICE",
    "metrics": {
-    "ada_side": 2628,
+    "ada_side": 2624,
     "mcap_ada": 3091,
     "holders": 24,
     "vol_h24_ada": 49,
@@ -1766,44 +1774,17 @@
     "ada_basis": "geckoterminal",
     "mcap_basis": "geckoterminal",
     "crossed": [
-     "ada_side 2628 < 4000",
+     "ada_side 2624 < 4000",
      "holders 24 < 40"
     ],
     "why": [
      "holders 25%+ deeper"
     ]
    }
-  },
-  {
-   "kind": "whale_move",
-   "name": "Grumpy Walrus",
-   "metrics": {
-    "tag": "w-f3186187",
-    "moves": [
-     {
-      "asset": "SNEKGIRL",
-      "delta": 1034273438,
-      "new_position": true,
-      "decimals": 0,
-      "qty": 1034273438.0,
-      "ada_equiv": 354,
-      "value_basis": "ada_leg"
-     },
-     {
-      "asset": "ASCEND",
-      "delta": -2500000000,
-      "decimals": 6,
-      "qty": -2500.0,
-      "ada_equiv": 3171,
-      "value_basis": "ada_leg",
-      "pct": 0.8
-     }
-    ]
-   }
   }
  ],
  "webhook_sent": false,
- "flags_new": 3,
+ "flags_new": 0,
  "dev_checks": {
   "entries": 16,
   "triggers": 0,
@@ -1818,39 +1799,39 @@
  },
  "big_moves": {
   "units_scanned": 12,
-  "txs_read": 128,
+  "txs_read": 108,
   "capped": [],
-  "koios_calls": 32,
-  "moves_new": 4
+  "koios_calls": 29,
+  "moves_new": 11
  },
  "whale_ledger": {
   "capped": false,
-  "koios_calls": 8,
+  "koios_calls": 7,
   "blockfrost_fallbacks": 0,
   "blockfrost_calls": 0,
-  "ada_balance": 1697.15015,
+  "ada_balance": 1390.546331,
   "basis": "koios",
-  "rows": 772,
+  "rows": 779,
   "open_orders": 0,
   "reconcile_ok": true,
   "stale": false
  },
  "liquidity_moves": {
   "tokens": 9,
-  "moves": 3,
-  "moves_new": 6,
+  "moves": 1,
+  "moves_new": 0,
   "capped": [
-   "COCK",
-   "ASCEND",
-   "NIGHT",
    "STRIKE",
    "MIN",
    "SOLADA",
    "CLOVE",
    "SNEK",
-   "IAG"
+   "IAG",
+   "ASCEND",
+   "NIGHT",
+   "COCK"
   ],
-  "koios_calls": 11,
+  "koios_calls": 4,
   "blockfrost_calls": 0,
   "blockfrost_fallbacks": 0,
   "basis": "koios",
@@ -1887,14 +1868,15 @@
  },
  "data_failures": {
   "match": 5,
-  "webhook": 1
+  "webhook": 1,
+  "koios": 1
  },
  "api_calls": {
   "solada": 2,
   "geckoterminal": 31,
-  "blockfrost": 40,
+  "blockfrost": 39,
   "dexscreener": 4,
-  "koios": 101,
+  "koios": 82,
   "tokenregistry": 2,
   "webhook": 1
  },
@@ -1903,7 +1885,7 @@
    "ticker": "BEAST",
    "tracked": true,
    "unit": "506e67a61005e19b4bee1b9f5ec33bbb0a8fba14e30edad856c67a500014df104245415354",
-   "ada_side": 8536,
+   "ada_side": 8520,
    "mcap_ada": 32901,
    "holders": 61,
    "vol_h24_ada": 1598,
@@ -1942,18 +1924,18 @@
    "ticker": "BOLT",
    "tracked": true,
    "unit": "14628c260a749e78e69e58acca32d0baa09808d50388c84fa7e1ae470014df10424f4c54",
-   "ada_side": 17909,
-   "mcap_ada": 111009,
-   "holders": 231,
-   "vol_h24_ada": 3191,
-   "price_ada": 0.0001110094597,
+   "ada_side": 17004,
+   "mcap_ada": 100802,
+   "holders": 230,
+   "vol_h24_ada": 4373,
+   "price_ada": 0.0001008015492,
    "decimals": 6,
    "pool_basis": "geckoterminal",
    "ada_basis": "geckoterminal",
    "mcap_basis": "geckoterminal",
    "crossed": [
-    "holders 231 < 265",
-    "mcap 111009 < 400000"
+    "holders 230 < 265",
+    "mcap 100802 < 400000"
    ],
    "kill": {
     "holders_below": 265.0,
@@ -1964,17 +1946,17 @@
    "ticker": "CLOVE",
    "tracked": true,
    "unit": "c1b89ed48dfc2b82167c1548b88942d367af1e517947c3dd8bdead0b0014df10434c4f56452d33",
-   "ada_side": 13840,
-   "mcap_ada": 80396,
-   "holders": 281,
-   "vol_h24_ada": 2325,
-   "price_ada": 8.039580313e-05,
+   "ada_side": 13138,
+   "mcap_ada": 73129,
+   "holders": 280,
+   "vol_h24_ada": 3076,
+   "price_ada": 7.312908889e-05,
    "decimals": 6,
    "pool_basis": "geckoterminal",
    "ada_basis": "geckoterminal",
    "mcap_basis": "geckoterminal",
    "crossed": [
-    "mcap 80396 < 160000"
+    "mcap 73129 < 160000"
    ],
    "kill": {
     "holders_below": 125.0,
@@ -1985,11 +1967,11 @@
    "ticker": "COCK",
    "tracked": true,
    "unit": "49e423161ef818adc475c783571cb479d5f15ad52a01a240eacc0d3b434f434b",
-   "ada_side": 164080,
+   "ada_side": 162857,
    "mcap_ada": null,
    "holders": 1000,
-   "vol_h24_ada": 10263,
-   "price_ada": 0.00397213747,
+   "vol_h24_ada": 10121,
+   "price_ada": 0.003943528669,
    "decimals": 0,
    "pool_basis": "geckoterminal",
    "ada_basis": "geckoterminal",
@@ -2004,10 +1986,10 @@
    "tracked": true,
    "unit": "d3eb30c5c7312bab529337a61eaa8352e0b50eaa9acad9a8cf46b32e0014df10434f52452d32",
    "ada_side": null,
-   "mcap_ada": 37604,
+   "mcap_ada": 37900,
    "holders": 48,
-   "vol_h24_ada": 878,
-   "price_ada": 3.76000516395559e-05,
+   "vol_h24_ada": 885,
+   "price_ada": 3.7896284537665325e-05,
    "decimals": null,
    "pool_basis": "solada-coins",
    "ada_basis": null,
@@ -2021,7 +2003,7 @@
    "ticker": "DEXY",
    "tracked": true,
    "unit": "00d6347365cb78d197369eed8b11c9a30e417e6d2f63931376a399070014df1044455859",
-   "ada_side": 2953,
+   "ada_side": 2948,
    "mcap_ada": 3920,
    "holders": 33,
    "vol_h24_ada": null,
@@ -2031,7 +2013,7 @@
    "ada_basis": "geckoterminal",
    "mcap_basis": "geckoterminal",
    "crossed": [
-    "ada_side 2953 < 13000",
+    "ada_side 2948 < 13000",
     "holders 33 < 80"
    ],
    "kill": {
@@ -2063,7 +2045,7 @@
    "ticker": "FEED",
    "tracked": true,
    "unit": "00e049b5a595740efcf34e90c4a209705f75c41d349c7e1a5a9cd5af0014df1046454544",
-   "ada_side": 6385,
+   "ada_side": 6381,
    "mcap_ada": 18041,
    "holders": 65,
    "vol_h24_ada": 37,
@@ -2073,7 +2055,7 @@
    "ada_basis": "geckoterminal",
    "mcap_basis": "geckoterminal",
    "crossed": [
-    "ada_side 6385 < 7000"
+    "ada_side 6381 < 7000"
    ],
    "kill": {
     "ada_side_below": 7000.0,
@@ -2104,7 +2086,7 @@
    "ticker": "HERO",
    "tracked": true,
    "unit": "47478467b3af325266cb4da6e92bdf522217e97d85b8d8d864b573cf0014df104845524f",
-   "ada_side": 2949,
+   "ada_side": 2943,
    "mcap_ada": 3947,
    "holders": 22,
    "vol_h24_ada": 294,
@@ -2114,7 +2096,7 @@
    "ada_basis": "geckoterminal",
    "mcap_basis": "geckoterminal",
    "crossed": [
-    "ada_side 2949 < 4000"
+    "ada_side 2943 < 4000"
    ],
    "kill": {
     "ada_side_below": 4000.0
@@ -2124,7 +2106,7 @@
    "ticker": "HIVE",
    "tracked": true,
    "unit": "8ec717891d0e73ede10ff8a7fe10ef6f0afba4cc4cf4c85ce5ce8e060014df1048495645",
-   "ada_side": 5421,
+   "ada_side": 5412,
    "mcap_ada": 13230,
    "holders": 62,
    "vol_h24_ada": 89,
@@ -2134,7 +2116,7 @@
    "ada_basis": "geckoterminal",
    "mcap_basis": "geckoterminal",
    "crossed": [
-    "ada_side 5421 < 7000"
+    "ada_side 5412 < 7000"
    ],
    "kill": {
     "ada_side_below": 7000.0,
@@ -2166,7 +2148,7 @@
    "ticker": "JUICE",
    "tracked": true,
    "unit": "80e2f764f741d466fbb07cfcea239cd24e21549935213406a58fed880014df104a55494345",
-   "ada_side": 2628,
+   "ada_side": 2624,
    "mcap_ada": 3091,
    "holders": 24,
    "vol_h24_ada": 49,
@@ -2176,7 +2158,7 @@
    "ada_basis": "geckoterminal",
    "mcap_basis": "geckoterminal",
    "crossed": [
-    "ada_side 2628 < 4000",
+    "ada_side 2624 < 4000",
     "holders 24 < 40"
    ],
    "kill": {
@@ -2188,7 +2170,7 @@
    "ticker": "SER",
    "tracked": true,
    "unit": "971236b54a245b8850cd8a7ff01a4fa1ac017ab8e53096531b37c1980014df10534552",
-   "ada_side": 5013,
+   "ada_side": 5004,
    "mcap_ada": 11550,
    "holders": 50,
    "vol_h24_ada": null,
@@ -2198,7 +2180,7 @@
    "ada_basis": "geckoterminal",
    "mcap_basis": "geckoterminal",
    "crossed": [
-    "ada_side 5013 < 13000",
+    "ada_side 5004 < 13000",
     "holders 50 < 80"
    ],
    "kill": {
@@ -2210,7 +2192,7 @@
    "ticker": "SHARKY",
    "tracked": true,
    "unit": "a9c3b13c7bde8b2ca30699df632cc3cee103bf8d60b5aa3d575d910d0014df10534841524b59",
-   "ada_side": 10438,
+   "ada_side": 10399,
    "mcap_ada": 50567,
    "holders": 76,
    "vol_h24_ada": 631,
@@ -2228,11 +2210,11 @@
    "ticker": "SOLADA",
    "tracked": true,
    "unit": "e7c77b2784e52949b3f95f8f9f2d1668dd47d7ed56491eab588bb730534f4c414441",
-   "ada_side": 9912,
+   "ada_side": 10115,
    "mcap_ada": null,
    "holders": 577,
    "vol_h24_ada": null,
-   "price_ada": 0.002015,
+   "price_ada": 0.002098,
    "decimals": null,
    "pool_basis": "dexscreener",
    "ada_basis": "dexscreener",
@@ -2246,7 +2228,7 @@
    "ticker": "VAMP",
    "tracked": true,
    "unit": "3f5a1f7a3ba788d40971ad05ecabb536c8bc8d766bcc98acd2583b0b0014df1056414d50",
-   "ada_side": 5240,
+   "ada_side": 5201,
    "mcap_ada": 12605,
    "holders": 46,
    "vol_h24_ada": 1342,
@@ -2262,7 +2244,7 @@
   }
  ],
  "est_universe_log": {
-  "at": "2026-11-17T23:16:36Z",
+  "at": "2026-11-18T01:15:49Z",
   "tickers": [
    "ASCEND",
    "STRIKE",
@@ -2271,7 +2253,7 @@
   "appended": 3
  },
  "x_buzz_shortlist": {
-  "at": "2026-11-17T23:16:36Z",
+  "at": "2026-11-18T01:15:49Z",
   "this_run": [
    "ASCEND",
    "STRIKE",
@@ -2279,14 +2261,14 @@
    "NIGHT",
    "SNEK",
    "COCK",
-   "COCKWHALE",
-   "TAPPY0352",
-   "TAPPY0867",
-   "TAPPY0932"
+   "TAPPY1421",
+   "TAPPY1753",
+   "TAPPY1857",
+   "TAPPY2496"
   ],
   "solana": [],
   "candidates": 101,
   "over_budget": false,
-  "cursor": 83
+  "cursor": 87
  }
 }
