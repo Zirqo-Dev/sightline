@@ -1,11 +1,11 @@
 {
- "at": "2026-11-18T19:13:06Z",
+ "at": "2026-11-18T21:12:40Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14217289,
+ "height": 14218063,
  "baseline_at": "2026-11-14T17:13:24Z",
- "ada_balance": 1511.923542,
+ "ada_balance": 1436.272555,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 305073789243,
@@ -37,7 +37,7 @@
   "CHADDY": 16848771299364,
   "CLOVE-3": 10000000424693,
   "CNET": 31327824482276,
-  "COCK": 44013284,
+  "COCK": 43913284,
   "COCKLOCK": 50000000,
   "CORE-2": 7656000,
   "CSWAP": 394,
@@ -108,7 +108,7 @@
   "WJB": 105182196,
   "cock-whale": 1,
   "cockwhale": 1,
-  "f5808c+f7db6b52": 172043986,
+  "f5808c+f7db6b52": 172621592,
   "fADA~47c42d": 4639030549,
   "fADA~daa59d": 4639030549,
   "tappy0352": 1,
@@ -153,7 +153,7 @@
   "CHADDY": 16848771299364,
   "CLOVE-3": 10000000424693,
   "CNET": 31327824482276,
-  "COCK": 44013284,
+  "COCK": 43913284,
   "COCKLOCK": 50000000,
   "CORE-2": 7656000,
   "CSWAP": 394,
@@ -224,7 +224,7 @@
   "WJB": 105182196,
   "cock-whale": 1,
   "cockwhale": 1,
-  "f5808c+f7db6b52": 172043986,
+  "f5808c+f7db6b52": 172621592,
   "fADA~47c42d": 4639030549,
   "fADA~daa59d": 4639030549,
   "tappy0352": 1,
@@ -392,7 +392,7 @@
   {
    "token": "COCK",
    "policy": "49e42316",
-   "qty": 44013284
+   "qty": 43913284
   },
   {
    "token": "COCKLOCK",
@@ -747,7 +747,7 @@
   {
    "token": "f5808c+f7db6b52",
    "policy": "f5808c2c",
-   "qty": 172043986
+   "qty": 172621592
   },
   {
    "token": "fADA~47c42d",
@@ -5324,6 +5324,43 @@
    "opened_at": "2026-11-18T16:10:26Z",
    "own_stake": true,
    "closed_at": "2026-11-18T17:12:53Z"
+  },
+  "6e37e1f5a6#0": {
+   "ref_short": "6e37e1f5a6#0",
+   "token": "COCK",
+   "qty_raw": 50000,
+   "ada": 4.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "6e37e1f5a6",
+   "opened_at": "2026-11-18T19:14:09Z",
+   "own_stake": true,
+   "closed_at": "2026-11-18T21:12:40Z"
+  },
+  "31a44a2e09#0": {
+   "ref_short": "31a44a2e09#0",
+   "token": "COCK",
+   "qty_raw": 50000,
+   "ada": 4.0,
+   "status": "filled",
+   "opened_tx": "31a44a2e09",
+   "opened_at": "2026-11-18T20:31:36Z",
+   "own_stake": true,
+   "closed_tx": "27212912b4",
+   "closed_at": "2026-11-18T20:31:36Z",
+   "filled_ada": -2.0
+  },
+  "67d01baf57#0": {
+   "ref_short": "67d01baf57#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "filled",
+   "opened_tx": "67d01baf57",
+   "opened_at": "2026-11-18T20:32:24Z",
+   "own_stake": true,
+   "closed_tx": "aa8edee2a6",
+   "closed_at": "2026-11-18T20:32:24Z",
+   "filled_ada": -71.0
   }
  },
  "rows": [
@@ -15602,6 +15639,88 @@
    "qty": 247872,
    "ada_leg": 2.0,
    "counterparty_tag": null
+  },
+  {
+   "time": "2026-11-18T19:14:09Z",
+   "tx_short": "c4edf97dad",
+   "kind": "lp_add",
+   "token": "LP:minswap_v2",
+   "qty": 246991,
+   "ada_leg": 2.0,
+   "counterparty_tag": null
+  },
+  {
+   "time": "2026-11-18T19:14:09Z",
+   "tx_short": "6e37e1f5a6",
+   "kind": "order_open",
+   "token": "COCK",
+   "qty": 50000,
+   "ada_leg": 4.0,
+   "counterparty_tag": null,
+   "order_ref_short": "6e37e1f5a6#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-18T20:31:36Z",
+   "tx_short": "31a44a2e09",
+   "kind": "order_open",
+   "token": "COCK",
+   "qty": 50000,
+   "ada_leg": 4.0,
+   "counterparty_tag": null,
+   "order_ref_short": "31a44a2e09#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-18T20:31:36Z",
+   "tx_short": "27212912b4",
+   "kind": "order_fill",
+   "token": "COCK",
+   "qty": 50000,
+   "ada_leg": -2.0,
+   "counterparty_tag": null,
+   "order_ref_short": "31a44a2e09#0",
+   "order_status": "filled"
+  },
+  {
+   "time": "2026-11-18T20:31:36Z",
+   "tx_short": "27212912b4",
+   "kind": "lp_add",
+   "token": "LP:minswap_v2",
+   "qty": 246368,
+   "ada_leg": 2.0,
+   "counterparty_tag": null
+  },
+  {
+   "time": "2026-11-18T20:32:24Z",
+   "tx_short": "67d01baf57",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "67d01baf57#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-18T20:32:24Z",
+   "tx_short": "aa8edee2a6",
+   "kind": "order_fill",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": -71.0,
+   "counterparty_tag": null,
+   "order_ref_short": "67d01baf57#0",
+   "order_status": "filled"
+  },
+  {
+   "time": "2026-11-18T20:32:24Z",
+   "tx_short": "aa8edee2a6",
+   "kind": "lp_add",
+   "token": "LP:minswap_v2",
+   "qty": 84247,
+   "ada_leg": 71.0,
+   "counterparty_tag": null
   }
  ],
  "capped": false,
@@ -15612,7 +15731,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 5,
+ "koios_calls": 7,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
