@@ -1,5 +1,5 @@
 {
- "at": "2026-11-19T13:14:59Z",
+ "at": "2026-11-19T15:14:20Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -80,10 +80,9 @@
    "policy_short": "49e42316",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~71183c8b",
-   "reserve_ada": 133836.4,
-   "reserve_qty": 33535438,
-   "asof": "2026-11-16T11:52:47Z",
-   "stale": true
+   "reserve_ada": 168469.03,
+   "reserve_qty": 41960668,
+   "asof": "2026-11-19T14:01:05Z"
   },
   {
    "ticker": "IAG",
@@ -115,7 +114,8 @@
    "pool_key": "minswap_v2~8d92b947",
    "reserve_ada": 4381590.13,
    "reserve_qty": 15293319944157,
-   "asof": "2026-11-16T12:16:05Z"
+   "asof": "2026-11-16T12:16:05Z",
+   "stale": true
   },
   {
    "ticker": "NIGHT",
@@ -193,7 +193,7 @@
    "policy_short": "f13ac4d6",
    "rank": 3,
    "unit_source": "cache",
-   "last_checked": "2026-11-19T03:16:46Z"
+   "last_checked": "2026-11-19T15:14:20Z"
   },
   {
    "ticker": "MIN",
@@ -221,7 +221,7 @@
    "policy_short": "49e42316",
    "rank": 8,
    "unit_source": "listed",
-   "last_checked": "2026-11-19T01:15:01Z"
+   "last_checked": "2026-11-19T15:14:20Z"
   },
   {
    "ticker": "SOLADA",
@@ -245,20 +245,15 @@
   }
  ],
  "coverage": {
-  "NIGHT": {
-   "read": 10,
+  "COCK": {
+   "read": 27,
    "complete": false,
    "pools": 1
-  },
-  "COCK": {
-   "read": 0,
-   "complete": false,
-   "skipped": "budget"
   },
   "STRIKE": {
    "read": 0,
    "complete": false,
-   "skipped": "budget"
+   "pools": 0
   },
   "MIN": {
    "read": 0,
@@ -289,10 +284,14 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "NIGHT": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "NIGHT",
   "COCK",
   "STRIKE",
   "MIN",
@@ -300,9 +299,10 @@
   "ASCEND",
   "IAG",
   "SOLADA",
-  "CLOVE"
+  "CLOVE",
+  "NIGHT"
  ],
- "koios_calls": 5,
+ "koios_calls": 8,
  "blockfrost_calls": 0,
  "blockfrost_fallbacks": 0,
  "blockfrost_available": true,
