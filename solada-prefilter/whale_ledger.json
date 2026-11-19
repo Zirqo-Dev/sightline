@@ -1,7 +1,7 @@
 {
- "at": "2026-11-19T17:11:03Z",
+ "at": "2026-11-19T19:12:29Z",
  "whale_tag": "w-f3186187",
- "basis": "blockfrost",
+ "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
  "height": 14221472,
  "baseline_at": "2026-11-14T17:13:24Z",
@@ -17310,8 +17310,8 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 0,
- "blockfrost_fallbacks": 6,
- "blockfrost_calls": 15,
+ "koios_calls": 6,
+ "blockfrost_fallbacks": 0,
+ "blockfrost_calls": 0,
  "blockfrost_available": true
 }
