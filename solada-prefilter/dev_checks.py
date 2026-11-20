@@ -752,15 +752,19 @@ class DevChain:
             if self.bf_left() <= 0 or self.late():
                 break
 
-    def asset_txs(self, unit, desc=False):
+    def asset_txs(self, unit, desc=False, offset=0):
         if self.stop_reason() and self.koios_open():
             return None
         if self.late():
             return None
         lim = int(self.dc["max_txs_per_unit"])
         order = "desc" if desc else "asc"
+        # offset 0 keeps the historical URL. A later run passes the next page.
+        skip = 0 if isinstance(offset, bool) else max(0, int(offset or 0))
         url = (f"{KOIOS}/asset_txs?_asset_policy={unit[:56]}&_asset_name={unit[56:]}"
                f"&_history=true&order=block_height.{order}&limit={lim}")
+        if skip:
+            url += "&offset=%d" % skip
         r, allow_bf = None, not self.koios_open()
         if self.koios_open() and self.koios_left() > 0:
             r = self.h.req("koios", url, quiet404=False)
@@ -769,7 +773,11 @@ class DevChain:
         elif self.koios_left() <= 0 and self.koios_open():
             return None
         if r is None and allow_bf and self._fallback():
-            r = self.bf(f"/assets/{unit}/transactions?order={order}&count={min(lim, 100)}")
+            page = (skip // lim) + 1 if skip else 1
+            path = f"/assets/{unit}/transactions?order={order}&count={min(lim, 100)}"
+            if page > 1:
+                path += "&page=%d" % page
+            r = self.bf(path)
         if not isinstance(r, list):
             return None
         rows = [(t.get("tx_hash"), t.get("block_height") or 0, t.get("block_time") or 0)
@@ -986,8 +994,392 @@ def _remember(cache, unit, stake, live_ms, late, complete, ticker=None, baseline
     cache.setdefault("units", {})[unit] = row
 
 
-def _scan(chain, item, ex, dc):
-    """Read one unit. Stake keys stay in the returned dict for the caller; they are not a public field."""
+# Age is from created_at, which a later run does not refresh. Seven days is long
+# enough to walk a history at one continuation page per 2h run.
+CURSOR_MAX_AGE_S = 7 * 24 * 3600
+_CURSOR_TX_CAP = 4000
+# A token off the tracked list survives 2 absent runs and is dropped on the 3rd.
+# A prior launch is not on that list. The run that scans it writes the cursor
+# and must not delete it in the same run.
+_CURSOR_ABSENT_RUNS = 3
+
+
+def _blank_cursor(now_s):
+    stamp = int(now_s)
+    return {
+        "v": 1, "created_at": stamp, "updated_at": stamp, "asc_offset": 0, "desc_offset": 0,
+        "asc_done": False, "desc_done": False, "done": False, "met": False, "gap": False,
+        "capped": False, "txs": [],
+    }
+
+
+def _flag(raw, name):
+    value = raw.get(name, False)
+    if not isinstance(value, bool):
+        return None
+    return value
+
+
+def cursor_usable(raw, now_s, max_age_s=CURSOR_MAX_AGE_S):
+    """The stored cursor, or None when it is missing, malformed, or older than the bound.
+
+    The bound is created_at. updated_at may move every run and is not the age.
+    A cursor at the storage cap is kept. It is not thrown out for being full.
+    """
+    if not isinstance(raw, dict) or raw.get("v") != 1:
+        return None
+    created = raw.get("created_at")
+    if isinstance(created, bool) or not isinstance(created, (int, float)):
+        return None
+    if float(now_s) - float(created) > float(max_age_s):
+        return None
+    updated = raw.get("updated_at", created)
+    if isinstance(updated, bool) or not isinstance(updated, (int, float)):
+        return None
+    for key in ("asc_offset", "desc_offset"):
+        number = raw.get(key)
+        if isinstance(number, bool) or not isinstance(number, int) or number < 0:
+            return None
+    if not isinstance(raw.get("asc_done"), bool) or not isinstance(raw.get("desc_done"), bool):
+        return None
+    if not isinstance(raw.get("done"), bool):
+        return None
+    met = _flag(raw, "met")
+    gap = _flag(raw, "gap")
+    capped = _flag(raw, "capped")
+    if met is None or gap is None or capped is None:
+        return None
+    txs = raw.get("txs")
+    if not isinstance(txs, list) or len(txs) > _CURSOR_TX_CAP:
+        return None
+    clean = []
+    for tx in txs:
+        if not isinstance(tx, dict) or not isinstance(tx.get("hash"), str):
+            return None
+        if tx.get("side") not in ("asc", "desc"):
+            return None
+        clean.append({
+            "hash": tx["hash"], "height": tx.get("height") or 0, "time": tx.get("time") or 0,
+            "side": tx["side"], "inputs": tx.get("inputs") or [], "outputs": tx.get("outputs") or [],
+            "withdrawals": tx.get("withdrawals") or {},
+        })
+    return {
+        "v": 1, "created_at": int(created), "updated_at": int(updated),
+        "asc_offset": raw["asc_offset"], "desc_offset": raw["desc_offset"],
+        "asc_done": raw["asc_done"], "desc_done": raw["desc_done"], "done": raw["done"],
+        "met": met, "gap": gap, "capped": capped, "txs": clean,
+    }
+
+
+def cursor_covered(cursor):
+    """True once either walk has reached the other end, or the two walks overlap.
+
+    A capped store, or a hole behind a new tip, is not covered.
+    """
+    if not isinstance(cursor, dict):
+        return False
+    if cursor.get("capped") or cursor.get("gap"):
+        return False
+    if cursor.get("done") or cursor.get("met") or cursor.get("asc_done") or cursor.get("desc_done"):
+        return True
+    asc, desc = [], []
+    for tx in cursor.get("txs") or []:
+        try:
+            height = int(tx.get("height") or 0)
+        except (TypeError, ValueError):
+            continue
+        if tx.get("side") == "asc":
+            asc.append(height)
+        elif tx.get("side") == "desc":
+            desc.append(height)
+    return bool(asc and desc and max(asc) >= min(desc))
+
+
+def _cursor_state(cache, unit, now_s):
+    """(usable cursor or None, stale). stale means a stored cursor was rejected."""
+    if not isinstance(cache, dict) or not isinstance(cache.get("cursors"), dict):
+        return None, False
+    raw = cache["cursors"].get(unit)
+    if raw is None:
+        return None, False
+    usable = cursor_usable(raw, now_s)
+    if usable is None:
+        return None, True
+    return usable, False
+
+
+def _remember_tx(cursor, side, row, body, by_hash):
+    """Store one new tx. False when the cap is full. None when the body is missing."""
+    if row[0] in by_hash:
+        prev = by_hash[row[0]]
+        if prev.get("side") != side:
+            cursor["met"] = True
+        return True
+    if len(cursor["txs"]) >= _CURSOR_TX_CAP:
+        cursor["capped"] = True
+        return False
+    if not isinstance(body, dict):
+        return None
+    stored = {
+        "hash": row[0], "height": row[1] or 0, "time": row[2] or 0, "side": side,
+        "inputs": body.get("inputs") or [], "outputs": body.get("outputs") or [],
+        "withdrawals": body.get("withdrawals") or {},
+    }
+    cursor["txs"].append(stored)
+    by_hash[row[0]] = stored
+    return True
+
+
+def _absorb_page(cursor, side, offset, rows, lim, bodies):
+    """Keep a page's bodies and advance. A missing body leaves the offset for a retry.
+
+    The cap stops the walk and keeps the cursor. The offset does not pass a tx
+    that was not stored.
+    """
+    if not isinstance(rows, list) or cursor.get("capped"):
+        return
+    by_hash = {tx.get("hash"): tx for tx in cursor["txs"]}
+    missing = False
+    for row in rows:
+        if not isinstance(row, (list, tuple)) or len(row) < 3 or not row[0]:
+            missing = True
+            continue
+        kept = _remember_tx(cursor, side, row, (bodies or {}).get(row[0]), by_hash)
+        if kept is False:
+            return
+        if kept is None:
+            missing = True
+    if missing or cursor.get("capped"):
+        return
+    if len(rows) < lim:
+        cursor["asc_done" if side == "asc" else "desc_done"] = True
+    else:
+        cursor["asc_offset" if side == "asc" else "desc_offset"] = int(offset) + len(rows)
+    if side == "desc" and (cursor.get("met") or cursor.get("desc_done")):
+        cursor["gap"] = False
+
+
+def _merge_tip(cursor, rows, bodies):
+    """Add the newest page. Does not move desc_offset. That offset walks the pages behind the tip.
+
+    A full store refuses new txs. The caller still folds those bodies and counts them unread.
+    """
+    if not isinstance(rows, list):
+        return
+    by_hash = {tx.get("hash"): tx for tx in cursor["txs"]}
+    for row in rows:
+        if not isinstance(row, (list, tuple)) or len(row) < 3 or not row[0]:
+            continue
+        _remember_tx(cursor, "desc", row, (bodies or {}).get(row[0]), by_hash)
+
+
+def _absent_count(raw):
+    try:
+        count = int(raw or 0)
+    except (TypeError, ValueError):
+        return 0
+    if count < 0:
+        return 0
+    return count
+
+
+def _prune_cursors(cache, keep, written=None):
+    """Drop a cursor on its 3rd run off the tracked list. It survives the first 2.
+
+    `written` is every unit whose cursor was saved on this run. A prior launch is
+    not tracked, so without this a run would store that cursor and delete it.
+    """
+    cursors = cache.get("cursors") if isinstance(cache, dict) else None
+    if not isinstance(cursors, dict):
+        return
+    keep = {unit for unit in (keep or []) if unit}
+    written = {unit for unit in (written or []) if unit}
+    absent = cache.get("cursor_absent")
+    if not isinstance(absent, dict):
+        absent = {}
+    for unit in list(cursors):
+        if unit in keep or unit in written:
+            absent.pop(unit, None)
+            continue
+        count = _absent_count(absent.get(unit)) + 1
+        if count >= _CURSOR_ABSENT_RUNS:
+            cursors.pop(unit, None)
+            absent.pop(unit, None)
+        else:
+            absent[unit] = count
+    for unit in list(absent):
+        if unit not in cursors:
+            absent.pop(unit, None)
+    if absent:
+        cache["cursor_absent"] = absent
+    else:
+        cache.pop("cursor_absent", None)
+
+
+def _store_cursor(cache, unit, scan):
+    """Move a cursor off the scan dict and into the private cache. Never a public field."""
+    if not isinstance(scan, dict):
+        return
+    reset = scan.pop("cursor_reset", False)
+    save = scan.pop("cursor_save", False)
+    cursor = scan.pop("cursor", None)
+    if not isinstance(cache, dict):
+        return
+    if reset:
+        cursors = cache.get("cursors")
+        if isinstance(cursors, dict):
+            cursors.pop(unit, None)
+    if save and isinstance(cursor, dict):
+        if not isinstance(cache.get("cursors"), dict):
+            cache["cursors"] = {}
+        cache["cursors"][unit] = cursor
+
+
+def _ordered_from(cursor):
+    by_hash = {}
+    for tx in cursor.get("txs") or []:
+        if isinstance(tx, dict) and tx.get("hash"):
+            by_hash[tx["hash"]] = tx
+    return sorted(by_hash.values(), key=lambda tx: (tx.get("height") or 0, tx.get("hash") or ""))
+
+
+def _fold_fetched(cursor, fetched, bodies):
+    """Stored history plus every fetched body that did not fit in the store.
+
+    The newest page is one of the fetched pages. A sell on it is folded on this
+    run even when the cap refused to store it. Each refused tx is unread: a full
+    store must not report unread 0.
+    """
+    have = {tx.get("hash") for tx in (cursor.get("txs") or []) if isinstance(tx, dict)}
+    seen = set(have)
+    extra = []
+    unread = 0
+    for _kind, _off, rows in fetched:
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, (list, tuple)) or len(row) < 3 or not row[0]:
+                continue
+            if row[0] in seen:
+                continue
+            seen.add(row[0])
+            unread += 1
+            body = (bodies or {}).get(row[0])
+            if not isinstance(body, dict):
+                continue
+            extra.append({
+                "hash": row[0], "height": row[1] or 0, "time": row[2] or 0,
+                "inputs": body.get("inputs") or [], "outputs": body.get("outputs") or [],
+                "withdrawals": body.get("withdrawals") or {},
+            })
+    ordered = _ordered_from(cursor)
+    ordered.extend(extra)
+    ordered.sort(key=lambda tx: (tx.get("height") or 0, tx.get("hash") or ""))
+    return ordered, unread
+
+
+def _resume_scan(chain, item, ex, dc, base, stake, cursor, clock):
+    """One continuation page, plus the newest page, inside the same page budget.
+
+    The newest page is read on every resume, including after the store is full.
+    A sell on that page is folded on this run. Txs the cap refuses are unread
+    and are not reported as zero. A full page of txs the cursor has never stored
+    is a hole behind that tip: the history stays incomplete until a later page
+    reaches a tx already stored. The store stops at the cap. It does not keep
+    growing, and it does not drop the newest page from the sell check to do so.
+    created_at is not refreshed.
+    """
+    unit = item.get("unit") or ""
+    lim = int(dc["max_txs_per_unit"])
+    pages = int(dc["max_pages_per_unit"])
+    used = 0
+
+    def pull(desc, offset):
+        nonlocal used
+        if used >= pages or chain.late():
+            return None
+        if chain.stop_reason() and chain.koios_open():
+            return None
+        rows = chain.asset_txs(unit, desc=desc, offset=offset)
+        used += 1
+        return rows
+
+    tip = pull(True, 0)
+    if not isinstance(tip, list):
+        base["skipped"] = "koios"
+        return base
+    known = {tx.get("hash") for tx in cursor["txs"]}
+    tip_fresh = [row[0] for row in tip if row and row[0] not in known]
+    gap = len(tip) >= lim and len(tip_fresh) == len(tip)
+    if gap:
+        cursor["gap"] = True
+        cursor["done"] = False
+        cursor["met"] = False
+        cursor["desc_done"] = False
+        cursor["desc_offset"] = len(tip)
+    fetched = [("tip", 0, tip)]
+    if used < pages and not cursor.get("capped") and chain.stop_reason() is None:
+        if cursor.get("gap") and not cursor.get("desc_done"):
+            rows = pull(True, int(cursor.get("desc_offset") or 0))
+            if isinstance(rows, list):
+                fetched.append(("desc", int(cursor.get("desc_offset") or 0), rows))
+        elif not cursor.get("done") and not cursor_covered(cursor):
+            if not cursor.get("asc_done"):
+                rows = pull(False, int(cursor.get("asc_offset") or 0))
+                if isinstance(rows, list):
+                    fetched.append(("asc", int(cursor.get("asc_offset") or 0), rows))
+            elif not cursor.get("desc_done") and int(cursor.get("desc_offset") or 0) > 0:
+                off = int(cursor["desc_offset"])
+                rows = pull(True, off)
+                if isinstance(rows, list):
+                    fetched.append(("desc", off, rows))
+    new_hashes = []
+    for _kind, _off, rows in fetched:
+        for row in rows:
+            if row and row[0] not in known and row[0] not in new_hashes:
+                new_hashes.append(row[0])
+    new_hashes.reverse()
+    ut = chain.utxos(new_hashes, dev=stake) if new_hashes else {}
+    for kind, offset, rows in fetched:
+        if kind == "tip":
+            _merge_tip(cursor, rows, ut)
+        else:
+            _absorb_page(cursor, kind, offset, rows, lim, ut)
+    ordered, unread = _fold_fetched(cursor, fetched, ut)
+    # One decision. A hole, a full store, or a dropped tx is not complete.
+    # Nothing below this replaces it with cursor_covered.
+    if cursor.get("gap") or cursor.get("capped") or unread:
+        covered = False
+    else:
+        covered = cursor_covered(cursor) and unread == 0
+    if not stake and ordered:
+        stake = creator_from_mint(unit, ordered[0], ex)
+        base["stake"] = stake
+        if stake:
+            chain.attach_withdrawals(ordered, stake)
+    launch = item.get("launch") or {}
+    launch_s = _launch_s(launch)
+    if launch_s is None:
+        launch_s = _verified_mint_s(unit, ordered)
+    stats = fold(unit, ordered, stake, ex, launch_s, dc)
+    if covered and stats["sold_ada"] == 0:
+        stats["holders_at_sell"] = None
+    cursor["done"] = bool(covered)
+    cursor["updated_at"] = int(clock)
+    base["cursor"] = cursor
+    base["cursor_save"] = True
+    base.update(complete=covered, txs_read=len(ordered), unread_txs=unread, saw_newest=True,
+                last_tx_s=max((tx.get("time") or 0 for tx in ordered), default=None), stats=stats, stake=stake,
+                launch_s=launch_s, funded=_funded_out(stake, ordered))
+    return base
+
+
+def _scan(chain, item, ex, dc, cache=None, now_s=None):
+    """Read one unit. Stake keys stay in the returned dict for the caller; they are not a public field.
+
+    A private cursor, when the cache is passed, continues an unfinished history on the next run.
+    The first read of a token uses the same pages as before.
+    """
     launch, unit = item.get("launch") or {}, item.get("unit") or ""
     stake = _launcher_stake(launch, ex)
     if not stake:
@@ -1002,29 +1394,40 @@ def _scan(chain, item, ex, dc):
     if chain.stop_reason():
         base["skipped"] = chain.stop_reason()
         return base
+    clock = time.time() if now_s is None else float(now_s)
+    saved, stale = _cursor_state(cache, unit, clock)
+    if stale:
+        base["cursor_reset"] = True
+    if saved is not None:
+        return _resume_scan(chain, item, ex, dc, base, stake, saved, clock)
     lim = int(dc["max_txs_per_unit"])
     pages = int(dc["max_pages_per_unit"])
     # Koios closed: this read is Blockfrost under a short per-row cap. Newest page and
     # newest bodies first, so a cutoff still sees a late sell. Koios-open stays oldest-first.
     newest_first = not chain.koios_open()
     desc_rows = None
+    got_asc, got_desc = False, False
     if newest_first:
         desc_rows = chain.asset_txs(unit, desc=True)
         if desc_rows is None:
             base["skipped"] = "koios"
             return base
+        got_desc = True
         asc = []
         if len(desc_rows) >= lim and pages >= 2 and chain.stop_reason() is None:
             older = chain.asset_txs(unit, desc=False)
             if isinstance(older, list):
                 asc = older
+                got_asc = True
     else:
         asc = chain.asset_txs(unit, desc=False)
         if asc is None:
             base["skipped"] = "koios"
             return base
+        got_asc = True
         if len(asc) >= lim and pages >= 2 and chain.stop_reason() is None:
             desc_rows = chain.asset_txs(unit, desc=True)
+            got_desc = isinstance(desc_rows, list)
     merged = {}
     for row in list(asc) + (desc_rows or []):
         merged[row[0]] = row
@@ -1063,6 +1466,18 @@ def _scan(chain, item, ex, dc):
     base.update(complete=complete, txs_read=len(ordered), unread_txs=unread, saw_newest=saw_newest,
                 last_tx_s=max((t["time"] for t in ordered), default=None), stats=stats, stake=stake,
                 launch_s=launch_s, funded=_funded_out(stake, ordered))
+    # An unfinished history remembers the pages it already folded. A finished one does not
+    # need a cursor: the next run reads the first page again, same as before.
+    if not complete and isinstance(cache, dict):
+        bodies = {tx["hash"]: tx for tx in ordered if tx.get("hash")}
+        cursor = _blank_cursor(clock)
+        if got_asc:
+            _absorb_page(cursor, "asc", 0, asc, lim, bodies)
+        if got_desc:
+            _absorb_page(cursor, "desc", 0, desc_rows, lim, bodies)
+        cursor["done"] = False
+        base["cursor"] = cursor
+        base["cursor_save"] = True
     return base
 
 
@@ -1548,7 +1963,8 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
             chain.begin_unit(len(window) - i)
             item = dict(item, watch=watch)
             try:
-                scans[item["unit"]] = _scan(chain, item, ex, dc)
+                scans[item["unit"]] = _scan(chain, item, ex, dc, cache, now_s)
+                _store_cursor(cache, item["unit"], scans[item["unit"]])
             except Exception as e:  # one bad launch must not drop the rest or the webhook
                 print(f"dev_checks: {item.get('ticker')} skipped ({type(e).__name__})", file=sys.stderr)
                 scans[item["unit"]] = {"stake": _launcher_stake(item.get("launch"), ex), "skipped": "error",
@@ -1597,7 +2013,8 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
                     break
                 chain.begin_unit(len(prior_window) - i)
                 try:
-                    sc = _scan(chain, item, ex, dc)
+                    sc = _scan(chain, item, ex, dc, cache, now_s)
+                    _store_cursor(cache, item["unit"], sc)
                 except Exception as e:
                     print(f"dev_checks: prior {item.get('ticker')} skipped ({type(e).__name__})", file=sys.stderr)
                     continue
@@ -1651,6 +2068,7 @@ def run(http, cfg, tracked, launches, watch, data_dir, cache_dir, dry_run, now_s
                                           "fresh_funded_h")},
         "entries": entries, "coverage": coverage,
     })
+    _prune_cursors(cache, by_unit.keys(), scanned_units)
     _feed_rugger(cache, scans, cache_dir, data_dir, now_s, loaded, dry_run, cfg)
     if not dry_run:
         if cpath:
