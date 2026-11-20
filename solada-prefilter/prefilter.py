@@ -37,6 +37,109 @@ def now_iso():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+# A queued alert older than this is not posted. One day is 12 slots at the 2h dispatch.
+# Legacy rows with no queued_at are older than the bound: their age is unknown.
+WEBHOOK_QUEUE_MAX_AGE_S = 24 * 3600
+_ISO_Z = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+_WEBHOOK_CLASS = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,39}$")
+_KIND = re.compile(r"^[a-z][a-z0-9_]{0,40}$")
+
+
+def parse_iso(value):
+    """Unix time for a UTC stamp this job writes, or None."""
+    if not isinstance(value, str) or not _ISO_Z.fullmatch(value):
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp()
+    except ValueError:
+        return None
+
+
+def webhook_status(status):
+    """An HTTP code or an exception class. Never a message, URL, or body."""
+    if isinstance(status, bool) or status is None:
+        return "error"
+    if isinstance(status, int):
+        return status if 100 <= status <= 599 else "error"
+    text = str(status)
+    if _WEBHOOK_CLASS.fullmatch(text):
+        return text
+    return "error"
+
+
+def partition_pending(pending, now_s, max_age_s=WEBHOOK_QUEUE_MAX_AGE_S):
+    """Split a retry queue into (still young, stale).
+
+    A missing queued_at is stale. Those rows were queued before this stamp existed.
+    """
+    kept, dropped = [], []
+    for item in pending or []:
+        if not isinstance(item, dict):
+            dropped.append(item)
+            continue
+        stamp = parse_iso(item.get("queued_at"))
+        if stamp is None or (now_s - stamp) > max_age_s:
+            dropped.append(item)
+        else:
+            kept.append(item)
+    return kept, dropped
+
+
+def with_queued_at(triggers, iso_now):
+    """Copy each trigger and set queued_at once. A later retry keeps the first stamp."""
+    out = []
+    for item in triggers or []:
+        row = dict(item)
+        if parse_iso(row.get("queued_at")) is None:
+            row["queued_at"] = iso_now
+        out.append(row)
+    return out
+
+
+def webhook_failure_count(path):
+    """Previous consecutive_failures, or 0 when the field is absent or not a count."""
+    try:
+        with open(path) as handle:
+            doc = json.load(handle)
+    except (OSError, ValueError):
+        return 0
+    hook = doc.get("webhook") if isinstance(doc, dict) else None
+    if not isinstance(hook, dict):
+        return 0
+    count = hook.get("consecutive_failures")
+    if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+        return 0
+    return count
+
+
+def webhook_public(http, prior, pending_count):
+    """Outcome for last-run.json. Counts and a status code or class name only."""
+    attempts = list(getattr(http, "webhook_attempts", []) or [])
+    dropped = [item for item in (getattr(http, "webhook_dropped", []) or []) if isinstance(item, dict)]
+    failed = [item for item in attempts if not item.get("ok")]
+    if not attempts:
+        status, ok, consecutive = "not_attempted", None, prior
+    elif failed:
+        status, ok, consecutive = failed[-1]["status"], False, prior + 1
+    else:
+        status, ok, consecutive = attempts[-1]["status"], True, 0
+    by_kind = {}
+    for item in dropped:
+        kind = item.get("kind")
+        if not isinstance(kind, str) or not _KIND.fullmatch(kind):
+            kind = "other"
+        by_kind[kind] = by_kind.get(kind, 0) + 1
+    return {
+        "ok": ok,
+        "status": status,
+        "consecutive_failures": consecutive,
+        "attempts": len(attempts),
+        "dropped_stale": len(dropped),
+        "dropped_by_kind": by_kind,
+        "queued": int(pending_count),
+    }
+
+
 class Http:
     def __init__(self, pace, backoff=None):
         self.pace, self.last, self.failures, self.calls = pace, {}, {}, {}
@@ -51,6 +154,8 @@ class Http:
         self.last_fail = {}  # src -> {"status": http code or "deadline"/"skipped"/exc name, "why": short text}
         self.dev_checks = False  # while set, a Koios 429 does not trip the breaker (dev checks falls back instead)
         self.koios_pause_until = 0  # unix time; research skips Koios until then after a dev-checks 429
+        self.webhook_attempts = []  # {status, ok}. No URL, secret, header, or response body.
+        self.webhook_dropped = []  # stale queue rows dropped this run; counts only are published
 
     def blocked(self, src):
         if src in self.tripped:
@@ -144,25 +249,38 @@ class Http:
         h = {"User-Agent": UA, "Accept": "application/json", "Content-Type": "application/json"}
         h.update(headers or {})
         data = json.dumps(body).encode()
+        last_status = "error"
         for attempt in (0, 1):
             self._wait("webhook")
             self.calls["webhook"] = self.calls.get("webhook", 0) + 1
             try:
                 r = urllib.request.Request(url, data=data, method="POST", headers=h)
                 with urllib.request.urlopen(r, timeout=30) as resp:
-                    return 200 <= resp.status < 300
+                    ok = 200 <= resp.status < 300
+                    self._note_webhook(resp.status, ok)
+                    return ok
             except urllib.error.HTTPError as e:
                 if 200 <= e.code < 300:
+                    self._note_webhook(e.code, True)
                     return True
+                last_status = e.code
                 if e.code == 429 and attempt == 0:
                     time.sleep(3)
                     continue
+                self._note_webhook(e.code, False)
                 self._fail("webhook", f"http {e.code}")
                 return False
             except Exception as e:  # timeout / network: may have landed, do not retry now
+                # Class name only. The message can contain the URL.
+                self._note_webhook(type(e).__name__, False)
                 self._fail("webhook", f"{type(e).__name__} (not retried; queued for next run)")
                 return False
+        self._note_webhook(last_status, False)
         return False
+
+    def _note_webhook(self, status, ok):
+        """Remember the outcome of one post. status is a code or a class name."""
+        self.webhook_attempts.append({"status": webhook_status(status), "ok": bool(ok)})
 
     def _remember_block(self, src):
         """Keep the earlier HTTP status (a 429 that tripped the breaker). A pure deadline/breaker skip has no code."""
@@ -1296,8 +1414,10 @@ def main():
     # ---- primary webhook BEFORE the dev_checks budget. A kill line, launch, or whale move is not held
     # for the 180s scan. Pending triggers from a failed earlier post are retried here. Vetoes are never
     # included: they are not buy signals. dev_sell, if the scan finds one, is a separate post afterwards.
-    NOPUB = ("key", "kill_sig", "kill_entry")
+    # queued_at stays in state.json. It is not part of the posted trigger.
+    NOPUB = ("key", "kill_sig", "kill_entry", "queued_at")
     fresh_all, sent_any, flags_attached = [], False, False
+    prior_webhook_failures = webhook_failure_count(os.path.join(args.data_dir, "last-run.json"))
 
     def settle(batch, retry_pending=True):
         nonlocal sent_any, flags_attached
@@ -1309,7 +1429,19 @@ def main():
         if retry_pending:
             pending = [t for t in state["pending_triggers"] if t.get("key") and t["key"] not in state["fired"] and t["key"] not in new_keys
                        and not (t.get("kind") == "kill_line" and t.get("name") in new_kill)]
-        fresh = pending + [t for t in batch if t["key"] not in state["fired"]]
+        kept, dropped = partition_pending(pending, time.time())
+        if dropped:
+            http.webhook_dropped.extend(item for item in dropped if isinstance(item, dict))
+            counts = {}
+            for item in dropped:
+                kind = item.get("kind") if isinstance(item, dict) else None
+                if not isinstance(kind, str) or not _KIND.fullmatch(kind):
+                    kind = "other"
+                counts[kind] = counts.get(kind, 0) + 1
+            print(f"webhook queue: dropped {len(dropped)} stale {json.dumps(counts, sort_keys=True)}")
+            gone = {item.get("key") for item in dropped if isinstance(item, dict)}
+            state["pending_triggers"] = [t for t in state["pending_triggers"] if t.get("key") not in gone]
+        fresh = kept + [t for t in batch if t["key"] not in state["fired"]]
         fresh_all.extend(fresh)
         if baseline:
             print(f"baseline run: {len(fresh)} would-be trigger(s) recorded, not sent")
@@ -1325,6 +1457,7 @@ def main():
                 print("dry-run: webhook not sent")
             elif not url:
                 print("SOLADA_WEBHOOK_URL not set: skipping webhook")
+                http._note_webhook("unset", False)
             else:
                 hdr = {"Authorization": f"Bearer {key}"} if key else {}
                 hdr["Idempotency-Key"] = idempotency_key(cfg, [t["key"] for t in fresh])
@@ -1343,11 +1476,12 @@ def main():
             else:
                 state["pending_triggers"] = [t for t in state["pending_triggers"] if t.get("key") not in done]
         elif fresh and not args.dry_run:
+            stamped = with_queued_at(fresh, now_iso())
             if retry_pending:
-                state["pending_triggers"] = fresh[-200:]
+                state["pending_triggers"] = stamped[-200:]
             else:
                 have = {t.get("key") for t in state["pending_triggers"]}
-                state["pending_triggers"] = (list(state["pending_triggers"]) + [t for t in fresh if t["key"] not in have])[-200:]
+                state["pending_triggers"] = (list(state["pending_triggers"]) + [t for t in stamped if t["key"] not in have])[-200:]
         if sent:
             sent_any = True
         return fresh
@@ -1413,7 +1547,9 @@ def main():
             "passed_k_y": [r["ticker"] for r in passed], "thresholds": {k: v for k, v in th.items() if k != "source"},
             "market_age_min": market_age_min, "ada_usd": ada_usd, "whale": {k: v for k, v in (whale_summary or {}).items()},
             "first_block_hits": fb_hits, "triggers": [{k: v for k, v in t.items() if k not in NOPUB} for t in fresh],
-            "webhook_sent": sent_any, "flags_new": len(new_flags), "dev_checks": dev_summary,
+            "webhook_sent": sent_any,
+            "webhook": webhook_public(http, prior_webhook_failures, len(state["pending_triggers"])),
+            "flags_new": len(new_flags), "dev_checks": dev_summary,
             "big_moves": big_moves, "whale_ledger": whale_ledger, "liquidity_moves": liquidity,
             "vetoes": veto_summary, "sw01": sw01_summary,
             "data_failures": http.failures, "api_calls": http.calls, "results": results,
