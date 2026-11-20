@@ -150,16 +150,19 @@ def _main_scan(token, rows):
     }
 
 
-def _trigger(scan, item):
+def _row(scan, item):
     stats = scan.get("stats") or {}
     hashes = list(stats.get("sell_hashes") or [])
     ada = round(sum(float((stats.get("sell_ada") or {}).get(h) or 0) for h in hashes), 2)
     prev = {"unit": item["unit"], "dev_sold_ada": 0, "late_rug": False, "dev_tag": "w-abcdef01"}
-    row = DC._entry(
+    return DC._entry(
         item, scan, prev, {"units": {}, "sells": {}}, [item["launch"]], dc(),
         FX["now_s"], FX["now_s"] * 1000, False, hashes, ada,
     )
-    return DC.trigger_for(row)
+
+
+def _trigger(scan, item):
+    return DC.trigger_for(_row(scan, item))
 
 
 def _kind(trigger):
@@ -170,6 +173,18 @@ def _read(chain, cache, now_s):
     scan = DC._scan(chain, _item(), set(), dc(), cache, now_s)
     DC._store_cursor(cache, _item()["unit"], scan)
     return scan
+
+
+def _extend(rows, count):
+    start = rows[-1]["height"]
+    for i in range(count):
+        rows.append({
+            "hash": "x%05d" % (start + 1 + i),
+            "height": start + 1 + i,
+            "time": FX["launch_s"] + start + i,
+            "inputs": [],
+            "outputs": [],
+        })
 
 
 class Resume(unittest.TestCase):
@@ -302,10 +317,91 @@ class Resume(unittest.TestCase):
         self.assertFalse(gap["stats"]["late_rug"])
         self.assertFalse(main["stats"]["late_rug"])
 
-    def test_a_cursor_for_a_token_that_left_the_list_is_dropped(self):
+    def test_a_newest_end_sell_after_the_cap_fires_on_the_same_run(self):
+        # 60 new txs a run, cap 120. Main reads the newest page and fires.
+        # The cursor is already full, so those txs are not stored. They are still folded.
+        old = DC._CURSOR_TX_CAP
+        DC._CURSOR_TX_CAP = 120
+        try:
+            token, rows = _sell_book(80, False)
+            chain = _Book(rows)
+            item = _sell_item(token)
+            cache = {}
+            now = FX["now_s"]
+            capped = False
+            for n in range(8):
+                scan = DC._scan(chain, item, set(), dc(), cache, now + n * 7200)
+                DC._store_cursor(cache, token, scan)
+                stored = cache["cursors"][token]
+                if stored.get("capped"):
+                    capped = True
+                    break
+                _extend(rows, 60)
+            self.assertTrue(capped)
+            self.assertLessEqual(len(cache["cursors"][token]["txs"]), 120)
+            _extend(rows, 59)
+            rows.append(_sell_tx(token, rows[-1]["height"] + 1))
+            pr = DC._scan(chain, item, set(), dc(), cache, now + 20 * 7200)
+            DC._store_cursor(cache, token, pr)
+            main = _main_scan(token, rows)
+            pr_row = _row(pr, item)
+            main_row = _row(main, item)
+            self.assertGreater(pr["unread_txs"], 0)
+            self.assertFalse(pr["complete"])
+            self.assertLessEqual(len(cache["cursors"][token]["txs"]), 120)
+            self.assertIn("sell", pr["stats"]["sell_hashes"])
+            self.assertEqual(pr["stats"]["sell_hashes"], main["stats"]["sell_hashes"])
+            self.assertEqual(pr["stats"]["sold_ada"], main["stats"]["sold_ada"])
+            self.assertEqual(pr["stats"]["late_rug"], True)
+            self.assertEqual(main["stats"]["late_rug"], True)
+            self.assertEqual(pr_row["risk"], "high")
+            self.assertEqual(main_row["risk"], "high")
+            self.assertEqual(_kind(DC.trigger_for(pr_row)), "dev_sell")
+            self.assertEqual(_kind(DC.trigger_for(main_row)), "dev_sell")
+            self.assertGreater(pr_row["dev_sold_ada"], 0)
+        finally:
+            DC._CURSOR_TX_CAP = old
+
+    def test_cursor_covered_cannot_override_a_gap(self):
+        # The walks already meet. A full unseen tip is still incomplete.
+        # cursor_covered stays True, which is what the old recompute trusted.
+        chain = _Chain(60)
+        cache = {}
+        now = FX["now_s"]
+        _read(chain, cache, now)
+        done = _read(chain, cache, now + 7200)
+        self.assertTrue(done["complete"])
+        token = _item()["unit"]
+        self.assertTrue(DC.cursor_covered(cache["cursors"][token]))
+        start = chain.rows[-1]["height"]
+        for i in range(LIM):
+            chain.rows.append({
+                "hash": "g%04d" % i, "height": start + 1 + i, "time": 1_800_000_000 + i,
+                "inputs": [], "outputs": [],
+            })
+        real = DC.cursor_covered
+        DC.cursor_covered = lambda _cursor: True
+        try:
+            gap = _read(chain, cache, now + 14400)
+        finally:
+            DC.cursor_covered = real
+        self.assertFalse(gap["complete"])
+        self.assertFalse(gap["stats"]["late_rug"])
+
+    def test_a_cursor_is_kept_until_absence_repeats_and_a_write_is_not_deleted(self):
         cache = {"cursors": {"stay": {"v": 1}, "left": {"v": 1}}}
         DC._prune_cursors(cache, ["stay"])
+        self.assertEqual(set(cache["cursors"]), {"stay", "left"})
+        self.assertEqual(cache["cursor_absent"]["left"], 1)
+        for _ in range(DC._CURSOR_ABSENT_RUNS - 1):
+            DC._prune_cursors(cache, ["stay"])
         self.assertEqual(set(cache["cursors"]), {"stay"})
+        self.assertNotIn("cursor_absent", cache)
+        # Written this run, and not on the tracked list: a prior launch.
+        cache["cursors"]["prior"] = {"v": 1}
+        DC._prune_cursors(cache, ["stay"], ["prior"])
+        self.assertIn("prior", cache["cursors"])
+        self.assertNotIn("prior", cache.get("cursor_absent") or {})
         import json
         import tempfile
         from test_dev_checks import run_dc, world
@@ -318,6 +414,10 @@ class Resume(unittest.TestCase):
             stored.setdefault("cursors", {})["not-on-the-list"] = {"v": 1, "txs": []}
             json.dump(stored, open(path, "w"))
             run_dc(True, books, launches, tracked, directory)
+            stored = json.load(open(path))
+            self.assertIn("not-on-the-list", stored.get("cursors") or {})
+            for _ in range(DC._CURSOR_ABSENT_RUNS - 1):
+                run_dc(True, books, launches, tracked, directory)
             stored = json.load(open(path))
         self.assertNotIn("not-on-the-list", stored.get("cursors") or {})
 
