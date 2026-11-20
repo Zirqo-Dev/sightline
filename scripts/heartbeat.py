@@ -25,12 +25,12 @@ file to main are ignored.
 ua-f1-data can skip a commit when a run has nothing new, so that branch is
 judged from the later of its tip and its last success.
 
-Two report-only flags can turn the overall status red without changing a
-workflow's missed_count. An nft-data snapshot saved as ok, whose Ethereum or
-Base lane was requested and screened no collections, is one. N consecutive
-prefilter webhook failures, read from desk-data last-run.json when that field
-exists, is the other. Hoodscout's snapshot commits are not in this repo, so
-that check is not made here.
+Two extra flags are recorded and do not change status or missed_count. One
+is an nft-data snapshot saved as ok whose Ethereum or Base lane screened no
+collections, unless that lane stopped for budget or deadline. The other is
+N consecutive prefilter webhook failures, read from desk-data last-run.json
+when that field exists and the file is recent. Hoodscout's snapshot commits
+are not in this repo, so that check is not made here.
 """
 
 from __future__ import annotations
@@ -552,11 +552,18 @@ def _status(miss, branch_level, failures, disable_red, days, state, waiting):
     return "green"
 
 
-def nft_empty_lanes(status):
-    """Lanes on an ok snapshot that ran and screened no collections.
+# A lane that stopped for these reasons did not screen. Base is requested even
+# then. That is not an empty screen.
+_LANE_NOT_RUN = frozenset({"not_run_budget", "deadline"})
+_FLAG_MAX_AGE = timedelta(hours=6)
 
-    A lane that was not requested and spent no calls is not a flag. A snapshot
-    that was not saved as ok is not a flag either.
+
+def nft_empty_lanes(status):
+    """Lanes on an ok snapshot that screened no collections after they ran.
+
+    A lane that was not requested and spent no calls is not a flag. A lane
+    whose stop is not_run_budget or deadline is not a flag. A snapshot that
+    was not saved as ok is not a flag either.
     """
     if not isinstance(status, dict) or status.get("status") != "ok":
         return []
@@ -567,6 +574,8 @@ def nft_empty_lanes(status):
     for lane in _NFT_LANES:
         row = by_chain.get(lane)
         if not isinstance(row, dict):
+            continue
+        if row.get("stop") in _LANE_NOT_RUN:
             continue
         screened = row.get("screened")
         if isinstance(screened, bool) or not isinstance(screened, int) or screened != 0:
@@ -596,14 +605,30 @@ def webhook_fail_count(doc):
     return count
 
 
-def health_flags(nft_status, prefilter_run, fail_after=WEBHOOK_FAIL_FLAG):
-    """Report-only flags. No schedule, lane, or webhook behavior changes here."""
+def _recent_enough(doc, now, key):
+    """True when the document has no stamp, or the stamp is within six hours.
+
+    A missing stamp is not treated as old. A stamp older than six hours is
+    ignored so a stale file cannot keep a flag up.
+    """
+    if now is None or not isinstance(doc, dict):
+        return True
+    stamp = parse_time(doc.get(key))
+    if stamp is None:
+        return True
+    return now - stamp <= _FLAG_MAX_AGE
+
+
+def health_flags(nft_status, prefilter_run, fail_after=WEBHOOK_FAIL_FLAG, now=None):
+    """Report-only flags. They do not change status, misses, or a lane."""
     flags = []
-    for lane in nft_empty_lanes(nft_status):
-        flags.append({"code": "nft_empty_lane", "level": "red", "lane": lane, "screened": 0})
-    count = webhook_fail_count(prefilter_run)
-    if count is not None and count >= fail_after:
-        flags.append({"code": "webhook_consecutive_failures", "level": "red", "count": count})
+    if _recent_enough(nft_status, now, "ran_at"):
+        for lane in nft_empty_lanes(nft_status):
+            flags.append({"code": "nft_empty_lane", "level": "red", "lane": lane, "screened": 0})
+    if _recent_enough(prefilter_run, now, "at"):
+        count = webhook_fail_count(prefilter_run)
+        if count is not None and count >= fail_after:
+            flags.append({"code": "webhook_consecutive_failures", "level": "red", "count": count})
     return flags
 
 
@@ -670,10 +695,8 @@ def build_health(workflows, runs_by_file, branch_commits, now, main_commit_at=No
     for row in rows:
         if rank[row["status"]] > rank[overall]:
             overall = row["status"]
-    # Flags do not change missed_count. They can only raise the overall status.
-    flags = health_flags(nft_status, prefilter_run)
-    if flags and rank["red"] > rank[overall]:
-        overall = "red"
+    # Flags are an extra field. They do not change this status.
+    flags = health_flags(nft_status, prefilter_run, now=now)
     return {
         "generated_at": iso(now),
         "status": overall,
