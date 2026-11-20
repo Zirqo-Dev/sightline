@@ -437,6 +437,8 @@ class FileGuard(unittest.TestCase):
             os.makedirs(os.path.join(main, "scripts"))
             shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), os.path.join(main, "scripts"))
             shutil.copy(os.path.join(ROOT, "scripts", "privacy_identity.py"), os.path.join(main, "scripts"))
+            shutil.copy(os.path.join(ROOT, "scripts", "privacy_hex.py"), os.path.join(main, "scripts"))
+            shutil.copy(os.path.join(ROOT, "scripts", "privacy-hex-allow.txt"), os.path.join(main, "scripts"))
             shutil.copy(os.path.join(ROOT, "scripts", "privacy-public-keys.txt"), os.path.join(main, "scripts"))
             shutil.copytree(SRC, os.path.join(main, "solada-prefilter"),
                             ignore=shutil.ignore_patterns("tests", "__pycache__"))

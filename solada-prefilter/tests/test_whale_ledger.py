@@ -235,6 +235,8 @@ class Config(unittest.TestCase):
             os.makedirs(os.path.join(d, "scripts"))
             shutil.copy(os.path.join(src, "privacy-guard.sh"), os.path.join(d, "scripts"))
             shutil.copy(os.path.join(src, "privacy_identity.py"), os.path.join(d, "scripts"))
+            shutil.copy(os.path.join(src, "privacy_hex.py"), os.path.join(d, "scripts"))
+            shutil.copy(os.path.join(src, "privacy-hex-allow.txt"), os.path.join(d, "scripts"))
             open(os.path.join(d, "scripts", "privacy-public-keys.txt"), "w").write("stake1u\n")  # prefix, not an address
             f = os.path.join(d, "x.txt")
             open(f, "w").write("hello\n")
