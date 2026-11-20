@@ -32,9 +32,9 @@ def spec(path, name, crons, branch=None):
     return {"file": path, "name": name, "crons": list(crons), "data_branch": branch}
 
 
-def health(workflows, runs, commits=None, main_age=timedelta(hours=-1)):
+def health(workflows, runs, commits=None, main_age=timedelta(hours=-1), **extra):
     return heartbeat.build_health(
-        workflows, runs, commits or {}, NOW, main_commit_at=NOW + main_age,
+        workflows, runs, commits or {}, NOW, main_commit_at=NOW + main_age, **extra,
     )
 
 
@@ -445,6 +445,174 @@ class LiveFiles(unittest.TestCase):
             self.assertNotIn("git push origin " + forbidden, text)
         for name in ("main", "desk-data", "races-data", "ua-f1-data"):
             self.assertIn(name, text)
+
+
+def _nft(status="ok", **lanes):
+    by_chain = {
+        "ethereum": {"screened": 4, "calls": 10, "requested": True},
+        "base": {"screened": 2, "calls": 8, "requested": True},
+    }
+    for name, row in lanes.items():
+        by_chain[name] = row
+    return {"status": status, "by_chain": by_chain}
+
+
+class Flags(unittest.TestCase):
+    def test_an_ok_snapshot_that_screened_nothing_is_flagged(self):
+        plain = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"])],
+            {DESK: [run(-5), run(-35)]},
+        )
+        doc = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"])],
+            {DESK: [run(-5), run(-35)]},
+            nft_status=_nft(ethereum={"screened": 0, "calls": 280, "requested": True}),
+        )
+        self.assertEqual(doc["flags"], [{"code": "nft_empty_lane", "level": "red", "lane": "ethereum", "screened": 0}])
+        self.assertEqual(doc["status"], plain["status"])
+        self.assertEqual(doc["workflows"][0]["missed_count"], plain["workflows"][0]["missed_count"])
+        self.assertEqual(doc["workflows"][0]["status"], plain["workflows"][0]["status"])
+        heartbeat.assert_public(doc)
+
+    def test_a_lane_that_did_not_run_is_not_an_empty_screen(self):
+        doc = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"])],
+            {DESK: [run(-5)]},
+            nft_status=_nft(
+                ethereum={"screened": 3, "calls": 12, "requested": True},
+                base={"screened": 0, "calls": 0, "requested": False},
+            ),
+        )
+        self.assertEqual(doc["flags"], [])
+        self.assertEqual(doc["status"], "green")
+
+    def test_a_budget_or_deadline_stop_is_not_an_empty_screen(self):
+        for stop in ("not_run_budget", "deadline"):
+            doc = health(
+                [spec(DESK, "Solana desk scan", ["*/30 * * * *"])],
+                {DESK: [run(-5)]},
+                nft_status=_nft(
+                    ethereum={"screened": 4, "calls": 12, "requested": True, "stop": "call_cap"},
+                    base={"screened": 0, "calls": 0, "requested": True, "stop": stop},
+                ),
+            )
+            self.assertEqual(doc["flags"], [], stop)
+            self.assertEqual(doc["status"], "green")
+
+    def test_an_ethereum_lane_with_calls_and_no_screen_is_flagged(self):
+        plain = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"])],
+            {DESK: [run(-5), run(-35)]},
+        )
+        doc = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"])],
+            {DESK: [run(-5), run(-35)]},
+            nft_status=_nft(
+                ethereum={"screened": 0, "calls": 280, "requested": True, "passing": 0, "pages": 1, "stop": "call_cap"},
+                base={"screened": 0, "calls": 0, "requested": True, "passing": 0, "pages": 0, "stop": "not_run_budget"},
+            ),
+        )
+        self.assertEqual(doc["flags"], [{"code": "nft_empty_lane", "level": "red", "lane": "ethereum", "screened": 0}])
+        self.assertEqual(doc["status"], plain["status"])
+        self.assertEqual(doc["workflows"][0]["status"], plain["workflows"][0]["status"])
+
+    def test_a_snapshot_that_is_not_ok_is_not_flagged(self):
+        doc = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"])],
+            {DESK: [run(-5)]},
+            nft_status=_nft("partial", ethereum={"screened": 0, "calls": 280, "requested": True}),
+        )
+        self.assertEqual(doc["flags"], [])
+
+    def test_webhook_failures_flag_at_three_and_ignore_a_missing_field(self):
+        quiet = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"])],
+            {DESK: [run(-5)]},
+            prefilter_run={"webhook": {"consecutive_failures": 2, "status": 503}},
+        )
+        loud = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"])],
+            {DESK: [run(-5)]},
+            prefilter_run={"webhook": {"consecutive_failures": 3, "status": 503}},
+        )
+        absent = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"])],
+            {DESK: [run(-5)]},
+            prefilter_run={"at": "2026-11-20T12:00:00Z"},
+        )
+        broken = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"])],
+            {DESK: [run(-5)]},
+            prefilter_run={"webhook": {"consecutive_failures": "3"}},
+        )
+        self.assertEqual(quiet["flags"], [])
+        self.assertEqual(loud["flags"], [{"code": "webhook_consecutive_failures", "level": "red", "count": 3}])
+        self.assertEqual(absent["flags"], [])
+        self.assertEqual(broken["flags"], [])
+        self.assertEqual(loud["workflows"][0]["missed_count"], quiet["workflows"][0]["missed_count"])
+        self.assertEqual(loud["status"], quiet["status"])
+        heartbeat.assert_public(loud)
+        stale = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"])],
+            {DESK: [run(-5)]},
+            nft_status={"status": "ok", "ran_at": at(timedelta(hours=-7)), "by_chain": {
+                "ethereum": {"screened": 0, "calls": 280, "requested": True, "stop": "call_cap"},
+            }},
+            prefilter_run={"at": at(timedelta(hours=-7)), "webhook": {"consecutive_failures": 9}},
+        )
+        self.assertEqual(stale["flags"], [])
+
+    def test_zero_runs_created_today_and_manual_runs_do_not_change_the_miss_count(self):
+        # No run yet. The due slots are still missed. The flag is separate from that red.
+        item = spec(DESK, "Solana desk scan", ["*/30 * * * *"])
+        nft = _nft(
+            ethereum={"screened": 0, "calls": 280, "requested": True, "stop": "call_cap"},
+            base={"screened": 0, "calls": 0, "requested": True, "stop": "not_run_budget"},
+        )
+        none = health([item], {DESK: []})
+        flagged = health([item], {DESK: []}, nft_status=nft)
+        self.assertGreaterEqual(none["workflows"][0]["missed_count"], 1)
+        self.assertEqual(flagged["workflows"][0]["missed_count"], none["workflows"][0]["missed_count"])
+        self.assertEqual(flagged["workflows"][0]["status"], none["workflows"][0]["status"])
+        self.assertEqual(none["status"], "red")
+        self.assertEqual(flagged["status"], none["status"])
+        self.assertEqual(none["flags"], [])
+        self.assertEqual(flagged["flags"], [{"code": "nft_empty_lane", "level": "red", "lane": "ethereum", "screened": 0}])
+
+        # Created at 11:20. 11:00 is before that, 12:00 is still inside grace, so only 11:30 is due.
+        partial = spec(DESK, "Solana desk scan", ["*/30 * * * *"])
+        partial["created_at"] = "2026-11-11T11:20:00Z"
+        partial["main_added_at"] = "2026-11-11T11:20:00Z"
+        plain_window = health([partial], {DESK: []})
+        window = health([partial], {DESK: []}, nft_status=nft)
+        # Only 11:30 is due. 11:00 is before the file existed, and 12:00 is still inside grace.
+        # Zero runs makes that single miss red. The flag does not add a miss.
+        self.assertEqual(window["workflows"][0]["missed_count"], 1)
+        self.assertEqual(window["workflows"][0]["missed_count"], plain_window["workflows"][0]["missed_count"])
+        self.assertEqual(window["workflows"][0]["status"], plain_window["workflows"][0]["status"])
+        self.assertEqual(window["status"], plain_window["status"])
+        self.assertTrue(window["flags"])
+
+        # Manual runs, including a dispatch from a branch other than main, do not fill that slot.
+        runs = {DESK: [
+            run(-20, "success", "workflow_dispatch", "feature"),
+            run(-25, "success", "workflow_dispatch"),
+            run(-15, "success", "push", "main"),
+        ]}
+        plain_manual = health([partial], runs)
+        manual = health([partial], runs, nft_status=nft, prefilter_run={"webhook": {"consecutive_failures": 4}})
+        self.assertEqual(manual["workflows"][0]["missed_count"], 1)
+        self.assertEqual(manual["workflows"][0]["missed_count"], plain_manual["workflows"][0]["missed_count"])
+        self.assertEqual(manual["status"], plain_manual["status"])
+        self.assertEqual(manual["workflows"][0]["status"], plain_manual["workflows"][0]["status"])
+        self.assertTrue(any(flag["code"] == "nft_empty_lane" for flag in manual["flags"]))
+        self.assertTrue(any(flag["code"] == "webhook_consecutive_failures" for flag in manual["flags"]))
+        filled_runs = {DESK: [run(-20, "success", "workflow_dispatch", "main")]}
+        plain_filled = health([partial], filled_runs)
+        filled = health([partial], filled_runs, nft_status=nft)
+        self.assertEqual(filled["workflows"][0]["missed_count"], 0)
+        self.assertEqual(filled["workflows"][0]["missed_count"], plain_filled["workflows"][0]["missed_count"])
+        self.assertEqual(filled["status"], plain_filled["status"])
 
 
 if __name__ == "__main__":
