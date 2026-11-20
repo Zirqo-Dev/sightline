@@ -124,7 +124,7 @@ class Day28Verdict(unittest.TestCase):
         self.assertTrue(got["headline_text"].startswith("v6.5 F: edge not shown."))
         self.assertNotIn("\nheadline: GO\n", "\n" + text)
         self.assertNotIn("VERDICT: GO", text)
-        self.assertEqual(got["closed_list"], "INVALIDATED")
+        self.assertEqual(got["closed_list"], "INCONCLUSIVE")
         self.assertEqual(got["SH-03"], "INVALIDATED")
         self.assertEqual(got["SH-03_changes_table"], "no")
 
@@ -133,9 +133,12 @@ class Day28Verdict(unittest.TestCase):
         f, trades = self.many("F", 20, -0.08, early, late)
         r, rt = self.many("R", 1, 0.0, self.cut - 1000, self.cut - 10)
         opens = {"F": {"F-20261120T1200-open": dict(
-            mint="openmint", opened=self.cut - 500, frac=1.0, pnl=0.0, stale=0, no_route_count=0,
+            mint="openmint", opened=self.cut - 500, entry=1.0, frac=1.0, pnl=0.0,
+            entry_cost=0.5, exit_haircut=0.0, stale=0, no_route_count=0,
         )}}
-        pos, trades = self.pack({"F": f, "R": r}, trades + rt, opens=opens)
+        buy = dict(book="F", action="buy", mint="openmint", time=str(self.cut - 500), frac="1",
+                   pnl="", quote_px="1", net_pnl="", why="pass", cost_model="", stale="0")
+        pos, trades = self.pack({"F": f, "R": r}, trades + rt + [buy], opens=opens)
         text, got = self.report(pos, trades, unfixable=True, recorded="STOP")
         self.assertEqual(got["day14_verdict"], "STOP")
         self.assertEqual(got["branch"], "1")
@@ -221,7 +224,7 @@ class Day28Verdict(unittest.TestCase):
         late, legs = self.close("F", -10.0, self.cut - 100, self.cut + 60)
         pos, trades = self.pack({"F": f + [late], "R": r}, trades + rt + legs)
         # At the cutoff this lot was still open. The later sell price is not the mark.
-        snap = {"books": {"F": {"closed": f, "open": {"F-snap-late": dict(
+        snap = {"last_run_ts": self.cut, "books": {"F": {"closed": f, "open": {"F-snap-late": dict(
             mint=late["mint"], opened=late["opened"], entry=1.0, frac=1.0, pnl=0.0,
             entry_cost=0.5, exit_haircut=0.0, last_mark=1.0, stale=0, no_route_count=0,
         )}}, "R": {"closed": r, "open": {}}, "S": {"closed": [], "open": {}}}}
@@ -240,11 +243,13 @@ class Day28Verdict(unittest.TestCase):
         f, trades = self.many("F", 20, 0.05, self.cut - 4000, self.cut)
         r, rt = self.many("R", 1, 0.01, self.cut - 4000, self.cut)
         base = trades + rt
+        healthy_buy = dict(book="F", action="buy", mint="markmint", time=str(self.cut - 800), frac="1",
+                           pnl="", quote_px="1", net_pnl="", why="pass", cost_model="", stale="0")
         healthy = {"F": {"F-20261120T1200-mk": dict(
             mint="markmint", opened=self.cut - 800, entry=1.0, frac=1.0, pnl=0.0,
             entry_cost=0.5, exit_haircut=0.0, last_mark=2.0, stale=0, no_route_count=0,
         )}}
-        pos, rows = self.pack({"F": f, "R": r}, base, opens=healthy)
+        pos, rows = self.pack({"F": f, "R": r}, base + [healthy_buy], opens=healthy)
         _text, got = self.report(pos, rows)
         self.assertEqual(got["F_closes"], "20")
         self.assertEqual(got["F_open_at_cutoff"], "1")
@@ -268,7 +273,9 @@ class Day28Verdict(unittest.TestCase):
             mint="bare", opened=self.cut - 800, entry=1.0, frac=1.0, pnl=0.0,
             entry_cost=0.5, exit_haircut=0.0, no_route_count=0,
         )}}
-        pos, rows = self.pack({"F": f, "R": r}, base, opens=bare)
+        bare_buy = dict(book="F", action="buy", mint="bare", time=str(self.cut - 800), frac="1",
+                        pnl="", quote_px="1", net_pnl="", why="pass", cost_model="", stale="0")
+        pos, rows = self.pack({"F": f, "R": r}, base + [bare_buy], opens=bare)
         _text, got = self.report(pos, rows)
         self.assertEqual(got["VERDICT"], "NOT_FINAL")
         self.assertIn("F_open_mark_unknown", got["finality_reasons"])
@@ -309,7 +316,9 @@ class Day28Verdict(unittest.TestCase):
             mint="rugmint", opened=self.cut - 800, entry=1.0, frac=1.0, pnl=0.0,
             entry_cost=0.5, exit_haircut=0.0, no_route_count=3, stale=0,
         )}}
-        _text, got = self.report(*self.pack({"F": f, "R": rr}, ft + rrt, opens=opens))
+        rug_buy = dict(book="F", action="buy", mint="rugmint", time=str(self.cut - 800), frac="1",
+                       pnl="", quote_px="1", net_pnl="", why="pass", cost_model="", stale="0")
+        _text, got = self.report(*self.pack({"F": f, "R": rr}, ft + rrt + [rug_buy], opens=opens))
         self.assertEqual(got["F_closes"], "20")
         self.assertEqual(got["F_rugs"], "1")
         self.assertEqual(got["F_open_at_cutoff"], "1")
@@ -326,8 +335,13 @@ class Day28Verdict(unittest.TestCase):
         self.assertAlmostEqual(float(got["F_all_in_expectancy"]), 0.1, places=6)
         self.assertEqual(got["table_label"], "PASS")
 
-        opens = {"F": {"F-20261120T1200-unk": dict(mint="unk", opened=self.cut - 50)}}
-        text, got = self.report(*self.pack({"F": f, "R": r}, trades + rt, opens=opens))
+        opens = {"F": {"F-20261120T1200-unk": dict(
+            mint="unk", opened=self.cut - 50, entry=1.0, frac=1.0, pnl=0.0,
+            entry_cost=0.5, exit_haircut=0.0,
+        )}}
+        buy = dict(book="F", action="buy", mint="unk", time=str(self.cut - 50), frac="1",
+                   pnl="", quote_px="1", net_pnl="", why="pass", cost_model="", stale="0")
+        text, got = self.report(*self.pack({"F": f, "R": r}, trades + rt + [buy], opens=opens))
         self.assertEqual(got["VERDICT"], "NOT_FINAL")
         self.assertIn("F_open_mark_unknown", got["finality_reasons"])
         self.assertNotEqual(got["table_label"], "PASS")
@@ -495,14 +509,30 @@ class Day28Verdict(unittest.TestCase):
                 writer = csv.DictWriter(fh, fieldnames=keys)
                 writer.writeheader()
                 writer.writerows(trades)
+            import builtins
             seen = []
+            opened = []
+            scanned = []
             orig = self.m.os.path.isfile
+            orig_open = builtins.open
+            orig_scan = os.scandir
 
             def spy(path):
                 seen.append(os.path.basename(path))
                 return orig(path)
 
+            def spy_open(*args, **kwargs):
+                opened.append(args[0] if args else "")
+                return orig_open(*args, **kwargs)
+
+            def spy_scan(*args, **kwargs):
+                scanned.append(args[0] if args else "")
+                return orig_scan(*args, **kwargs)
+
             self.m.os.path.isfile = spy
+            self.m.os.scandir = spy_scan
+            builtins.open = spy_open
+            os.scandir = spy_scan
             try:
                 err = io.StringIO()
                 with redirect_stderr(err):
@@ -512,8 +542,13 @@ class Day28Verdict(unittest.TestCase):
                     )
             finally:
                 self.m.os.path.isfile = orig
+                self.m.os.scandir = orig_scan
+                builtins.open = orig_open
+                os.scandir = orig_scan
             self.assertEqual(code, 2)
             self.assertEqual(seen, [self.m.SENTINEL_NAME])
+            self.assertEqual(opened, [])
+            self.assertEqual(scanned, [])
             self.assertIn("DAY28_SYNTHETIC_FIXTURE", err.getvalue())
             open(os.path.join(directory, self.m.SENTINEL_NAME), "w").close()
             err = io.StringIO()
@@ -599,7 +634,7 @@ class Day28Verdict(unittest.TestCase):
             rows.append(rec)
             legs.extend(pair)
         r, rt = self.many("R", 1, 0.01, self.cut - 4000, self.cut)
-        kept = sorted(rows, key=lambda rec: (rec["closed"], rec["opened"], rec["mint"]))[-200:]
+        kept = rows[-200:]
         pos, trades = self.pack({"F": kept, "R": r}, legs + rt)
         _text, got = self.report(pos, trades, recorded="CONTINUE")
         self.assertEqual(got["finality"], "yes", got["finality_reasons"])
@@ -617,6 +652,103 @@ class Day28Verdict(unittest.TestCase):
         _text, got = self.report(pos, rows)
         self.assertEqual(got["VERDICT"], "NOT_FINAL")
         self.assertIn("malformed_row", got["finality_reasons"])
+
+    def test_snapshot_must_hold_every_lot_still_open_at_the_cutoff(self):
+        f, trades = self.many("F", 20, 0.05, self.cut - 4000, self.cut)
+        r, rt = self.many("R", 1, 0.01, self.cut - 4000, self.cut)
+        buy = dict(book="F", action="buy", mint="stillopen", time=str(self.cut - 700), frac="1",
+                   pnl="", quote_px="1", net_pnl="", why="pass", cost_model="", stale="0")
+        pos, rows = self.pack({"F": f, "R": r}, trades + rt + [buy])
+        # The snapshot is at the cutoff but omits the lot that is still open.
+        _text, got = self.report(pos, rows, snapshot=pos)
+        self.assertEqual(got["VERDICT"], "NOT_FINAL")
+        self.assertIn("F_open_snapshot_incomplete", got["finality_reasons"])
+        self.assertNotEqual(got["table_label"], "PASS")
+        late_snap = dict(pos)
+        late_snap["last_run_ts"] = self.cut + 60
+        late_snap["books"] = {
+            "F": {"closed": f, "open": {"F-still": dict(
+                mint="stillopen", opened=self.cut - 700, entry=1.0, frac=1.0, pnl=0.0,
+                entry_cost=0.5, exit_haircut=0.0, last_mark=1.0, stale=0,
+            )}},
+            "R": pos["books"]["R"], "S": pos["books"]["S"],
+        }
+        _text, late = self.report(pos, rows, snapshot=late_snap)
+        self.assertIn("open_snapshot_after_cutoff", late["finality_reasons"])
+        self.assertNotEqual(late["table_label"], "PASS")
+
+    def test_snapshot_lot_without_a_trade_is_not_final(self):
+        f, trades = self.many("F", 20, 0.05, self.cut - 4000, self.cut)
+        r, rt = self.many("R", 1, 0.01, self.cut - 4000, self.cut)
+        pos, rows = self.pack({"F": f, "R": r}, trades + rt)
+        snap = {
+            "last_run_ts": self.cut,
+            "books": {
+                "F": {"closed": f, "open": {"F-ghost": dict(
+                    mint="ghost", opened=self.cut - 50, entry=1.0, frac=1.0, pnl=0.0,
+                    entry_cost=0.5, exit_haircut=0.0, last_mark=1.0, stale=0,
+                )}},
+                "R": pos["books"]["R"], "S": pos["books"]["S"],
+            },
+        }
+        _text, got = self.report(pos, rows, snapshot=snap)
+        self.assertIn("F_open_snapshot_mismatch", got["finality_reasons"])
+        self.assertEqual(got["VERDICT"], "NOT_FINAL")
+
+    def test_missing_open_frac_is_not_final(self):
+        f, trades = self.many("F", 20, 0.05, self.cut - 4000, self.cut)
+        r, rt = self.many("R", 1, 0.01, self.cut - 4000, self.cut)
+        buy = dict(book="F", action="buy", mint="nofrac", time=str(self.cut - 600), frac="1",
+                   pnl="", quote_px="1", net_pnl="", why="pass", cost_model="", stale="0")
+        opens = {"F": {"F-nofrac": dict(
+            mint="nofrac", opened=self.cut - 600, entry=1.0, pnl=0.0,
+            entry_cost=0.5, exit_haircut=0.0, last_mark=1.0, stale=0,
+        )}}
+        pos, rows = self.pack({"F": f, "R": r}, trades + rt + [buy], opens=opens)
+        _text, got = self.report(pos, rows)
+        self.assertIn("F_open_frac_missing", got["finality_reasons"])
+        self.assertEqual(got["VERDICT"], "NOT_FINAL")
+        self.assertNotEqual(got["table_label"], "PASS")
+
+    def test_day14_not_final_recompute_keeps_the_recorded_branch(self):
+        early, late = self.day14 - 86400, self.day14 - 3600
+        f, trades = self.many("F", 20, -0.08, early, late)
+        r, rt = self.many("R", 1, 0.0, self.cut - 1000, self.cut - 10)
+        f[1]["id"] = f[0]["id"]
+        pos, rows = self.pack({"F": f, "R": r}, trades + rt)
+        _text, got = self.report(pos, rows, recorded="STOP", unfixable=True)
+        self.assertEqual(got["day14_verdict"], "NOT_FINAL")
+        self.assertNotIn("day14_branch_mismatch", got["finality_reasons"])
+        self.assertEqual(got["branch"], "1")
+        self.assertEqual(got["headline"], "INCONCLUSIVE")
+        self.assertIn("early STOP stands", got["headline_text"])
+
+    def test_tied_close_timestamps_use_the_sell_row_order(self):
+        rows, legs = [], []
+        same = self.cut - 10
+        for i in range(250):
+            rec, pair = self.close("F", 0.05, self.cut - 9000 - i, same)
+            rows.append(rec)
+            legs.extend(pair)
+        r, rt = self.many("R", 1, 0.01, self.cut - 4000, self.cut)
+        pos, trades = self.pack({"F": rows[-200:], "R": r}, legs + rt)
+        _text, got = self.report(pos, trades, recorded="CONTINUE")
+        self.assertEqual(got["finality"], "yes", got["finality_reasons"])
+        self.assertEqual(got["F_closes"], "250")
+        self.assertEqual(got["table_label"], "PASS")
+
+    def test_fixture_mode_refuses_a_git_checkout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            os.mkdir(os.path.join(directory, ".git"))
+            open(os.path.join(directory, self.m.SENTINEL_NAME), "w").close()
+            err = io.StringIO()
+            with redirect_stderr(err):
+                code = self.m.main(
+                    self._argv(directory, extra=["--test"]),
+                    now=self.cut - 1,
+                )
+            self.assertEqual(code, 2)
+            self.assertIn("git checkout", err.getvalue())
 
 
 if __name__ == "__main__":

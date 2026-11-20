@@ -206,7 +206,7 @@ def build_lots(trades, book):
 def _build_lots(trades, book, lots, closed, still_open, refills):
     ok = True
     reason = None
-    for row in trades:
+    for index, row in enumerate(trades):
         action = row.get("action")
         if action == "refill":
             if row.get("book") == book:
@@ -257,6 +257,7 @@ def _build_lots(trades, book, lots, closed, still_open, refills):
         lot["whys"].append(why)
         lot["sells"].append(dict(time=ts, pnl=pnl, frac=frac, why=why, quote=_num(row.get("quote_px")), stale=_stale(row)))
         if lot["frac"] >= 1 - 1e-4:
+            lot["sell_index"] = index
             closed.append(lots[mint].pop(0))
     for mint in lots:
         for lot in lots[mint]:
@@ -273,13 +274,14 @@ def _build_lots(trades, book, lots, closed, still_open, refills):
 def reconciles_book(closed, trades, book):
     """positions.json keeps the last CLOSED_KEEP closes. The log keeps every lot.
 
-    The tail must be the same lots as the newest CLOSED_KEEP trade lots. Older
-    lots stay in the sample. A non-finite pnl does not reconcile.
+    The tail is the last CLOSED_KEEP lots by the trades.csv row of the final
+    sell, not by close time. Same-run closes share a timestamp. Older lots
+    stay in the sample. A non-finite pnl does not reconcile.
     """
     built, _open, ok, _refills, _reason = build_lots(trades, book)
     if not ok or not D14.ids_unique(closed):
         return False
-    ordered = sorted(built, key=lambda lot: (lot["closed"], lot["opened"], lot["mint"]))
+    ordered = sorted(built, key=lambda lot: lot["sell_index"])
     tail = ordered[-CLOSED_KEEP:] if len(ordered) > CLOSED_KEEP else ordered
     if len(closed) != len(tail):
         return False
@@ -564,6 +566,62 @@ def register_label(branch, label, computable):
     return "INCONCLUSIVE", NEITHER_NOTE
 
 
+def _closed_list(branch, label, computable):
+    """Section 6 closed-list mapping. A branch-1 descriptive PASS is INCONCLUSIVE.
+
+    This is not the SH-03 line. register_label owns that line.
+    """
+    if not computable or label is None:
+        return "UNKNOWN"
+    if label == LABEL_STOP or (branch == 1 and label == LABEL_PASS) or (branch == 2 and label == LABEL_PASS):
+        return "INCONCLUSIVE"
+    if branch == 1 or str(label).startswith("KILL"):
+        return "INVALIDATED"
+    return "UNKNOWN"
+
+
+def _snapshot_reasons(trades, cutoff_ts, snapshot):
+    """The snapshot is the book of lots still open at the cutoff."""
+    reasons = []
+    last = snapshot.get("last_run_ts") if isinstance(snapshot, dict) else None
+    try:
+        last_ts = int(last) if last not in (None, "") else None
+    except (TypeError, ValueError):
+        last_ts = None
+    if last_ts is None or last_ts > cutoff_ts:
+        reasons.append("open_snapshot_after_cutoff")
+    for name in BOOKS:
+        built, still_open, ok, _refills, reason = build_lots(trades, name)
+        if not ok:
+            continue
+        trade_keys = set()
+        expected = set()
+        for lot in list(built) + list(still_open):
+            key = (lot["mint"], int(lot["opened"]))
+            trade_keys.add(key)
+            if lot["opened"] > cutoff_ts or in_committed_void(lot["opened"]):
+                continue
+            if lot.get("closed") is None or lot["closed"] > cutoff_ts:
+                expected.add(key)
+        present = set()
+        opens = (((snapshot.get("books") or {}).get(name) or {}).get("open") or {})
+        for pid, pos in opens.items():
+            pos = pos or {}
+            mint = pos.get("mint") or pid
+            try:
+                opened = int(pos["opened"])
+            except (TypeError, ValueError, KeyError):
+                reasons.append(f"{name}_open_snapshot_mismatch")
+                continue
+            key = (mint, opened)
+            present.add(key)
+            if key not in trade_keys:
+                reasons.append(f"{name}_open_snapshot_mismatch")
+        if expected - present:
+            reasons.append(f"{name}_open_snapshot_incomplete")
+    return list(dict.fromkeys(reasons))
+
+
 def _sources(tasks, cutoff_ts):
     counts = {"profile": 0, "boost": 0, "manual": 0, "other": 0}
     bad = 0
@@ -645,8 +703,8 @@ def _value_open(pos, book, trades, cutoff_ts, lot=None):
     try:
         entry = _num(pos.get("entry"))
         frac = _num(pos.get("frac"))
-        if frac is None:
-            frac = 1.0
+        if pos.get("frac") in (None, ""):
+            return None, 0, "open_frac_missing"
         cost = entry_cost_of_lot(pos, trades, book)
         raw_last = pos.get("last_mark")
         last = None if raw_last in (None, "") else _num(raw_last)
@@ -807,13 +865,15 @@ def render(positions, trades, cutoff_text, data_commit, positions_sha256, trades
     if day14_recorded not in ("STOP", "CONTINUE"):
         reasons.append("day14_recorded_missing")
         branch = None
-    elif early["verdict"] != day14_recorded:
+    elif early["verdict"] in ("STOP", "CONTINUE") and early["verdict"] != day14_recorded:
         reasons.append("day14_branch_mismatch")
         branch = None
     else:
         branch = 1 if day14_recorded == "STOP" else 2
     if not open_snapshot_commit or open_snapshot is None:
         reasons.append("open_snapshot_missing")
+    else:
+        reasons.extend(_snapshot_reasons(trades, cutoff_ts, open_snapshot))
     samples = {name: _book_sample(name, trades, cutoff_ts, open_snapshot) for name in BOOKS}
     if not binding:
         reasons.append("cutoff_not_default")
@@ -875,7 +935,7 @@ def render(positions, trades, cutoff_text, data_commit, positions_sha256, trades
         samples["F"]["all_in"], samples["R"]["all_in"], n_boot, SEED,
     )
     sh03, sh03_note = register_label(branch, label, final and label is not None)
-    closed_list = sh03
+    closed_list = _closed_list(branch, label, final and label is not None)
     trim_f = trimmed(samples["F"]["all_in"])
     trim_r = trimmed(samples["R"]["all_in"])
     trim_warn = bool(samples["F"]["all_in"] and samples["R"]["all_in"] and mean(trim_f) <= mean(trim_r))
@@ -916,6 +976,7 @@ def render(positions, trades, cutoff_text, data_commit, positions_sha256, trades
         f"day14_verdict: {early['verdict']}",
         f"day14_rule_result: {early['rule']}",
         f"day14_n_closes: {early['n']}",
+        f"day14_recompute_reasons: {'none' if not early['reasons'] else ','.join(early['reasons'])}",
         f"branch: {branch if branch else 'na'}",
     ]
     for name in BOOKS:
@@ -1089,6 +1150,13 @@ def main(argv=None, *, now=None):
                 print(
                     "day28_verdict: fixture mode requires a DAY28_SYNTHETIC_FIXTURE file "
                     "in the data directory. No other file was read.",
+                    file=sys.stderr,
+                )
+                return 2
+            git_mark = os.path.join(o.data_dir, ".git")
+            if os.path.isdir(git_mark) or os.path.isfile(git_mark):
+                print(
+                    "day28_verdict: fixture mode refuses a data directory that is a git checkout.",
                     file=sys.stderr,
                 )
                 return 2
