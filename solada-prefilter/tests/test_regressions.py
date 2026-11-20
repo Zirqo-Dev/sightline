@@ -313,22 +313,20 @@ class HolderPagination(unittest.TestCase):
 
 class WebhookDelivery(unittest.TestCase):
     def test_any_2xx_is_success_and_timeouts_are_not_retried(self):
-        import urllib.request as UR
-
         class Resp:
             status = 202
             def __enter__(self): return self
             def __exit__(self, *a): return False
             def read(self): return b"not json"
         http = P.Http({"webhook": 0})
-        with mock.patch.object(UR, "urlopen", lambda r, timeout=30: Resp()):
+        with mock.patch.object(P, "_open_webhook", lambda r, timeout=30: Resp()):
             self.assertTrue(http.post_webhook("https://example.invalid/h", {"a": 1}, {"Idempotency-Key": "k"}))
         n = []
 
         def boom(r, timeout=30):
             n.append(r)
             raise TimeoutError()
-        with mock.patch.object(UR, "urlopen", boom):
+        with mock.patch.object(P, "_open_webhook", boom):
             self.assertFalse(http.post_webhook("https://example.invalid/h", {"a": 1}))
         self.assertEqual(len(n), 1)
 
