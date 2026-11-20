@@ -998,9 +998,9 @@ def _remember(cache, unit, stake, live_ms, late, complete, ticker=None, baseline
 # enough to walk a history at one continuation page per 2h run.
 CURSOR_MAX_AGE_S = 7 * 24 * 3600
 _CURSOR_TX_CAP = 4000
-# A token that leaves the tracked list keeps its cursor for this many runs.
-# One absence is a skip, not a reason to throw the history away. A prior launch
-# is not on the tracked list; its cursor is written and must survive that run.
+# A token off the tracked list survives 2 absent runs and is dropped on the 3rd.
+# A prior launch is not on that list. The run that scans it writes the cursor
+# and must not delete it in the same run.
 _CURSOR_ABSENT_RUNS = 3
 
 
@@ -1184,7 +1184,7 @@ def _absent_count(raw):
 
 
 def _prune_cursors(cache, keep, written=None):
-    """Drop a cursor only after it has been off the tracked list for several runs.
+    """Drop a cursor on its 3rd run off the tracked list. It survives the first 2.
 
     `written` is every unit whose cursor was saved on this run. A prior launch is
     not tracked, so without this a run would store that cursor and delete it.

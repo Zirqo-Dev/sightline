@@ -283,6 +283,8 @@ class Resume(unittest.TestCase):
         self.assertEqual(second["stats"]["sell_hashes"], main["stats"]["sell_hashes"])
         self.assertEqual(_kind(_trigger(second, item)), "dev_sell")
         self.assertEqual(_kind(_trigger(main, item)), "dev_sell")
+        stored = {tx["hash"] for tx in cache["cursors"][token]["txs"]}
+        self.assertIn("sell", stored)
 
     def test_run_1_sees_the_same_dev_sell_as_a_scan_without_a_cursor(self):
         token, rows = _sell_book(40, True)
@@ -393,8 +395,11 @@ class Resume(unittest.TestCase):
         DC._prune_cursors(cache, ["stay"])
         self.assertEqual(set(cache["cursors"]), {"stay", "left"})
         self.assertEqual(cache["cursor_absent"]["left"], 1)
-        for _ in range(DC._CURSOR_ABSENT_RUNS - 1):
-            DC._prune_cursors(cache, ["stay"])
+        # Survives 2 absent runs. The next call is the 3rd and drops it.
+        DC._prune_cursors(cache, ["stay"])
+        self.assertIn("left", cache["cursors"])
+        self.assertEqual(cache["cursor_absent"]["left"], 2)
+        DC._prune_cursors(cache, ["stay"])
         self.assertEqual(set(cache["cursors"]), {"stay"})
         self.assertNotIn("cursor_absent", cache)
         # Written this run, and not on the tracked list: a prior launch.
@@ -420,6 +425,44 @@ class Resume(unittest.TestCase):
                 run_dc(True, books, launches, tracked, directory)
             stored = json.load(open(path))
         self.assertNotIn("not-on-the-list", stored.get("cursors") or {})
+
+    def test_a_prior_launch_cursor_survives_the_run_that_scanned_it(self):
+        import json
+        import tempfile
+        from test_dev_checks import leg, run_dc, world
+        cu, _, books, launches, tracked = world()
+        prior = unit("PRIOR")
+        live = FX["now_s"] - 3600
+        prior_book = [
+            leg("p%04d" % i, int(live) + i, [],
+                [utxo("dev", 2_000_000, {prior: 1}, "p%04d#0" % i)])
+            for i in range(40)
+        ]
+        launch = {
+            "id": "p", "ticker": "PRIOR", "policyId": prior[:56], "assetName": prior[56:],
+            "launcherAddress": addr("dev"), "liveAtMs": live * 1000,
+        }
+        clean_launch = next(row for row in launches if row.get("ticker") == "CLEAN")
+        clean_row = next(row for row in tracked if row["unit"] == cu)
+        cfg = {"dev_checks": {"budget_s": 30, "max_calls": 40, "max_bf_calls": 40,
+                              "max_launches": 1, "max_prior": 2},
+               "flags": {"exclude_tags": {}}}
+        with tempfile.TemporaryDirectory() as directory:
+            os.makedirs(os.path.join(directory, "cache"))
+            summary, _, doc, _ = run_dc(
+                True, {cu: books[cu], prior: prior_book}, [clean_launch, launch],
+                [clean_row], directory, cfg=cfg,
+            )
+            path = os.path.join(directory, "cache", "dev-checks-cache.json")
+            with open(path) as handle:
+                stored = json.load(handle)
+        self.assertEqual(summary.get("prior_unchecked"), 0)
+        self.assertNotIn("PRIOR", {entry["ticker"] for entry in doc["entries"]})
+        cursor = (stored.get("cursors") or {}).get(prior)
+        self.assertIsInstance(cursor, dict)
+        self.assertTrue(cursor.get("txs"))
+        self.assertFalse(cursor.get("done"))
+        self.assertNotIn(prior, stored.get("cursor_absent") or {})
 
 
 if __name__ == "__main__":
