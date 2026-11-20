@@ -38,8 +38,10 @@ def now_iso():
 
 
 # A queued alert older than this is not posted. One day is 12 slots at the 2h dispatch.
-# Legacy rows with no queued_at are older than the bound: their age is unknown.
+# A missing stamp is set to now, so a row already in the queue gets this same window.
+# A stamp more than an hour ahead of the clock is rewritten to now.
 WEBHOOK_QUEUE_MAX_AGE_S = 24 * 3600
+WEBHOOK_FUTURE_SKEW_S = 3600
 _ISO_Z = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 _WEBHOOK_CLASS = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,39}$")
 _KIND = re.compile(r"^[a-z][a-z0-9_]{0,40}$")
@@ -67,10 +69,37 @@ def webhook_status(status):
     return "error"
 
 
+def _iso(now_s):
+    return datetime.fromtimestamp(int(now_s), timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def queued_stamp(existing, now_s, iso_now):
+    """A usable past stamp, or iso_now when the stamp is missing or more than 1h ahead."""
+    stamp = parse_iso(existing)
+    if stamp is None or stamp > float(now_s) + WEBHOOK_FUTURE_SKEW_S:
+        return iso_now
+    return existing
+
+
+def normalize_queued(pending, now_s):
+    """Copy the queue and repair stamps. Does not drop old rows."""
+    iso_now = _iso(now_s)
+    out = []
+    for item in pending or []:
+        if not isinstance(item, dict):
+            out.append(item)
+            continue
+        row = dict(item)
+        row["queued_at"] = queued_stamp(row.get("queued_at"), now_s, iso_now)
+        out.append(row)
+    return out
+
+
 def partition_pending(pending, now_s, max_age_s=WEBHOOK_QUEUE_MAX_AGE_S):
     """Split a retry queue into (still young, stale).
 
-    A missing queued_at is stale. Those rows were queued before this stamp existed.
+    Callers stamp a missing queued_at first. A row that still has no stamp, or
+    one older than the bound, is not sent.
     """
     kept, dropped = [], []
     for item in pending or []:
@@ -85,13 +114,16 @@ def partition_pending(pending, now_s, max_age_s=WEBHOOK_QUEUE_MAX_AGE_S):
     return kept, dropped
 
 
-def with_queued_at(triggers, iso_now):
-    """Copy each trigger and set queued_at once. A later retry keeps the first stamp."""
+def with_queued_at(triggers, iso_now, now_s=None):
+    """Copy each trigger and set queued_at once. A later retry keeps a usable stamp."""
+    if now_s is None:
+        now_s = parse_iso(iso_now)
+        if now_s is None:
+            now_s = time.time()
     out = []
     for item in triggers or []:
         row = dict(item)
-        if parse_iso(row.get("queued_at")) is None:
-            row["queued_at"] = iso_now
+        row["queued_at"] = queued_stamp(row.get("queued_at"), now_s, iso_now)
         out.append(row)
     return out
 
@@ -112,17 +144,30 @@ def webhook_failure_count(path):
     return count
 
 
+def auth_header_present(headers):
+    """True when the request would send a non-empty Authorization header. The value is ignored."""
+    for key, value in (headers or {}).items():
+        if str(key).lower() != "authorization":
+            continue
+        if isinstance(value, str) and value.strip():
+            return True
+    return False
+
+
 def webhook_public(http, prior, pending_count):
-    """Outcome for last-run.json. Counts and a status code or class name only."""
+    """Outcome for last-run.json. Counts, a status code or class name, and whether auth was sent."""
     attempts = list(getattr(http, "webhook_attempts", []) or [])
     dropped = [item for item in (getattr(http, "webhook_dropped", []) or []) if isinstance(item, dict)]
     failed = [item for item in attempts if not item.get("ok")]
     if not attempts:
         status, ok, consecutive = "not_attempted", None, prior
+        auth = None
     elif failed:
         status, ok, consecutive = failed[-1]["status"], False, prior + 1
+        auth = any(bool(item.get("auth_header_present")) for item in attempts)
     else:
         status, ok, consecutive = attempts[-1]["status"], True, 0
+        auth = any(bool(item.get("auth_header_present")) for item in attempts)
     by_kind = {}
     for item in dropped:
         kind = item.get("kind")
@@ -137,7 +182,22 @@ def webhook_public(http, prior, pending_count):
         "dropped_stale": len(dropped),
         "dropped_by_kind": by_kind,
         "queued": int(pending_count),
+        "auth_header_present": auth,
     }
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Do not follow a 30x. urllib would turn 301, 302, and 303 into a GET."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_WEBHOOK_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
+def _open_webhook(request, timeout):
+    return _WEBHOOK_OPENER.open(request, timeout=timeout)
 
 
 class Http:
@@ -241,46 +301,49 @@ class Http:
                 return None
 
     def post_webhook(self, url, body, headers=None):
-        """POST the webhook once. True on ANY 2xx (body ignored), False otherwise.
+        """POST the webhook once. True on ANY 2xx that was not a redirect. False otherwise.
 
+        A 30x is a failure and is not followed. urllib would resend 301/302/303 as GET.
         Never retried after the request may have landed (timeouts/network errors after send, 5xx):
         the trigger stays in state.json pending_triggers and is resent next run with an
         Idempotency-Key. Only a 429 (explicitly not processed) is retried once."""
         h = {"User-Agent": UA, "Accept": "application/json", "Content-Type": "application/json"}
         h.update(headers or {})
         data = json.dumps(body).encode()
-        last_status = "error"
+        auth = auth_header_present(h)
         for attempt in (0, 1):
             self._wait("webhook")
             self.calls["webhook"] = self.calls.get("webhook", 0) + 1
             try:
                 r = urllib.request.Request(url, data=data, method="POST", headers=h)
-                with urllib.request.urlopen(r, timeout=30) as resp:
+                with _open_webhook(r, timeout=30) as resp:
                     ok = 200 <= resp.status < 300
-                    self._note_webhook(resp.status, ok)
+                    self._note_webhook(resp.status, ok, auth)
                     return ok
             except urllib.error.HTTPError as e:
                 if 200 <= e.code < 300:
-                    self._note_webhook(e.code, True)
+                    self._note_webhook(e.code, True, auth)
                     return True
-                last_status = e.code
                 if e.code == 429 and attempt == 0:
                     time.sleep(3)
                     continue
-                self._note_webhook(e.code, False)
+                self._note_webhook(e.code, False, auth)
                 self._fail("webhook", f"http {e.code}")
                 return False
             except Exception as e:  # timeout / network: may have landed, do not retry now
                 # Class name only. The message can contain the URL.
-                self._note_webhook(type(e).__name__, False)
+                self._note_webhook(type(e).__name__, False, auth)
                 self._fail("webhook", f"{type(e).__name__} (not retried; queued for next run)")
                 return False
-        self._note_webhook(last_status, False)
         return False
 
-    def _note_webhook(self, status, ok):
+    def _note_webhook(self, status, ok, auth=False):
         """Remember the outcome of one post. status is a code or a class name."""
-        self.webhook_attempts.append({"status": webhook_status(status), "ok": bool(ok)})
+        self.webhook_attempts.append({
+            "status": webhook_status(status),
+            "ok": bool(ok),
+            "auth_header_present": bool(auth),
+        })
 
     def _remember_block(self, src):
         """Keep the earlier HTTP status (a 429 that tripped the breaker). A pure deadline/breaker skip has no code."""
@@ -1429,7 +1492,9 @@ def main():
         if retry_pending:
             pending = [t for t in state["pending_triggers"] if t.get("key") and t["key"] not in state["fired"] and t["key"] not in new_keys
                        and not (t.get("kind") == "kill_line" and t.get("name") in new_kill)]
-        kept, dropped = partition_pending(pending, time.time())
+        now_s = time.time()
+        pending = normalize_queued(pending, now_s)
+        kept, dropped = partition_pending(pending, now_s)
         if dropped:
             http.webhook_dropped.extend(item for item in dropped if isinstance(item, dict))
             counts = {}
