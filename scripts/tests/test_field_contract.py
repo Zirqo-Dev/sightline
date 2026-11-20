@@ -48,6 +48,8 @@ class Races(unittest.TestCase):
         races_js = _read("revamp/races.js")
         app_js = _read("revamp/app.js")
         fields = FC.js_fields(races_js)
+        self.assertTrue(fields)
+        self.assertTrue(all(names for names in fields.values()))
         summary_body = FC.function_body(races_js, "applySummary")
         equity_body = FC.between(races_js, "parseLines(pack.equity", "function takeTrades")
         trade_body = FC.function_body(races_js, "takeTrades")

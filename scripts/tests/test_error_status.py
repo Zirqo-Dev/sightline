@@ -67,17 +67,22 @@ class RaceQuotes(unittest.TestCase):
         self.assertIn("429", reasons)
         self.assertNotIn("no_route", reasons)
 
-    @unittest.expectedFailure
-    def test_http_401_and_403_are_not_logged_as_no_route(self):
-        """Gap: races/jupiter.py logs reason no_route for any quote that is not
-        HTTP 200, including 401 and 403. A real empty route uses that same reason.
-        Left as an expected failure until the owner splits them.
+    def _auth_is_not_no_route(self, code):
+        """Gap: races/jupiter.py logs reason no_route for any quote that is not HTTP 200.
+        A real empty route uses that same reason. Left expected until the owner splits it.
         """
-        for code in (401, 403):
-            got, reasons = _quote_reasons(code, {"error": "denied"})
-            self.assertIsNone(got)
-            self.assertNotIn("no_route", reasons)
-            self.assertTrue(any(str(code) in (item or "") for item in reasons), reasons)
+        got, reasons = _quote_reasons(code, {"error": "denied"})
+        self.assertIsNone(got)
+        self.assertNotIn("no_route", reasons)
+        self.assertTrue(any(str(code) in (item or "") for item in reasons), reasons)
+
+    @unittest.expectedFailure
+    def test_http_401_is_not_logged_as_no_route(self):
+        self._auth_is_not_no_route(401)
+
+    @unittest.expectedFailure
+    def test_http_403_is_not_logged_as_no_route(self):
+        self._auth_is_not_no_route(403)
 
 
 class DeskFetches(unittest.TestCase):

@@ -1,4 +1,5 @@
 """Long hex in fixtures and data is a privacy failure unless it is an obvious fake or allowlisted."""
+import datetime
 import hashlib
 import json
 import os
@@ -37,6 +38,27 @@ class Fakes(unittest.TestCase):
         self.assertFalse(H.obvious_fake(token_of("fixture-order-not-a-secret")))
         self.assertFalse(H.obvious_fake("0x" + token_of("fixture-address-not-a-secret")[:40]))
 
+    def test_a_dummy_marker_must_be_the_whole_value(self):
+        marker = "bb22cc33dd44ee55ff6677889900"
+        body = ("ab" * 18) + marker
+        self.assertEqual(len(body), 64)
+        self.assertIn(marker, body)
+        self.assertFalse(H.obvious_fake(body))
+        self.assertTrue(H.obvious_fake(
+            "aa11bb22cc33dd44ee55ff6677889900aabbccdd11223344556677889900ab01"
+        ))
+
+
+def hits(rules, rel, text, today=None):
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, rel)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        found = H.scan_file(path, rules, today=today)
+    blob = json.dumps(found)
+    return found, blob
+
 
 class Rules(unittest.TestCase):
     def setUp(self):
@@ -45,24 +67,101 @@ class Rules(unittest.TestCase):
     def test_order_hash_and_salt_are_rejected(self):
         order = "0x" + token_of("fixture-order-not-a-secret")
         salt = token_of("fixture-salt-not-a-secret")
-        line = '{"order_hash": "%s", "salt": "%s"}' % (order, salt)
-        self.assertFalse(H.allowed(order, line, line.index(order), self.rules))
-        self.assertFalse(H.allowed(salt, line, line.index(salt), self.rules))
+        found, blob = hits(self.rules, "order.json", json.dumps({"order_hash": order, "salt": salt}))
+        self.assertEqual(len(found), 2)
+        self.assertNotIn(order, blob)
+        self.assertNotIn(salt, blob)
 
-    def test_a_sha256_field_and_the_public_aggregator_pass(self):
+    def test_whole_values_of_the_right_shape_pass(self):
         digest = token_of("public-file")
-        line = '{"sha256": "%s"}' % digest
-        self.assertTrue(H.allowed(digest, line, line.index(digest), self.rules))
-        addr = "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419"
-        spec = "aggregator (`%s`) on Ethereum" % addr
-        self.assertTrue(H.allowed(addr, spec, spec.index(addr), self.rules))
+        addr = "0x" + "cd" * 20
+        utxo = token_of("pool-tx") + "#1 (pool note)"
+        found, _blob = hits(self.rules, "doc.json", json.dumps({
+            "sha256": digest,
+            "lp_name": token_of("lp-name"),
+            "unit": token_of("unit-id"),
+            "contract_address": addr,
+            "pool_utxo": utxo,
+        }))
+        self.assertEqual(found, [])
+        spec = "aggregator (`0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419`) on Ethereum\n"
+        found, _blob = hits(self.rules, "SPEC.md", spec)
+        self.assertEqual(found, [])
 
-    def test_a_url_image_id_passes_and_a_bare_note_does_not(self):
+    def test_wrong_shapes_and_a_csv_sha256_cell_fail(self):
+        digest = token_of("shape-probe")
+        probes = (
+            ("sha.json", {"sha256": "0x" + "ab" * 20}),
+            ("unit.json", {"unit": digest + "!"}),
+            ("lp.json", {"lp_name": "0x" + digest}),
+            ("contract.json", {"contract_address": "0x" + digest}),
+        )
+        for name, doc in probes:
+            found, blob = hits(self.rules, name, json.dumps(doc))
+            self.assertEqual(len(found), 1, name)
+            self.assertNotIn(digest, blob)
+        csv_text = 'time,note\n1,"sha256: %s"\n' % digest
+        found, blob = hits(self.rules, "tasks.csv", csv_text)
+        self.assertEqual(len(found), 1)
+        self.assertNotIn(digest, blob)
+
+    def test_markdown_label_is_only_a_bare_64_directly_after_the_word(self):
+        digest = token_of("md-digest")
+        found, _blob = hits(self.rules, "note.md", "file sha256 %s\n" % digest)
+        self.assertEqual(found, [])
+        found, _blob = hits(self.rules, "note.md", "%s then the word sha256\n" % digest)
+        self.assertEqual(len(found), 1)
+        found, _blob = hits(self.rules, "note.md", "sha256 0x%s\n" % digest)
+        self.assertEqual(len(found), 1)
+        found, _blob = hits(self.rules, "note.txt", "sha256 %s\n" % digest)
+        self.assertEqual(len(found), 1)
+
+    def test_cdn_urls_allow_bare_64_and_explorers_do_not(self):
         image = token_of("cdn-image")
-        url = 'https://cdn.example.test/images/%s?width=800' % image
-        self.assertTrue(H.allowed(image, url, url.index(image), self.rules))
-        note = '{"note": "%s"}' % image
-        self.assertFalse(H.allowed(image, note, note.index(image), self.rules))
+        addr = "0x" + "ab" * 20
+        cdn = "https://cdn.dexscreener.com/cms/images/%s?width=800\n" % image
+        found, _blob = hits(self.rules, "icons.json", json.dumps({"origin": cdn.strip()}))
+        self.assertEqual(found, [])
+        found, _blob = hits(self.rules, "icons.json", json.dumps({
+            "origin": "https://cdn.dexscreener.com/address/%s" % addr,
+        }))
+        self.assertEqual(len(found), 1)
+        found, blob = hits(self.rules, "note.md", "https://etherscan.io/address/%s\n" % addr)
+        self.assertEqual(len(found), 1)
+        self.assertNotIn(addr, blob)
+        found, _blob = hits(self.rules, "note.json", json.dumps({"note": image}))
+        self.assertEqual(len(found), 1)
+
+    def test_nft_pilot_paths_allow_collection_ids_digests_and_contracts(self):
+        digest = token_of("order-digest")
+        addr = "0x" + "ef" * 20
+        collection = "nft_collection:eip155:1:" + addr
+        books = {
+            "offers": {collection: {"digests": [digest]}},
+            "passes": {"2026-11-20": [collection]},
+            "note": addr,
+        }
+        found, blob = hits(self.rules, "nft-pilot/books.json", json.dumps(books))
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0]["key"], "note")
+        self.assertNotIn(addr, blob)
+        found, _blob = hits(self.rules, "nft-pilot/units.jsonl", json.dumps({
+            "asset_id": collection, "contract": addr,
+        }) + "\n")
+        self.assertEqual(found, [])
+        found, _blob = hits(self.rules, "elsewhere.json", json.dumps({"asset_id": collection}))
+        self.assertEqual(len(found), 1)
+        digest = token_of("prereg-file")
+        found, _blob = hits(
+            self.rules, "decisions.jsonl",
+            json.dumps({"message": "prereg sha256 " + digest}) + "\n",
+        )
+        self.assertEqual(found, [])
+        found, _blob = hits(
+            self.rules, "decisions.jsonl",
+            json.dumps({"message": "note " + digest}) + "\n",
+        )
+        self.assertEqual(len(found), 1)
 
     def test_the_tracked_tree_has_no_unlisted_long_hex(self):
         paths = subprocess.check_output(["git", "ls-files"], cwd=ROOT, text=True).splitlines()
@@ -74,44 +173,49 @@ class Rules(unittest.TestCase):
 
 
 class Hold(unittest.TestCase):
-    def test_one_task_row_is_deferred_and_the_value_is_not_listed(self):
-        rules = H.load_rules(RULES)
+    def test_the_hold_is_one_cell_until_the_expiry_and_the_value_is_not_listed(self):
         text = Path(RULES).read_text(encoding="utf-8")
         hold_lines = [line for line in text.splitlines() if line.startswith("hold-cell:")]
-        self.assertTrue(hold_lines)
-        for line in hold_lines:
-            self.assertNotIn("0x", line.lower())
+        self.assertEqual(len(hold_lines), 1)
+        self.assertNotIn("0x", hold_lines[0].lower())
+        self.assertIn("until:2026-11-26", hold_lines[0])
         held = "0x" + token_of("desk-task-row")[:40]
-        other = "0x" + token_of("later-desk-task-row")[:40]
-        salt = token_of("salt-on-the-held-row")
+        other = "0x" + token_of("other-mint-same-run")[:40]
+        pin = hashlib.sha256(held.encode()).hexdigest()
+        rules = H.load_rules(self._rules(pin))
         header = "time,run_id,agent,task,mint,book,result\n"
-        held_line = "1,20261105T1930,scanner,scan,%s,,skip\n" % held
-        other_line = "2,20261105T2000,scanner,scan,%s,,skip\n" % other
-        salty = "3,20261105T1930,scanner,scan,%s,%s,skip\n" % (held, salt)
-        with tempfile.TemporaryDirectory() as tmp:
-            path = os.path.join(tmp, "solana-desk")
-            os.makedirs(path)
-            task = os.path.join(path, "tasks.csv")
-            with open(task, "w", encoding="utf-8") as fh:
-                fh.write(header + held_line + other_line)
-            mixed = H.scan_file(task, rules)
-            self.assertEqual(len(mixed), 1)
-            self.assertEqual(mixed[0]["line"], 3)
-            self.assertNotIn(held, json.dumps(mixed))
-            self.assertNotIn(other, json.dumps(mixed))
-            with open(task, "w", encoding="utf-8") as fh:
-                fh.write(header + other_line)
-            flagged = H.scan_file(task, rules)
-            self.assertEqual(len(flagged), 1)
-            self.assertEqual(flagged[0]["kind"], "0x-40")
-            self.assertNotIn(other, json.dumps(flagged))
-            with open(task, "w", encoding="utf-8") as fh:
-                fh.write(header + salty)
-            both = H.scan_file(task, rules)
-        self.assertEqual(len(both), 1)
-        self.assertEqual(both[0]["kind"], "bare-64")
-        self.assertNotIn(salt, json.dumps(both))
-        self.assertNotIn(held, json.dumps(both))
+        same = header + "1,20261105T1930,scanner,scan,%s,,skip\n" % held
+        different = header + "1,20261105T1930,scanner,scan,%s,,skip\n" % other
+        found, blob = hits(rules, "solana-desk/tasks.csv", same)
+        self.assertEqual(found, [])
+        self.assertNotIn(held, blob)
+        found, blob = hits(rules, "solana-desk/tasks.csv", different)
+        self.assertEqual(len(found), 1)
+        self.assertNotIn(other, blob)
+        found, _blob = hits(rules, "notsolana-desk/tasks.csv", same)
+        self.assertEqual(len(found), 1)
+        found, _blob = hits(
+            rules, "solana-desk/tasks.csv", same, today=datetime.date(2026, 11, 27),
+        )
+        self.assertEqual(len(found), 1)
+        salt = token_of("salt-on-the-held-row")
+        salty = header + "1,20261105T1930,scanner,scan,%s,%s,skip\n" % (held, salt)
+        found, blob = hits(rules, "solana-desk/tasks.csv", salty)
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0]["kind"], "bare-64")
+        self.assertNotIn(salt, blob)
+        self.assertNotIn(held, blob)
+
+    def _rules(self, pin):
+        handle = tempfile.NamedTemporaryFile("w", delete=False, encoding="utf-8")
+        handle.write(
+            "field:sha256 shape:bare-64\n"
+            "hold-cell:solana-desk/tasks.csv column:mint run:20261105T1930 "
+            "sha256:%s until:2026-11-26\n" % pin
+        )
+        handle.close()
+        self.addCleanup(os.remove, handle.name)
+        return handle.name
 
 
 class Guard(unittest.TestCase):

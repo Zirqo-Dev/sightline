@@ -1,45 +1,73 @@
 """Flag long hex that looks like a hash, a salt, a private key, or an address.
 
 Scope is test fixtures and committed data or docs (markdown, json, jsonl, csv, text).
-Source files are not scanned. LST outcome files are not opened.
+Source files are not scanned. LST outcome files are not opened. The rules file
+itself is not scanned.
 
-Shapes:
+Shapes that are flagged:
   0x and 40 hex digits (an address)
   0x and 64 hex digits (a hash or a key)
   64 hex digits with no 0x
 
-An obvious fake is allowed in code, not by listing the repo's current values:
-  one repeated nibble, a value from 0 through 16 (zero-padded counters),
-  dead / beef / cafe / c0ffee / deadbeef with zero padding,
-  a body that is only 0123456789abcdef or abcdef0123456789 repeated,
-  or the dummy marker bb22cc33dd44ee55ff6677889900.
+Not flagged: a bare 40-hex string, a 56-hex policy id, or text in .py .js .yml
+.html .log.
 
-Anything else needs scripts/privacy-hex-allow.txt:
-  an exact token, a JSON field name, a same-line label, or https URLs.
-A hold-cell line defers one CSV cell by file, column, and run id. It does
-not store the hex, and a different row still fails.
-The file is the allowlist. It does not name order_hash, salt, or key.
+JSON and JSONL are read as values. A field rule applies only when the whole
+value has that key's shape. The key for an array item or a dict key is the
+parent key. A markdown label applies only in .md, only to a bare 64-hex
+directly after the word sha256. A URL rule applies only to a bare 64-hex on a
+named CDN host, never to an 0x address and never on a block explorer.
 """
 from __future__ import annotations
 
 import csv
+import datetime
+import hashlib
+import json
 import os
 import re
 import sys
+from urllib.parse import urlparse
 
 _OX64 = re.compile(r"(?<![0-9A-Za-z])0x[0-9a-fA-F]{64}(?![0-9a-fA-F])")
 _OX40 = re.compile(r"(?<![0-9A-Za-z])0x[0-9a-fA-F]{40}(?![0-9a-fA-F])")
 _BARE64 = re.compile(r"(?<![0-9A-Za-z])[0-9a-fA-F]{64}(?![0-9a-fA-F])")
-_KEY = re.compile(r'"([A-Za-z0-9_]+)"\s*:')
 _URL = re.compile(r"https://[^\s\"'<>]+")
+_DIRECT_SHA = re.compile(
+    r"(?i)(?<![A-Za-z0-9_])sha256(?![A-Za-z0-9_])[ \t`'\"::()]*$"
+)
+_COLLECTION = re.compile(r"^nft_collection:eip155:[0-9]+:(0x[0-9a-fA-F]{40})$")
+_UTXO = re.compile(r"^([0-9a-fA-F]{64})(?:#\d+(?: \([^)]*\))?)?$")
+_DIGEST_PATH = re.compile(r"^([0-9a-fA-F]{64}) [- \w./]+$")
+_PREREG_LINE = re.compile(r"^prereg sha256 ([0-9a-fA-F]{64})$")
+_FIXTURE_DUMMY = re.compile(
+    r"^[0-9a-f]{2}11bb22cc33dd44ee55ff6677889900aabbccdd11223344556677889900ab[0-9a-f]{2}$"
+)
 _DATA_EXT = {".md", ".json", ".jsonl", ".csv", ".txt"}
-_SKIP_NAMES = {"captures.jsonl"}
+_JSON_EXT = {".json", ".jsonl"}
+_SKIP_NAMES = {"captures.jsonl", "privacy-hex-allow.txt"}
 _DUMMY = "bb22cc33dd44ee55ff6677889900"
 _CYCLES = ("0123456789abcdef", "abcdef0123456789")
 _DEAD = {"dead", "beef", "cafe", "c0ffee", "deadbeef"}
+_SHAPES = {"bare-64", "0x-40", "0x-64", "collection-id", "utxo", "digest-path", "prereg-line"}
+_EXPLORERS = (
+    "etherscan.io",
+    "basescan.org",
+    "bscscan.com",
+    "polygonscan.com",
+    "arbiscan.io",
+    "snowtrace.io",
+    "solscan.io",
+    "cardanoscan.io",
+)
+_HOLD = re.compile(
+    r"hold-cell:(\S+)\s+column:([A-Za-z0-9_]+)\s+run:(\S+)\s+"
+    r"sha256:([0-9a-fA-F]{64})\s+until:(\d{4}-\d{2}-\d{2})\s*$"
+)
 
 
 def obvious_fake(token):
+    """True only when the whole token is an obvious dummy, not when it contains one."""
     raw = token.lower()
     body = raw[2:] if raw.startswith("0x") else raw
     if not re.fullmatch(r"[0-9a-f]+", body or ""):
@@ -56,7 +84,9 @@ def obvious_fake(token):
     for cycle in _CYCLES:
         if len(body) % len(cycle) == 0 and body == cycle * (len(body) // len(cycle)):
             return True
-    if _DUMMY in body:
+    if body == _DUMMY or (len(_DUMMY) and len(body) % len(_DUMMY) == 0 and body == _DUMMY * (len(body) // len(_DUMMY))):
+        return True
+    if _FIXTURE_DUMMY.fullmatch(body):
         return True
     return False
 
@@ -66,18 +96,52 @@ def in_scope(path):
     if name in _SKIP_NAMES:
         return False
     low = path.replace("\\", "/").lower()
+    if low.endswith("/captures.jsonl") or low == "captures.jsonl":
+        return False
     if "/fixtures/" in low:
         return True
     return os.path.splitext(name)[1].lower() in _DATA_EXT
 
 
-_HOLD = re.compile(r"hold-cell:(\S+)\s+column:([A-Za-z0-9_]+)\s+run:(\S+)\s*$")
+def path_is(path, rule_path):
+    """Match a rule path on a slash boundary. A glued prefix does not count."""
+    rel = path.replace("\\", "/")
+    if rel.startswith("./"):
+        rel = rel[2:]
+    return rel == rule_path or rel.endswith("/" + rule_path)
+
+
+def _shape_ok(shape, whole, token, kind):
+    text = (whole or "").strip()
+    if shape == "bare-64":
+        return kind == "bare-64" and text.lower() == token.lower()
+    if shape == "0x-40":
+        return kind == "0x-40" and text.lower() == token.lower()
+    if shape == "0x-64":
+        return kind == "0x-64" and text.lower() == token.lower()
+    if shape == "collection-id":
+        match = _COLLECTION.fullmatch(text)
+        return bool(match) and kind == "0x-40" and match.group(1).lower() == token.lower()
+    if shape == "utxo":
+        match = _UTXO.fullmatch(text)
+        return bool(match) and kind == "bare-64" and match.group(1).lower() == token.lower()
+    if shape == "digest-path":
+        match = _DIGEST_PATH.fullmatch(text)
+        if not match or kind != "bare-64" or match.group(1).lower() != token.lower():
+            return False
+        return re.search(r"[0-9a-fA-F]{32}", text[len(match.group(1)):]) is None
+    if shape == "prereg-line":
+        match = _PREREG_LINE.fullmatch(text)
+        return bool(match) and kind == "bare-64" and match.group(1).lower() == token.lower()
+    return False
 
 
 def load_rules(path):
-    tokens, fields, labels = set(), set(), set()
+    tokens = set()
+    json_rules = []
+    labels = set()
+    cdn_hosts = set()
     holds = []
-    urls = False
     if not os.path.isfile(path):
         raise FileNotFoundError(path)
     with open(path, errors="replace") as fh:
@@ -85,13 +149,7 @@ def load_rules(path):
             item = line.split("#", 1)[0].strip()
             if not item:
                 continue
-            if item.startswith("field:"):
-                fields.add(item.split(":", 1)[1].strip())
-            elif item.startswith("label:"):
-                labels.add(item.split(":", 1)[1].strip().lower())
-            elif item == "url":
-                urls = True
-            elif item.startswith("hold-cell:"):
+            if item.startswith("hold-cell:"):
                 match = _HOLD.fullmatch(item)
                 if not match:
                     raise ValueError("bad hold-cell")
@@ -99,48 +157,46 @@ def load_rules(path):
                     "path": match.group(1),
                     "column": match.group(2),
                     "run": match.group(3),
+                    "sha256": match.group(4).lower(),
+                    "until": datetime.date.fromisoformat(match.group(5)),
                 })
-            else:
-                tokens.add(item.lower())
-    return {"tokens": tokens, "fields": fields, "labels": labels, "urls": urls, "holds": holds}
-
-
-def _key_before(line, index):
-    found = None
-    for match in _KEY.finditer(line[:index]):
-        found = match.group(1)
-    return found
-
-
-def _label_hit(line, labels):
-    for word in labels:
-        if re.search(r"(?<![A-Za-z0-9_])" + re.escape(word) + r"(?![A-Za-z0-9_])", line, re.I):
-            return True
-    return False
-
-
-def _in_url(line, index, rules):
-    if not rules["urls"]:
-        return False
-    for match in _URL.finditer(line):
-        if match.start() <= index < match.end():
-            return True
-    return False
-
-
-def allowed(token, line, index, rules):
-    if obvious_fake(token):
-        return True
-    if token.lower() in rules["tokens"]:
-        return True
-    key = _key_before(line, index)
-    if key and key in rules["fields"]:
-        return True
-    if _label_hit(line, rules["labels"]):
-        return True
-    if _in_url(line, index, rules):
-        return True
-    return False
+                continue
+            if item.startswith("label:"):
+                labels.add(item.split(":", 1)[1].strip().lower())
+                continue
+            if item.startswith("url:"):
+                host = item.split(":", 1)[1].strip().lower()
+                if host:
+                    cdn_hosts.add(host)
+                continue
+            if item == "url":
+                raise ValueError("bad url rule")
+            if item.startswith("field:") or item.startswith("path:"):
+                parts = {}
+                for piece in item.split():
+                    if ":" not in piece:
+                        raise ValueError("bad rule")
+                    key, value = piece.split(":", 1)
+                    parts[key] = value
+                shape = parts.get("shape")
+                if shape not in _SHAPES:
+                    raise ValueError("bad shape")
+                if "field" not in parts and "path" not in parts:
+                    raise ValueError("bad rule")
+                json_rules.append({
+                    "path": parts.get("path"),
+                    "field": parts.get("field"),
+                    "shape": shape,
+                })
+                continue
+            tokens.add(item.lower())
+    return {
+        "tokens": tokens,
+        "json_rules": json_rules,
+        "labels": labels,
+        "cdn_hosts": cdn_hosts,
+        "holds": holds,
+    }
 
 
 def iter_tokens(line):
@@ -154,12 +210,62 @@ def iter_tokens(line):
             yield match.start(), match.group(0), kind
 
 
+def _host_is(host, names):
+    host = (host or "").lower().rstrip(".")
+    return any(host == name or host.endswith("." + name) for name in names)
+
+
+def url_allows(token, kind, text, index=None):
+    """Bare 64-hex on a named CDN host. Never an 0x address, never an explorer."""
+    if kind != "bare-64":
+        return False
+    for match in _URL.finditer(text or ""):
+        if index is not None:
+            if not (match.start() <= index < match.end()):
+                continue
+        elif token.lower() not in match.group(0).lower():
+            continue
+        host = (urlparse(match.group(0)).hostname or "").lower()
+        if _host_is(host, _EXPLORERS):
+            return False
+        # The caller passes the allowed hosts via the text check below.
+        return host
+    return None
+
+
+def _label_direct(line, index):
+    return bool(_DIRECT_SHA.search(line[:index]))
+
+
+def _json_allowed(token, kind, field, whole, path, rules):
+    if obvious_fake(token) or token.lower() in rules["tokens"]:
+        return True
+    host = url_allows(token, kind, whole)
+    if isinstance(host, str) and host in rules["cdn_hosts"] and not _host_is(host, _EXPLORERS):
+        return True
+    for rule in rules["json_rules"]:
+        if rule["path"] and not path_is(path, rule["path"]):
+            continue
+        if rule["field"] and rule["field"] != field:
+            continue
+        if _shape_ok(rule["shape"], whole, token, kind):
+            return True
+    return False
+
+
+def _line_allowed(token, kind, line, index, path, ext, rules):
+    if obvious_fake(token) or token.lower() in rules["tokens"]:
+        return True
+    host = url_allows(token, kind, line, index)
+    if isinstance(host, str) and host in rules["cdn_hosts"] and not _host_is(host, _EXPLORERS):
+        return True
+    if ext == ".md" and "sha256" in rules["labels"] and kind == "bare-64" and _label_direct(line, index):
+        return True
+    return False
+
+
 def _holds_for(path, rules):
-    rel = path.replace("\\", "/")
-    return [
-        hold for hold in rules.get("holds") or []
-        if rel.endswith("/" + hold["path"]) or rel.endswith(hold["path"])
-    ]
+    return [hold for hold in rules.get("holds") or [] if path_is(path, hold["path"])]
 
 
 def _csv_row(line):
@@ -169,11 +275,10 @@ def _csv_row(line):
         return None
 
 
-def _cell_held(header, row, token, holds):
-    """True only when this whole cell is the held row's named column.
+def _cell_held(header, row, token, holds, today):
+    """True only for the pinned cell: same file, column, run, and sha256, before expiry.
 
-    The token itself is not on an allowlist. A different run, a different
-    column, or any extra hex in the cell still fails.
+    A different value in that column, even on the same run, is not held.
     """
     if not header or not row or not holds or "run_id" not in header:
         return False
@@ -182,22 +287,111 @@ def _cell_held(header, row, token, holds):
     except IndexError:
         return False
     for hold in holds:
-        if run != hold["run"] or hold["column"] not in header:
+        if today > hold["until"] or run != hold["run"] or hold["column"] not in header:
             continue
         try:
-            cell = row[header.index(hold["column"])]
+            cell = (row[header.index(hold["column"])] or "").strip()
         except IndexError:
             continue
-        if (cell or "").strip().lower() == token.lower():
+        if cell.lower() != token.lower():
+            continue
+        digest = hashlib.sha256(cell.encode("utf-8")).hexdigest()
+        if digest == hold["sha256"]:
             return True
     return False
 
 
-def scan_file(path, rules):
-    """Findings are path, line, kind, and the JSON key when one sits in front.
+def _line_of(text, token, cursors):
+    start = cursors.get(token, 0)
+    pos = text.find(token, start)
+    if pos < 0:
+        pos = text.find(token)
+        if pos < 0:
+            return 1
+    cursors[token] = pos + len(token)
+    return text.count("\n", 0, pos) + 1
 
-    The hex value is not returned.
-    """
+
+def _walk(node, parent, path, rules, text, cursors, found):
+    if isinstance(node, dict):
+        for key, value in node.items():
+            key_text = key if isinstance(key, str) else ""
+            if key_text:
+                _consider(key_text, parent, path, rules, text, cursors, found)
+            _walk(value, key_text or parent, path, rules, text, cursors, found)
+    elif isinstance(node, list):
+        for item in node:
+            if isinstance(item, (dict, list)):
+                _walk(item, parent, path, rules, text, cursors, found)
+            elif isinstance(item, str):
+                _consider(item, parent, path, rules, text, cursors, found)
+    elif isinstance(node, str):
+        _consider(node, parent, path, rules, text, cursors, found)
+
+
+def _consider(whole, field, path, rules, text, cursors, found):
+    for _index, token, kind in iter_tokens(whole):
+        if _json_allowed(token, kind, field, whole, path, rules):
+            continue
+        found.append({
+            "path": path,
+            "line": _line_of(text, token, cursors),
+            "kind": kind,
+            "key": field or "",
+        })
+
+
+def _scan_json(path, text, rules):
+    found = []
+    cursors = {}
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".jsonl":
+        for number, line in enumerate(text.splitlines(), 1):
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                node = json.loads(stripped)
+            except json.JSONDecodeError:
+                _scan_lines(path, line, rules, found, base_line=number)
+                continue
+            before = len(found)
+            _walk(node, "", path, rules, line, cursors, found)
+            for item in found[before:]:
+                item["line"] = number
+        return found
+    try:
+        node = json.loads(text)
+    except json.JSONDecodeError:
+        _scan_lines(path, text, rules, found)
+        return found
+    _walk(node, "", path, rules, text, cursors, found)
+    return found
+
+
+def _scan_lines(path, text, rules, found, base_line=0, today=None):
+    ext = os.path.splitext(path)[1].lower()
+    holds = _holds_for(path, rules) if ext == ".csv" else []
+    today = today or datetime.date.today()
+    lines = text.splitlines()
+    header = _csv_row(lines[0]) if holds and lines else None
+    for number, line in enumerate(lines, 1):
+        row = _csv_row(line) if holds and number > 1 else None
+        for index, token, kind in iter_tokens(line):
+            if _line_allowed(token, kind, line, index, path, ext, rules):
+                continue
+            if _cell_held(header, row, token, holds, today):
+                continue
+            found.append({
+                "path": path,
+                "line": base_line or number,
+                "kind": kind,
+                "key": "",
+            })
+
+
+def scan_file(path, rules, today=None):
+    """Findings are path, line, kind, and the JSON key. The hex is not returned."""
     if not in_scope(path) or not os.path.isfile(path):
         return []
     try:
@@ -208,31 +402,19 @@ def scan_file(path, rules):
     if b"\0" in raw[:8192]:
         return []
     text = raw.decode("utf-8", "replace")
-    holds = _holds_for(path, rules)
-    lines = text.splitlines()
-    header = _csv_row(lines[0]) if holds and lines else None
+    ext = os.path.splitext(path)[1].lower()
+    if ext in _JSON_EXT:
+        return _scan_json(path, text, rules)
     found = []
-    for number, line in enumerate(lines, 1):
-        row = _csv_row(line) if holds and number > 1 else None
-        for index, token, kind in iter_tokens(line):
-            if allowed(token, line, index, rules):
-                continue
-            if _cell_held(header, row, token, holds):
-                continue
-            found.append({
-                "path": path,
-                "line": number,
-                "kind": kind,
-                "key": _key_before(line, index) or "",
-            })
+    _scan_lines(path, text, rules, found, today=today)
     return found
 
 
-def scan_paths(paths, rules):
+def scan_paths(paths, rules, today=None):
     found = []
     for path in paths:
         if path:
-            found.extend(scan_file(path, rules))
+            found.extend(scan_file(path, rules, today=today))
     return found
 
 
@@ -241,6 +423,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Scan fixtures and data for long hex")
     parser.add_argument("--root", default=".")
     parser.add_argument("--rules", default="")
+    parser.add_argument("--count", action="store_true", help="Print the hit count only")
     parser.add_argument("paths", nargs="*")
     args = parser.parse_args(argv)
     here = os.path.dirname(os.path.abspath(__file__))
@@ -251,7 +434,7 @@ def main(argv=None):
         print("PRIVACY GUARD FAILED: hex allowlist is missing", file=sys.stderr)
         return 1
     except ValueError:
-        print("PRIVACY GUARD FAILED: hex allowlist has a bad hold-cell line", file=sys.stderr)
+        print("PRIVACY GUARD FAILED: hex allowlist has a bad rule", file=sys.stderr)
         return 1
     paths = list(args.paths)
     if not paths and not sys.stdin.isatty():
@@ -263,6 +446,9 @@ def main(argv=None):
             continue
         full.append(path if os.path.isabs(path) else os.path.join(root, path))
     found = scan_paths(full, rules)
+    if args.count:
+        print(len(found))
+        return 0 if not found else 1
     for item in found:
         key = (" key " + item["key"]) if item["key"] else ""
         print(
