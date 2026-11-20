@@ -1,29 +1,35 @@
 {
- "at": "2026-11-20T21:10:58Z",
+ "at": "2026-11-20T23:11:28Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
- "new": [],
- "recent": [
+ "new": [
   {
    "kind": "whale_move",
    "ticker": "ASCEND",
    "tag": "w-f3186187",
-   "delta": 194900425,
+   "delta": 282254096,
    "decimals": 6,
-   "qty": 194.9004,
-   "ada_equiv": 252,
-   "value_basis": "ada_leg",
+   "qty": 282.2541,
+   "ada_equiv": 400,
+   "value_basis": "ada_leg_rate",
    "pct": 0.1,
-   "at": "2026-11-14T23:11:16Z"
+   "at": "2026-11-20T23:11:28Z"
   },
   {
-   "kind": "sniper_full_exit",
-   "ticker": "FERRET",
-   "wallet": "w-9575676a",
-   "tags": [],
-   "at": "2026-11-15T03:10:53Z"
-  },
+   "kind": "whale_move",
+   "ticker": "STRIKE",
+   "tag": "w-f3186187",
+   "delta": 538929,
+   "decimals": 6,
+   "qty": 0.5389,
+   "ada_equiv": 2,
+   "value_basis": "decimals_x_price",
+   "dust": true,
+   "at": "2026-11-20T23:11:28Z"
+  }
+ ],
+ "recent": [
   {
    "kind": "holder_concentration",
    "ticker": "BEAST",
@@ -3041,6 +3047,30 @@
    "value_basis": "ada_leg_rate",
    "pct": 0.1,
    "at": "2026-11-20T19:10:50Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 282254096,
+   "decimals": 6,
+   "qty": 282.2541,
+   "ada_equiv": 400,
+   "value_basis": "ada_leg_rate",
+   "pct": 0.1,
+   "at": "2026-11-20T23:11:28Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "STRIKE",
+   "tag": "w-f3186187",
+   "delta": 538929,
+   "decimals": 6,
+   "qty": 0.5389,
+   "ada_equiv": 2,
+   "value_basis": "decimals_x_price",
+   "dust": true,
+   "at": "2026-11-20T23:11:28Z"
   }
  ],
  "api_calls": {
