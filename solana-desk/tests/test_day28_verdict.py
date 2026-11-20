@@ -57,10 +57,14 @@ class Day28Verdict(unittest.TestCase):
             trades.extend(legs)
         return rows, trades
 
-    def report(self, pos, trades, cutoff=None, tasks=None, unfixable=False):
+    def report(self, pos, trades, cutoff=None, tasks=None, unfixable=False, recorded="CONTINUE",
+               snapshot="same", snap_commit="fixture-snap"):
+        if snapshot == "same":
+            snapshot = pos
         text = self.m.render(
             pos, trades, cutoff or self.m.derived_cutoff_text(), "fixture", "pos", "tr",
             tasks=tasks, unfixable=unfixable, n_boot=40,
+            day14_recorded=recorded, open_snapshot=snapshot, open_snapshot_commit=snap_commit,
         )
         return text, fields(text)
 
@@ -77,7 +81,7 @@ class Day28Verdict(unittest.TestCase):
         early, late = self.day14 - 86400, self.day14 - 3600
         f, trades = self.many("F", 20, -0.08, early, late)
         pos, trades = self.pack({"F": f}, trades)
-        text, got = self.report(pos, trades)
+        text, got = self.report(pos, trades, recorded="STOP")
         d14 = self.m.D14.render(pos, trades, self.m.D14.CUTOFF_DEFAULT, "c", "p", "t")
         verdict = [line for line in d14.splitlines() if line.startswith("VERDICT: ")][-1].split(": ", 1)[1]
         self.assertEqual(got["day14_verdict"], verdict)
@@ -89,7 +93,7 @@ class Day28Verdict(unittest.TestCase):
         f, trades = self.many("F", 20, -0.08, early, late)
         r, rt = self.many("R", 1, 0.0, self.cut - 1000, self.cut - 10)
         pos, trades = self.pack({"F": f, "R": r}, trades + rt)
-        text, got = self.report(pos, trades)
+        text, got = self.report(pos, trades, recorded="STOP")
         self.assertEqual(got["headline"], "NO-GO")
         self.assertEqual(got["VERDICT"], "NO-GO")
         self.assertEqual(got["table_label"], 'post-STOP, descriptive: KILL "edge not shown"')
@@ -112,7 +116,7 @@ class Day28Verdict(unittest.TestCase):
         # A descriptive PASS still cannot headline GO.
         wins, wt = self.many("F", 20, 0.20, self.cut - 5000, self.cut)
         pos, trades = self.pack({"F": f + wins, "R": r}, trades + wt)
-        text, got = self.report(pos, trades)
+        text, got = self.report(pos, trades, recorded="STOP")
         self.assertEqual(got["day14_verdict"], "STOP")
         self.assertEqual(got["table_label"], "post-STOP, descriptive: PASS")
         self.assertEqual(got["headline"], "NO-GO")
@@ -120,7 +124,8 @@ class Day28Verdict(unittest.TestCase):
         self.assertTrue(got["headline_text"].startswith("v6.5 F: edge not shown."))
         self.assertNotIn("\nheadline: GO\n", "\n" + text)
         self.assertNotIn("VERDICT: GO", text)
-        self.assertEqual(got["closed_list"], "INCONCLUSIVE")
+        self.assertEqual(got["closed_list"], "INVALIDATED")
+        self.assertEqual(got["SH-03"], "INVALIDATED")
         self.assertEqual(got["SH-03_changes_table"], "no")
 
     def test_branch1_inconclusive_when_unfixable(self):
@@ -131,7 +136,7 @@ class Day28Verdict(unittest.TestCase):
             mint="openmint", opened=self.cut - 500, frac=1.0, pnl=0.0, stale=0, no_route_count=0,
         )}}
         pos, trades = self.pack({"F": f, "R": r}, trades + rt, opens=opens)
-        text, got = self.report(pos, trades, unfixable=True)
+        text, got = self.report(pos, trades, unfixable=True, recorded="STOP")
         self.assertEqual(got["day14_verdict"], "STOP")
         self.assertEqual(got["branch"], "1")
         self.assertEqual(got["finality"], "no")
@@ -145,7 +150,7 @@ class Day28Verdict(unittest.TestCase):
             f"({got['finality_reasons']}). The day-14 early STOP stands.",
         )
         self.assertNotIn("headline: GO", text)
-        held, held_got = self.report(pos, trades, unfixable=False)
+        held, held_got = self.report(pos, trades, unfixable=False, recorded="STOP")
         self.assertEqual(held_got["headline"], "none")
         self.assertEqual(held_got["VERDICT"], "NOT_FINAL")
         self.assertNotIn("NO-GO", held_got["headline"])
@@ -187,7 +192,8 @@ class Day28Verdict(unittest.TestCase):
         self.assertEqual(got["headline_text"], self.m.PASS_TEXT)
         self.assertIn("Never live.", got["headline_text"])
         self.assertEqual(got["closed_list"], "INCONCLUSIVE")
-        self.assertEqual(got["SH-03"], "VALIDATED")
+        self.assertEqual(got["SH-03"], "INCONCLUSIVE")
+        self.assertIn("addendum", got["SH-03_note"])
         self.assertEqual(got["SH-03_changes_table"], "no")
         self.assertIn("R", got["small_control_warning"])
         self.assertIn("S", got["small_control_warning"])
@@ -207,38 +213,66 @@ class Day28Verdict(unittest.TestCase):
         self.assertEqual(got["table_label"], 'KILL "beats random but loses money"')
         self.assertEqual(got["headline"], "NO-GO")
         self.assertEqual(got["headline_text"], "v6.5 F: day-28 KILL (beats random but loses money).")
+        self.assertEqual(got["SH-03"], "INVALIDATED")
 
-    def test_post_cutoff_close_is_excluded_from_the_count(self):
+    def test_lot_open_in_the_snapshot_is_marked_not_dropped(self):
         f, trades = self.many("F", 20, 0.05, self.cut - 4000, self.cut)
         r, rt = self.many("R", 1, 0.01, self.cut - 4000, self.cut)
         late, legs = self.close("F", -10.0, self.cut - 100, self.cut + 60)
-        mark = dict(book="F", action="mark", mint=late["mint"], time=str(self.cut - 10),
-                    frac="0", pnl="", quote_px="99", why="stale", stale="1", net_pnl="999")
-        pos, trades = self.pack({"F": f + [late], "R": r}, trades + rt + legs + [mark])
-        _text, got = self.report(pos, trades)
+        pos, trades = self.pack({"F": f + [late], "R": r}, trades + rt + legs)
+        # At the cutoff this lot was still open. The later sell price is not the mark.
+        snap = {"books": {"F": {"closed": f, "open": {"F-snap-late": dict(
+            mint=late["mint"], opened=late["opened"], entry=1.0, frac=1.0, pnl=0.0,
+            entry_cost=0.5, exit_haircut=0.0, last_mark=1.0, stale=0, no_route_count=0,
+        )}}, "R": {"closed": r, "open": {}}, "S": {"closed": [], "open": {}}}}
+        _text, got = self.report(pos, trades, snapshot=snap)
         self.assertEqual(got["F_closes"], "20")
         self.assertEqual(got["F_after_cutoff"], "1")
-        self.assertEqual(got["F_open_at_cutoff"], "0")
-        self.assertAlmostEqual(float(got["F_all_in_expectancy"]), 0.1, places=6)
-        self.assertEqual(got["table_label"], "PASS")
-        self.assertEqual(got["headline"], "PASS")
-
-    def test_open_mark_counts_in_expectancy_not_in_the_gate(self):
-        f, trades = self.many("F", 20, 0.05, self.cut - 4000, self.cut)
-        r, rt = self.many("R", 1, 0.01, self.cut - 4000, self.cut)
-        opens = {"F": {"F-20261120T1200-mk": dict(
-            mint="markmint", opened=self.cut - 800, entry=1.0, frac=1.0, pnl=0.0,
-            entry_cost=0.5, exit_haircut=0.0, no_route_count=0, stale=0,
-        )}}
-        mark = dict(book="F", action="mark", mint="markmint", time=str(self.cut - 20),
-                    frac="0", pnl="", quote_px="1", why="stale", stale="1", net_pnl="999")
-        _text, got = self.report(*self.pack({"F": f, "R": r}, trades + rt + [mark], opens=opens))
-        self.assertEqual(got["F_closes"], "20")
         self.assertEqual(got["F_open_at_cutoff"], "1")
-        self.assertEqual(got["F_stale_marks"], "1")
         self.assertGreater(float(got["F_all_in_expectancy"]), 0.09)
         self.assertLess(float(got["F_all_in_expectancy"]), 0.1)
         self.assertEqual(got["table_label"], "PASS")
+        missing, miss = self.report(pos, trades, snapshot=None, snap_commit=None)
+        self.assertEqual(miss["VERDICT"], "NOT_FINAL")
+        self.assertIn("open_snapshot_missing", miss["finality_reasons"])
+
+    def test_open_mark_uses_last_mark_not_entry(self):
+        f, trades = self.many("F", 20, 0.05, self.cut - 4000, self.cut)
+        r, rt = self.many("R", 1, 0.01, self.cut - 4000, self.cut)
+        base = trades + rt
+        healthy = {"F": {"F-20261120T1200-mk": dict(
+            mint="markmint", opened=self.cut - 800, entry=1.0, frac=1.0, pnl=0.0,
+            entry_cost=0.5, exit_haircut=0.0, last_mark=2.0, stale=0, no_route_count=0,
+        )}}
+        pos, rows = self.pack({"F": f, "R": r}, base, opens=healthy)
+        _text, got = self.report(pos, rows)
+        self.assertEqual(got["F_closes"], "20")
+        self.assertEqual(got["F_open_at_cutoff"], "1")
+        self.assertEqual(got["F_stale_marks"], "0")
+        self.assertGreater(float(got["F_all_in_expectancy"]), 0.14)
+        self.assertEqual(got["table_label"], "PASS")
+        # A later quote is used only when last_mark is absent. Entry is not the mark.
+        quoted = {"F": {"F-20261120T1200-q": dict(
+            mint="quotemint", opened=self.cut - 800, entry=1.0, frac=1.0, pnl=0.0,
+            entry_cost=0.5, exit_haircut=0.0, stale=1, no_route_count=0,
+        )}}
+        buy = dict(book="F", action="buy", mint="quotemint", time=str(self.cut - 800), frac="1",
+                   pnl="", quote_px="1", net_pnl="", why="pass", cost_model="", stale="0")
+        quote = dict(book="F", action="mark", mint="quotemint", time=str(self.cut - 20),
+                     frac="0", pnl="", quote_px="2", why="stale", stale="1", net_pnl="999")
+        pos, rows = self.pack({"F": f, "R": r}, base + [buy, quote], opens=quoted)
+        _text, got = self.report(pos, rows)
+        self.assertEqual(got["F_stale_marks"], "1")
+        self.assertGreater(float(got["F_all_in_expectancy"]), 0.14)
+        bare = {"F": {"F-20261120T1200-bare": dict(
+            mint="bare", opened=self.cut - 800, entry=1.0, frac=1.0, pnl=0.0,
+            entry_cost=0.5, exit_haircut=0.0, no_route_count=0,
+        )}}
+        pos, rows = self.pack({"F": f, "R": r}, base, opens=bare)
+        _text, got = self.report(pos, rows)
+        self.assertEqual(got["VERDICT"], "NOT_FINAL")
+        self.assertIn("F_open_mark_unknown", got["finality_reasons"])
+        self.assertNotEqual(got["table_label"], "PASS")
 
     def test_refill_rows_are_skipped(self):
         f, trades = self.many("F", 20, 0.05, self.cut - 4000, self.cut)
@@ -368,7 +402,9 @@ class Day28Verdict(unittest.TestCase):
         self.assertEqual(self.m.judge_sh02(30, 0.20, 0.04), ("VALIDATED", ""))
         self.assertEqual(self.m.judge_sh02(30, 0.05, 0.001), ("INVALIDATED", ""))
         self.assertEqual(self.m.judge_sh02(29, 0.20, 0.01)[0], "INCONCLUSIVE")
-        self.assertEqual(self.m.judge_sh02(30, 0.20, 0.05)[0], "neither_bar_nor_futility")
+        status, note = self.m.judge_sh02(30, 0.20, 0.05)
+        self.assertEqual(status, "INCONCLUSIVE")
+        self.assertIn("futility", note)
         self.assertEqual(self.m.judge_sh03(20, True, 0.02, 0.01, True), ("VALIDATED", ""))
         status, note = self.m.judge_sh03(20, True, 0.02, 0.0, True)
         self.assertEqual(status, "INCONCLUSIVE")
@@ -382,7 +418,9 @@ class Day28Verdict(unittest.TestCase):
         self.assertEqual(self.m.judge_sh05m_a(60, 2.0, 1.1, 1.1, 1.4)[0], "INVALIDATED")
         self.assertEqual(self.m.judge_sh05m_a(59, 2.0, 1.1, 1.1, 1.4)[0], "INCONCLUSIVE")
         self.assertEqual(self.m.judge_sh05m_b(125, 0.15, 0.15), ("VALIDATED", ""))
-        self.assertEqual(self.m.judge_sh05m_b(125, 0.146, 0.146)[0], "neither_bar_nor_futility")
+        status, note = self.m.judge_sh05m_b(125, 0.146, 0.146)
+        self.assertEqual(status, "INCONCLUSIVE")
+        self.assertIn("futility", note)
         self.assertEqual(self.m.judge_sh05m_b(125, 0.15, 0.146)[0], "INCONCLUSIVE")
         self.assertEqual(self.m.judge_sh05m_b(124, 0.2, 0.2)[0], "INCONCLUSIVE")
         self.assertEqual(self.m.judge_sh09(30, 20, 3.0, 1.2, 1.2, 4.0), ("VALIDATED", ""))
@@ -390,6 +428,15 @@ class Day28Verdict(unittest.TestCase):
         self.assertEqual(self.m.judge_sh09(29, 20, 3.0, 1.2, 1.2, 4.0)[0], "INCONCLUSIVE")
         self.assertEqual(self.m.judge_sh08(), ("DIAGNOSTIC", "never changes a verdict"))
         self.assertFalse(self.m.holm_p_passes(0.04))
+
+    def _argv(self, directory, commit="fixture", snap="fixture-snap", recorded="CONTINUE", extra=None):
+        argv = [
+            "--data-dir", directory, "--data-commit", commit,
+            "--day14-recorded", recorded, "--open-snapshot-commit", snap,
+        ]
+        if extra:
+            argv.extend(extra)
+        return argv
 
     def test_main_refuses_real_data_before_the_cutoff(self):
         self.assertTrue(self.m.refused_before_cutoff(self.cut - 1, False))
@@ -406,10 +453,7 @@ class Day28Verdict(unittest.TestCase):
         try:
             err = io.StringIO()
             with redirect_stderr(err):
-                code = self.m.main(
-                    ["--data-dir", "/tmp/day28-fixture-not-real", "--data-commit", "abc"],
-                    now=self.cut - 1,
-                )
+                code = self.m.main(self._argv("/tmp/day28-fixture-not-real"), now=self.cut - 1)
         finally:
             self.m.os.path.isfile = orig
         self.assertEqual(code, 2)
@@ -417,20 +461,30 @@ class Day28Verdict(unittest.TestCase):
         self.assertIn("refused before the cutoff", err.getvalue())
         err = io.StringIO()
         with redirect_stderr(err):
-            code = self.m.main(
-                ["--data-dir", "/tmp/day28-fixture-not-real", "--data-commit", "abc"],
-                now=self.cut,
-            )
+            code = self.m.main(self._argv("/tmp/day28-fixture-not-real"), now=self.cut)
         self.assertEqual(code, 2)
         self.assertNotIn("refused before the cutoff", err.getvalue())
         self.assertIn("positions.json", err.getvalue())
 
-    def test_main_synthetic_flag_reads_only_the_fixture(self):
+    def test_refusal_floor_ignores_an_earlier_day14_constant(self):
+        old = self.m.D14.CUTOFF_DEFAULT
+        self.m.D14.CUTOFF_DEFAULT = "2026-10-01T00:00:00Z"
+        try:
+            before = self.m.D14.parse_utc("2026-11-20T00:00:00Z")
+            at_floor = self.m.D14.parse_utc(self.m.REGISTERED_FLOOR)
+            self.assertTrue(self.m.refused_before_cutoff(before, False))
+            self.assertFalse(self.m.refused_before_cutoff(at_floor, False))
+        finally:
+            self.m.D14.CUTOFF_DEFAULT = old
+
+    def test_fixture_mode_needs_a_sentinel_and_is_not_a_verdict(self):
         f, trades = self.many("F", 20, 0.05, self.cut - 4000, self.cut)
         r, rt = self.many("R", 1, 0.01, self.cut - 4000, self.cut)
         pos, trades = self.pack({"F": f, "R": r}, trades + rt)
         with tempfile.TemporaryDirectory() as directory:
             with open(os.path.join(directory, "positions.json"), "w") as fh:
+                json.dump(pos, fh)
+            with open(os.path.join(directory, "open-snapshot.json"), "w") as fh:
                 json.dump(pos, fh)
             keys = []
             for row in trades:
@@ -441,17 +495,128 @@ class Day28Verdict(unittest.TestCase):
                 writer = csv.DictWriter(fh, fieldnames=keys)
                 writer.writeheader()
                 writer.writerows(trades)
+            seen = []
+            orig = self.m.os.path.isfile
+
+            def spy(path):
+                seen.append(os.path.basename(path))
+                return orig(path)
+
+            self.m.os.path.isfile = spy
+            try:
+                err = io.StringIO()
+                with redirect_stderr(err):
+                    code = self.m.main(
+                        self._argv(directory, extra=["--test", "--bootstrap", "20"]),
+                        now=self.cut - 1,
+                    )
+            finally:
+                self.m.os.path.isfile = orig
+            self.assertEqual(code, 2)
+            self.assertEqual(seen, [self.m.SENTINEL_NAME])
+            self.assertIn("DAY28_SYNTHETIC_FIXTURE", err.getvalue())
+            open(os.path.join(directory, self.m.SENTINEL_NAME), "w").close()
+            err = io.StringIO()
+            with redirect_stderr(err):
+                code = self.m.main(
+                    self._argv(directory, commit="a" * 40, extra=["--test"]),
+                    now=self.cut - 1,
+                )
+            self.assertEqual(code, 2)
+            self.assertIn("40-hex", err.getvalue())
             err = io.StringIO()
             out = io.StringIO()
             from contextlib import redirect_stdout
             with redirect_stderr(err), redirect_stdout(out):
                 code = self.m.main(
-                    ["--data-dir", directory, "--data-commit", "abc", "--test", "--bootstrap", "20"],
+                    self._argv(directory, extra=["--synthetic", "--bootstrap", "20"]),
                     now=self.cut - 1,
                 )
-        self.assertEqual(code, 0, err.getvalue())
-        self.assertIn("VERDICT: PASS", out.getvalue())
-        self.assertNotIn("refused before the cutoff", err.getvalue())
+            self.assertEqual(code, 0, err.getvalue())
+            self.assertIn("VERDICT: SYNTHETIC (not a verdict)", out.getvalue())
+            self.assertNotIn("VERDICT: PASS", out.getvalue())
+            self.assertIn("table_label: PASS", out.getvalue())
+
+    def test_real_run_rejects_any_other_bootstrap(self):
+        err = io.StringIO()
+        with redirect_stderr(err):
+            code = self.m.main(
+                self._argv("/tmp/day28-fixture-not-real", extra=["--bootstrap", "20"]),
+                now=self.cut,
+            )
+        self.assertEqual(code, 2)
+        self.assertIn("10000", err.getvalue())
+
+    def test_non_finite_values_are_not_final(self):
+        f, trades = self.many("F", 20, 0.05, self.cut - 4000, self.cut)
+        r, rt = self.many("R", 1, 0.01, self.cut - 4000, self.cut)
+        bad = list(trades)
+        for row in bad:
+            if row.get("action") == "sell" and row.get("book") == "F":
+                row["pnl"] = "nan"
+                break
+        pos, rows = self.pack({"F": f, "R": r}, bad + rt)
+        _text, got = self.report(pos, rows)
+        self.assertIn("non_finite", got["finality_reasons"])
+        self.assertEqual(got["VERDICT"], "NOT_FINAL")
+        self.assertNotEqual(got["table_label"], "PASS")
+        f, trades = self.many("F", 20, 0.05, self.cut - 4000, self.cut)
+        opens = {"F": {"F-20261120T1200-inf": dict(
+            mint="infmint", opened=self.cut - 50, entry=1.0, frac=1.0, pnl=0.0,
+            entry_cost=0.5, exit_haircut=0.0, last_mark="inf", stale=0,
+        )}}
+        pos, rows = self.pack({"F": f, "R": r}, trades + rt, opens=opens)
+        _text, got = self.report(pos, rows)
+        self.assertIn("F_non_finite", got["finality_reasons"])
+        self.assertEqual(got["VERDICT"], "NOT_FINAL")
+
+    def test_rug_keeps_a_logged_loss_past_minus_100(self):
+        good, trades = self.many("F", 19, 0.05, self.cut - 4000, self.cut)
+        rug, rug_tr = self.close("F", -0.51, self.cut - 3000, self.cut - 10, why="pool_gone")
+        r, rt = self.many("R", 1, 0.0, self.cut - 4000, self.cut)
+        _text, got = self.report(*self.pack({"F": good + [rug], "R": r}, trades + rug_tr + rt))
+        self.assertAlmostEqual(float(got["F_all_in_expectancy"]), (19 * 0.1 - 1.02) / 20, places=6)
+        self.assertNotAlmostEqual(float(got["F_all_in_expectancy"]), (19 * 0.1 - 1.0) / 20, places=6)
+
+    def test_day14_recorded_must_match_continue_as_well_as_stop(self):
+        f, trades = self.many("F", 20, 0.05, self.cut - 4000, self.cut)
+        r, rt = self.many("R", 1, 0.01, self.cut - 4000, self.cut)
+        pos, rows = self.pack({"F": f, "R": r}, trades + rt)
+        _text, got = self.report(pos, rows, recorded="CONTINUE")
+        self.assertEqual(got["day14_verdict"], "CONTINUE")
+        self.assertEqual(got["branch"], "2")
+        self.assertEqual(got["table_label"], "PASS")
+        _text, bad = self.report(pos, rows, recorded="STOP")
+        self.assertEqual(bad["VERDICT"], "NOT_FINAL")
+        self.assertIn("day14_branch_mismatch", bad["finality_reasons"])
+        self.assertEqual(bad["branch"], "na")
+        self.assertNotEqual(bad["headline"], "NO-GO")
+
+    def test_trade_log_keeps_lots_older_than_the_positions_tail(self):
+        rows, legs = [], []
+        for i in range(201):
+            rec, pair = self.close("F", 0.05, self.cut - 8000 - i, self.cut - 3000 + i)
+            rows.append(rec)
+            legs.extend(pair)
+        r, rt = self.many("R", 1, 0.01, self.cut - 4000, self.cut)
+        kept = sorted(rows, key=lambda rec: (rec["closed"], rec["opened"], rec["mint"]))[-200:]
+        pos, trades = self.pack({"F": kept, "R": r}, legs + rt)
+        _text, got = self.report(pos, trades, recorded="CONTINUE")
+        self.assertEqual(got["finality"], "yes", got["finality_reasons"])
+        self.assertEqual(got["F_closes"], "201")
+        self.assertEqual(got["table_label"], "PASS")
+
+    def test_malformed_sell_pnl_is_not_final(self):
+        f, trades = self.many("F", 20, 0.05, self.cut - 4000, self.cut)
+        r, rt = self.many("R", 1, 0.01, self.cut - 4000, self.cut)
+        for row in trades:
+            if row.get("action") == "sell":
+                row["pnl"] = "not-a-number"
+                break
+        pos, rows = self.pack({"F": f, "R": r}, trades + rt)
+        _text, got = self.report(pos, rows)
+        self.assertEqual(got["VERDICT"], "NOT_FINAL")
+        self.assertIn("malformed_row", got["finality_reasons"])
 
 
 if __name__ == "__main__":

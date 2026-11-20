@@ -20,7 +20,7 @@ is not the measure. A trimmed mean, a bootstrap interval, a segment, a twin
 line, and the R-overlap check never change the table label. Branch 1 has no
 GO headline.
 """
-import argparse, calendar, os, random, sys, time
+import argparse, calendar, json, os, random, re, sys, time
 
 SPEC_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(SPEC_DIR)
@@ -31,7 +31,7 @@ for path in (ROOT, SPEC_DIR, ANALYSIS):
         sys.path.insert(0, path)
 
 from desk import config as C
-from desk.fills import exit_haircut_of, slice_pnl
+from desk.fills import CLOSED_KEEP, exit_haircut_of, slice_pnl
 from desk.report import trimmed
 import day14_verdict as D14
 import random_twin_check as TWIN
@@ -39,6 +39,17 @@ import r_overlap_check as OVERLAP
 
 SPEC = "SPD-5 DRAFT v2.1"
 BOOKS = ("F", "R", "S")
+REGISTERED_FLOOR = "2026-11-25T15:00:00Z"
+SENTINEL_NAME = "DAY28_SYNTHETIC_FIXTURE"
+SNAPSHOT_NAME = "open-snapshot.json"
+_HEX40 = re.compile(r"^[0-9a-fA-F]{40}$")
+NEITHER_NOTE = "neither the 95% bar nor the futility rule; filed as INCONCLUSIVE"
+PASS_REGISTER_NOTE = "section 6 keeps a branch-2 PASS at INCONCLUSIVE; VALIDATED would need an owner addendum"
+UNMODELED_COSTS = "The paper desk has no Jito, priority-fee, rent, or failed-tx cost model."
+
+
+class NonFinite(ValueError):
+    """A NaN or infinity in a numeric field. It is not a zero and not a mark."""
 RUG_WHYS = ("pool_gone", "no_route_3x")
 SEED = 20261125
 HOLM_M = 6
@@ -104,6 +115,8 @@ def assert_shared():
         bad.append("TRIM_PCT")
     if C.EXIT.get("no_route_kill_checks") != 3:
         bad.append("no_route_kill_checks")
+    if CLOSED_KEEP != 200:
+        bad.append("CLOSED_KEEP")
     if bad:
         raise RuntimeError("day-28 constants drifted: " + ",".join(bad))
 
@@ -112,6 +125,19 @@ def derived_cutoff_text():
     """Day-14 constant plus exactly 14 * 24 h. The constant wins over the registered text."""
     ts = D14.parse_utc(D14.CUTOFF_DEFAULT) + 14 * 24 * 3600
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(ts))
+
+
+def refusal_instant():
+    """Real data stays closed until this instant.
+
+    The floor is the later of the derived day-28 cutoff and 2026-11-25T15:00:00Z.
+    Editing the day-14 constant cannot open the gate earlier than that date.
+    """
+    return max(D14.parse_utc(derived_cutoff_text()), D14.parse_utc(REGISTERED_FLOOR))
+
+
+def is_git_sha(text):
+    return bool(_HEX40.fullmatch(text or ""))
 
 
 def derived_last_run():
@@ -133,13 +159,21 @@ def mean(xs):
     return None if not xs else sum(xs) / float(len(xs))
 
 
+def _finite(x):
+    return x == x and x not in (float("inf"), float("-inf"))
+
+
 def _num(text):
-    if text is None or text == "":
+    """A blank field is None. NaN and inf raise. A non-numeric token is None (malformed)."""
+    if isinstance(text, bool) or text is None or text == "":
         return None
     try:
-        return float(text)
+        x = float(text)
     except (TypeError, ValueError):
         return None
+    if not _finite(x):
+        raise NonFinite()
+    return x
 
 
 def _stale(row):
@@ -154,13 +188,24 @@ def build_lots(trades, book):
     """Lots for one book. Sells fill the oldest open buy. Refill and mark rows are not lots.
 
     A blank pnl on a sell fails the build (it is not treated as zero). net_pnl is not read.
-    Returns (closed_lots, open_lots, ok, refill_rows).
+    NaN and inf fail the build as non_finite. Returns
+    (closed_lots, open_lots, ok, refill_rows, reason).
     """
     from collections import defaultdict
     lots = defaultdict(list)
     closed, still_open = [], []
     ok = True
+    reason = None
     refills = 0
+    try:
+        return _build_lots(trades, book, lots, closed, still_open, refills)
+    except NonFinite:
+        return closed, still_open, False, refills, "non_finite"
+
+
+def _build_lots(trades, book, lots, closed, still_open, refills):
+    ok = True
+    reason = None
     for row in trades:
         action = row.get("action")
         if action == "refill":
@@ -194,13 +239,14 @@ def build_lots(trades, book):
             continue
         if row.get("pnl") in ("", None) or not lots[mint]:
             ok = False
+            reason = reason or "malformed_row"
             continue
         lot = lots[mint][0]
-        try:
-            pnl = float(row["pnl"])
-            frac = float(row.get("frac") or 0)
-        except (TypeError, ValueError):
+        pnl = _num(row.get("pnl"))
+        frac = _num(row.get("frac"))
+        if pnl is None or frac is None:
             ok = False
+            reason = reason or "malformed_row"
             continue
         lot["pnl"] += pnl
         lot["frac"] += frac
@@ -219,32 +265,48 @@ def build_lots(trades, book):
         labels = set(lot["models"])
         lot["post_v3"] = bool(labels) and "" not in labels
         lot["rug"] = any(w in RUG_WHYS for w in lot["whys"])
-    return closed, still_open, ok, refills
+    if not ok and reason is None:
+        reason = "malformed_row"
+    return closed, still_open, ok, refills, reason
 
 
 def reconciles_book(closed, trades, book):
-    """True when every positions.json close is the same lot trades.csv still has."""
-    built, _open, ok, _refills = build_lots(trades, book)
+    """positions.json keeps the last CLOSED_KEEP closes. The log keeps every lot.
+
+    The tail must be the same lots as the newest CLOSED_KEEP trade lots. Older
+    lots stay in the sample. A non-finite pnl does not reconcile.
+    """
+    built, _open, ok, _refills, _reason = build_lots(trades, book)
     if not ok or not D14.ids_unique(closed):
         return False
-    if len(built) != len(closed):
+    ordered = sorted(built, key=lambda lot: (lot["closed"], lot["opened"], lot["mint"]))
+    tail = ordered[-CLOSED_KEEP:] if len(ordered) > CLOSED_KEEP else ordered
+    if len(closed) != len(tail):
         return False
     used = set()
     for row in closed:
         hit = None
-        for i, lot in enumerate(built):
+        try:
+            opened = int(row["opened"])
+            done = int(row["closed"])
+            pnl = float(row["pnl"])
+        except (TypeError, ValueError, KeyError):
+            return False
+        if not _finite(pnl):
+            return False
+        for i, lot in enumerate(tail):
             if i in used or lot["mint"] != row.get("mint"):
                 continue
-            if lot["opened"] != int(row["opened"]) or lot["closed"] != int(row["closed"]):
+            if lot["opened"] != opened or lot["closed"] != done:
                 continue
-            if abs(lot["pnl"] - float(row["pnl"])) > D14.PNL_TOL:
+            if abs(lot["pnl"] - pnl) > D14.PNL_TOL:
                 continue
             hit = i
             break
         if hit is None:
             return False
         used.add(hit)
-    return True
+    return len(used) == len(tail)
 
 
 def in_committed_void(opened):
@@ -290,36 +352,67 @@ def mark_return(entry, frac, entry_cost, exit_haircut, mark, realized):
     return (float(realized) + net) / C.TICKET_SOL
 
 
+def _trades_for_closed(trades, closed, book):
+    """Buy and sell rows for the positions.json tail, so the day-14 check can see that tail."""
+    spans = []
+    for row in closed:
+        try:
+            spans.append((row.get("mint") or "", int(row["opened"]), int(row["closed"])))
+        except (TypeError, ValueError, KeyError):
+            continue
+    out = []
+    for row in trades:
+        if row.get("book") != book or row.get("action") not in ("buy", "sell"):
+            continue
+        ts = _num(row.get("time"))
+        if ts is None:
+            continue
+        ts = int(ts)
+        mint = row.get("mint") or ""
+        for span_mint, opened, done in spans:
+            if mint == span_mint and opened <= ts <= done:
+                out.append(row)
+                break
+    return out
+
+
 def day14_outcome(positions, trades, commit_bytes="unchecked"):
     """What the frozen day-14 script would print at its own default cutoff.
 
-    NOT_FINAL is not a non-confirmation. STOP (final) is branch 1. CONTINUE (final) is branch 2.
+    The recorded flag is the branch. This recompute is only the parity check.
+    The positions.json tail is what that script can see; older lots are not fed to it.
+    NOT_FINAL is not a non-confirmation.
     """
-    cutoff_ts = D14.parse_utc(D14.CUTOFF_DEFAULT)
-    closed, _opened = D14.f_records(positions)
-    counted, _voided, _late = D14.select_closes(
-        closed, cutoff_ts, D14.parse_utc(D14.VOID_START), D14.parse_utc(D14.VOID_END),
-    )
-    total = sum(float(row["pnl"]) for row in counted)
-    rule, exp = D14.decide(len(counted), total, D14.TICKET, D14.MIN_CLOSES, D14.STOP_EXP)
-    last = positions.get("last_run_ts")
     try:
-        last_ts = int(last) if last not in (None, "") else None
+        cutoff_ts = D14.parse_utc(D14.CUTOFF_DEFAULT)
+        closed, _opened = D14.f_records(positions)
+        counted, _voided, _late = D14.select_closes(
+            closed, cutoff_ts, D14.parse_utc(D14.VOID_START), D14.parse_utc(D14.VOID_END),
+        )
+        total = sum(float(row["pnl"]) for row in counted)
+        rule, exp = D14.decide(len(counted), total, D14.TICKET, D14.MIN_CLOSES, D14.STOP_EXP)
+        last = positions.get("last_run_ts")
+        try:
+            last_ts = int(last) if last not in (None, "") else None
+        except (TypeError, ValueError):
+            last_ts = None
+        reasons = []
+        if last_ts is None:
+            reasons.append("day14_last_run_missing")
+        elif last_ts < cutoff_ts:
+            reasons.append("day14_last_run_before_cutoff")
+        if not D14.ids_unique(closed):
+            reasons.append("day14_close_ids_not_unique")
+        if not D14.reconciles(closed, _trades_for_closed(trades, closed, "F")):
+            reasons.append("day14_closes_do_not_reconcile")
+        if commit_bytes == "mismatch":
+            reasons.append("day14_commit_bytes_mismatch")
+        verdict = rule if not reasons else "NOT_FINAL"
+        return dict(verdict=verdict, rule=rule, expectancy=exp, n=len(counted), reasons=reasons)
+    except NonFinite:
+        return dict(verdict="NOT_FINAL", rule="CONTINUE", expectancy=None, n=0, reasons=["non_finite"])
     except (TypeError, ValueError):
-        last_ts = None
-    reasons = []
-    if last_ts is None:
-        reasons.append("day14_last_run_missing")
-    elif last_ts < cutoff_ts:
-        reasons.append("day14_last_run_before_cutoff")
-    if not D14.ids_unique(closed):
-        reasons.append("day14_close_ids_not_unique")
-    if not D14.reconciles(closed, trades):
-        reasons.append("day14_closes_do_not_reconcile")
-    if commit_bytes == "mismatch":
-        reasons.append("day14_commit_bytes_mismatch")
-    verdict = rule if not reasons else "NOT_FINAL"
-    return dict(verdict=verdict, rule=rule, expectancy=exp, n=len(counted), reasons=reasons)
+        return dict(verdict="NOT_FINAL", rule="CONTINUE", expectancy=None, n=0, reasons=["malformed_row"])
 
 
 def table_label(n_closes, f_exp, r_exp):
@@ -378,7 +471,7 @@ def _bar(meets_95, meets_holm, futility, below_min):
         return "VALIDATED", ""
     if meets_95:
         return "INCONCLUSIVE", HOLM_FOOTNOTE
-    return "neither_bar_nor_futility", ""
+    return "INCONCLUSIVE", NEITHER_NOTE
 
 
 def judge_sh02(n_reentries, gap, fisher_p):
@@ -391,7 +484,7 @@ def judge_sh02(n_reentries, gap, fisher_p):
         return "INVALIDATED", ""
     if gap >= 0.20 and fisher_p < 0.05:
         return "VALIDATED", ""
-    return "neither_bar_nor_futility", ""
+    return "INCONCLUSIVE", NEITHER_NOTE
 
 
 def judge_sh03(n_closes, f_beats_r, lb95, lb_holm, computable):
@@ -454,15 +547,21 @@ def bootstrap_bounds(f_returns, r_returns, n_boot, seed):
     return f_lo, f_hi, TWIN.percentile(diffs, ALPHA), TWIN.percentile(diffs, holm_alpha())
 
 
-def _closed_list(branch, label, computable):
-    """Section 6 mapping. Printed beside the Holm line. Does not change the table."""
-    if not computable or label is None:
-        return "UNKNOWN"
-    if label == LABEL_STOP or (branch == 1 and label == LABEL_PASS) or (branch == 2 and label == LABEL_PASS):
-        return "INCONCLUSIVE"
-    if branch == 1 or (isinstance(label, str) and label.startswith("KILL")):
-        return "INVALIDATED"
-    return "UNKNOWN"
+def register_label(branch, label, computable):
+    """Section 6, the conservative reading. Never VALIDATED.
+
+    Branch 1 or any KILL is INVALIDATED. STOP is INCONCLUSIVE.
+    A branch-2 PASS stays INCONCLUSIVE. VALIDATED would need an owner addendum.
+    """
+    if not computable or label is None or branch not in (1, 2):
+        return "UNKNOWN", ""
+    if branch == 1 or str(label).startswith("KILL"):
+        return "INVALIDATED", ""
+    if label == LABEL_STOP:
+        return "INCONCLUSIVE", ""
+    if branch == 2 and label == LABEL_PASS:
+        return "INCONCLUSIVE", PASS_REGISTER_NOTE
+    return "INCONCLUSIVE", NEITHER_NOTE
 
 
 def _sources(tasks, cutoff_ts):
@@ -510,116 +609,150 @@ def entry_cost_of_lot(pos, trades, book):
     return None
 
 
-def _quote_from_lot(lot, cutoff_ts, entry):
-    """Last quote on this lot at or before the cutoff. The entry is that quote when nothing later was logged."""
+def _latest_quote(lot, cutoff_ts):
+    """Latest mark or sell quote on this lot at or before the cutoff. Never the entry."""
+    if not lot:
+        return None
     best = None
     points = list(lot.get("marks") or [])
     for sell in lot.get("sells") or []:
-        if sell.get("quote") is not None and sell["time"] <= cutoff_ts:
-            points.append((sell["time"], sell["quote"], sell["stale"]))
+        if sell.get("quote") is None or sell["time"] > cutoff_ts:
+            continue
+        points.append((sell["time"], sell["quote"], sell["stale"]))
     for ts, px, stale in points:
-        if ts <= cutoff_ts and (best is None or ts >= best[0]):
-            best = (ts, px, stale)
+        if not _finite(px) or ts > cutoff_ts:
+            continue
+        if best is None or ts >= best[0]:
+            best = (ts, px, 1 if stale else 0)
     if best is None:
-        return entry, 0
-    return best[1], 1 if best[2] else 0
+        return None
+    return best[1], best[2]
+
+
+def _pos_stale(pos):
+    return str((pos or {}).get("stale") or "") in ("1", "1.0", "true")
 
 
 def _value_open(pos, book, trades, cutoff_ts, lot=None):
-    """Return (return_or_None, stale, unknown_reason). A confirmed rug is exactly -1."""
+    """Return (return_or_None, stale, unknown_reason).
+
+    The mark is pos['last_mark'] with pos['stale'], or a quote at or before the
+    cutoff when last_mark is absent. The entry price is never the mark.
+    A confirmed open rug is -100%.
+    """
     if is_rug_open(pos):
         return -1.0, 0, None
-    entry = _num(pos.get("entry"))
-    frac = _num(pos.get("frac"))
-    cost = entry_cost_of_lot(pos, trades, book)
+    try:
+        entry = _num(pos.get("entry"))
+        frac = _num(pos.get("frac"))
+        if frac is None:
+            frac = 1.0
+        cost = entry_cost_of_lot(pos, trades, book)
+        raw_last = pos.get("last_mark")
+        last = None if raw_last in (None, "") else _num(raw_last)
+        quote = _latest_quote(lot, cutoff_ts)
+    except NonFinite:
+        return None, 0, "non_finite"
     if entry is None or entry <= 0 or frac is None or cost is None:
         return None, 0, "open_mark_unknown"
-    if lot is not None:
-        px, stale = _quote_from_lot(lot, cutoff_ts, entry)
+    if last is not None:
+        px, stale = last, (1 if _pos_stale(pos) else 0)
+    elif quote is not None:
+        px, stale = quote
     else:
-        mark = last_mark(trades, book, pos.get("mint") or "", pos.get("opened"), cutoff_ts)
-        if mark is None:
-            px = entry
-            stale = 1 if str(pos.get("stale") or "") in ("1", "1.0", "true") else 0
-        else:
-            px = mark[1]
-            stale = 1 if mark[2] else 0
-    realized = _num(pos.get("pnl"))
-    if realized is None:
-        realized = 0.0
+        return None, 0, "open_mark_unknown"
+    if not _finite(px):
+        return None, 0, "open_mark_unknown"
+    realized = 0.0
     try:
+        if pos.get("pnl") not in (None, ""):
+            realized = _num(pos.get("pnl"))
+            if realized is None:
+                realized = 0.0
         ret = mark_return(entry, frac, cost, exit_haircut_of(pos), px, realized)
+    except NonFinite:
+        return None, 0, "non_finite"
     except (TypeError, ValueError, ZeroDivisionError):
         return None, 0, "open_mark_unknown"
+    if not _finite(ret):
+        return None, 0, "non_finite"
     return ret, stale, None
 
 
-def _book_sample(name, positions, trades, cutoff_ts):
-    book = ((positions.get("books") or {}).get(name) or {})
-    closed = list(book.get("closed") or [])
-    opens = book.get("open") or {}
+def _book_sample(name, trades, cutoff_ts, snapshot):
+    """Closes come from the append-only lots. Opens come from the cutoff snapshot."""
     voided = late = rugs = stale = post_v3 = 0
     close_returns = []
     realized_returns = []
     all_in = []
     unknown = None
-    built, still_open, built_ok, _refills = build_lots(trades, name)
-    if not built_ok:
-        unknown = "trade_log_unreadable"
-    by_close = {}
+    built, still_open, ok, _refills, reason = build_lots(trades, name)
+    if reason == "non_finite":
+        unknown = "non_finite"
+    elif not ok:
+        unknown = reason or "malformed_row"
+    by_open = {}
+    for lot in list(built) + list(still_open):
+        by_open[(lot["mint"], lot["opened"])] = lot
+    counted = set()
     for lot in built:
-        by_close[(lot["mint"], lot["opened"], lot["closed"])] = lot
-    by_open = {(lot["mint"], lot["opened"]): lot for lot in still_open}
-    for row in closed:
-        opened = int(row["opened"])
-        if in_committed_void(opened):
+        if unknown in ("non_finite", "malformed_row"):
+            break
+        if in_committed_void(lot["opened"]):
             voided += 1
             continue
-        done = int(row["closed"])
-        try:
-            logged = float(row["pnl"]) / C.TICKET_SOL
-        except (TypeError, ValueError, KeyError):
-            unknown = "close_pnl_unknown"
-            continue
-        if done > cutoff_ts:
-            # That close does not exist for this run, so its price is not used.
+        if lot["closed"] is None or lot["closed"] > cutoff_ts:
             late += 1
             continue
-        rug = (row.get("why") or "") in RUG_WHYS
-        ret = -1.0 if rug else logged
+        logged = lot["pnl"] / C.TICKET_SOL
+        if not _finite(logged):
+            unknown = "non_finite"
+            continue
+        rug = bool(lot.get("rug"))
+        ret = min(logged, -1.0) if rug else logged
         if rug:
             rugs += 1
         close_returns.append(ret)
         realized_returns.append(logged)
         all_in.append(ret)
-        matched = by_close.get((row.get("mint") or "", opened, done))
-        if matched is not None and matched.get("post_v3"):
+        counted.add((lot["mint"], lot["opened"]))
+        if lot.get("post_v3"):
             post_v3 += 1
-    for pid, pos in opens.items():
+    snap = (((snapshot or {}).get("books") or {}).get(name) or {}).get("open") or {}
+    for pid, pos in snap.items():
+        if unknown in ("non_finite", "malformed_row"):
+            break
+        pos = dict(pos)
+        pos.setdefault("mint", pid)
         opened = pos.get("opened")
         if opened is None:
             unknown = "open_mark_unknown"
             continue
-        if int(opened) > cutoff_ts:
+        try:
+            opened_i = int(opened)
+        except (TypeError, ValueError):
+            unknown = "malformed_row"
             continue
-        if in_committed_void(int(opened)):
+        if opened_i > cutoff_ts:
+            continue
+        if in_committed_void(opened_i):
             voided += 1
             continue
-        pos = dict(pos)
-        pos.setdefault("mint", pid)
-        lot = by_open.get((pos.get("mint") or "", int(opened)))
+        if (pos.get("mint") or "", opened_i) in counted:
+            continue
+        lot = by_open.get((pos.get("mint") or "", opened_i))
         ret, st, why = _value_open(pos, name, trades, cutoff_ts, lot)
         stale += st
         if why:
             unknown = why
             continue
-        if ret == -1.0 and is_rug_open(pos):
+        if is_rug_open(pos):
             rugs += 1
         all_in.append(ret)
     return dict(
         closes=len(close_returns), voided=voided, late=late, rugs=rugs, stale=stale,
         post_v3=post_v3, close_returns=close_returns, realized_returns=realized_returns,
-        all_in=all_in, unknown=unknown, n_closed_rows=len(closed),
+        all_in=all_in, unknown=unknown,
     )
 
 
@@ -660,7 +793,8 @@ def _twin_lines(samples, data_dir):
 
 def render(positions, trades, cutoff_text, data_commit, positions_sha256, trades_sha256,
            tasks=None, commit_bytes="unchecked", unfixable=False, n_boot=None,
-           tasks_sha256="unchecked", data_dir=None):
+           tasks_sha256="unchecked", data_dir=None, day14_recorded=None,
+           open_snapshot=None, open_snapshot_commit=None, synthetic=False):
     assert_shared()
     n_boot = TWIN.BOOT if n_boot is None else int(n_boot)
     if n_boot < 1:
@@ -669,14 +803,18 @@ def render(positions, trades, cutoff_text, data_commit, positions_sha256, trades
     cutoff_ts = D14.parse_utc(cutoff_text)
     binding = cutoff_text == registered
     early = day14_outcome(positions, trades, commit_bytes)
-    if early["verdict"] == "STOP":
-        branch = 1
-    elif early["verdict"] == "CONTINUE":
-        branch = 2
-    else:
-        branch = None
-    samples = {name: _book_sample(name, positions, trades, cutoff_ts) for name in BOOKS}
     reasons = []
+    if day14_recorded not in ("STOP", "CONTINUE"):
+        reasons.append("day14_recorded_missing")
+        branch = None
+    elif early["verdict"] != day14_recorded:
+        reasons.append("day14_branch_mismatch")
+        branch = None
+    else:
+        branch = 1 if day14_recorded == "STOP" else 2
+    if not open_snapshot_commit or open_snapshot is None:
+        reasons.append("open_snapshot_missing")
+    samples = {name: _book_sample(name, trades, cutoff_ts, open_snapshot) for name in BOOKS}
     if not binding:
         reasons.append("cutoff_not_default")
     last = positions.get("last_run_ts")
@@ -699,8 +837,6 @@ def render(positions, trades, cutoff_text, data_commit, positions_sha256, trades
             reasons.append(f"{name}_{samples[name]['unknown']}")
     if commit_bytes == "mismatch":
         reasons.append("commit_bytes_mismatch")
-    if early["verdict"] == "NOT_FINAL":
-        reasons.append("day14_not_final")
     # Unique, stable order.
     reasons = list(dict.fromkeys(reasons))
     final = not reasons
@@ -733,12 +869,13 @@ def render(positions, trades, cutoff_text, data_commit, positions_sha256, trades
         verdict = "NOT_FINAL"
     else:
         verdict = head
+    if synthetic:
+        verdict = "SYNTHETIC (not a verdict)"
     f_lo, f_hi, lb95, lb_holm = bootstrap_bounds(
         samples["F"]["all_in"], samples["R"]["all_in"], n_boot, SEED,
     )
-    beats = None if f_exp is None or r_exp is None else f_exp > r_exp
-    sh03, sh03_note = judge_sh03(n_f, beats, lb95, lb_holm, final and label is not None)
-    closed_list = _closed_list(branch, label, final and label is not None)
+    sh03, sh03_note = register_label(branch, label, final and label is not None)
+    closed_list = sh03
     trim_f = trimmed(samples["F"]["all_in"])
     trim_r = trimmed(samples["R"]["all_in"])
     trim_warn = bool(samples["F"]["all_in"] and samples["R"]["all_in"] and mean(trim_f) <= mean(trim_r))
@@ -775,6 +912,7 @@ def render(positions, trades, cutoff_text, data_commit, positions_sha256, trades
         f"later_void_records: {len(voids) if isinstance(voids, list) else 0}",
         "later_voids_applied: no",
         f"day14_cutoff: {D14.CUTOFF_DEFAULT}",
+        f"day14_recorded: {day14_recorded if day14_recorded else 'missing'}",
         f"day14_verdict: {early['verdict']}",
         f"day14_rule_result: {early['rule']}",
         f"day14_n_closes: {early['n']}",
@@ -861,8 +999,9 @@ def render(positions, trades, cutoff_text, data_commit, positions_sha256, trades
         f"day14_discrepancy: {DAY14_DISCREPANCY}",
         f"gate_bug: {GATE_BUG}",
         f"paper_ceiling: {OPTIMISM}",
+        f"unmodeled_costs: {UNMODELED_COSTS}",
         f"jupiter_http_400: {JUPITER_400}",
-        "gaps: not_inferred",
+        "gaps: not logged by v6.5, not imputed",
         f"positions_sha256: {positions_sha256}",
         f"trades_sha256: {trades_sha256}",
         f"tasks_sha256: {tasks_sha256}",
@@ -874,10 +1013,40 @@ def render(positions, trades, cutoff_text, data_commit, positions_sha256, trades
 
 
 def refused_before_cutoff(now_ts, synthetic):
-    """True when a real-data run must stop before any file is opened."""
+    """True when a real-data run must stop before any file is opened.
+
+    Fixture mode does not skip the sentinel check in main(). It only skips this clock.
+    """
     if synthetic:
         return False
-    return float(now_ts) < D14.parse_utc(derived_cutoff_text())
+    return float(now_ts) < refusal_instant()
+
+
+def _load_snapshot(commit, data_dir, synthetic):
+    """The positions file from the last desk run at or before the cutoff.
+
+    Fixture mode reads open-snapshot.json and does not call git.
+    """
+    if not commit:
+        return None
+    if synthetic:
+        path = os.path.join(data_dir, SNAPSHOT_NAME)
+        if not os.path.isfile(path):
+            return None
+        return D14.load_json(path)
+    raw = None
+    try:
+        import subprocess
+        raw = subprocess.check_output(
+            ["git", "-C", REPO, "show", f"{commit}:solana-desk/positions.json"],
+            stderr=subprocess.DEVNULL,
+        )
+    except (subprocess.CalledProcessError, OSError):
+        return None
+    try:
+        return json.loads(raw.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError, TypeError, ValueError):
+        return None
 
 
 def main(argv=None, *, now=None):
@@ -885,11 +1054,15 @@ def main(argv=None, *, now=None):
     p.add_argument("--data-dir", required=True, help="desk-data solana-desk directory")
     p.add_argument("--cutoff", default=None, help="UTC cutoff ending in Z; default is the derived day-28 instant")
     p.add_argument("--data-commit", default="unknown", help="commit of the desk data that was read")
-    p.add_argument("--synthetic", action="store_true", help="fixture only; required to run before the cutoff")
+    p.add_argument("--synthetic", action="store_true", help="fixture only; requires DAY28_SYNTHETIC_FIXTURE")
     p.add_argument("--test", action="store_true", help="same as --synthetic; fixture only")
     p.add_argument("--not-final-unfixable", action="store_true",
                    help="the owner has decided a NOT_FINAL result cannot be repaired")
     p.add_argument("--bootstrap", type=int, default=TWIN.BOOT)
+    p.add_argument("--day14-recorded", required=True, choices=("STOP", "CONTINUE"),
+                   help="the recorded day-14 final verdict")
+    p.add_argument("--open-snapshot-commit", required=True,
+                   help="commit of the last desk run at or before the cutoff")
     o = p.parse_args(argv)
     synthetic = bool(o.synthetic or o.test)
     try:
@@ -900,13 +1073,28 @@ def main(argv=None, *, now=None):
         now_ts = time.time() if now is None else now
         if refused_before_cutoff(now_ts, synthetic):
             print(
-                "day28_verdict: refused before the cutoff. Real desk data is not read. "
-                "Pass --synthetic or --test only for a fixture.",
+                "day28_verdict: refused before the cutoff. Real desk data is not read.",
                 file=sys.stderr,
             )
             return 2
+        if not synthetic and o.bootstrap != TWIN.BOOT:
+            print("day28_verdict: a real run uses bootstrap 10000", file=sys.stderr)
+            return 2
         if o.bootstrap < 1:
             raise ValueError("bootstrap must be positive")
+        if synthetic:
+            # The sentinel is the first read. A 40-hex commit is refused before any other file.
+            sentinel = os.path.join(o.data_dir, SENTINEL_NAME)
+            if not os.path.isfile(sentinel):
+                print(
+                    "day28_verdict: fixture mode requires a DAY28_SYNTHETIC_FIXTURE file "
+                    "in the data directory. No other file was read.",
+                    file=sys.stderr,
+                )
+                return 2
+            if is_git_sha(o.data_commit) or is_git_sha(o.open_snapshot_commit):
+                print("day28_verdict: fixture mode refuses a 40-hex commit.", file=sys.stderr)
+                return 2
         pos_path = os.path.join(o.data_dir, "positions.json")
         tr_path = os.path.join(o.data_dir, "trades.csv")
         task_path = os.path.join(o.data_dir, "tasks.csv")
@@ -919,15 +1107,17 @@ def main(argv=None, *, now=None):
         if os.path.isfile(task_path):
             tasks = D14.load_trades(task_path)
             task_hash = D14.sha256_file(task_path)
+        snapshot = _load_snapshot(o.open_snapshot_commit, o.data_dir, synthetic)
         commit_bytes = "unchecked"
-        gpos = D14.git_blob_sha256(o.data_commit, "solana-desk/positions.json")
-        gtr = D14.git_blob_sha256(o.data_commit, "solana-desk/trades.csv")
-        if gpos is not None and gtr is not None:
-            commit_bytes = "match" if (gpos == pos_hash and gtr == tr_hash) else "mismatch"
+        if not synthetic:
+            gpos = D14.git_blob_sha256(o.data_commit, "solana-desk/positions.json")
+            gtr = D14.git_blob_sha256(o.data_commit, "solana-desk/trades.csv")
+            if gpos is not None and gtr is not None:
+                commit_bytes = "match" if (gpos == pos_hash and gtr == tr_hash) else "mismatch"
         text = render(
             D14.load_json(pos_path), D14.load_trades(tr_path), cutoff, o.data_commit,
             pos_hash, tr_hash, tasks, commit_bytes, o.not_final_unfixable, o.bootstrap,
-            task_hash, o.data_dir,
+            task_hash, o.data_dir, o.day14_recorded, snapshot, o.open_snapshot_commit, synthetic,
         )
     except (OSError, ValueError, RuntimeError) as exc:
         print(f"day28_verdict: {exc}", file=sys.stderr)
