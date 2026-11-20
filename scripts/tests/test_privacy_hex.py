@@ -1,9 +1,11 @@
 """Long hex in fixtures and data is a privacy failure unless it is an obvious fake or allowlisted."""
 import hashlib
+import json
 import os
 import subprocess
 import tempfile
 import unittest
+from pathlib import Path
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.sys.path.insert(0, os.path.join(ROOT, "scripts"))
@@ -71,11 +73,52 @@ class Rules(unittest.TestCase):
         )
 
 
+class Hold(unittest.TestCase):
+    def test_one_task_row_is_deferred_and_the_value_is_not_listed(self):
+        rules = H.load_rules(RULES)
+        text = Path(RULES).read_text(encoding="utf-8")
+        hold_lines = [line for line in text.splitlines() if line.startswith("hold-cell:")]
+        self.assertTrue(hold_lines)
+        for line in hold_lines:
+            self.assertNotIn("0x", line.lower())
+        held = "0x" + token_of("desk-task-row")[:40]
+        other = "0x" + token_of("later-desk-task-row")[:40]
+        salt = token_of("salt-on-the-held-row")
+        header = "time,run_id,agent,task,mint,book,result\n"
+        held_line = "1,20261105T1930,scanner,scan,%s,,skip\n" % held
+        other_line = "2,20261105T2000,scanner,scan,%s,,skip\n" % other
+        salty = "3,20261105T1930,scanner,scan,%s,%s,skip\n" % (held, salt)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "solana-desk")
+            os.makedirs(path)
+            task = os.path.join(path, "tasks.csv")
+            with open(task, "w", encoding="utf-8") as fh:
+                fh.write(header + held_line + other_line)
+            mixed = H.scan_file(task, rules)
+            self.assertEqual(len(mixed), 1)
+            self.assertEqual(mixed[0]["line"], 3)
+            self.assertNotIn(held, json.dumps(mixed))
+            self.assertNotIn(other, json.dumps(mixed))
+            with open(task, "w", encoding="utf-8") as fh:
+                fh.write(header + other_line)
+            flagged = H.scan_file(task, rules)
+            self.assertEqual(len(flagged), 1)
+            self.assertEqual(flagged[0]["kind"], "0x-40")
+            self.assertNotIn(other, json.dumps(flagged))
+            with open(task, "w", encoding="utf-8") as fh:
+                fh.write(header + salty)
+            both = H.scan_file(task, rules)
+        self.assertEqual(len(both), 1)
+        self.assertEqual(both[0]["kind"], "bare-64")
+        self.assertNotIn(salt, json.dumps(both))
+        self.assertNotIn(held, json.dumps(both))
+
+
 class Guard(unittest.TestCase):
     def test_a_planted_order_hash_fails_and_the_value_is_not_printed(self):
         order = "0x" + token_of("fixture-order-not-a-secret")
         env = os.environ.copy()
-        env["PRIVACY_IDENTITY_HASHES"] = token_of("zzsyntheticidentityblocktoken")
+        env["PRIVACY_IDENTITY_HASHES"] = token_of("zzsynthetic" + "identityblocktoken")
         env.pop("SIGHTLINE_PRIVATE_TOKEN", None)
         env.pop("PRIVACY_IDENTITY_KEY", None)
         env.pop("GITHUB_ACTIONS", None)

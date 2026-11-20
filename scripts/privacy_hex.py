@@ -16,10 +16,13 @@ An obvious fake is allowed in code, not by listing the repo's current values:
 
 Anything else needs scripts/privacy-hex-allow.txt:
   an exact token, a JSON field name, a same-line label, or https URLs.
+A hold-cell line defers one CSV cell by file, column, and run id. It does
+not store the hex, and a different row still fails.
 The file is the allowlist. It does not name order_hash, salt, or key.
 """
 from __future__ import annotations
 
+import csv
 import os
 import re
 import sys
@@ -68,8 +71,12 @@ def in_scope(path):
     return os.path.splitext(name)[1].lower() in _DATA_EXT
 
 
+_HOLD = re.compile(r"hold-cell:(\S+)\s+column:([A-Za-z0-9_]+)\s+run:(\S+)\s*$")
+
+
 def load_rules(path):
     tokens, fields, labels = set(), set(), set()
+    holds = []
     urls = False
     if not os.path.isfile(path):
         raise FileNotFoundError(path)
@@ -84,9 +91,18 @@ def load_rules(path):
                 labels.add(item.split(":", 1)[1].strip().lower())
             elif item == "url":
                 urls = True
+            elif item.startswith("hold-cell:"):
+                match = _HOLD.fullmatch(item)
+                if not match:
+                    raise ValueError("bad hold-cell")
+                holds.append({
+                    "path": match.group(1),
+                    "column": match.group(2),
+                    "run": match.group(3),
+                })
             else:
                 tokens.add(item.lower())
-    return {"tokens": tokens, "fields": fields, "labels": labels, "urls": urls}
+    return {"tokens": tokens, "fields": fields, "labels": labels, "urls": urls, "holds": holds}
 
 
 def _key_before(line, index):
@@ -138,6 +154,45 @@ def iter_tokens(line):
             yield match.start(), match.group(0), kind
 
 
+def _holds_for(path, rules):
+    rel = path.replace("\\", "/")
+    return [
+        hold for hold in rules.get("holds") or []
+        if rel.endswith("/" + hold["path"]) or rel.endswith(hold["path"])
+    ]
+
+
+def _csv_row(line):
+    try:
+        return next(csv.reader([line]))
+    except csv.Error:
+        return None
+
+
+def _cell_held(header, row, token, holds):
+    """True only when this whole cell is the held row's named column.
+
+    The token itself is not on an allowlist. A different run, a different
+    column, or any extra hex in the cell still fails.
+    """
+    if not header or not row or not holds or "run_id" not in header:
+        return False
+    try:
+        run = row[header.index("run_id")]
+    except IndexError:
+        return False
+    for hold in holds:
+        if run != hold["run"] or hold["column"] not in header:
+            continue
+        try:
+            cell = row[header.index(hold["column"])]
+        except IndexError:
+            continue
+        if (cell or "").strip().lower() == token.lower():
+            return True
+    return False
+
+
 def scan_file(path, rules):
     """Findings are path, line, kind, and the JSON key when one sits in front.
 
@@ -153,10 +208,16 @@ def scan_file(path, rules):
     if b"\0" in raw[:8192]:
         return []
     text = raw.decode("utf-8", "replace")
+    holds = _holds_for(path, rules)
+    lines = text.splitlines()
+    header = _csv_row(lines[0]) if holds and lines else None
     found = []
-    for number, line in enumerate(text.splitlines(), 1):
+    for number, line in enumerate(lines, 1):
+        row = _csv_row(line) if holds and number > 1 else None
         for index, token, kind in iter_tokens(line):
             if allowed(token, line, index, rules):
+                continue
+            if _cell_held(header, row, token, holds):
                 continue
             found.append({
                 "path": path,
@@ -188,6 +249,9 @@ def main(argv=None):
         rules = load_rules(rules_path)
     except OSError:
         print("PRIVACY GUARD FAILED: hex allowlist is missing", file=sys.stderr)
+        return 1
+    except ValueError:
+        print("PRIVACY GUARD FAILED: hex allowlist has a bad hold-cell line", file=sys.stderr)
         return 1
     paths = list(args.paths)
     if not paths and not sys.stdin.isatty():

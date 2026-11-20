@@ -34,3 +34,9 @@ label:sha256
 
 # Long hex inside an https URL (public CDN image ids).
 url
+
+# Owner decision. This is not an allowlist entry and not a mint-column rule.
+# solana-desk/tasks.csv on desk-data has one 0x+40 value in the mint column,
+# on the row whose run_id is below. It was not confirmed as a public token
+# or contract, so the value is not listed and other rows are still checked.
+hold-cell:solana-desk/tasks.csv column:mint run:20261105T1930
