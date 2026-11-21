@@ -1,5 +1,5 @@
 {
- "at": "2026-11-21T17:11:24Z",
+ "at": "2026-11-21T19:13:36Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -82,7 +82,8 @@
    "pool_key": "minswap_v2~c9d8143f",
    "reserve_ada": 1369829.69,
    "reserve_qty": 919973641926,
-   "asof": "2026-11-21T15:58:56Z"
+   "asof": "2026-11-21T15:58:56Z",
+   "stale": true
   },
   {
    "ticker": "CLOVE",
@@ -278,11 +279,6 @@
   }
  ],
  "coverage": {
-  "ASCEND": {
-   "read": 10,
-   "complete": false,
-   "pools": 1
-  },
   "NIGHT": {
    "read": 0,
    "complete": false,
@@ -291,41 +287,45 @@
   "STRIKE": {
    "read": 0,
    "complete": false,
-   "pools": 0
+   "skipped": "budget"
   },
   "IAG": {
    "read": 0,
    "complete": false,
-   "pools": 0
+   "skipped": "budget"
   },
   "COCK": {
    "read": 0,
    "complete": false,
-   "pools": 0
+   "skipped": "budget"
   },
   "CLOVE": {
    "read": 0,
    "complete": false,
-   "pools": 0
+   "skipped": "budget"
   },
   "MIN": {
    "read": 0,
    "complete": false,
-   "pools": 0
+   "skipped": "budget"
   },
   "SNEK": {
    "read": 0,
    "complete": false,
-   "pools": 0
+   "skipped": "budget"
   },
   "SOLADA": {
    "read": 0,
    "complete": false,
-   "pools": 0
+   "skipped": "budget"
+  },
+  "ASCEND": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "ASCEND",
   "NIGHT",
   "STRIKE",
   "IAG",
@@ -333,11 +333,12 @@
   "CLOVE",
   "MIN",
   "SNEK",
-  "SOLADA"
+  "SOLADA",
+  "ASCEND"
  ],
- "koios_calls": 0,
- "blockfrost_calls": 12,
- "blockfrost_fallbacks": 12,
+ "koios_calls": 3,
+ "blockfrost_calls": 0,
+ "blockfrost_fallbacks": 0,
  "blockfrost_available": true,
- "basis": "blockfrost"
+ "basis": "koios"
 }

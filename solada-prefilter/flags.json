@@ -1,51 +1,49 @@
 {
- "at": "2026-11-21T17:11:08Z",
+ "at": "2026-11-21T19:10:39Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-5eda4ac1",
+   "launches": [
+    "10",
+    "BULL",
+    "HOSKIM",
+    "OIN",
+    "YY"
+   ],
+   "at": "2026-11-21T19:10:39Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "YY",
+   "wallet": "w-de7a9f53",
+   "tags": [],
+   "at": "2026-11-21T19:10:39Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "YY",
+   "wallet": "w-5eda4ac1",
+   "tags": [],
+   "at": "2026-11-21T19:10:39Z"
+  },
+  {
    "kind": "whale_move",
    "ticker": "ASCEND",
    "tag": "w-f3186187",
-   "delta": 1367546271,
+   "delta": 2252484213,
    "decimals": 6,
-   "qty": 1367.5463,
-   "ada_equiv": 2063,
+   "qty": 2252.4842,
+   "ada_equiv": 3411,
    "value_basis": "ada_leg_rate",
-   "pct": 0.4,
-   "at": "2026-11-21T17:11:08Z"
+   "pct": 0.7,
+   "at": "2026-11-21T19:10:39Z"
   }
  ],
  "recent": [
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "DARK",
-   "wallet": "w-5ec38e17",
-   "tags": [],
-   "at": "2026-11-15T05:12:19Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "DARK",
-   "wallet": "w-24be6fb9",
-   "tags": [],
-   "at": "2026-11-15T05:12:19Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "DARK",
-   "wallet": "w-f4e4ef65",
-   "tags": [],
-   "at": "2026-11-15T05:12:19Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "DARK",
-   "wallet": "w-3eeb6f9a",
-   "tags": [],
-   "at": "2026-11-15T05:12:19Z"
-  },
   {
    "kind": "sniper_full_exit",
    "ticker": "DARK",
@@ -3063,10 +3061,49 @@
    "value_basis": "ada_leg_rate",
    "pct": 0.4,
    "at": "2026-11-21T17:11:08Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-5eda4ac1",
+   "launches": [
+    "10",
+    "BULL",
+    "HOSKIM",
+    "OIN",
+    "YY"
+   ],
+   "at": "2026-11-21T19:10:39Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "YY",
+   "wallet": "w-de7a9f53",
+   "tags": [],
+   "at": "2026-11-21T19:10:39Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "YY",
+   "wallet": "w-5eda4ac1",
+   "tags": [],
+   "at": "2026-11-21T19:10:39Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 2252484213,
+   "decimals": 6,
+   "qty": 2252.4842,
+   "ada_equiv": 3411,
+   "value_basis": "ada_leg_rate",
+   "pct": 0.7,
+   "at": "2026-11-21T19:10:39Z"
   }
  ],
  "api_calls": {
-  "koios": 2
+  "blockfrost": 1,
+  "koios": 4
  },
  "thresholds": {
   "enabled": true,

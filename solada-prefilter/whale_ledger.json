@@ -1,14 +1,14 @@
 {
- "at": "2026-11-21T17:11:17Z",
+ "at": "2026-11-21T19:12:33Z",
  "whale_tag": "w-f3186187",
- "basis": "blockfrost",
+ "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14230111,
+ "height": 14230436,
  "baseline_at": "2026-11-14T17:13:24Z",
- "ada_balance": 4489.883595,
+ "ada_balance": 1078.95511,
  "positions": {
   "6e917b+fda00259": 2790905,
-  "ASCEND": 316182915944,
+  "ASCEND": 318435400157,
   "ATM": 19024975734573,
   "BABYBOLT": 13368031015248,
   "BANK": 100000000,
@@ -121,7 +121,7 @@
  },
  "positions_counted": {
   "6e917b+fda00259": 2790905,
-  "ASCEND": 316182915944,
+  "ASCEND": 318435400157,
   "ATM": 19024975734573,
   "BABYBOLT": 13368031015248,
   "BANK": 100000000,
@@ -241,7 +241,7 @@
   {
    "token": "ASCEND",
    "policy": "eb7a93eb",
-   "qty": 316182915944
+   "qty": 318435400157
   },
   {
    "token": "ATM",
@@ -7980,6 +7980,70 @@
    "closed_at": "2026-11-21T16:43:53Z",
    "filled_token": "ASCEND",
    "filled_qty": 132880207
+  },
+  "2a6cd1cce4#0": {
+   "ref_short": "2a6cd1cce4#0",
+   "token": "ADA",
+   "qty_raw": 204000000,
+   "ada": 204.0,
+   "status": "filled",
+   "opened_tx": "2a6cd1cce4",
+   "opened_at": "2026-11-21T17:27:36Z",
+   "own_stake": true,
+   "closed_tx": "14d4bb2abf",
+   "closed_at": "2026-11-21T17:27:36Z",
+   "filled_token": "ASCEND",
+   "filled_qty": 137180126
+  },
+  "924f2529d3#0": {
+   "ref_short": "924f2529d3#0",
+   "token": "ADA",
+   "qty_raw": 204000000,
+   "ada": 204.0,
+   "status": "filled",
+   "opened_tx": "924f2529d3",
+   "opened_at": "2026-11-21T17:28:26Z",
+   "own_stake": true,
+   "closed_tx": "7651983d5d",
+   "closed_at": "2026-11-21T17:29:35Z",
+   "filled_token": "ASCEND",
+   "filled_qty": 137139688
+  },
+  "bbbb186149#0": {
+   "ref_short": "bbbb186149#0",
+   "token": "ADA",
+   "qty_raw": 1004000000,
+   "ada": 1004.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "bbbb186149",
+   "opened_at": "2026-11-21T18:34:12Z",
+   "own_stake": true,
+   "closed_at": "2026-11-21T19:12:33Z"
+  },
+  "ac75fe2c18#0": {
+   "ref_short": "ac75fe2c18#0",
+   "token": "ADA",
+   "qty_raw": 1004000000,
+   "ada": 1004.0,
+   "status": "filled",
+   "opened_tx": "ac75fe2c18",
+   "opened_at": "2026-11-21T18:36:55Z",
+   "own_stake": true,
+   "closed_tx": "1db8ac4c40",
+   "closed_at": "2026-11-21T18:36:55Z",
+   "filled_token": "ASCEND",
+   "filled_qty": 659628027
+  },
+  "b8a7e0714c#0": {
+   "ref_short": "b8a7e0714c#0",
+   "token": "ADA",
+   "qty_raw": 1004000000,
+   "ada": 1004.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "b8a7e0714c",
+   "opened_at": "2026-11-21T18:39:26Z",
+   "own_stake": true,
+   "closed_at": "2026-11-21T19:12:33Z"
   }
  },
  "rows": [
@@ -23586,6 +23650,117 @@
    "order_ref_short": "bdd05d7c3d#0",
    "order_status": "filled",
    "sold": "ADA"
+  },
+  {
+   "time": "2026-11-21T17:27:36Z",
+   "tx_short": "2a6cd1cce4",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 204000000,
+   "ada_leg": 204.0,
+   "counterparty_tag": null,
+   "order_ref_short": "2a6cd1cce4#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-21T17:27:36Z",
+   "tx_short": "14d4bb2abf",
+   "kind": "order_fill",
+   "token": "ASCEND",
+   "qty": 137180126,
+   "ada_leg": 204.0,
+   "counterparty_tag": null,
+   "order_ref_short": "2a6cd1cce4#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-21T17:28:26Z",
+   "tx_short": "924f2529d3",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 204000000,
+   "ada_leg": 204.0,
+   "counterparty_tag": null,
+   "order_ref_short": "924f2529d3#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-21T17:29:35Z",
+   "tx_short": "7651983d5d",
+   "kind": "order_fill",
+   "token": "ASCEND",
+   "qty": 137139688,
+   "ada_leg": 204.0,
+   "counterparty_tag": null,
+   "order_ref_short": "924f2529d3#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-21T18:34:12Z",
+   "tx_short": "e95c18df59",
+   "kind": "swap",
+   "token": "ASCEND",
+   "qty": 659860852,
+   "ada_leg": 1002.0,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-21T18:34:12Z",
+   "tx_short": "bbbb186149",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 1004000000,
+   "ada_leg": 1004.0,
+   "counterparty_tag": null,
+   "order_ref_short": "bbbb186149#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-21T18:36:55Z",
+   "tx_short": "ac75fe2c18",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 1004000000,
+   "ada_leg": 1004.0,
+   "counterparty_tag": null,
+   "order_ref_short": "ac75fe2c18#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-21T18:36:55Z",
+   "tx_short": "1db8ac4c40",
+   "kind": "order_fill",
+   "token": "ASCEND",
+   "qty": 659628027,
+   "ada_leg": 1004.0,
+   "counterparty_tag": null,
+   "order_ref_short": "ac75fe2c18#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-21T18:39:26Z",
+   "tx_short": "7b71394233",
+   "kind": "swap",
+   "token": "ASCEND",
+   "qty": 658675520,
+   "ada_leg": 1002.0,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-21T18:39:26Z",
+   "tx_short": "b8a7e0714c",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 1004000000,
+   "ada_leg": 1004.0,
+   "counterparty_tag": null,
+   "order_ref_short": "b8a7e0714c#0",
+   "order_status": "open"
   }
  ],
  "capped": false,
@@ -23596,8 +23771,8 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 0,
- "blockfrost_fallbacks": 9,
- "blockfrost_calls": 49,
+ "koios_calls": 7,
+ "blockfrost_fallbacks": 0,
+ "blockfrost_calls": 0,
  "blockfrost_available": true
 }
