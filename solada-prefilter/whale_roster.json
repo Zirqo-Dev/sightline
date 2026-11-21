@@ -5,7 +5,7 @@
   "measured_factor": true,
   "min_sample": 8,
   "dormant_count": 15,
-  "asof": "2026-11-21T03:17:16Z",
+  "asof": "2026-11-21T05:15:20Z",
   "note": "Research tally. A hit is an observed checkpoint where every measured series (price and liquidity) moves the whale's way at +1h, +6h, or +24h. A wrong-way observation is a miss. No observation is unobserved and is not a miss. n_observed is hits plus misses. Rates stay blank under 8 observed checkpoints on that horizon in that tally. scores.live is the forward quote path, or the lead's published private-cache tally. scores.backfill is approximate: nearest desk-data ADA/qty within 20 minutes at 1h, 60 minutes at 6h, and 3 hours at 24h, plus pool ADA when a snapshot is in that window. Backfill never replaces live. eligible_for_active needs at least 25 live observed checkpoints and a live hit rate above 55% at both 6h and 24h. promising_backfill means the approximate tally alone would clear that bar. Nothing is promoted automatically. Not a buy signal.",
   "whales": [
     {
@@ -13,7 +13,7 @@
       "role": "lead",
       "status": "active",
       "eligible_for_active": false,
-      "eligible_reason": "not eligible: live 6h observed 136, rate 0.404 (need > 0.55); live 24h observed 75, rate 0.307 (need > 0.55); promotion is a manual owner decision",
+      "eligible_reason": "not eligible: live 6h observed 140, rate 0.4 (need > 0.55); live 24h observed 79, rate 0.329 (need > 0.55); promotion is a manual owner decision",
       "promising_backfill": false,
       "scores": {
         "events": 2119,
@@ -22,19 +22,19 @@
         "exit": 17,
         "live": {
           "h1": {
-            "n_observed": 111,
+            "n_observed": 120,
             "hits": 59,
-            "hit_rate": 0.532
+            "hit_rate": 0.492
           },
           "h6": {
-            "n_observed": 136,
-            "hits": 55,
-            "hit_rate": 0.404
+            "n_observed": 140,
+            "hits": 56,
+            "hit_rate": 0.4
           },
           "h24": {
-            "n_observed": 75,
-            "hits": 23,
-            "hit_rate": 0.307
+            "n_observed": 79,
+            "hits": 26,
+            "hit_rate": 0.329
           }
         },
         "backfill": {
@@ -56,18 +56,18 @@
           "approximate": true,
           "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
         },
-        "n_observed_h1": 111,
-        "priced_h1": 111,
+        "n_observed_h1": 120,
+        "priced_h1": 120,
         "hits_h1": 59,
-        "hit_rate_h1": 0.532,
-        "n_observed_h6": 136,
-        "priced_h6": 136,
-        "hits_h6": 55,
-        "hit_rate_h6": 0.404,
-        "n_observed_h24": 75,
-        "priced_h24": 75,
-        "hits_h24": 23,
-        "hit_rate_h24": 0.307,
+        "hit_rate_h1": 0.492,
+        "n_observed_h6": 140,
+        "priced_h6": 140,
+        "hits_h6": 56,
+        "hit_rate_h6": 0.4,
+        "n_observed_h24": 79,
+        "priced_h24": 79,
+        "hits_h24": 26,
+        "hit_rate_h24": 0.329,
         "small_sample": false,
         "social_moves_matched": null
       }
@@ -144,15 +144,15 @@
       "eligible_reason": "not eligible: live 6h observed 16 (need 25), rate 0.188 (need > 0.55); live 24h observed 21 (need 25), rate 0.667; promotion is a manual owner decision",
       "promising_backfill": false,
       "scores": {
-        "events": 108,
+        "events": 112,
         "accumulate": 56,
-        "trim": 52,
+        "trim": 56,
         "exit": 0,
         "live": {
           "h1": {
-            "n_observed": 16,
+            "n_observed": 20,
             "hits": 3,
-            "hit_rate": 0.188
+            "hit_rate": 0.15
           },
           "h6": {
             "n_observed": 16,
@@ -167,9 +167,9 @@
         },
         "backfill": {
           "h1": {
-            "n_observed": 43,
+            "n_observed": 44,
             "hits": 13,
-            "hit_rate": 0.302
+            "hit_rate": 0.295
           },
           "h6": {
             "n_observed": 54,
@@ -184,10 +184,10 @@
           "approximate": true,
           "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
         },
-        "n_observed_h1": 16,
-        "priced_h1": 16,
+        "n_observed_h1": 20,
+        "priced_h1": 20,
         "hits_h1": 3,
-        "hit_rate_h1": 0.188,
+        "hit_rate_h1": 0.15,
         "n_observed_h6": 16,
         "priced_h6": 16,
         "hits_h6": 3,
@@ -653,7 +653,7 @@
       "role": "watch",
       "status": "candidate",
       "eligible_for_active": false,
-      "eligible_reason": "not eligible: live 6h observed 9 (need 25), rate 0.444 (need > 0.55); live 24h observed 4 (need 25), rate blank (need > 0.55); promotion is a manual owner decision",
+      "eligible_reason": "not eligible: live 6h observed 11 (need 25), rate 0.545 (need > 0.55); live 24h observed 4 (need 25), rate blank (need > 0.55); promotion is a manual owner decision",
       "promising_backfill": false,
       "scores": {
         "events": 63,
@@ -667,9 +667,9 @@
             "hit_rate": null
           },
           "h6": {
-            "n_observed": 9,
-            "hits": 4,
-            "hit_rate": 0.444
+            "n_observed": 11,
+            "hits": 6,
+            "hit_rate": 0.545
           },
           "h24": {
             "n_observed": 4,
@@ -684,9 +684,9 @@
             "hit_rate": 0.5
           },
           "h6": {
-            "n_observed": 31,
+            "n_observed": 32,
             "hits": 24,
-            "hit_rate": 0.774
+            "hit_rate": 0.75
           },
           "h24": {
             "n_observed": 29,
@@ -700,10 +700,10 @@
         "priced_h1": 2,
         "hits_h1": 2,
         "hit_rate_h1": null,
-        "n_observed_h6": 9,
-        "priced_h6": 9,
-        "hits_h6": 4,
-        "hit_rate_h6": 0.444,
+        "n_observed_h6": 11,
+        "priced_h6": 11,
+        "hits_h6": 6,
+        "hit_rate_h6": 0.545,
         "n_observed_h24": 4,
         "priced_h24": 4,
         "hits_h24": 2,
