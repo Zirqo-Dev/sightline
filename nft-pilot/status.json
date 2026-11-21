@@ -12,11 +12,11 @@
       "stop": "call_cap"
     },
     "ethereum": {
-      "calls": 144,
+      "calls": 133,
       "pages": 1,
       "passing": 10,
       "requested": true,
-      "screened": 25,
+      "screened": 22,
       "stop": "pass_target"
     }
   },
@@ -42,9 +42,9 @@
     "gate2_window_hours": 72,
     "result": null
   },
-  "eth_usd": 1624.35012629,
+  "eth_usd": 1622.90614822,
   "eth_usd_runs": {
-    "chainlink": 249,
+    "chainlink": 250,
     "fallback": 1
   },
   "eth_usd_source": "chainlink",
@@ -60,46 +60,46 @@
   "nh04": "not_ready",
   "nh04_ready": false,
   "nh04_verdict": "not_ready",
-  "null_cost_count": 460,
-  "null_cost_share": 0.3624901497241923,
+  "null_cost_count": 466,
+  "null_cost_share": 0.364347146207975,
   "null_cost_share_max": 0.2,
-  "opensea_calls": 344,
+  "opensea_calls": 333,
   "outage_runs": 0,
   "pace_median": null,
   "pace_ready": false,
   "partial": false,
-  "passers_footnoted": 1,
+  "passers_footnoted": 2,
   "pending": 10,
   "pending_deferred": 0,
   "pending_served": 10,
-  "ran_at": "2026-11-21T01:27:14Z",
+  "ran_at": "2026-11-21T02:27:13Z",
   "rate_limit": {
     "limit": "120",
     "remaining": "119",
-    "reset": "1795224909"
+    "reset": "1795228497"
   },
   "raw": "not_kept",
   "reason": null,
   "rejections": {
-    "bidders": 1,
-    "buyers": 9,
-    "concentration": 12,
+    "bidders": 0,
+    "buyers": 6,
+    "concentration": 8,
     "contracts": 3,
     "disabled": 0,
     "floor": 26,
-    "gas": 9,
-    "listings": 13,
+    "gas": 14,
+    "listings": 12,
     "mint": 0,
-    "sales": 11,
+    "sales": 9,
     "shared": 3,
     "standard": 6
   },
   "rule": "v0.3 GET /api/v2/collections order_by=market_cap limit=100 max_list_pages=8 pass_target=10 max_calls=480 chains=ethereum,base pace_per_minute=60 window=7d min_sales=30 min_buyers=10 max_buyer_share=0.20 min_bidders=3 bid_band=0.85 min_listings=5 floor_usd=250 gas_ratio=0.02 min_mint_days=14 event_pages=3 truncated=flag",
   "schema_version": 1,
-  "screened": 25,
+  "screened": 22,
   "status": "ok",
   "stop": "pass_target",
-  "units": 1269,
+  "units": 1279,
   "unsellable_share": 0.0,
-  "verdict_footnote": "154 of 1269 units: top seller or one day above 50% of 7d sales; ETH/USD source on measured runs: 249 Chainlink, 1 fallback (fallback USD not published; costs are ETH-only)"
+  "verdict_footnote": "155 of 1279 units: top seller or one day above 50% of 7d sales; ETH/USD source on measured runs: 250 Chainlink, 1 fallback (fallback USD not published; costs are ETH-only)"
 }
