@@ -1,0 +1,62 @@
+# Explicit allowlist for the long-hex check. Comments explain every rule.
+# Exact tokens are public values already in this repo. A field rule allows a
+# whole JSON value of one shape. A path rule is limited to that file. They do
+# not allow order_hash, salt, or key.
+#
+# Obvious fakes are not listed here. The checker allows a whole token that is
+# one repeated nibble, 0x0 through 0x10, dead/beef/cafe/c0ffee/deadbeef,
+# only 0123456789abcdef or abcdef0123456789 repeated, the dummy marker as the
+# entire value, or the full sequential fixture pattern. A substring is not enough.
+
+# Chainlink ETH/USD aggregator on Ethereum. Named in the NFT spec. Public contract.
+0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419
+
+# Public Cardano asset unit stored under a ticker key in solada-prefilter/config.json.
+# The same unit is also under the field "unit" in known_units.json. Not a key or a salt.
+49e423161ef818adc475c783571cb479d5f15ad52a01a240eacc0d3b434f434b
+
+# Whole JSON value only. sha256 names, unit, and LP names are 64 hex.
+# pool_utxo is that tx id, optionally #index and a short parenthetical note.
+# contract_address is 0x plus 40 hex. A different shape under the same key fails.
+field:sha256 shape:bare-64
+field:prereg_sha256 shape:bare-64
+field:sha256_expected shape:bare-64
+field:sha256_v1 shape:bare-64
+field:trades_sha256 shape:bare-64
+field:new_manifest_sha256 shape:bare-64
+field:lock_time_manifest_sha256 shape:bare-64
+field:current_manifest_sha256 shape:bare-64
+field:unit shape:bare-64
+field:lp_name shape:bare-64
+field:known_min_lp shape:bare-64
+field:lp_asset_name shape:bare-64
+field:pool_utxo shape:utxo
+field:contract_address shape:0x-40
+
+# nft-pilot. Collection ids are nft_collection:eip155:<chain>:0x<40>.
+# Order digests are the whole digests[] item. Contract is the whole contract value.
+path:nft-pilot/books.json shape:collection-id
+path:nft-pilot/units.jsonl shape:collection-id
+path:nft-pilot/books.json field:digests shape:bare-64
+path:nft-pilot/units.jsonl field:contract shape:0x-40
+
+# One run log stores a digest and a relative path in the same string.
+path:ua_f1/run_log.jsonl field:s0_sha256_line shape:digest-path
+path:ua_f1/run_log.jsonl field:contents shape:digest-path
+path:ua_f1/run_log.jsonl field:target shape:bare-64
+
+# The race log line is exactly "prereg sha256" plus one digest.
+path:decisions.jsonl field:message shape:prereg-line
+
+# Markdown only, bare 64-hex, directly after the word.
+label:sha256
+
+# Bare 64-hex on this CDN only. 0x addresses and block explorers are not allowed.
+url:cdn.dexscreener.com
+
+# Permanent one-cell hold. Not an allowlist of the value and not a mint-column rule.
+# The owner ruled on Nov 20, 2026 that this cell is not the owner's wallet,
+# and that its origin is unexplained. No until means the hold does not expire.
+# A different value on the same run still fails. The value itself is not listed.
+# A hold with until applies through that UTC date and fails after it.
+hold-cell:solana-desk/tasks.csv column:mint run:20261105T1930 sha256:15a76f8c0ff6c00bc38b62f0859e844c6ecb7b23d4cb45e9f8b44282d81b6701

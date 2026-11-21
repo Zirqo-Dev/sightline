@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Privacy guard: fail if owner wallet data or identity wording appears in files to be published.
+# Privacy guard: fail if owner wallet data, identity wording, or a long hex
+# secret (hash, salt, key, or address) appears in files to be published.
 # Usage: scripts/privacy-guard.sh [--root DIR] [files...]   (no args = staged files, or all tracked files if none staged)
 #   --root DIR: scan the git checkout at DIR (e.g. a desk-data worktree) with this script's rules.
 # Extra private wallet patterns (one ERE per line): env PRIVACY_GUARD_PATTERNS and/or gitignored .privacy-patterns
@@ -11,6 +12,9 @@
 # source yields digests. Non-digest lines do not drop digest lines. When the file
 # list is non-empty, a missing or unrunnable identity helper fails this guard.
 # Wallet checks above still run.
+# Long hex (0x + 40, 0x + 64, or a bare 64) in fixtures and committed data or
+# docs is checked by scripts/privacy_hex.py. Obvious fakes and
+# scripts/privacy-hex-allow.txt are the only passes. The value is not printed.
 set -u
 # Resolve this script's directory before any cd. In --root mode the workflow
 # runs `bash main/scripts/privacy-guard.sh --root desk-data`; cd "$2" first
@@ -581,6 +585,17 @@ if [ ${#files[@]} -gt 0 ]; then
     echo "PRIVACY GUARD FAILED: identity helper is missing" >&2
     fail=1
   elif ! printf '%s\n' "${files[@]}" | python3 "$ident_py" --root "$(pwd)"; then
+    fail=1
+  fi
+fi
+# Fixtures and committed data/docs only. Source is not scanned. A missing helper
+# fails closed, same as the identity helper. The value is not printed.
+hex_py="$script_dir/privacy_hex.py"
+if [ ${#files[@]} -gt 0 ]; then
+  if [ ! -f "$hex_py" ] || [ ! -r "$hex_py" ]; then
+    echo "PRIVACY GUARD FAILED: hex helper is missing" >&2
+    fail=1
+  elif ! printf '%s\n' "${files[@]}" | python3 "$hex_py" --root "$(pwd)"; then
     fail=1
   fi
 fi
