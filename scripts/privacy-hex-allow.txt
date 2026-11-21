@@ -55,8 +55,8 @@ label:sha256
 url:cdn.dexscreener.com
 
 # Permanent one-cell hold. Not an allowlist of the value and not a mint-column rule.
-# The owner ruled on Nov 20, 2026 that this cell is not the owner's wallet.
-# Its origin is a malformed feed profile. No until means the hold does not expire.
+# The owner ruled on Nov 20, 2026 that this cell is not the owner's wallet,
+# and that its origin is unexplained. No until means the hold does not expire.
 # A different value on the same run still fails. The value itself is not listed.
-# A hold line that still has until expires on that date.
+# A hold with until applies through that UTC date and fails after it.
 hold-cell:solana-desk/tasks.csv column:mint run:20261105T1930 sha256:15a76f8c0ff6c00bc38b62f0859e844c6ecb7b23d4cb45e9f8b44282d81b6701
