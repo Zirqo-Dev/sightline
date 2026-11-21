@@ -173,46 +173,74 @@ class Rules(unittest.TestCase):
 
 
 class Hold(unittest.TestCase):
-    def test_the_hold_is_one_cell_until_the_expiry_and_the_value_is_not_listed(self):
+    def test_the_allowlist_hold_has_no_expiry_and_no_address(self):
         text = Path(RULES).read_text(encoding="utf-8")
         hold_lines = [line for line in text.splitlines() if line.startswith("hold-cell:")]
         self.assertEqual(len(hold_lines), 1)
         self.assertNotIn("0x", hold_lines[0].lower())
-        self.assertIn("until:2026-11-26", hold_lines[0])
+        self.assertNotIn("until:", hold_lines[0])
+        self.assertNotIn("0x", text.lower().split("hold-cell:", 1)[-1])
+
+    def test_a_permanent_hold_still_passes_after_the_old_expiry(self):
         held = "0x" + token_of("desk-task-row")[:40]
-        other = "0x" + token_of("other-mint-same-run")[:40]
-        pin = hashlib.sha256(held.encode()).hexdigest()
-        rules = H.load_rules(self._rules(pin))
-        header = "time,run_id,agent,task,mint,book,result\n"
-        same = header + "1,20261105T1930,scanner,scan,%s,,skip\n" % held
-        different = header + "1,20261105T1930,scanner,scan,%s,,skip\n" % other
-        found, blob = hits(rules, "solana-desk/tasks.csv", same)
+        rules = H.load_rules(self._rules(hashlib.sha256(held.encode()).hexdigest()))
+        row = self._csv(held, "20261105T1930")
+        found, blob = hits(rules, "solana-desk/tasks.csv", row, today=datetime.date(2026, 11, 27))
         self.assertEqual(found, [])
         self.assertNotIn(held, blob)
-        found, blob = hits(rules, "solana-desk/tasks.csv", different)
+
+    def test_a_different_address_on_the_same_run_fails(self):
+        held = "0x" + token_of("desk-task-row")[:40]
+        other = "0x" + token_of("other-mint-same-run")[:40]
+        rules = H.load_rules(self._rules(hashlib.sha256(held.encode()).hexdigest()))
+        found, blob = hits(rules, "solana-desk/tasks.csv", self._csv(other, "20261105T1930"))
         self.assertEqual(len(found), 1)
         self.assertNotIn(other, blob)
-        found, _blob = hits(rules, "notsolana-desk/tasks.csv", same)
-        self.assertEqual(len(found), 1)
-        found, _blob = hits(
-            rules, "solana-desk/tasks.csv", same, today=datetime.date(2026, 11, 27),
-        )
-        self.assertEqual(len(found), 1)
-        salt = token_of("salt-on-the-held-row")
-        salty = header + "1,20261105T1930,scanner,scan,%s,%s,skip\n" % (held, salt)
-        found, blob = hits(rules, "solana-desk/tasks.csv", salty)
-        self.assertEqual(len(found), 1)
-        self.assertEqual(found[0]["kind"], "bare-64")
-        self.assertNotIn(salt, blob)
-        self.assertNotIn(held, blob)
 
-    def _rules(self, pin):
-        handle = tempfile.NamedTemporaryFile("w", delete=False, encoding="utf-8")
-        handle.write(
-            "field:sha256 shape:bare-64\n"
-            "hold-cell:solana-desk/tasks.csv column:mint run:20261105T1930 "
-            "sha256:%s until:2026-11-26\n" % pin
+    def test_the_same_digest_on_another_run_or_column_fails(self):
+        held = "0x" + token_of("desk-task-row")[:40]
+        rules = H.load_rules(self._rules(hashlib.sha256(held.encode()).hexdigest()))
+        found, blob = hits(rules, "solana-desk/tasks.csv", self._csv(held, "20261105T2000"))
+        self.assertEqual(len(found), 1)
+        self.assertNotIn(held, blob)
+        header = "time,run_id,agent,task,mint,book,result\n"
+        other_col = header + "1,20261105T1930,scanner,scan,,%s,skip\n" % held
+        found, blob = hits(rules, "solana-desk/tasks.csv", other_col)
+        self.assertEqual(len(found), 1)
+        self.assertNotIn(held, blob)
+        found, _blob = hits(rules, "notsolana-desk/tasks.csv", self._csv(held, "20261105T1930"))
+        self.assertEqual(len(found), 1)
+
+    def test_a_hold_that_keeps_until_still_expires(self):
+        held = "0x" + token_of("desk-task-row")[:40]
+        rules = H.load_rules(self._rules(hashlib.sha256(held.encode()).hexdigest(), until="2026-11-26"))
+        row = self._csv(held, "20261105T1930")
+        found, _blob = hits(rules, "solana-desk/tasks.csv", row, today=datetime.date(2026, 11, 26))
+        self.assertEqual(found, [])
+        found, _blob = hits(rules, "solana-desk/tasks.csv", row, today=datetime.date(2026, 11, 27))
+        self.assertEqual(len(found), 1)
+
+    def test_a_malformed_hold_line_fails_closed(self):
+        path = self._rules_text("hold-cell:solana-desk/tasks.csv column:mint\n")
+        with self.assertRaises(ValueError):
+            H.load_rules(path)
+        self.assertEqual(H.main(["--rules", path, "--count"]), 1)
+
+    def _csv(self, mint, run_id):
+        return "time,run_id,agent,task,mint,book,result\n1,%s,scanner,scan,%s,,skip\n" % (run_id, mint)
+
+    def _rules(self, pin, until=None):
+        line = (
+            "hold-cell:solana-desk/tasks.csv column:mint run:20261105T1930 sha256:%s"
+            % pin
         )
+        if until:
+            line += " until:" + until
+        return self._rules_text("field:sha256 shape:bare-64\n" + line + "\n")
+
+    def _rules_text(self, text):
+        handle = tempfile.NamedTemporaryFile("w", delete=False, encoding="utf-8")
+        handle.write(text)
         handle.close()
         self.addCleanup(os.remove, handle.name)
         return handle.name

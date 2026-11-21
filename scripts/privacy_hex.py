@@ -17,6 +17,7 @@ value has that key's shape. The key for an array item or a dict key is the
 parent key. A markdown label applies only in .md, only to a bare 64-hex
 directly after the word sha256. A URL rule applies only to a bare 64-hex on a
 named CDN host, never to an 0x address and never on a block explorer.
+A hold-cell line may omit until. With no until the hold does not expire.
 """
 from __future__ import annotations
 
@@ -62,7 +63,7 @@ _EXPLORERS = (
 )
 _HOLD = re.compile(
     r"hold-cell:(\S+)\s+column:([A-Za-z0-9_]+)\s+run:(\S+)\s+"
-    r"sha256:([0-9a-fA-F]{64})\s+until:(\d{4}-\d{2}-\d{2})\s*$"
+    r"sha256:([0-9a-fA-F]{64})(?:\s+until:(\d{4}-\d{2}-\d{2}))?\s*$"
 )
 
 
@@ -153,12 +154,13 @@ def load_rules(path):
                 match = _HOLD.fullmatch(item)
                 if not match:
                     raise ValueError("bad hold-cell")
+                until = match.group(5)
                 holds.append({
                     "path": match.group(1),
                     "column": match.group(2),
                     "run": match.group(3),
                     "sha256": match.group(4).lower(),
-                    "until": datetime.date.fromisoformat(match.group(5)),
+                    "until": datetime.date.fromisoformat(until) if until else None,
                 })
                 continue
             if item.startswith("label:"):
@@ -276,8 +278,9 @@ def _csv_row(line):
 
 
 def _cell_held(header, row, token, holds, today):
-    """True only for the pinned cell: same file, column, run, and sha256, before expiry.
+    """True only for the pinned cell: same file, column, run, and sha256.
 
+    A hold with no until does not expire. A hold with until stops after that date.
     A different value in that column, even on the same run, is not held.
     """
     if not header or not row or not holds or "run_id" not in header:
@@ -287,7 +290,9 @@ def _cell_held(header, row, token, holds, today):
     except IndexError:
         return False
     for hold in holds:
-        if today > hold["until"] or run != hold["run"] or hold["column"] not in header:
+        if hold["until"] is not None and today > hold["until"]:
+            continue
+        if run != hold["run"] or hold["column"] not in header:
             continue
         try:
             cell = (row[header.index(hold["column"])] or "").strip()

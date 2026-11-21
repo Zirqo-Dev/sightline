@@ -54,7 +54,9 @@ label:sha256
 # Bare 64-hex on this CDN only. 0x addresses and block explorers are not allowed.
 url:cdn.dexscreener.com
 
-# Owner decision. Not an allowlist of the value and not a mint-column rule.
-# One desk-data tasks.csv mint cell, pinned by the sha256 of that cell, through 2026-11-26.
+# Permanent one-cell hold. Not an allowlist of the value and not a mint-column rule.
+# The owner ruled on Nov 20, 2026 that this cell is not the owner's wallet.
+# Its origin is a malformed feed profile. No until means the hold does not expire.
 # A different value on the same run still fails. The value itself is not listed.
-hold-cell:solana-desk/tasks.csv column:mint run:20261105T1930 sha256:15a76f8c0ff6c00bc38b62f0859e844c6ecb7b23d4cb45e9f8b44282d81b6701 until:2026-11-26
+# A hold line that still has until expires on that date.
+hold-cell:solana-desk/tasks.csv column:mint run:20261105T1930 sha256:15a76f8c0ff6c00bc38b62f0859e844c6ecb7b23d4cb45e9f8b44282d81b6701
