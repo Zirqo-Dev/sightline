@@ -1,5 +1,5 @@
 {
- "at": "2026-11-20T23:14:36Z",
+ "at": "2026-11-21T01:14:29Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -124,10 +124,9 @@
    "policy_short": "49e42316",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~71183c8b",
-   "reserve_ada": 140493.36,
-   "reserve_qty": 37190297,
-   "asof": "2026-11-17T12:20:55Z",
-   "stale": true
+   "reserve_ada": 167647.63,
+   "reserve_qty": 43719084,
+   "asof": "2026-11-21T00:56:06Z"
   },
   {
    "ticker": "IAG",
@@ -277,7 +276,7 @@
    "policy_short": "49e42316",
    "rank": 8,
    "unit_source": "listed",
-   "last_checked": "2026-11-20T09:13:02Z"
+   "last_checked": "2026-11-21T01:14:29Z"
   },
   {
    "ticker": "SOLADA",
@@ -301,15 +300,10 @@
   }
  ],
  "coverage": {
-  "SNEK": {
-   "read": 0,
-   "complete": false,
-   "pools": 0
-  },
   "COCK": {
-   "read": 0,
+   "read": 20,
    "complete": false,
-   "skipped": "budget"
+   "pools": 1
   },
   "CLOVE": {
    "read": 0,
@@ -345,10 +339,14 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "SNEK": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "SNEK",
   "COCK",
   "CLOVE",
   "ASCEND",
@@ -356,9 +354,10 @@
   "IAG",
   "STRIKE",
   "SOLADA",
-  "MIN"
+  "MIN",
+  "SNEK"
  ],
- "koios_calls": 4,
+ "koios_calls": 6,
  "blockfrost_calls": 0,
  "blockfrost_fallbacks": 0,
  "blockfrost_available": true,
