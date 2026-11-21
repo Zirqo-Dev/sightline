@@ -1,5 +1,5 @@
 {
- "at": "2026-11-21T21:15:33Z",
+ "at": "2026-11-21T23:15:44Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -170,7 +170,8 @@
    "pool_key": "minswap_v2~8d92b947",
    "reserve_ada": 4576226.45,
    "reserve_qty": 15509205784919,
-   "asof": "2026-11-18T21:21:48Z"
+   "asof": "2026-11-18T21:21:48Z",
+   "stale": true
   },
   {
    "ticker": "NIGHT",
@@ -213,7 +214,8 @@
    "pool_key": "minswap_v2~b4f379d0",
    "reserve_ada": 1355902.08,
    "reserve_qty": 457473745167,
-   "asof": "2026-11-19T03:26:41Z"
+   "asof": "2026-11-19T03:26:41Z",
+   "stale": true
   },
   {
    "ticker": "STRIKE",
@@ -268,7 +270,7 @@
    "policy_short": "5d16cc1a",
    "rank": 7,
    "unit_source": "cache",
-   "last_checked": "2026-11-21T11:12:52Z"
+   "last_checked": "2026-11-21T23:15:44Z"
   },
   {
    "ticker": "COCK",
@@ -299,20 +301,10 @@
   }
  ],
  "coverage": {
-  "NIGHT": {
-   "read": 15,
-   "complete": false,
-   "pools": 1
-  },
-  "STRIKE": {
-   "read": 10,
-   "complete": false,
-   "pools": 1
-  },
   "IAG": {
    "read": 0,
    "complete": false,
-   "skipped": "budget"
+   "pools": 0
   },
   "COCK": {
    "read": 0,
@@ -343,20 +335,30 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "NIGHT": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
+  },
+  "STRIKE": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "NIGHT",
-  "STRIKE",
   "IAG",
   "COCK",
   "CLOVE",
   "MIN",
   "SNEK",
   "SOLADA",
-  "ASCEND"
+  "ASCEND",
+  "NIGHT",
+  "STRIKE"
  ],
- "koios_calls": 7,
+ "koios_calls": 3,
  "blockfrost_calls": 0,
  "blockfrost_fallbacks": 0,
  "blockfrost_available": true,
