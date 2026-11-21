@@ -1,45 +1,23 @@
 {
- "at": "2026-11-21T15:10:35Z",
+ "at": "2026-11-21T17:11:08Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
    "kind": "whale_move",
-   "ticker": "VAMP",
-   "tag": "w-f3186187",
-   "delta": -20000000221931,
-   "decimals": 6,
-   "qty": -20000000.2219,
-   "ada_equiv": 328,
-   "value_basis": "ada_leg",
-   "pct": 44.2,
-   "at": "2026-11-21T15:10:35Z"
-  },
-  {
-   "kind": "whale_move",
    "ticker": "ASCEND",
    "tag": "w-f3186187",
-   "delta": 333187316,
+   "delta": 1367546271,
    "decimals": 6,
-   "qty": 333.1873,
-   "ada_equiv": 500,
+   "qty": 1367.5463,
+   "ada_equiv": 2063,
    "value_basis": "ada_leg_rate",
-   "pct": 0.1,
-   "at": "2026-11-21T15:10:35Z"
+   "pct": 0.4,
+   "at": "2026-11-21T17:11:08Z"
   }
  ],
  "recent": [
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-f7844f67",
-   "launches": [
-    "DARK",
-    "FERRET",
-    "GTADA"
-   ],
-   "at": "2026-11-15T05:12:19Z"
-  },
   {
    "kind": "sniper_full_exit",
    "ticker": "DARK",
@@ -3073,10 +3051,22 @@
    "value_basis": "ada_leg_rate",
    "pct": 0.1,
    "at": "2026-11-21T15:10:35Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 1367546271,
+   "decimals": 6,
+   "qty": 1367.5463,
+   "ada_equiv": 2063,
+   "value_basis": "ada_leg_rate",
+   "pct": 0.4,
+   "at": "2026-11-21T17:11:08Z"
   }
  ],
  "api_calls": {
-  "koios": 1
+  "koios": 2
  },
  "thresholds": {
   "enabled": true,

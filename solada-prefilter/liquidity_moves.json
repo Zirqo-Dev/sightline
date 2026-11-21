@@ -1,5 +1,5 @@
 {
- "at": "2026-11-21T15:13:22Z",
+ "at": "2026-11-21T17:11:24Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -28,50 +28,6 @@
  },
  "actor_tags": true,
  "moves": [
-  {
-   "time": "2026-11-18T16:31:01Z",
-   "tx_short": "01f1b25ab0",
-   "kind": "swap",
-   "ticker": "ASCEND",
-   "token": "ASCEND",
-   "policy_short": "eb7a93eb",
-   "dex": "minswap_v2",
-   "pool_key": "minswap_v2~c9d8143f",
-   "direction": "buy",
-   "ada": 15000.0,
-   "ada_basis": "ada_leg",
-   "qty": 10896623889,
-   "qty_basis": "raw",
-   "reserve_ada_after": 1320068.43,
-   "lp": false,
-   "actor_tag": null,
-   "ahead_of_dump": false,
-   "dump_tx_short": null,
-   "dump_ada": null,
-   "level": "pool"
-  },
-  {
-   "time": "2026-11-18T16:33:22Z",
-   "tx_short": "0ad8125ea2",
-   "kind": "swap",
-   "ticker": "ASCEND",
-   "token": "ASCEND",
-   "policy_short": "eb7a93eb",
-   "dex": "minswap_v2",
-   "pool_key": "minswap_v2~c9d8143f",
-   "direction": "sell",
-   "ada": 6823.89,
-   "ada_basis": "ada_leg",
-   "qty": 5026414289,
-   "qty_basis": "raw",
-   "reserve_ada_after": 1313175.15,
-   "lp": false,
-   "actor_tag": null,
-   "ahead_of_dump": false,
-   "dump_tx_short": null,
-   "dump_ada": null,
-   "level": "pool"
-  },
   {
    "time": "2026-11-19T16:02:15Z",
    "tx_short": "fcc27b3731",
@@ -124,10 +80,9 @@
    "policy_short": "eb7a93eb",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~c9d8143f",
-   "reserve_ada": 1313175.15,
-   "reserve_qty": 962622841357,
-   "asof": "2026-11-18T16:33:22Z",
-   "stale": true
+   "reserve_ada": 1369829.69,
+   "reserve_qty": 919973641926,
+   "asof": "2026-11-21T15:58:56Z"
   },
   {
    "ticker": "CLOVE",
@@ -225,7 +180,8 @@
    "pool_key": "minswap_v2~d494ef2a",
    "reserve_ada": 10723.88,
    "reserve_qty": 4560480,
-   "asof": "2026-11-19T03:52:00Z"
+   "asof": "2026-11-19T03:52:00Z",
+   "stale": true
   },
   {
    "ticker": "STRIKE",
@@ -256,7 +212,7 @@
    "policy_short": "eb7a93eb",
    "rank": 1,
    "unit_source": "cache",
-   "last_checked": "2026-11-21T11:12:52Z"
+   "last_checked": "2026-11-21T17:11:24Z"
   },
   {
    "ticker": "NIGHT",
@@ -322,66 +278,66 @@
   }
  ],
  "coverage": {
-  "SOLADA": {
-   "read": 15,
+  "ASCEND": {
+   "read": 10,
    "complete": false,
    "pools": 1
+  },
+  "NIGHT": {
+   "read": 0,
+   "complete": false,
+   "pools": 0
+  },
+  "STRIKE": {
+   "read": 0,
+   "complete": false,
+   "pools": 0
+  },
+  "IAG": {
+   "read": 0,
+   "complete": false,
+   "pools": 0
+  },
+  "COCK": {
+   "read": 0,
+   "complete": false,
+   "pools": 0
+  },
+  "CLOVE": {
+   "read": 0,
+   "complete": false,
+   "pools": 0
+  },
+  "MIN": {
+   "read": 0,
+   "complete": false,
+   "pools": 0
   },
   "SNEK": {
    "read": 0,
    "complete": false,
    "pools": 0
   },
-  "ASCEND": {
+  "SOLADA": {
    "read": 0,
    "complete": false,
-   "skipped": "budget"
-  },
-  "NIGHT": {
-   "read": 0,
-   "complete": false,
-   "skipped": "budget"
-  },
-  "STRIKE": {
-   "read": 0,
-   "complete": false,
-   "skipped": "budget"
-  },
-  "IAG": {
-   "read": 0,
-   "complete": false,
-   "skipped": "budget"
-  },
-  "COCK": {
-   "read": 0,
-   "complete": false,
-   "skipped": "budget"
-  },
-  "CLOVE": {
-   "read": 0,
-   "complete": false,
-   "skipped": "budget"
-  },
-  "MIN": {
-   "read": 0,
-   "complete": false,
-   "skipped": "budget"
+   "pools": 0
   }
  },
  "capped": [
-  "SOLADA",
-  "SNEK",
   "ASCEND",
   "NIGHT",
   "STRIKE",
   "IAG",
   "COCK",
   "CLOVE",
-  "MIN"
+  "MIN",
+  "SNEK",
+  "SOLADA"
  ],
- "koios_calls": 6,
- "blockfrost_calls": 0,
- "blockfrost_fallbacks": 0,
+ "koios_calls": 0,
+ "blockfrost_calls": 12,
+ "blockfrost_fallbacks": 12,
  "blockfrost_available": true,
- "basis": "koios"
+ "basis": "blockfrost"
 }
