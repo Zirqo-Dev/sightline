@@ -1,5 +1,5 @@
 {
- "at": "2026-11-21T19:13:36Z",
+ "at": "2026-11-21T21:15:33Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -28,6 +28,28 @@
  },
  "actor_tags": true,
  "moves": [
+  {
+   "time": "2026-11-19T03:26:41Z",
+   "tx_short": "87eee58e9c",
+   "kind": "swap",
+   "ticker": "STRIKE",
+   "token": "STRIKE",
+   "policy_short": "f13ac4d6",
+   "dex": "minswap_v2",
+   "pool_key": "minswap_v2~b4f379d0",
+   "direction": "sell",
+   "ada": 5814.52,
+   "ada_basis": "ada_leg",
+   "qty": 1973048000,
+   "qty_basis": "raw",
+   "reserve_ada_after": 1355902.08,
+   "lp": false,
+   "actor_tag": null,
+   "ahead_of_dump": false,
+   "dump_tx_short": null,
+   "dump_ada": null,
+   "level": "pool"
+  },
   {
    "time": "2026-11-19T16:02:15Z",
    "tx_short": "fcc27b3731",
@@ -146,10 +168,9 @@
    "policy_short": "0691b2fe",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~8d92b947",
-   "reserve_ada": 4523175.07,
-   "reserve_qty": 15578300700366,
-   "asof": "2026-11-18T10:22:57Z",
-   "stale": true
+   "reserve_ada": 4576226.45,
+   "reserve_qty": 15509205784919,
+   "asof": "2026-11-18T21:21:48Z"
   },
   {
    "ticker": "NIGHT",
@@ -190,10 +211,9 @@
    "policy_short": "f13ac4d6",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~b4f379d0",
-   "reserve_ada": 1342794.71,
-   "reserve_qty": 462693707674,
-   "asof": "2026-11-21T07:03:36Z",
-   "stale": true
+   "reserve_ada": 1355902.08,
+   "reserve_qty": 457473745167,
+   "asof": "2026-11-19T03:26:41Z"
   },
   {
    "ticker": "STRIKE",
@@ -220,14 +240,14 @@
    "policy_short": "0691b2fe",
    "rank": 2,
    "unit_source": "cache",
-   "last_checked": "2026-11-21T11:12:52Z"
+   "last_checked": "2026-11-21T21:15:33Z"
   },
   {
    "ticker": "STRIKE",
    "policy_short": "f13ac4d6",
    "rank": 3,
    "unit_source": "cache",
-   "last_checked": "2026-11-21T11:12:52Z"
+   "last_checked": "2026-11-21T21:15:33Z"
   },
   {
    "ticker": "MIN",
@@ -280,14 +300,14 @@
  ],
  "coverage": {
   "NIGHT": {
-   "read": 0,
+   "read": 15,
    "complete": false,
-   "pools": 0
+   "pools": 1
   },
   "STRIKE": {
-   "read": 0,
+   "read": 10,
    "complete": false,
-   "skipped": "budget"
+   "pools": 1
   },
   "IAG": {
    "read": 0,
@@ -336,7 +356,7 @@
   "SOLADA",
   "ASCEND"
  ],
- "koios_calls": 3,
+ "koios_calls": 7,
  "blockfrost_calls": 0,
  "blockfrost_fallbacks": 0,
  "blockfrost_available": true,

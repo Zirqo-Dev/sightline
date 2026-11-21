@@ -1,14 +1,14 @@
 {
- "at": "2026-11-21T19:12:33Z",
+ "at": "2026-11-21T21:13:25Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14230436,
+ "height": 14230786,
  "baseline_at": "2026-11-14T17:13:24Z",
- "ada_balance": 1078.95511,
+ "ada_balance": 876.769941,
  "positions": {
   "6e917b+fda00259": 2790905,
-  "ASCEND": 318435400157,
+  "ASCEND": 318564235748,
   "ATM": 19024975734573,
   "BABYBOLT": 13368031015248,
   "BANK": 100000000,
@@ -121,7 +121,7 @@
  },
  "positions_counted": {
   "6e917b+fda00259": 2790905,
-  "ASCEND": 318435400157,
+  "ASCEND": 318564235748,
   "ATM": 19024975734573,
   "BABYBOLT": 13368031015248,
   "BANK": 100000000,
@@ -241,7 +241,7 @@
   {
    "token": "ASCEND",
    "policy": "eb7a93eb",
-   "qty": 318435400157
+   "qty": 318564235748
   },
   {
    "token": "ATM",
@@ -8044,6 +8044,17 @@
    "opened_at": "2026-11-21T18:39:26Z",
    "own_stake": true,
    "closed_at": "2026-11-21T19:12:33Z"
+  },
+  "9af617c468#0": {
+   "ref_short": "9af617c468#0",
+   "token": "ADA",
+   "qty_raw": 204000000,
+   "ada": 204.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "9af617c468",
+   "opened_at": "2026-11-21T20:35:32Z",
+   "own_stake": true,
+   "closed_at": "2026-11-21T21:13:25Z"
   }
  },
  "rows": [
@@ -23760,6 +23771,27 @@
    "ada_leg": 1004.0,
    "counterparty_tag": null,
    "order_ref_short": "b8a7e0714c#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-21T20:35:32Z",
+   "tx_short": "83389da7dc",
+   "kind": "swap",
+   "token": "ASCEND",
+   "qty": 128835591,
+   "ada_leg": 202.0,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-21T20:35:32Z",
+   "tx_short": "9af617c468",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 204000000,
+   "ada_leg": 204.0,
+   "counterparty_tag": null,
+   "order_ref_short": "9af617c468#0",
    "order_status": "open"
   }
  ],
