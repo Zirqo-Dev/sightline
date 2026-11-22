@@ -1,403 +1,206 @@
 {
- "at": "2026-11-21T23:11:21Z",
+ "at": "2026-11-22T01:13:16Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "watch_tags_early_buyers",
-   "ticker": "DOLLAR",
-   "tags": [
-    "uxz6fvju"
-   ],
-   "roles": [
-    "first_block_sniper"
-   ],
-   "at": "2026-11-21T23:11:21Z"
-  },
-  {
-   "kind": "coordinated_buys",
-   "ticker": "DOLLAR",
-   "wallets": [
-    "w-1cb6f9a9",
-    "w-3e5fed6a",
-    "w-5bd7d359",
-    "w-8ae9d37b",
-    "w-8da06c3e",
-    "w-9577b73c",
-    "w-e87d53fa"
-   ],
-   "window_s": 120,
-   "at": "2026-11-21T23:11:21Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "DOLLAR",
-   "wallets": [
-    "w-1cb6f9a9",
-    "w-3e5fed6a",
-    "w-8da06c3e",
-    "w-9577b73c"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-21T23:11:21Z"
-  },
-  {
-   "kind": "coordinated_buys",
-   "ticker": "POPPY",
-   "wallets": [
-    "w-03f22a75",
-    "w-0ba2f087",
-    "w-0e57cfa5",
-    "w-284240e2",
-    "w-414d0f18",
-    "w-57444622",
-    "w-5fc07251",
-    "w-70ddd692",
-    "w-7e3a9e2b",
-    "w-8ecf02d1",
-    "w-9188b3f2",
-    "w-9e6af8b7",
-    "w-ac121654",
-    "w-d06a9beb"
-   ],
-   "window_s": 120,
-   "at": "2026-11-21T23:11:21Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "POPPY",
-   "wallets": [
-    "w-0ba2f087",
-    "w-284240e2",
-    "w-414d0f18",
-    "w-566becbf",
-    "w-57444622",
-    "w-5fc07251",
-    "w-9e6af8b7"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-21T23:11:21Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-03f22a75",
-   "launches": [
-    "3NATIVE",
-    "KURO",
-    "MHOSKY",
-    "OIN",
-    "POPPY",
-    "RAVEN",
-    "TEMP"
-   ],
-   "at": "2026-11-21T23:11:21Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-5863344e",
-   "launches": [
-    "DOLLAR",
-    "POPPY"
-   ],
-   "at": "2026-11-21T23:11:21Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-70ddd692",
-   "launches": [
-    "3NATIVE",
-    "KURO",
-    "OIN",
-    "POPPY"
-   ],
-   "at": "2026-11-21T23:11:21Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-8ae9d37b",
-   "launches": [
-    "3NATIVE",
-    "DOLLAR",
-    "KURO",
-    "MIDHOSKY",
-    "TEMP"
-   ],
-   "at": "2026-11-21T23:11:21Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-9188b3f2",
-   "launches": [
-    "BULL",
-    "FERRET",
-    "POPPY",
-    "RAVEN",
-    "TEMP"
-   ],
-   "at": "2026-11-21T23:11:21Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-ac121654",
-   "launches": [
-    "BULL",
-    "POPPY"
-   ],
-   "at": "2026-11-21T23:11:21Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-e87d53fa",
-   "launches": [
-    "DOLLAR",
-    "GTAVI",
-    "HOSKIM",
-    "OIN",
-    "POPPY",
-    "TEMP"
-   ],
-   "at": "2026-11-21T23:11:21Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "POPPY",
-   "wallet": "w-c2b17a33",
-   "tags": [],
-   "at": "2026-11-21T23:11:21Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "POPPY",
-   "wallet": "w-566becbf",
-   "tags": [],
-   "at": "2026-11-21T23:11:21Z"
-  },
-  {
-   "kind": "ada_side_drop",
-   "ticker": "POPPY",
-   "from": 3079,
-   "to": 42,
-   "at": "2026-11-21T23:11:21Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "POPPY",
-   "tag": "w-f3186187",
-   "delta": 30061355764473,
-   "new_position": true,
-   "curve_pct": 42.3,
-   "decimals": 6,
-   "qty": 30061355.7645,
-   "at": "2026-11-21T23:11:21Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "ASCEND",
-   "tag": "w-f3186187",
-   "delta": 394370269,
-   "decimals": 6,
-   "qty": 394.3703,
-   "ada_equiv": 609,
-   "value_basis": "ada_leg_rate",
-   "pct": 0.1,
-   "at": "2026-11-21T23:11:21Z"
-  }
- ],
- "recent": [
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-c78957cd",
-   "launches": [
-    "3NATIVE",
-    "KURO"
-   ],
-   "at": "2026-11-15T13:11:11Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-d17561bb",
-   "launches": [
-    "GTADA",
-    "KURO"
-   ],
-   "at": "2026-11-15T13:11:11Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-d9bcb4ca",
-   "launches": [
-    "KURO",
-    "NOONOO",
-    "ZAPZEKE"
-   ],
-   "at": "2026-11-15T13:11:11Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-e9e4c704",
-   "launches": [
-    "3NATIVE",
-    "KURO"
-   ],
-   "at": "2026-11-15T13:11:11Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "KURO",
-   "wallet": "w-9dd9f645",
-   "tags": [
-    "uyetfdape9"
-   ],
-   "at": "2026-11-15T13:11:11Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "NOONOO",
-   "wallet": "w-d9bcb4ca",
-   "tags": [],
-   "at": "2026-11-15T13:11:11Z"
-  },
-  {
-   "kind": "ada_side_drop",
-   "ticker": "KURO",
-   "from": 2982,
-   "to": 0,
-   "at": "2026-11-15T13:11:11Z"
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 87.0,
+   "top_cluster_pct": 87.0,
+   "top_cluster": "w-13d53c47",
+   "basis": "ex-fe819d",
+   "at": "2026-11-22T01:13:16Z"
   },
   {
    "kind": "holder_concentration",
-   "ticker": "VAMP",
-   "top_addr_pct": 29.1,
-   "top_cluster_pct": 29.1,
-   "top_cluster": "w-f3186187",
+   "ticker": "HERO",
+   "top_addr_pct": 49.5,
+   "top_cluster_pct": 49.5,
+   "top_cluster": "w-2211ab16",
    "basis": "ex-fe819d",
-   "at": "2026-11-15T13:11:11Z"
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "concentration_jump",
+   "ticker": "HERO",
+   "from": 30.7,
+   "to": 49.5,
+   "at": "2026-11-22T01:13:16Z"
   },
   {
    "kind": "whale_move",
-   "ticker": "ASCEND",
+   "ticker": "NIGHT",
    "tag": "w-f3186187",
-   "delta": 174907330,
+   "delta": 18199837520,
    "decimals": 6,
-   "qty": 174.9073,
-   "ada_equiv": 252,
-   "value_basis": "ada_leg",
-   "pct": 0.1,
-   "at": "2026-11-15T15:11:19Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "GTADA",
-   "wallet": "w-79620ea4",
-   "tags": [],
-   "at": "2026-11-15T17:11:19Z"
+   "qty": 18199.8375,
+   "ada_equiv": 5644,
+   "value_basis": "ada_leg_rate",
+   "pct": 1.3,
+   "at": "2026-11-22T01:13:16Z"
   },
   {
    "kind": "whale_move",
-   "ticker": "SURFY",
+   "ticker": "HERO",
    "tag": "w-f3186187",
-   "delta": -17067452227217,
+   "delta": -44000000796505,
    "decimals": 6,
-   "qty": -17067452.2272,
-   "ada_equiv": 46,
+   "qty": -44000000.7965,
+   "ada_equiv": 135,
+   "value_basis": "decimals_x_price",
+   "pct": 100.0,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "IAGONAUT",
+   "tag": "w-f3186187",
+   "delta": -26101795136163,
+   "decimals": 6,
+   "qty": -26101795.1362,
+   "ada_equiv": 76,
+   "value_basis": "decimals_x_price",
+   "pct": 100.0,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "POPPY",
+   "tag": "w-f3186187",
+   "delta": 7827821974802,
+   "curve_pct": 68.9,
+   "decimals": 6,
+   "qty": 7827821.9748,
+   "pct": 26.0,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "EXPLODE",
+   "tag": "w-f3186187",
+   "delta": -11339279905225,
+   "curve_pct": 4.3,
+   "decimals": 6,
+   "qty": -11339279.9052,
+   "pct": 100.0,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "PAWS-2",
+   "tag": "w-f3186187",
+   "delta": -10000000397542,
+   "decimals": 6,
+   "qty": -10000000.3975,
+   "ada_equiv": 179,
    "value_basis": "decimals_x_price",
    "pct": 50.0,
-   "at": "2026-11-15T17:11:19Z"
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "STABLE",
+   "tag": "w-f3186187",
+   "delta": -20165843834023,
+   "curve_pct": 4.1,
+   "decimals": 6,
+   "qty": -20165843.834,
+   "pct": 50.0,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "CAMP",
+   "tag": "w-f3186187",
+   "delta": -34632631851536,
+   "curve_pct": 4.3,
+   "decimals": 6,
+   "qty": -34632631.8515,
+   "pct": 100.0,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ROBIN",
+   "tag": "w-f3186187",
+   "delta": -19397686817159,
+   "decimals": 6,
+   "qty": -19397686.8172,
+   "ada_equiv": 147,
+   "value_basis": "decimals_x_price",
+   "pct": 10.4,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "BXP",
+   "tag": "w-f3186187",
+   "delta": -22523230783145,
+   "curve_pct": 10.3,
+   "decimals": 6,
+   "qty": -22523230.7831,
+   "pct": 100.0,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "GUINEA",
+   "tag": "w-f3186187",
+   "delta": -10000000413431,
+   "decimals": 6,
+   "qty": -10000000.4134,
+   "ada_equiv": 387,
+   "value_basis": "decimals_x_price",
+   "pct": 10.3,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "CORE-2",
+   "tag": "w-f3186187",
+   "delta": -7656000,
+   "pct": 100.0,
+   "at": "2026-11-22T01:13:16Z"
   },
   {
    "kind": "whale_move",
    "ticker": "ASCEND",
    "tag": "w-f3186187",
-   "delta": 237457797,
+   "delta": -1345707142,
    "decimals": 6,
-   "qty": 237.4578,
-   "ada_equiv": 354,
+   "qty": -1345.7071,
+   "ada_equiv": 2062,
    "value_basis": "ada_leg",
-   "pct": 0.1,
-   "at": "2026-11-15T19:11:04Z"
+   "pct": 0.4,
+   "at": "2026-11-22T01:13:16Z"
   },
   {
-   "kind": "coordinated_buys",
-   "ticker": "FLY",
-   "wallets": [
-    "w-0ed3eab2",
-    "w-14808a0a",
-    "w-18fffaa6",
-    "w-314559ec",
-    "w-6b049e53",
-    "w-6b9a333f",
-    "w-71570d35",
-    "w-79620ea4",
-    "w-87626206",
-    "w-9c4c6283",
-    "w-9e14bd16",
-    "w-a49db809",
-    "w-b90abe62",
-    "w-c8a3372c",
-    "w-e18ae92d",
-    "w-ee4307c1",
-    "w-f7844f67"
-   ],
-   "window_s": 120,
-   "at": "2026-11-15T23:12:09Z"
+   "kind": "whale_move",
+   "ticker": "STRIKE",
+   "tag": "w-f3186187",
+   "delta": 166185,
+   "new_position": true,
+   "decimals": 6,
+   "qty": 0.1662,
+   "ada_equiv": 1,
+   "value_basis": "decimals_x_price",
+   "at": "2026-11-22T01:13:16Z"
   },
   {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "FLY",
-   "wallets": [
-    "w-0ed3eab2",
-    "w-6b049e53",
-    "w-6b9a333f",
-    "w-c8a3372c"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-15T23:12:09Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-606a1d07",
-   "launches": [
-    "DARK",
-    "FLY"
-   ],
-   "at": "2026-11-15T23:12:09Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-79620ea4",
-   "launches": [
-    "BLACKOUT",
-    "BULL",
-    "DARK",
-    "FERRET",
-    "FLY",
-    "GTADA",
-    "HOSKIM",
-    "KURO",
-    "TEMP"
-   ],
-   "at": "2026-11-15T23:12:09Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-a49db809",
-   "launches": [
-    "3NATIVE",
-    "FLY"
-   ],
-   "at": "2026-11-15T23:12:09Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-b90abe62",
-   "launches": [
-    "3NATIVE",
-    "FERRET",
-    "FLY"
-   ],
-   "at": "2026-11-15T23:12:09Z"
-  },
+   "kind": "whale_move",
+   "ticker": "BRO",
+   "tag": "w-f3186187",
+   "delta": -9126979259604,
+   "curve_pct": 0.4,
+   "decimals": 6,
+   "qty": -9126979.2596,
+   "pct": 100.0,
+   "at": "2026-11-22T01:13:16Z"
+  }
+ ],
+ "recent": [
   {
    "kind": "repeat_early_buyer",
    "wallet": "w-e18ae92d",
@@ -3322,11 +3125,205 @@
    "value_basis": "ada_leg_rate",
    "pct": 0.1,
    "at": "2026-11-21T23:11:21Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "CORE",
+   "top_addr_pct": 87.0,
+   "top_cluster_pct": 87.0,
+   "top_cluster": "w-13d53c47",
+   "basis": "ex-fe819d",
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "HERO",
+   "top_addr_pct": 49.5,
+   "top_cluster_pct": 49.5,
+   "top_cluster": "w-2211ab16",
+   "basis": "ex-fe819d",
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "concentration_jump",
+   "ticker": "HERO",
+   "from": 30.7,
+   "to": 49.5,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "NIGHT",
+   "tag": "w-f3186187",
+   "delta": 18199837520,
+   "decimals": 6,
+   "qty": 18199.8375,
+   "ada_equiv": 5644,
+   "value_basis": "ada_leg_rate",
+   "pct": 1.3,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "HERO",
+   "tag": "w-f3186187",
+   "delta": -44000000796505,
+   "decimals": 6,
+   "qty": -44000000.7965,
+   "ada_equiv": 135,
+   "value_basis": "decimals_x_price",
+   "pct": 100.0,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "IAGONAUT",
+   "tag": "w-f3186187",
+   "delta": -26101795136163,
+   "decimals": 6,
+   "qty": -26101795.1362,
+   "ada_equiv": 76,
+   "value_basis": "decimals_x_price",
+   "pct": 100.0,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "POPPY",
+   "tag": "w-f3186187",
+   "delta": 7827821974802,
+   "curve_pct": 68.9,
+   "decimals": 6,
+   "qty": 7827821.9748,
+   "pct": 26.0,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "EXPLODE",
+   "tag": "w-f3186187",
+   "delta": -11339279905225,
+   "curve_pct": 4.3,
+   "decimals": 6,
+   "qty": -11339279.9052,
+   "pct": 100.0,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "PAWS-2",
+   "tag": "w-f3186187",
+   "delta": -10000000397542,
+   "decimals": 6,
+   "qty": -10000000.3975,
+   "ada_equiv": 179,
+   "value_basis": "decimals_x_price",
+   "pct": 50.0,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "STABLE",
+   "tag": "w-f3186187",
+   "delta": -20165843834023,
+   "curve_pct": 4.1,
+   "decimals": 6,
+   "qty": -20165843.834,
+   "pct": 50.0,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "CAMP",
+   "tag": "w-f3186187",
+   "delta": -34632631851536,
+   "curve_pct": 4.3,
+   "decimals": 6,
+   "qty": -34632631.8515,
+   "pct": 100.0,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ROBIN",
+   "tag": "w-f3186187",
+   "delta": -19397686817159,
+   "decimals": 6,
+   "qty": -19397686.8172,
+   "ada_equiv": 147,
+   "value_basis": "decimals_x_price",
+   "pct": 10.4,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "BXP",
+   "tag": "w-f3186187",
+   "delta": -22523230783145,
+   "curve_pct": 10.3,
+   "decimals": 6,
+   "qty": -22523230.7831,
+   "pct": 100.0,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "GUINEA",
+   "tag": "w-f3186187",
+   "delta": -10000000413431,
+   "decimals": 6,
+   "qty": -10000000.4134,
+   "ada_equiv": 387,
+   "value_basis": "decimals_x_price",
+   "pct": 10.3,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "CORE-2",
+   "tag": "w-f3186187",
+   "delta": -7656000,
+   "pct": 100.0,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": -1345707142,
+   "decimals": 6,
+   "qty": -1345.7071,
+   "ada_equiv": 2062,
+   "value_basis": "ada_leg",
+   "pct": 0.4,
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "STRIKE",
+   "tag": "w-f3186187",
+   "delta": 166185,
+   "new_position": true,
+   "decimals": 6,
+   "qty": 0.1662,
+   "ada_equiv": 1,
+   "value_basis": "decimals_x_price",
+   "at": "2026-11-22T01:13:16Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "BRO",
+   "tag": "w-f3186187",
+   "delta": -9126979259604,
+   "curve_pct": 0.4,
+   "decimals": 6,
+   "qty": -9126979.2596,
+   "pct": 100.0,
+   "at": "2026-11-22T01:13:16Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 2,
-  "koios": 21
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,
