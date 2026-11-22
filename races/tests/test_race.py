@@ -121,6 +121,8 @@ class DuplicateSlot(unittest.TestCase):
             }
             trades = (path / "trades.jsonl").read_text(encoding="utf-8")
             self.assertTrue(trades.strip())
+            decisions = (path / "decisions.jsonl").read_text(encoding="utf-8").splitlines()
+            others = {name: blob for name, blob in before.items() if name != "decisions.jsonl"}
             buf = io.StringIO()
             with redirect_stdout(buf):
                 result = run_once(path, again_at, dry_run=True, transport=Boom())
@@ -132,8 +134,15 @@ class DuplicateSlot(unittest.TestCase):
                 for item in path.iterdir()
                 if item.is_file()
             }
-            self.assertEqual(after, before)
+            self.assertEqual(
+                {name: blob for name, blob in after.items() if name != "decisions.jsonl"},
+                others,
+            )
             self.assertEqual((path / "trades.jsonl").read_text(encoding="utf-8"), trades)
+            logged = (path / "decisions.jsonl").read_text(encoding="utf-8").splitlines()
+            self.assertEqual(logged[:-1], decisions)
+            skip = json.loads(logged[-1])
+            self.assertEqual(skip, {"kind": "duplicate_slot", "ts": "2026-11-11T12:12:00Z"})
             buf = io.StringIO()
             with redirect_stdout(buf):
                 code = main(["--data-dir", str(path), "--dry-run", "--now", "2026-11-11T12:40:00Z"])
@@ -144,7 +153,13 @@ class DuplicateSlot(unittest.TestCase):
                 for item in path.iterdir()
                 if item.is_file()
             }
-            self.assertEqual(still, before)
+            self.assertEqual(
+                {name: blob for name, blob in still.items() if name != "decisions.jsonl"},
+                others,
+            )
+            twice = (path / "decisions.jsonl").read_text(encoding="utf-8").splitlines()
+            self.assertEqual(twice[:-1], logged)
+            self.assertEqual(json.loads(twice[-1])["kind"], "duplicate_slot")
 
 
 class Isolation(unittest.TestCase):

@@ -4,10 +4,12 @@ name: Pipeline heartbeat
 # Reads run history for every workflow with the job token (actions: read)
 # and writes health.json only to the health-data branch.
 # Never pushes main, desk-data, races-data, or ua-f1-data.
-# dispatch-races starts wallet races on main (mode=live) only when this
-# workflow was scheduled or started by github-actions[bot]. A manual run
-# does not. races.yml keeps cron 12,42 * * * *. health.json scores races
-# on that 30-minute grid, so races may show red.
+# dispatch-races starts wallet races on main (mode=live) only from main, and
+# only on attempt 1. A scheduled run may dispatch. A workflow_dispatch may
+# dispatch only when this run started in the outside window: UTC hour % 3 == 2
+# and minute 30-44. A manual run outside that window does not. A re-run does
+# not. races.yml keeps cron 12,42 * * * *. health.json scores races on that
+# 30-minute grid, so races may show red.
 
 on:
   schedule:
@@ -68,11 +70,16 @@ jobs:
           if-no-files-found: error
 
   dispatch-races:
-    # A manual heartbeat run must not start a live race. That would back-fill
-    # a missed window. Only the schedule, or github-actions[bot], dispatches.
+    # Only from main, and only the first attempt. A re-run keeps the original
+    # event and actor, so run_attempt is what stops it.
+    # A scheduled run may dispatch. A workflow_dispatch may dispatch only when
+    # this run's start time, in UTC, has hour % 3 == 2 and minute 30-44
+    # (02:30-02:44, 05:30-05:44, 08:30-08:44, 11:30-11:44, 14:30-14:44,
+    # 17:30-17:44, 20:30-20:44, 23:30-23:44). That is the outside 3-hour
+    # heartbeat. A manual run outside the window does not dispatch.
     # The frozen races cron stays 12,42 * * * *. health.json keeps that
     # 30-minute denominator. This job does not shrink it, and races may show red.
-    if: "${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.actor == 'github-actions[bot]') }}"
+    if: "${{ github.ref == 'refs/heads/main' && github.run_attempt == 1 && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}"
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -85,6 +92,23 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          # Window uses this run's start time, not the clock when curl runs.
+          if [ "${GITHUB_EVENT_NAME}" != "schedule" ]; then
+            started=$(curl -sS -f \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin).get("run_started_at") or "")')
+            if [ -z "${started}" ]; then
+              echo "missing run start"
+              exit 0
+            fi
+            if ! python3 -c 'import sys; from datetime import datetime; stamp = datetime.strptime(sys.argv[1], "%Y-%m-%dT%H:%M:%SZ"); raise SystemExit(0 if stamp.hour % 3 == 2 and 30 <= stamp.minute <= 44 else 1)' "${started}"; then
+              echo "outside dispatch window"
+              exit 0
+            fi
+          fi
           curl -sS -f -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \

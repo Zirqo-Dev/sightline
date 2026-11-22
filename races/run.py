@@ -91,6 +91,7 @@ def run_once(data_dir, now, dry_run=False, transport=None):
     # A second run of the same slot must not enter, exit, or close.
     if state.get("last_slot") == slot_iso:
         prereg.check_prereg(cfg)
+        ledger.append("decisions.jsonl", {"ts": slot_iso, "kind": "duplicate_slot"})
         print("duplicate_slot")
         return {"slot": slot_iso, "duplicate_slot": True, "calls": None, "draw": None}
     lines = []

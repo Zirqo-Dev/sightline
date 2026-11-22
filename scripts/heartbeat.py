@@ -20,10 +20,12 @@ and commits on data branches do not either. The expected interval is the
 longest gap between scheduled fires. Grace is max(15 minutes, one quarter
 of that interval). A due slot is filled by a successful schedule run, or by
 a successful workflow_dispatch whose head_branch is main. races.yml is the
-exception: only a scheduled run on main, or a workflow_dispatch on main from
-github-actions[bot], fills a slot. A manual dispatch does not, and a dry-run
-does not. Its denominator stays the frozen 12,42 grid (30 minutes), so races
-may show red. Slots earlier than the later of the workflow's created_at and
+exception. A counted races run is on main, is attempt 1, and was scheduled,
+or was a workflow_dispatch whose start falls in the outside window (UTC
+hour % 3 == 2 and minute 30-44). A manual run outside that window does not
+count, and a re-run does not. Its denominator stays the frozen 12,42 grid
+(30 minutes), so races may show red. Slots earlier than the later of the
+workflow's created_at and
 the commit that added its file to main are ignored.
 ua-f1-data can skip a commit when a run has nothing new, so that branch is
 judged from the later of its tip and its last success.
@@ -55,7 +57,6 @@ IGNORED_CONCLUSIONS = {"cancelled", "skipped", "neutral", "stale"}
 # Schedule runs fill a slot on any branch. races.yml is stricter: see
 # _filling_run_at. Its 30-minute grid is not shrunk by the 3h dispatch.
 _FILLING_EVENTS = frozenset({"schedule", "workflow_dispatch"})
-_ACTIONS_BOT = "github-actions[bot]"
 RACES_WORKFLOW = ".github/workflows/races.yml"
 CONCLUSIONS = FAILURES | IGNORED_CONCLUSIONS | {"success", "action_required", "in_progress"}
 SLOT_SKEW = timedelta(minutes=2)
@@ -356,14 +357,25 @@ def consecutive_failures(runs):
     return streak
 
 
-def _bot_dispatch(row):
-    """True when github-actions[bot] triggered the run. The login is not kept."""
-    chosen = row.get("triggering_actor")
-    if not isinstance(chosen, dict):
-        chosen = row.get("actor")
-    if not isinstance(chosen, dict):
+def in_dispatch_window(moment):
+    """True when a UTC start is inside the outside heartbeat window.
+
+    The outside dispatcher starts a workflow_dispatch during minutes 30-44
+    of a UTC hour whose remainder modulo 3 is 2: 02:30-02:44, 05:30-05:44,
+    08:30-08:44, 11:30-11:44, 14:30-14:44, 17:30-17:44, 20:30-20:44, and
+    23:30-23:44. A scheduled run does not use this window. A manual run
+    outside it does not dispatch or count.
+    """
+    stamp = _as_utc(moment)
+    if stamp is None:
         return False
-    return chosen.get("login") == _ACTIONS_BOT
+    return stamp.hour % 3 == 2 and 30 <= stamp.minute <= 44
+
+
+def _first_attempt(run):
+    """True only for attempt 1. A re-run keeps the original event."""
+    attempt = run.get("run_attempt")
+    return isinstance(attempt, int) and not isinstance(attempt, bool) and attempt == 1
 
 
 def _filling_run_at(run, races=False):
@@ -375,10 +387,10 @@ def _filling_run_at(run, races=False):
 
     races.yml keeps the frozen 12,42 cron. health.json scores races on that
     30-minute grid. A live dispatch about every 3 hours does not shrink the
-    denominator, and races may show red. A races run counts only on main,
-    and only when it was scheduled or a workflow_dispatch from
-    github-actions[bot]. A manual dispatch does not count. A dry-run is that
-    workflow_dispatch path and does not count either.
+    denominator, and races may show red. A races run counts only on main and
+    only on attempt 1. A scheduled run counts. A workflow_dispatch counts
+    only when its start is inside in_dispatch_window. A manual run outside
+    that window does not count, and a re-run does not.
     """
     event = run.get("event")
     if event not in _FILLING_EVENTS:
@@ -386,12 +398,13 @@ def _filling_run_at(run, races=False):
     if run.get("conclusion") != "success":
         return None
     if races:
-        if run.get("head_branch") != "main":
+        if run.get("head_branch") != "main" or not _first_attempt(run):
             return None
+        at = parse_time(run.get("at"))
         if event == "schedule":
-            return parse_time(run.get("at"))
-        if event == "workflow_dispatch" and run.get("bot_dispatch") is True:
-            return parse_time(run.get("at"))
+            return at
+        if event == "workflow_dispatch" and in_dispatch_window(at):
+            return at
         return None
     if event == "workflow_dispatch" and run.get("head_branch") != "main":
         return None
@@ -440,9 +453,10 @@ def missed_count(crons, runs, now, created_at=None, races=False):
     """How many newest due slots have no filling run.
 
     A filling run is a successful schedule run, or a successful
-    workflow_dispatch whose head_branch is main. races.yml counts only a
-    scheduled run on main, or a workflow_dispatch on main from
-    github-actions[bot]. The 30-minute grid stays the denominator.
+    workflow_dispatch whose head_branch is main. races.yml counts a run on
+    main only when it is attempt 1, and only when it was scheduled or its
+    workflow_dispatch start is inside the outside window. The 30-minute grid
+    stays the denominator.
 
     Slots earlier than created_at are ignored. Callers pass the slot baseline:
     the later of the workflow created_at and the main add-commit. A file that
@@ -508,7 +522,8 @@ def public_run(row):
     """Keep time, conclusion, event, and head_branch. Drop actors, commits, and urls.
 
     head_branch is the branch name the run used. Slot filling reads it for
-    workflow_dispatch and ignores it for schedule. It is not written to health.json.
+    workflow_dispatch and ignores it for schedule. run_attempt is the attempt
+    number. Neither is written to health.json. Actors are dropped.
     """
     if not isinstance(row, dict):
         raise ValueError("run is not an object")
@@ -520,9 +535,9 @@ def public_run(row):
     branch = row.get("head_branch")
     if isinstance(branch, str):
         cleaned["head_branch"] = branch
-    # Boolean only. The login is not copied into the run or health.json.
-    if _bot_dispatch(row):
-        cleaned["bot_dispatch"] = True
+    attempt = row.get("run_attempt")
+    if isinstance(attempt, int) and not isinstance(attempt, bool) and attempt >= 1:
+        cleaned["run_attempt"] = attempt
     return cleaned
 
 

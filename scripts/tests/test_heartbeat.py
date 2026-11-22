@@ -2,6 +2,8 @@
 
 import json
 import os
+import re
+import subprocess
 import sys
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -21,12 +23,12 @@ def at(delta):
     return (NOW + delta).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def run(minutes, conclusion="success", event="schedule", head_branch=None, bot=False):
+def run(minutes, conclusion="success", event="schedule", head_branch=None, attempt=None):
     row = {"at": at(timedelta(minutes=minutes)), "conclusion": conclusion, "event": event}
     if head_branch is not None:
         row["head_branch"] = head_branch
-    if bot:
-        row["bot_dispatch"] = True
+    if attempt is not None:
+        row["run_attempt"] = attempt
     return row
 
 
@@ -464,8 +466,13 @@ class LiveFiles(unittest.TestCase):
         self.assertIn("actions: write", dispatch)
         self.assertIn("contents: none", dispatch)
         self.assertNotIn("contents: write", dispatch)
-        self.assertIn("github-actions[bot]", dispatch)
+        self.assertIn("github.ref == 'refs/heads/main'", dispatch)
+        self.assertIn("github.run_attempt == 1", dispatch)
         self.assertIn("github.event_name == 'schedule'", dispatch)
+        self.assertNotIn("github.actor", dispatch)
+        self.assertIn("hour % 3 == 2", dispatch)
+        self.assertIn("30 <= stamp.minute <= 44", dispatch)
+        self.assertIn("run_started_at", dispatch)
         self.assertIn("actions/workflows/races.yml/dispatches", dispatch)
         self.assertIn('"mode":"live"', dispatch)
         self.assertIn("30-minute", dispatch)
@@ -473,6 +480,14 @@ class LiveFiles(unittest.TestCase):
         self.assertNotIn("actions: write", publish)
         self.assertNotIn("races.yml/dispatches", publish)
         self.assertIn("git push origin HEAD:health-data", publish)
+        code = _window_check(dispatch)
+        for stamp, allowed in _WINDOW_CASES:
+            proc = subprocess.run(
+                [sys.executable, "-c", code, stamp],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(proc.returncode == 0, allowed, stamp)
+            self.assertEqual(heartbeat.in_dispatch_window(stamp), allowed, stamp)
 
 
 def _job(text, name):
@@ -495,28 +510,69 @@ def _job(text, name):
     return "\n".join(lines[start:end])
 
 
+_WINDOW_CASES = (
+    ("2026-11-11T02:30:00Z", True),
+    ("2026-11-11T02:44:00Z", True),
+    ("2026-11-11T02:29:00Z", False),
+    ("2026-11-11T02:45:00Z", False),
+    ("2026-11-11T11:42:00Z", True),
+    ("2026-11-11T11:50:00Z", False),
+    ("2026-11-11T12:37:00Z", False),
+    ("2026-11-11T14:37:00Z", True),
+    ("2026-11-11T23:44:00Z", True),
+    ("2026-11-11T23:45:00Z", False),
+)
+
+
+def _window_check(dispatch):
+    match = re.search(r"python3 -c '([^']*hour % 3 == 2[^']*)'", dispatch)
+    if match is None:
+        raise AssertionError("dispatch window check is missing")
+    return match.group(1)
+
+
 class RacesCounter(unittest.TestCase):
     def _races(self, runs):
         item = spec(RACES, "wallet races", ["12,42 * * * *"], "races-data")
         return health([item], {RACES: runs}, {"races-data": at(timedelta(minutes=-4))})["workflows"][0]
 
-    def test_only_a_scheduled_or_bot_run_on_main_fills_a_races_slot(self):
-        scheduled = self._races([run(-10, "success", "schedule", "main")])
+    def _user_dispatch(self, minutes, attempt, branch="main", event="workflow_dispatch"):
+        stamp = at(timedelta(minutes=minutes))
+        return heartbeat.public_run({
+            "run_started_at": stamp,
+            "conclusion": "success",
+            "event": event,
+            "head_branch": branch,
+            "run_attempt": attempt,
+            "actor": {"login": "octocat", "type": "User"},
+            "triggering_actor": {"login": "octocat", "type": "User"},
+            "html_url": "https://github.com/example/example/actions/runs/9",
+        })
+
+    def test_a_user_dispatch_counts_only_inside_the_window_and_only_once(self):
+        # 11:42 is inside the window and covers the newest due races slot.
+        inside = self._user_dispatch(-18, 1)
+        self.assertNotIn("octocat", json.dumps(inside))
+        self.assertEqual(inside["run_attempt"], 1)
+        counted = self._races([inside])
+        self.assertEqual(counted["missed_count"], 0)
+        self.assertEqual(counted["status"], "green")
+        # The same User actor ten minutes later is outside the window.
+        outside = self._races([self._user_dispatch(-10, 1)])
+        self.assertGreaterEqual(outside["missed_count"], 2)
+        self.assertEqual(outside["status"], "red")
+        # A re-run keeps the event. Attempt 2 does not count, inside or as a schedule.
+        rerun = self._races([self._user_dispatch(-18, 2)])
+        self.assertGreaterEqual(rerun["missed_count"], 2)
+        self.assertEqual(rerun["status"], "red")
+        scheduled_rerun = self._races([self._user_dispatch(-18, 2, event="schedule")])
+        self.assertGreaterEqual(scheduled_rerun["missed_count"], 2)
+        # A scheduled first attempt counts even outside the window.
+        scheduled = self._races([self._user_dispatch(-10, 1, event="schedule")])
         self.assertEqual(scheduled["missed_count"], 0)
         self.assertEqual(scheduled["status"], "green")
-        bot = self._races([run(-10, "success", "workflow_dispatch", "main", bot=True)])
-        self.assertEqual(bot["missed_count"], 0)
-        self.assertEqual(bot["status"], "green")
-        # A manual dispatch, including the dry-run path, does not fill the slot.
-        manual = self._races([run(-10, "success", "workflow_dispatch", "main")])
-        self.assertGreaterEqual(manual["missed_count"], 2)
-        self.assertEqual(manual["status"], "red")
-        off_main = self._races([
-            run(-10, "success", "schedule", "feature"),
-            run(-40, "success", "workflow_dispatch", "feature", bot=True),
-        ])
+        off_main = self._races([self._user_dispatch(-18, 1, branch="feature")])
         self.assertGreaterEqual(off_main["missed_count"], 2)
-        self.assertEqual(off_main["status"], "red")
         # Other workflows still count a workflow_dispatch on main from anyone.
         desk = health(
             [spec(DESK, "Solana desk scan", ["*/30 * * * *"], "desk-data")],
@@ -525,43 +581,13 @@ class RacesCounter(unittest.TestCase):
         )["workflows"][0]
         self.assertEqual(desk["missed_count"], 0)
         self.assertEqual(desk["status"], "green")
-
-    def test_public_run_keeps_a_bot_flag_and_drops_the_login(self):
-        stamp = at(timedelta(minutes=-10))
-        cleaned = heartbeat.public_run({
-            "created_at": stamp,
-            "conclusion": "success",
-            "event": "workflow_dispatch",
-            "head_branch": "main",
-            "actor": {"login": "github-actions[bot]"},
-            "triggering_actor": {"login": "github-actions[bot]"},
-            "html_url": "https://github.com/example/example/actions/runs/1",
-        })
-        self.assertEqual(cleaned["bot_dispatch"], True)
-        self.assertNotIn("github-actions[bot]", json.dumps(cleaned))
-        self.assertNotIn("html_url", cleaned)
-        self.assertNotIn("login", cleaned)
-        human = heartbeat.public_run({
-            "created_at": stamp,
-            "conclusion": "success",
-            "event": "workflow_dispatch",
-            "head_branch": "main",
-            "actor": {"login": "octocat"},
-            "triggering_actor": {"login": "octocat"},
-        })
-        self.assertNotIn("bot_dispatch", human)
-        self.assertNotIn("octocat", json.dumps(human))
-        row = self._races([cleaned])
-        self.assertEqual(row["missed_count"], 0)
-        quiet = self._races([human])
-        self.assertGreaterEqual(quiet["missed_count"], 2)
         doc = health(
             [spec(RACES, "wallet races", ["12,42 * * * *"], "races-data")],
-            {RACES: [cleaned]},
+            {RACES: [inside]},
             {"races-data": at(timedelta(minutes=-4))},
         )
         heartbeat.assert_public(doc)
-        self.assertNotIn("github-actions", json.dumps(doc))
+        self.assertNotIn("octocat", json.dumps(doc))
 
 
 if __name__ == "__main__":
