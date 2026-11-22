@@ -4,7 +4,10 @@ name: Pipeline heartbeat
 # Reads run history for every workflow with the job token (actions: read)
 # and writes health.json only to the health-data branch.
 # Never pushes main, desk-data, races-data, or ua-f1-data.
-# The publish job also dispatches wallet races on main (mode=live).
+# dispatch-races starts wallet races on main (mode=live) only when this
+# workflow was scheduled or started by github-actions[bot]. A manual run
+# does not. races.yml keeps cron 12,42 * * * *. health.json scores races
+# on that 30-minute grid, so races may show red.
 
 on:
   schedule:
@@ -64,20 +67,18 @@ jobs:
           path: output/health-strip-*.png
           if-no-files-found: error
 
-  publish:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+  dispatch-races:
+    # A manual heartbeat run must not start a live race. That would back-fill
+    # a missed window. Only the schedule, or github-actions[bot], dispatches.
+    # The frozen races cron stays 12,42 * * * *. health.json keeps that
+    # 30-minute denominator. This job does not shrink it, and races may show red.
+    if: "${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.actor == 'github-actions[bot]') }}"
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 5
     permissions:
-      contents: write
       actions: write
+      contents: none
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-        with:
-          path: code
-          persist-credentials: false
-
       - name: Dispatch wallet races on main
         continue-on-error: true
         env:
@@ -90,6 +91,20 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/races.yml/dispatches" \
             -d '{"ref":"main","inputs":{"mode":"live"}}'
+
+  publish:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          path: code
+          persist-credentials: false
 
       - name: Read run history and write health.json
         env:

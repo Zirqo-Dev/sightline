@@ -21,10 +21,12 @@ def at(delta):
     return (NOW + delta).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def run(minutes, conclusion="success", event="schedule", head_branch=None):
+def run(minutes, conclusion="success", event="schedule", head_branch=None, bot=False):
     row = {"at": at(timedelta(minutes=minutes)), "conclusion": conclusion, "event": event}
     if head_branch is not None:
         row["head_branch"] = head_branch
+    if bot:
+        row["bot_dispatch"] = True
     return row
 
 
@@ -400,7 +402,7 @@ class LiveFiles(unittest.TestCase):
         by = {item["file"]: item for item in specs}
         self.assertEqual(by[DESK]["crons"], ["*/30 * * * *"])
         self.assertEqual(by[DESK]["data_branch"], "desk-data")
-        self.assertEqual(by[RACES]["crons"], ["19 */3 * * *"])
+        self.assertEqual(by[RACES]["crons"], ["12,42 * * * *"])
         self.assertEqual(by[RACES]["data_branch"], "races-data")
         self.assertEqual(by[UA]["data_branch"], "ua-f1-data")
         self.assertTrue(by[UA]["noop_commit"])
@@ -445,6 +447,121 @@ class LiveFiles(unittest.TestCase):
             self.assertNotIn("git push origin " + forbidden, text)
         for name in ("main", "desk-data", "races-data", "ua-f1-data"):
             self.assertIn(name, text)
+
+    def test_live_dispatch_sits_on_top_of_the_frozen_races_cron(self):
+        with open(os.path.join(ROOT, ".github", "workflows", "races.yml"), encoding="utf-8") as handle:
+            races_text = handle.read()
+        with open(os.path.join(ROOT, ".github", "workflows", "heartbeat.yml"), encoding="utf-8") as handle:
+            heart_text = handle.read()
+        self.assertIn('cron: "12,42 * * * *"', races_text)
+        self.assertNotIn("19 */3 * * * *", races_text)
+        specs = heartbeat.load_workflow_files(os.path.join(ROOT, ".github", "workflows"))
+        races = [item for item in specs if item["file"] == RACES][0]
+        self.assertEqual(races["crons"], ["12,42 * * * *"])
+        self.assertEqual(heartbeat.interval_minutes(tuple(races["crons"])), 30)
+        dispatch = _job(heart_text, "dispatch-races")
+        publish = _job(heart_text, "publish")
+        self.assertIn("actions: write", dispatch)
+        self.assertIn("contents: none", dispatch)
+        self.assertNotIn("contents: write", dispatch)
+        self.assertIn("github-actions[bot]", dispatch)
+        self.assertIn("github.event_name == 'schedule'", dispatch)
+        self.assertIn("actions/workflows/races.yml/dispatches", dispatch)
+        self.assertIn('"mode":"live"', dispatch)
+        self.assertIn("30-minute", dispatch)
+        self.assertIn("actions: read", publish)
+        self.assertNotIn("actions: write", publish)
+        self.assertNotIn("races.yml/dispatches", publish)
+        self.assertIn("git push origin HEAD:health-data", publish)
+
+
+def _job(text, name):
+    lines = text.splitlines()
+    start = None
+    for index, line in enumerate(lines):
+        if line == "  %s:" % name:
+            start = index
+            break
+    if start is None:
+        raise AssertionError("missing job %s" % name)
+    end = len(lines)
+    for index in range(start + 1, len(lines)):
+        if len(lines[index]) >= 2 and not lines[index].startswith(" ") and lines[index].endswith(":"):
+            end = index
+            break
+        if lines[index].startswith("  ") and not lines[index].startswith("   ") and lines[index].rstrip().endswith(":"):
+            end = index
+            break
+    return "\n".join(lines[start:end])
+
+
+class RacesCounter(unittest.TestCase):
+    def _races(self, runs):
+        item = spec(RACES, "wallet races", ["12,42 * * * *"], "races-data")
+        return health([item], {RACES: runs}, {"races-data": at(timedelta(minutes=-4))})["workflows"][0]
+
+    def test_only_a_scheduled_or_bot_run_on_main_fills_a_races_slot(self):
+        scheduled = self._races([run(-10, "success", "schedule", "main")])
+        self.assertEqual(scheduled["missed_count"], 0)
+        self.assertEqual(scheduled["status"], "green")
+        bot = self._races([run(-10, "success", "workflow_dispatch", "main", bot=True)])
+        self.assertEqual(bot["missed_count"], 0)
+        self.assertEqual(bot["status"], "green")
+        # A manual dispatch, including the dry-run path, does not fill the slot.
+        manual = self._races([run(-10, "success", "workflow_dispatch", "main")])
+        self.assertGreaterEqual(manual["missed_count"], 2)
+        self.assertEqual(manual["status"], "red")
+        off_main = self._races([
+            run(-10, "success", "schedule", "feature"),
+            run(-40, "success", "workflow_dispatch", "feature", bot=True),
+        ])
+        self.assertGreaterEqual(off_main["missed_count"], 2)
+        self.assertEqual(off_main["status"], "red")
+        # Other workflows still count a workflow_dispatch on main from anyone.
+        desk = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"], "desk-data")],
+            {DESK: [run(-10, "success", "workflow_dispatch", "main")]},
+            {"desk-data": at(timedelta(minutes=-4))},
+        )["workflows"][0]
+        self.assertEqual(desk["missed_count"], 0)
+        self.assertEqual(desk["status"], "green")
+
+    def test_public_run_keeps_a_bot_flag_and_drops_the_login(self):
+        stamp = at(timedelta(minutes=-10))
+        cleaned = heartbeat.public_run({
+            "created_at": stamp,
+            "conclusion": "success",
+            "event": "workflow_dispatch",
+            "head_branch": "main",
+            "actor": {"login": "github-actions[bot]"},
+            "triggering_actor": {"login": "github-actions[bot]"},
+            "html_url": "https://github.com/example/example/actions/runs/1",
+        })
+        self.assertEqual(cleaned["bot_dispatch"], True)
+        self.assertNotIn("github-actions[bot]", json.dumps(cleaned))
+        self.assertNotIn("html_url", cleaned)
+        self.assertNotIn("login", cleaned)
+        human = heartbeat.public_run({
+            "created_at": stamp,
+            "conclusion": "success",
+            "event": "workflow_dispatch",
+            "head_branch": "main",
+            "actor": {"login": "octocat"},
+            "triggering_actor": {"login": "octocat"},
+        })
+        self.assertNotIn("bot_dispatch", human)
+        self.assertNotIn("octocat", json.dumps(human))
+        row = self._races([cleaned])
+        self.assertEqual(row["missed_count"], 0)
+        quiet = self._races([human])
+        self.assertGreaterEqual(quiet["missed_count"], 2)
+        doc = health(
+            [spec(RACES, "wallet races", ["12,42 * * * *"], "races-data")],
+            {RACES: [cleaned]},
+            {"races-data": at(timedelta(minutes=-4))},
+        )
+        heartbeat.assert_public(doc)
+        self.assertNotIn("github-actions", json.dumps(doc))
 
 
 if __name__ == "__main__":
