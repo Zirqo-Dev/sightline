@@ -1,11 +1,11 @@
 {
- "at": "2026-11-22T17:12:21Z",
+ "at": "2026-11-22T19:12:45Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14234248,
+ "height": 14234870,
  "baseline_at": "2026-11-14T17:13:24Z",
- "ada_balance": 3116.192147,
+ "ada_balance": 2913.874325,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 315000751404,
@@ -65,7 +65,7 @@
   "MISS": 8375000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1430870039405,
+  "NIGHT": 1431458983437,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -173,7 +173,7 @@
   "MISS": 8375000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1430870039405,
+  "NIGHT": 1431458983437,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -516,7 +516,7 @@
   {
    "token": "NIGHT",
    "policy": "0691b2fe",
-   "qty": 1430870039405
+   "qty": 1431458983437
   },
   {
    "token": "NIKY",
@@ -26178,6 +26178,16 @@
    "token": "NIGHT",
    "qty": 595571536,
    "ada_leg": 201.860541,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-22T19:08:09Z",
+   "tx_short": "5f41274599",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 588944032,
+   "ada_leg": 202.317822,
    "counterparty_tag": null,
    "direction": "buy"
   }
