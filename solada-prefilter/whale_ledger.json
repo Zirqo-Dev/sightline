@@ -1,11 +1,11 @@
 {
- "at": "2026-11-22T15:13:17Z",
+ "at": "2026-11-22T17:12:21Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14234063,
+ "height": 14234248,
  "baseline_at": "2026-11-14T17:13:24Z",
- "ada_balance": 3985.686383,
+ "ada_balance": 3116.192147,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 315000751404,
@@ -47,7 +47,7 @@
   "FLOW": 390000288371,
   "FUSH": 10119334,
   "GUINEA": 87507229937873,
-  "Guinea Pig": 20000000,
+  "Guinea Pig": 21641748,
   "HEN": 31304917420332,
   "HOSKITO": 3231757310682,
   "Hoskilien": 4000000,
@@ -65,7 +65,7 @@
   "MISS": 8375000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1428930327243,
+  "NIGHT": 1430870039405,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -82,6 +82,7 @@
   "ROCKET": 2204035481465,
   "SAD": 696969000000,
   "SER": 137024426411911,
+  "SHARKY": 1991813318269,
   "SNEK": 15000000,
   "SOLABLUE": 1438534570029,
   "SOLADA": 22001884,
@@ -154,7 +155,7 @@
   "FLOW": 390000288371,
   "FUSH": 10119334,
   "GUINEA": 87507229937873,
-  "Guinea Pig": 20000000,
+  "Guinea Pig": 21641748,
   "HEN": 31304917420332,
   "HOSKITO": 3231757310682,
   "Hoskilien": 4000000,
@@ -172,7 +173,7 @@
   "MISS": 8375000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1428930327243,
+  "NIGHT": 1430870039405,
   "NIKY": 26285265786372,
   "NVL": 2,
   "NightBringer": 11158478,
@@ -189,6 +190,7 @@
   "ROCKET": 2204035481465,
   "SAD": 696969000000,
   "SER": 137024426411911,
+  "SHARKY": 1991813318269,
   "SNEK": 15000000,
   "SOLABLUE": 1438534570029,
   "SOLADA": 22001884,
@@ -424,7 +426,7 @@
   {
    "token": "Guinea Pig",
    "policy": "ffc3c757",
-   "qty": 20000000
+   "qty": 21641748
   },
   {
    "token": "HEN",
@@ -514,7 +516,7 @@
   {
    "token": "NIGHT",
    "policy": "0691b2fe",
-   "qty": 1428930327243
+   "qty": 1430870039405
   },
   {
    "token": "NIKY",
@@ -595,6 +597,11 @@
    "token": "SER",
    "policy": "971236b5",
    "qty": 137024426411911
+  },
+  {
+   "token": "SHARKY",
+   "policy": "a9c3b13c",
+   "qty": 1991813318269
   },
   {
    "token": "SNEK",
@@ -8642,6 +8649,45 @@
    "opened_at": "2026-11-22T04:25:24Z",
    "own_stake": true,
    "closed_at": "2026-11-22T05:12:29Z"
+  },
+  "5784f42338#0": {
+   "ref_short": "5784f42338#0",
+   "token": "ADA",
+   "qty_raw": 73500000,
+   "ada": 73.5,
+   "status": "filled",
+   "opened_tx": "5784f42338",
+   "opened_at": "2026-11-22T15:14:19Z",
+   "own_stake": true,
+   "closed_tx": "50dbdff9bd",
+   "closed_at": "2026-11-22T15:14:19Z",
+   "filled_token": "Guinea Pig",
+   "filled_qty": 1641748
+  },
+  "ede01e223e#0": {
+   "ref_short": "ede01e223e#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "filled",
+   "opened_tx": "ede01e223e",
+   "opened_at": "2026-11-22T15:16:20Z",
+   "own_stake": true,
+   "closed_tx": "e8bb249f5c",
+   "closed_at": "2026-11-22T15:16:20Z",
+   "filled_token": "SHARKY",
+   "filled_qty": 1018419651657
+  },
+  "b925316b30#0": {
+   "ref_short": "b925316b30#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "b925316b30",
+   "opened_at": "2026-11-22T15:25:11Z",
+   "own_stake": true,
+   "closed_at": "2026-11-22T17:12:21Z"
   }
  },
  "rows": [
@@ -26035,6 +26081,103 @@
    "token": "NIGHT",
    "qty": 586466626,
    "ada_leg": 201.658271,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-22T15:14:19Z",
+   "tx_short": "5784f42338",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73500000,
+   "ada_leg": 73.5,
+   "counterparty_tag": null,
+   "order_ref_short": "5784f42338#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-22T15:14:19Z",
+   "tx_short": "50dbdff9bd",
+   "kind": "order_fill",
+   "token": "Guinea Pig",
+   "qty": 1641748,
+   "ada_leg": 73.5,
+   "counterparty_tag": null,
+   "order_ref_short": "5784f42338#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-22T15:14:45Z",
+   "tx_short": "66c05a693c",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 746328725,
+   "ada_leg": 251.905653,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-22T15:16:20Z",
+   "tx_short": "ede01e223e",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "ede01e223e#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-22T15:16:20Z",
+   "tx_short": "e8bb249f5c",
+   "kind": "order_fill",
+   "token": "SHARKY",
+   "qty": 1018419651657,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "ede01e223e#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-22T15:25:11Z",
+   "tx_short": "fc91ff8eab",
+   "kind": "swap",
+   "token": "SHARKY",
+   "qty": 973393666612,
+   "ada_leg": 71.0,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-22T15:25:11Z",
+   "tx_short": "d9c037f56a",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 597811901,
+   "ada_leg": 201.421176,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-22T15:25:11Z",
+   "tx_short": "b925316b30",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "b925316b30#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-22T15:37:53Z",
+   "tx_short": "1fee303d26",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 595571536,
+   "ada_leg": 201.860541,
    "counterparty_tag": null,
    "direction": "buy"
   }
