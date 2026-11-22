@@ -6,7 +6,9 @@ name: wallet races
 
 on:
   schedule:
-    - cron: "12,42 * * * *"
+    # Backup only. GitHub's schedule in this repo often skips or lands hours late.
+    # Primary: heartbeat.yml dispatches this workflow on main (mode=live) every 3h.
+    - cron: "19 */3 * * *"
   workflow_dispatch:
     inputs:
       mode:

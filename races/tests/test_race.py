@@ -101,7 +101,7 @@ class Isolation(unittest.TestCase):
         self.assertNotRegex(text, r"(import\s+desk|solana-desk|desk-data|JUPITER_API_KEY)")
         wf = (ROOT / ".github/workflows/races.yml").read_text(encoding="utf-8")
         self.assertIn("sightline-races", wf)
-        self.assertIn('cron: "12,42 * * * *"', wf)
+        self.assertIn('cron: "19 */3 * * *"', wf)
         self.assertIn("timeout-minutes: 5", wf)
         self.assertIn("races-data", wf)
         self.assertNotIn("ref: desk-data", wf)

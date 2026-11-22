@@ -400,7 +400,7 @@ class LiveFiles(unittest.TestCase):
         by = {item["file"]: item for item in specs}
         self.assertEqual(by[DESK]["crons"], ["*/30 * * * *"])
         self.assertEqual(by[DESK]["data_branch"], "desk-data")
-        self.assertEqual(by[RACES]["crons"], ["12,42 * * * *"])
+        self.assertEqual(by[RACES]["crons"], ["19 */3 * * *"])
         self.assertEqual(by[RACES]["data_branch"], "races-data")
         self.assertEqual(by[UA]["data_branch"], "ua-f1-data")
         self.assertTrue(by[UA]["noop_commit"])
