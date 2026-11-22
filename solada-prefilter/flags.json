@@ -1,17 +1,20 @@
 {
- "at": "2026-11-22T11:10:49Z",
+ "at": "2026-11-22T13:10:35Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
- "new": [],
- "recent": [
+ "new": [
   {
-   "kind": "sniper_full_exit",
-   "ticker": "FERRET",
-   "wallet": "w-ad1f93a6",
-   "tags": [],
-   "at": "2026-11-15T23:12:09Z"
-  },
+   "kind": "holder_concentration",
+   "ticker": "DEXY",
+   "top_addr_pct": 25.2,
+   "top_cluster_pct": 25.2,
+   "top_cluster": "w-f3186187",
+   "basis": "ex-fe819d",
+   "at": "2026-11-22T13:10:35Z"
+  }
+ ],
+ "recent": [
   {
    "kind": "sniper_full_exit",
    "ticker": "FLY",
@@ -3129,6 +3132,15 @@
    "value_basis": "ada_leg",
    "pct": 0.9,
    "at": "2026-11-22T05:10:45Z"
+  },
+  {
+   "kind": "holder_concentration",
+   "ticker": "DEXY",
+   "top_addr_pct": 25.2,
+   "top_cluster_pct": 25.2,
+   "top_cluster": "w-f3186187",
+   "basis": "ex-fe819d",
+   "at": "2026-11-22T13:10:35Z"
   }
  ],
  "api_calls": {

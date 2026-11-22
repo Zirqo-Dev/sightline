@@ -1,5 +1,5 @@
 {
- "at": "2026-11-22T11:14:32Z",
+ "at": "2026-11-22T13:13:14Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -115,7 +115,8 @@
    "pool_key": "minswap_v2~511d5cf7",
    "reserve_ada": 13452.82,
    "reserve_qty": 176220297444145,
-   "asof": "2026-11-22T07:23:21Z"
+   "asof": "2026-11-22T07:23:21Z",
+   "stale": true
   },
   {
    "ticker": "COCK",
@@ -125,7 +126,8 @@
    "pool_key": "minswap_v2~71183c8b",
    "reserve_ada": 168667.97,
    "reserve_qty": 41910669,
-   "asof": "2026-11-19T12:39:17Z"
+   "asof": "2026-11-19T12:39:17Z",
+   "stale": true
   },
   {
    "ticker": "IAG",
@@ -135,7 +137,8 @@
    "pool_key": "minswap_v2~76ec391d",
    "reserve_ada": 413480.66,
    "reserve_qty": 4030238295773,
-   "asof": "2026-11-19T22:22:34Z"
+   "asof": "2026-11-19T22:22:34Z",
+   "stale": true
   },
   {
    "ticker": "IAG",
@@ -298,21 +301,6 @@
   }
  ],
  "coverage": {
-  "IAG": {
-   "read": 15,
-   "complete": false,
-   "pools": 1
-  },
-  "COCK": {
-   "read": 15,
-   "complete": false,
-   "pools": 1
-  },
-  "CLOVE": {
-   "read": 13,
-   "complete": false,
-   "pools": 1
-  },
   "MIN": {
    "read": 0,
    "complete": false,
@@ -342,20 +330,35 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "IAG": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
+  },
+  "COCK": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
+  },
+  "CLOVE": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "IAG",
-  "COCK",
-  "CLOVE",
   "MIN",
   "SNEK",
   "SOLADA",
   "ASCEND",
   "NIGHT",
-  "STRIKE"
+  "STRIKE",
+  "IAG",
+  "COCK",
+  "CLOVE"
  ],
- "koios_calls": 11,
+ "koios_calls": 3,
  "blockfrost_calls": 0,
  "blockfrost_fallbacks": 0,
  "blockfrost_available": true,
