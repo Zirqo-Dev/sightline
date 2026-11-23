@@ -1,152 +1,23 @@
 {
- "at": "2026-11-23T19:12:48Z",
+ "at": "2026-11-23T21:10:43Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "coordinated_buys",
-   "ticker": "TOMZOEY",
-   "wallets": [
-    "w-08f13eb7",
-    "w-0f4c081d",
-    "w-1266725c",
-    "w-34618c98",
-    "w-398a9f5b",
-    "w-4703aad9",
-    "w-6cb04076",
-    "w-6f64ecef",
-    "w-85b19952",
-    "w-8c6f51f9",
-    "w-8f339097",
-    "w-91b28cd1",
-    "w-92ccd7f3",
-    "w-b0ccb4af",
-    "w-bf3f65df",
-    "w-c666e2c8",
-    "w-c7aaed03",
-    "w-dd5a5c74",
-    "w-ee705f92",
-    "w-f8ab5a39"
-   ],
-   "window_s": 120,
-   "at": "2026-11-23T19:12:48Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "TOMZOEY",
-   "wallets": [
-    "w-08f13eb7",
-    "w-1266725c",
-    "w-34618c98",
-    "w-398a9f5b",
-    "w-4703aad9",
-    "w-85b19952",
-    "w-8f339097",
-    "w-91b28cd1",
-    "w-92ccd7f3",
-    "w-b0ccb4af",
-    "w-bf3f65df",
-    "w-c666e2c8",
-    "w-dd5a5c74",
-    "w-ee705f92",
-    "w-f8ab5a39"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-23T19:12:48Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-6f64ecef",
-   "launches": [
-    "NJAK",
-    "TOMZOEY"
-   ],
-   "at": "2026-11-23T19:12:48Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "NJAK",
-   "wallet": "w-a2504504",
-   "tags": [],
-   "at": "2026-11-23T19:12:48Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "NJAK",
-   "wallet": "w-07a373d6",
-   "tags": [],
-   "at": "2026-11-23T19:12:48Z"
-  },
-  {
-   "kind": "holder_concentration",
-   "ticker": "HERO",
-   "top_addr_pct": 41.7,
-   "top_cluster_pct": 41.7,
-   "top_cluster": "w-8ef8072f",
-   "basis": "ex-fe819d",
-   "at": "2026-11-23T19:12:48Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "TOMZOEY",
-   "tag": "w-f3186187",
-   "delta": 29672184710528,
-   "new_position": true,
-   "curve_pct": 73.0,
-   "decimals": 6,
-   "qty": 29672184.7105,
-   "at": "2026-11-23T19:12:48Z"
-  },
-  {
    "kind": "whale_move",
    "ticker": "ASCEND",
    "tag": "w-f3186187",
-   "delta": 157784916,
+   "delta": 400681872,
    "decimals": 6,
-   "qty": 157.7849,
-   "ada_equiv": 252,
-   "value_basis": "ada_leg",
+   "qty": 400.6819,
+   "ada_equiv": 644,
+   "value_basis": "ada_leg_rate",
    "pct": 0.1,
-   "at": "2026-11-23T19:12:48Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "STRIKE",
-   "tag": "w-f3186187",
-   "delta": 51985,
-   "decimals": 6,
-   "qty": 0.052,
-   "ada_equiv": 0,
-   "value_basis": "decimals_x_price",
-   "dust": true,
-   "at": "2026-11-23T19:12:48Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "NSNEK",
-   "tag": "w-f3186187",
-   "delta": 3127235605656,
-   "new_position": true,
-   "curve_pct": 8.8,
-   "decimals": 6,
-   "qty": 3127235.6057,
-   "at": "2026-11-23T19:12:48Z"
+   "at": "2026-11-23T21:10:43Z"
   }
  ],
  "recent": [
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-d9bcb4ca",
-   "launches": [
-    "KURO",
-    "NOONOO",
-    "NSNEK",
-    "QUANT",
-    "ZAPZEKE"
-   ],
-   "at": "2026-11-16T09:11:09Z"
-  },
   {
    "kind": "sniper_full_exit",
    "ticker": "QUANT",
@@ -3329,11 +3200,22 @@
    "decimals": 6,
    "qty": 3127235.6057,
    "at": "2026-11-23T19:12:48Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 400681872,
+   "decimals": 6,
+   "qty": 400.6819,
+   "ada_equiv": 644,
+   "value_basis": "ada_leg_rate",
+   "pct": 0.1,
+   "at": "2026-11-23T21:10:43Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 1,
-  "koios": 20
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,
