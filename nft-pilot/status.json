@@ -12,12 +12,12 @@
       "stop": "call_cap"
     },
     "ethereum": {
-      "calls": 263,
+      "calls": 280,
       "pages": 2,
-      "passing": 10,
+      "passing": 9,
       "requested": true,
       "screened": 44,
-      "stop": "pass_target"
+      "stop": "call_cap"
     }
   },
   "commit_sha": "a85df13c3616ed529afb253c12b3b44d03e7f0a3",
@@ -42,9 +42,9 @@
     "gate2_window_hours": 72,
     "result": null
   },
-  "eth_usd": 1741.98532873,
+  "eth_usd": 1733.14,
   "eth_usd_runs": {
-    "chainlink": 298,
+    "chainlink": 299,
     "fallback": 1
   },
   "eth_usd_source": "chainlink",
@@ -52,54 +52,54 @@
     "liquid_tail": 0,
     "sales_truncated": 0
   },
-  "floor_passing_this_run": 10,
+  "floor_passing_this_run": 9,
   "kind": "status",
   "measured": true,
-  "median_cost": 0.15115895459182105,
-  "median_cost_seasoned": 0.15117343942125894,
+  "median_cost": 0.15112569451609908,
+  "median_cost_seasoned": 0.15116904535509712,
   "nh04": "not_ready",
   "nh04_ready": false,
   "nh04_verdict": "INCONCLUSIVE",
-  "null_cost_count": 654,
-  "null_cost_share": 0.3718021603183627,
+  "null_cost_count": 657,
+  "null_cost_share": 0.3713962690785755,
   "null_cost_share_max": 0.2,
-  "opensea_calls": 463,
+  "opensea_calls": 480,
   "outage_runs": 0,
   "pace_median": 14,
   "pace_ready": true,
   "partial": false,
   "passers_footnoted": 1,
-  "pending": 10,
+  "pending": 9,
   "pending_deferred": 0,
   "pending_served": 10,
-  "ran_at": "2026-11-23T03:27:12Z",
+  "ran_at": "2026-11-23T04:27:12Z",
   "rate_limit": {
     "limit": "120",
-    "remaining": "118",
-    "reset": "1795405052"
+    "remaining": "119",
+    "reset": "1795408364"
   },
   "raw": "not_kept",
   "reason": null,
   "rejections": {
     "bidders": 3,
-    "buyers": 17,
-    "concentration": 28,
+    "buyers": 18,
+    "concentration": 30,
     "contracts": 9,
     "disabled": 1,
-    "floor": 40,
-    "gas": 32,
-    "listings": 26,
+    "floor": 50,
+    "gas": 38,
+    "listings": 31,
     "mint": 0,
     "sales": 24,
     "shared": 13,
-    "standard": 8
+    "standard": 9
   },
-  "rule": "v0.3 GET /api/v2/collections order_by=market_cap limit=100 max_list_pages=8 pass_target=10 max_calls=480 chains=ethereum,base pace_per_minute=60 window=7d min_sales=30 min_buyers=10 max_buyer_share=0.20 min_bidders=3 bid_band=0.85 min_listings=5 floor_usd=250 gas_ratio=0.02 min_mint_days=14 event_pages=3 truncated=flag",
+  "rule": "v0.3-eth280 GET /api/v2/collections order_by=market_cap limit=100 max_list_pages=8 pass_target=10 max_calls=480 chains=ethereum,base pace_per_minute=60 window=7d min_sales=30 min_buyers=10 max_buyer_share=0.20 min_bidders=3 bid_band=0.85 min_listings=5 floor_usd=250 gas_ratio=0.02 min_mint_days=14 event_pages=3 truncated=flag",
   "schema_version": 1,
   "screened": 44,
   "status": "ok",
-  "stop": "pass_target",
-  "units": 1759,
+  "stop": "call_cap",
+  "units": 1769,
   "unsellable_share": 0.0,
-  "verdict_footnote": "253 of 1759 units: top seller or one day above 50% of 7d sales; ETH/USD source on measured runs: 298 Chainlink, 1 fallback (fallback USD not published; costs are ETH-only)"
+  "verdict_footnote": "254 of 1769 units: top seller or one day above 50% of 7d sales; ETH/USD source on measured runs: 299 Chainlink, 1 fallback (fallback USD not published; costs are ETH-only)"
 }
