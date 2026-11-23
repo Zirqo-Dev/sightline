@@ -10,7 +10,9 @@ from pathlib import Path
 from tools.replay.engine import (
     C,
     DESK_MODE,
+    DEVIATION_2H,
     RuleError,
+    _null_verdict,
     buy_quote,
     fills,
     format_report,
@@ -31,7 +33,9 @@ AT = datetime(2026, 11, 25, 15, 0, tzinfo=timezone.utc)
 
 def _bar(mint, t_s, sol, token=1000.0, rules=None, sells=2, age=3000, status=None, origin=None):
     bar = {"mint": mint, "t_s": t_s, "sol": sol, "token": token, "sells_h1": sells, "age_s": age}
-    if rules is not None:
+    if rules is None:
+        rules = {"s2": "pass"}
+    if rules is not False:
         bar["rules"] = rules
     if status is not None:
         bar["status"] = status
@@ -227,7 +231,7 @@ class Replay(unittest.TestCase):
         self.assertEqual(row["open_n"], 4)
         self.assertEqual(row["baseline"]["eligible_n"], 6)
         self.assertEqual(row["baseline"]["draws"], 1000)
-        self.assertGreater(row["baseline"]["percentile"], 90)
+        self.assertGreater(row["baseline"]["percentile_upper"], 90)
         self.assertEqual(row["baseline"]["cluster_by"], "overlap")
         self.assertEqual(row["baseline"]["statistic"], "sum")
         self.assertTrue(row["baseline"]["cluster_warning"])
@@ -240,7 +244,9 @@ class Replay(unittest.TestCase):
         self.assertEqual(len(hours), 1)
         self.assertEqual(format_report(first), format_report(second))
         self.assertIn("proxy inputs:", format_report(first))
-        self.assertIn("percentile=", format_report(first))
+        self.assertIn("percentile_upper=", format_report(first))
+        self.assertIn("holds past 2h cannot be resolved on v2 data", format_report(first))
+        self.assertIn("unresolved_share=", format_report(first))
         self.assertIn("effective_n=", format_report(first))
         self.assertIn("warning=fewer-than-5-clusters", format_report(first))
         # Caps do not bind: one winner the rule takes, one loser outside the rule's filter.
@@ -257,13 +263,13 @@ class Replay(unittest.TestCase):
         self.assertEqual(wide["skipped_open_cap"], 0)
         self.assertEqual(wide["skipped_day_cap"], 0)
         self.assertGreater(wide["baseline"]["base_universe_n"], wide["baseline"]["eligible_n"])
-        self.assertNotAlmostEqual(wide["baseline"]["null_mean"], wide["net_pnl"])
+        self.assertNotAlmostEqual(wide["baseline"]["null_mean_upper"], wide["net_upper"])
 
     def test_same_trade_at_0_and_125_bps(self):
         stop = C.EXIT["time_stop_min"] * 60
         bars = [_bar(MINT_A, T0, 100.0), _bar(MINT_A, T0 + stop, 100.0)]
-        plain = replay(bars, {"swap_fee_bps": 0, "rules": [_rule("a")]})["rules"][0]["net_pnl"]
-        charged = replay(bars, {"swap_fee_bps": 125, "rules": [_rule("a")]})["rules"][0]["net_pnl"]
+        plain = replay(bars, {"swap_fee_bps": 0, "rules": [_rule("a")]})["rules"][0]["net_upper"]
+        charged = replay(bars, {"swap_fee_bps": 125, "rules": [_rule("a")]})["rules"][0]["net_upper"]
         self.assertNotAlmostEqual(plain, charged)
         self.assertEqual(pumpswap_fee_bps(100), 125.0)
         self.assertEqual(pumpswap_fee_bps(98240), 30.0)
@@ -389,7 +395,8 @@ class Replay(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("rule synth-hold trades=1", proc.stdout)
-        self.assertIn("percentile=", proc.stdout)
+        self.assertIn("percentile_upper=", proc.stdout)
+        self.assertIn("unresolved_share=", proc.stdout)
         self.assertIn("effective_n=", proc.stdout)
         after = {p: p.stat().st_mtime_ns for p in FIXTURES.iterdir() if p.is_file()}
         self.assertEqual(before, after)
@@ -408,7 +415,8 @@ class Replay(unittest.TestCase):
         self.assertEqual(row["open_n"], 0)
         self.assertLess(row["net_lower"], 0)
         self.assertGreater(row["net_upper"], 0)
-        self.assertEqual(row["verdict"], "INCONCLUSIVE")
+        self.assertEqual(row["bounds"], "BOUNDS_DISAGREE")
+        self.assertIn(row["verdict"], {"NO_EVIDENCE", "BEATS_NULL", "WORSE"})
         self.assertIn("percentile_lower", row["baseline"])
         self.assertIn("percentile_upper", row["baseline"])
         self.assertIn("bootstrap_ci_lower", row["baseline"])
@@ -457,6 +465,75 @@ class Replay(unittest.TestCase):
                 )
         finally:
             eng.BLIND_UNTIL, load.BLIND_UNTIL = saved
+
+    def test_unresolved_frees_the_open_slot_for_a_later_entry(self):
+        gap = int(C.OUTAGE_VOID_H * 3600)
+        sol2 = _sol_for_return(100.0, 1000.0, 0.15)
+        bars = []
+        for i in range(4):
+            mint = f"SYNTH-W{i}"
+            bars.append(_bar(mint, T0, 100.0, sells=2))
+            bars.append(_bar(mint, T0 + 60, sol2, sells=2))
+        clock1 = T0 + 60 + gap + 10
+        bars.append(_bar("SYNTH-CLOCK1", clock1, 100.0, sells=0))
+        bars.append(_bar("SYNTH-W4", clock1, 100.0, sells=2))
+        bars.append(_bar("SYNTH-W4", clock1 + 60, sol2, sells=2))
+        clock2 = clock1 + 60 + gap + 10
+        bars.append(_bar("SYNTH-CLOCK2", clock2, 100.0, sells=0))
+        bars.append(_bar("SYNTH-W5", clock2, 100.0, sells=2))
+        row = replay(bars, {"rules": [_rule("slots", entry={"min_sells_h1": 1})]})["rules"][0]
+        self.assertEqual(row["unresolved_n"], 5)
+        self.assertEqual(row["open_n"], 1)
+        self.assertEqual(row["open"][0]["mint"], "SYNTH-W5")
+        self.assertEqual(row["skipped_open_cap"], 0)
+
+    def test_blind_guard_coerces_decimal_and_numpy(self):
+        from decimal import Decimal
+        late = {"mint": MINT_A, "t_s": Decimal(BLIND_START_S), "sol": 100.0, "token": 1000.0,
+                "sells_h1": 2, "rules": {"s2": "pass"}}
+        with self.assertRaises(RuleError):
+            replay([late], {"rules": [_rule("dec")]})
+        early = dict(late, t_s=Decimal(T0))
+        self.assertEqual(replay([early], {"rules": [_rule("early")]})["rules"][0]["open_n"], 1)
+        with self.assertRaises(RuleError):
+            replay([dict(late, t_s="not-a-time")], {"rules": [_rule("bad")]})
+        try:
+            import numpy as np
+        except ImportError:
+            self.skipTest("numpy absent")
+        with self.assertRaises(RuleError):
+            replay([dict(late, t_s=np.int64(BLIND_START_S))], {"rules": [_rule("np")]})
+
+    def test_percentiles_at_50_are_no_evidence(self):
+        self.assertEqual(_null_verdict(50, 50), "NO_EVIDENCE")
+        self.assertEqual(_null_verdict(95, 95), "BEATS_NULL")
+        self.assertEqual(_null_verdict(5, 5), "WORSE")
+        self.assertEqual(_null_verdict(96, 40), "NO_EVIDENCE")
+
+    def test_forced_120m_is_labelled_a_deviation(self):
+        sol2 = _sol_for_return(100.0, 1000.0, 0.15)
+        stop = C.EXIT["time_stop_min"] * 60
+        bars = [_bar(MINT_A, T0, 100.0), _bar(MINT_A, T0 + stop, sol2)]
+        row = replay(bars, {"rules": [_rule("forced", mode="desk_v65_2h")]})["rules"][0]
+        self.assertEqual(row["trades"][0]["exit_reason"], "time_stop")
+        self.assertEqual(row["deviation"], DEVIATION_2H)
+        self.assertIn(DEVIATION_2H, format_report({"proxy_inputs": "proxy inputs: x", "rules": [row]}))
+
+    def test_rule_cannot_enter_a_tiny_pool_without_rules_all_pass(self):
+        bars = [_bar(MINT_A, T0, 0.05, sells=2, rules={"s2": "pass"})]
+        row = replay(bars, {"rules": [_rule("tiny")]})["rules"][0]
+        self.assertEqual(row["n"] + row["open_n"] + row["unresolved_n"], 0)
+
+    def test_no_route_does_not_refresh_the_clock(self):
+        gap = int(C.OUTAGE_VOID_H * 3600)
+        bars = [
+            _bar(MINT_A, T0, 100.0, sells=2),
+            {"mint": MINT_A, "t_s": T0 + 30, "sol": None, "token": None, "error": "no_route"},
+            _bar(MINT_A, T0 + gap + 5, 100.0, sells=0),
+        ]
+        row = replay(bars, {"rules": [_rule("route", entry={"min_sells_h1": 1})]})["rules"][0]
+        self.assertEqual(row["unresolved_n"], 1)
+        self.assertEqual(row["open_n"], 0)
 
     def test_sources_do_not_open_the_network(self):
         import re

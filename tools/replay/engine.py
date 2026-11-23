@@ -39,7 +39,10 @@ DEFAULT_MAX_GAP_S = float(C.OUTAGE_VOID_H) * 3600.0
 MIN_DRAWS = 1000
 BOOTSTRAP_REPS = 1000
 DESK_MODE = "desk_v65"
+DESK_2H = "desk_v65_2h"
 FIXED_MODE = "fixed"
+DEVIATION_2H = "DEVIATION from v6.5: forced 120m exit"
+V2_HOLD_NOTE = "holds past 2h cannot be resolved on v2 data"
 # Canonical PumpSwap total, per side. https://pump.fun/docs/fees (16 November 2026).
 # Lower edge of each SOL market-cap tier, then the total fee in bps.
 DEFAULT_SWAP_FEE_BPS = 125.0
@@ -147,8 +150,8 @@ def _exit_mode(rule: dict) -> str:
         named = rule["exit"].get("mode")
     if named is None:
         return DESK_MODE
-    if named not in {DESK_MODE, FIXED_MODE}:
-        raise RuleError(f"rule {rule.get('id')}: exit mode must be {DESK_MODE} or {FIXED_MODE}")
+    if named not in {DESK_MODE, DESK_2H, FIXED_MODE}:
+        raise RuleError(f"rule {rule.get('id')}: exit mode must be {DESK_MODE}, {DESK_2H}, or {FIXED_MODE}")
     return named
 
 
@@ -379,7 +382,7 @@ def _status_of(bar: dict) -> str:
     return status
 
 
-def _mark_desk(book: dict, pos: dict, bar: dict, fee_override) -> None:
+def _mark_desk(book: dict, pos: dict, bar: dict, fee_override, force_120: bool = False) -> bool:
     status = _status_of(bar)
     fee = fee_bps_for(bar, fee_override)
     if status == "ok":
@@ -399,8 +402,14 @@ def _mark_desk(book: dict, pos: dict, bar: dict, fee_override) -> None:
     acts = exits.check(pos, mark, liq, int(bar["t_s"]), status)
     if any(why == "no_route_3x" for _a, _f, why, _p in acts):
         acts = [item for item in acts if item[2] != "no_route_3x"]
+    if force_120 and status == "ok" and pos["frac"] > 1e-12:
+        elapsed_min = (int(bar["t_s"]) - int(pos["opened"])) / 60.0
+        already = any(action == "sell" and not str(why).startswith("take_profit") for action, _f, why, _px in acts)
+        if elapsed_min >= float(C.EXIT["time_stop_min"]) and not already:
+            acts.append(("sell", pos["frac"], "time_stop", mark))
     _apply(book, pos, acts, pool, int(bar["t_s"]), fee_override)
-    return status != "temp_error"
+    # temp_error and no_route keep the previous clock. A later live bar is what moves last_t.
+    return status not in {"temp_error", "no_route"}
 
 
 def _mark_fixed(book: dict, pos: dict, bar: dict, exit_spec: dict, fee_override) -> bool:
@@ -415,7 +424,7 @@ def _mark_fixed(book: dict, pos: dict, bar: dict, exit_spec: dict, fee_override)
         acts = exits.check(pos, pos["last_mark"], None, int(bar["t_s"]), status)
         acts = [item for item in acts if item[2] != "no_route_3x"]
         _apply(book, pos, acts, None, int(bar["t_s"]), fee_override)
-        return status != "temp_error"
+        return status not in {"temp_error", "no_route"}
     mark = sell_mark(bar["sol"], bar["token"], pos["tokens"] * pos["frac"], fee)
     pos["peak"] = max(pos["peak"], mark)
     ret = mark / pos["entry"] - 1 if pos["entry"] else 0.0
@@ -451,7 +460,8 @@ def _try_enter(book: dict, bar: dict, rule: dict, fee_override, bound: dict, bas
     if book["cash"] < cost:
         book["skip_cash"] += 1
         return False
-    if len(book["open"]) + len(book["unresolved"]) >= C.MAX_OPEN_F:
+    # Unresolved names already left the book at unresolved_at. Only live positions use a slot.
+    if len(book["open"]) >= C.MAX_OPEN_F:
         book["skip_open"] += 1
         return False
     if book["fills"].get(day, 0) >= C.MAX_NEW_F_PER_DAY:
@@ -534,8 +544,10 @@ def _run_book(bars: list[dict], rule: dict, fee_override, rng: random.Random | N
             if mint not in book["open"]:
                 continue
             bar = grouped[mint][i]
-            if mode == DESK_MODE:
-                refresh = _mark_desk(book, book["open"][mint], bar, fee_override)
+            if mode in {DESK_MODE, DESK_2H}:
+                refresh = _mark_desk(
+                    book, book["open"][mint], bar, fee_override, force_120=(mode == DESK_2H),
+                )
             else:
                 refresh = _mark_fixed(book, book["open"][mint], bar, exit_spec, fee_override)
             if refresh and mint in book["open"]:
@@ -548,7 +560,7 @@ def _run_book(bars: list[dict], rule: dict, fee_override, rng: random.Random | N
             if baseline:
                 if not _desk_enterable(bar):
                     continue
-            elif not _pool_ok(bar) or not entry_match(bar, entry):
+            elif not _desk_enterable(bar) or not entry_match(bar, entry):
                 continue
             candidates.append(bar)
         if rng is None:
@@ -573,7 +585,7 @@ def _hour_counts(trades: list[dict]) -> Counter:
 
 
 def _eligible_n(bars: list[dict], entry: dict) -> int:
-    return sum(1 for bar in bars if _pool_ok(bar) and entry_match(bar, entry))
+    return sum(1 for bar in bars if _desk_enterable(bar) and entry_match(bar, entry))
 
 
 def _percentile(rule_net: float, nulls: list[float]):
@@ -761,17 +773,30 @@ def _round(value: float) -> float:
     return round(float(value), 9)
 
 
-def _refuse_blinded_bars(bars, _until=datetime(2026, 11, 25, 15, 0, tzinfo=timezone.utc)) -> None:
-    """Real UTC clock only. ``_until`` is bound here, so assigning BLIND_UNTIL later does nothing."""
+def _refuse_blinded_bars(
+    bars,
+    _until=datetime(2026, 11, 25, 15, 0, tzinfo=timezone.utc),
+    _start=int(datetime(2026, 10, 26, 0, 0, tzinfo=timezone.utc).timestamp()),
+) -> None:
+    """Real UTC clock only.
+
+    ``_until`` and ``_start`` are bound when this function is defined. Assigning
+    the module names later does not move them. Replacing ``__defaults__`` on the
+    function object still can; Python does not offer a stronger seal.
+    """
     if datetime.now(timezone.utc) >= _until:
         return
     for bar in bars or []:
-        if not isinstance(bar, dict):
+        if not isinstance(bar, dict) or "t_s" not in bar:
             continue
         stamp = bar.get("t_s")
-        if isinstance(stamp, bool) or not isinstance(stamp, (int, float)):
-            continue
-        if int(stamp) >= BLIND_START_S:
+        if isinstance(stamp, bool):
+            raise RuleError("refused: bar time cannot be read")
+        try:
+            stamp_i = int(stamp)
+        except (TypeError, ValueError):
+            raise RuleError("refused: bar time cannot be read")
+        if stamp_i >= _start:
             raise RuleError("refused: a bar is inside the blinded window")
 
 
@@ -783,13 +808,24 @@ def _sign(value: float) -> int:
     return 0
 
 
-def _bounds_verdict(lower: float, upper: float, p_lower, p_upper) -> str:
-    """INCONCLUSIVE when the loss bound and the mark bound disagree."""
+def _bounds_label(lower: float, upper: float, p_lower, p_upper) -> str:
+    """BOUNDS_DISAGREE when the loss bound and the mark bound disagree."""
     if _sign(lower) != _sign(upper):
-        return "INCONCLUSIVE"
+        return "BOUNDS_DISAGREE"
     if p_lower is not None and p_upper is not None and (p_lower - 50.0) * (p_upper - 50.0) < 0:
-        return "INCONCLUSIVE"
-    return "CONCLUSIVE"
+        return "BOUNDS_DISAGREE"
+    return "BOUNDS_AGREE"
+
+
+def _null_verdict(p_lower, p_upper) -> str:
+    """Both bounds must clear the same bar. 50/50 is not evidence."""
+    if p_lower is None or p_upper is None:
+        return "NO_EVIDENCE"
+    if p_lower >= 95.0 and p_upper >= 95.0:
+        return "BEATS_NULL"
+    if p_lower <= 5.0 and p_upper <= 5.0:
+        return "WORSE"
+    return "NO_EVIDENCE"
 
 
 def _reason_counts(trades: list[dict]) -> dict:
@@ -851,12 +887,15 @@ def replay(bars: list[dict], rules, seed: int | None = None, n_draws: int | None
         ci_lo_l, ci_hi_l, ci_lo_u, ci_hi_u, n_eff, n_clusters = _bootstrap(holds, rng)
         p_lower = _percentile(net_lower, null_lower)
         p_upper = _percentile(net_upper, null_upper)
-        verdict = _bounds_verdict(net_lower, net_upper, p_lower, p_upper)
+        entered = len(trades) + len(live["open"]) + len(live["unresolved"])
+        share = (len(live["unresolved"]) / entered) if entered else 0.0
         rows.append({
             "id": rule["id"],
+            "exit_mode": _exit_mode(rule),
             "n": len(trades),
             "open_n": len(live["open"]),
             "unresolved_n": len(live["unresolved"]),
+            "unresolved_share": _round(share),
             "open": [
                 {"mint": pos["mint"], "entry_t": int(pos["opened"]), "exit_fixed": pos["exit_fixed"]}
                 for pos in live["open"].values()
@@ -864,8 +903,10 @@ def replay(bars: list[dict], rules, seed: int | None = None, n_draws: int | None
             "hit_rate": _rate(trades),
             "net_lower": _round(net_lower),
             "net_upper": _round(net_upper),
-            "net_pnl": _round(net_upper),
-            "verdict": verdict,
+            "bounds": _bounds_label(net_lower, net_upper, p_lower, p_upper),
+            "verdict": _null_verdict(p_lower, p_upper),
+            "deviation": DEVIATION_2H if _exit_mode(rule) == DESK_2H else None,
+            "v2_hold_note": V2_HOLD_NOTE if _exit_mode(rule) == DESK_MODE else None,
             "gross_pnl": _round(sum(trade["gross_pnl"] for trade in trades) + sum(pos["gross"] for pos in live["open"].values())),
             "close_reasons": _reason_counts(trades),
             "trades": [_public_trade(trade) for trade in trades],
@@ -876,7 +917,6 @@ def replay(bars: list[dict], rules, seed: int | None = None, n_draws: int | None
                 "seed": seed,
                 "draws": n_draws,
                 "statistic": "sum",
-                "percentile": p_upper,
                 "percentile_lower": p_lower,
                 "percentile_upper": p_upper,
                 "null_mean": _round(sum(null_upper) / len(null_upper)) if null_upper else None,
@@ -936,9 +976,14 @@ def format_report(result: dict) -> str:
         lines.append(
             f"rule {row['id']} trades={row['n']} hit_rate={_fmt_rate(row['hit_rate'])} "
             f"net_lower={row['net_lower']:.9f} net_upper={row['net_upper']:.9f} "
-            f"unresolved_n={row['unresolved_n']} verdict={row['verdict']} "
+            f"unresolved_n={row['unresolved_n']} unresolved_share={row['unresolved_share']:.4f} "
+            f"bounds={row['bounds']} verdict={row['verdict']} "
             f"gross_pnl_sol={row['gross_pnl']:.9f}"
         )
+        if row.get("v2_hold_note"):
+            lines.append(f"note={row['v2_hold_note']}")
+        if row.get("deviation"):
+            lines.append(row["deviation"])
         reasons = row.get("close_reasons") or {}
         if reasons:
             lines.append("close_reasons " + " ".join(f"{name}={count}" for name, count in reasons.items()))
@@ -957,7 +1002,7 @@ def format_report(result: dict) -> str:
         lines.append(
             f"baseline {row['id']} draws={base['draws']} statistic={base.get('statistic', 'sum')} "
             f"percentile_lower={_pct('percentile_lower')} percentile_upper={_pct('percentile_upper')} "
-            f"percentile={_pct('percentile_upper')} null_mean_sol={mean} "
+            f"null_mean_sol={mean} "
             f"bootstrap_ci_lower={_fmt_ci(base.get('bootstrap_ci_lower'))} "
             f"bootstrap_ci_upper={_fmt_ci(base.get('bootstrap_ci_upper'))} "
             f"cluster={base['cluster_by']} effective_n={base['effective_n']:.4f} seed={base['seed']}{warn}"
