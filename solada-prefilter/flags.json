@@ -1,42 +1,22 @@
 {
- "at": "2026-11-23T13:11:40Z",
+ "at": "2026-11-23T15:11:30Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
    "kind": "whale_move",
-   "ticker": "SHARKY",
+   "ticker": "IAGONE",
    "tag": "w-f3186187",
-   "delta": 529738868747,
+   "delta": -31281004546065,
+   "curve_pct": 0.4,
    "decimals": 6,
-   "qty": 529738.8687,
-   "ada_equiv": 71,
-   "value_basis": "ada_leg",
-   "pct": 12.4,
-   "at": "2026-11-23T13:11:40Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "PERP COIN",
-   "tag": "w-f3186187",
-   "delta": 213773,
-   "decimals": 0,
-   "qty": 213773.0,
-   "ada_equiv": 17560088,
-   "value_basis": "decimals_x_price",
-   "pct": 6.3,
-   "at": "2026-11-23T13:11:40Z"
+   "qty": -31281004.5461,
+   "pct": 75.8,
+   "at": "2026-11-23T15:11:30Z"
   }
  ],
  "recent": [
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "NSNEK",
-   "wallet": "w-72db8230",
-   "tags": [],
-   "at": "2026-11-16T07:11:18Z"
-  },
   {
    "kind": "coordinated_buys",
    "ticker": "QUANT",
@@ -3212,10 +3192,21 @@
    "value_basis": "decimals_x_price",
    "pct": 6.3,
    "at": "2026-11-23T13:11:40Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "IAGONE",
+   "tag": "w-f3186187",
+   "delta": -31281004546065,
+   "curve_pct": 0.4,
+   "decimals": 6,
+   "qty": -31281004.5461,
+   "pct": 75.8,
+   "at": "2026-11-23T15:11:30Z"
   }
  ],
  "api_calls": {
-  "koios": 1
+  "koios": 2
  },
  "thresholds": {
   "enabled": true,
