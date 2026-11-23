@@ -1,11 +1,11 @@
 {
- "at": "2026-11-22T23:13:04Z",
+ "at": "2026-11-23T01:12:45Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14234870,
+ "height": 14235680,
  "baseline_at": "2026-11-14T17:13:24Z",
- "ada_balance": 2913.874325,
+ "ada_balance": 2409.452639,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 315000751404,
@@ -34,7 +34,7 @@
   "CHADDY": 16848771299364,
   "CLOVE-3": 12276457780863,
   "CNET": 31327824482276,
-  "COCK": 40315689,
+  "COCK": 40265689,
   "COCKLOCK": 50000000,
   "CSWAP": 394,
   "CTO Man": 51188,
@@ -100,7 +100,7 @@
   "WJB": 105272992,
   "cock-whale": 1,
   "cockwhale": 1,
-  "f5808c+f7db6b52": 182968822,
+  "f5808c+f7db6b52": 183835086,
   "fADA~47c42d": 4639030549,
   "fADA~daa59d": 4639030549,
   "tappy0352": 1,
@@ -142,7 +142,7 @@
   "CHADDY": 16848771299364,
   "CLOVE-3": 12276457780863,
   "CNET": 31327824482276,
-  "COCK": 40315689,
+  "COCK": 40265689,
   "COCKLOCK": 50000000,
   "CSWAP": 394,
   "CTO Man": 51188,
@@ -208,7 +208,7 @@
   "WJB": 105272992,
   "cock-whale": 1,
   "cockwhale": 1,
-  "f5808c+f7db6b52": 182968822,
+  "f5808c+f7db6b52": 183835086,
   "fADA~47c42d": 4639030549,
   "fADA~daa59d": 4639030549,
   "tappy0352": 1,
@@ -361,7 +361,7 @@
   {
    "token": "COCK",
    "policy": "49e42316",
-   "qty": 40315689
+   "qty": 40265689
   },
   {
    "token": "COCKLOCK",
@@ -691,7 +691,7 @@
   {
    "token": "f5808c+f7db6b52",
    "policy": "f5808c2c",
-   "qty": 182968822
+   "qty": 183835086
   },
   {
    "token": "fADA~47c42d",
@@ -8688,6 +8688,28 @@
    "opened_at": "2026-11-22T15:25:11Z",
    "own_stake": true,
    "closed_at": "2026-11-22T17:12:21Z"
+  },
+  "9a202ac43d#0": {
+   "ref_short": "9a202ac43d#0",
+   "token": "COCK",
+   "qty_raw": 50000,
+   "ada": 4.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "9a202ac43d",
+   "opened_at": "2026-11-22T23:48:08Z",
+   "own_stake": true,
+   "closed_at": "2026-11-23T01:12:45Z"
+  },
+  "660c20d70a#0": {
+   "ref_short": "660c20d70a#0",
+   "token": "ADA",
+   "qty_raw": 504000000,
+   "ada": 504.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "660c20d70a",
+   "opened_at": "2026-11-22T23:50:32Z",
+   "own_stake": true,
+   "closed_at": "2026-11-23T01:12:45Z"
   }
  },
  "rows": [
@@ -26190,6 +26212,46 @@
    "ada_leg": 202.317822,
    "counterparty_tag": null,
    "direction": "buy"
+  },
+  {
+   "time": "2026-11-22T23:48:08Z",
+   "tx_short": "992ea5e005",
+   "kind": "lp_add",
+   "token": "LP:minswap_v2",
+   "qty": 243586,
+   "ada_leg": 2.0,
+   "counterparty_tag": null
+  },
+  {
+   "time": "2026-11-22T23:48:08Z",
+   "tx_short": "9a202ac43d",
+   "kind": "order_open",
+   "token": "COCK",
+   "qty": 50000,
+   "ada_leg": 4.0,
+   "counterparty_tag": null,
+   "order_ref_short": "9a202ac43d#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-22T23:50:32Z",
+   "tx_short": "394f69940c",
+   "kind": "lp_add",
+   "token": "LP:minswap_v2",
+   "qty": 622678,
+   "ada_leg": 502.0,
+   "counterparty_tag": null
+  },
+  {
+   "time": "2026-11-22T23:50:32Z",
+   "tx_short": "660c20d70a",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 504000000,
+   "ada_leg": 504.0,
+   "counterparty_tag": null,
+   "order_ref_short": "660c20d70a#0",
+   "order_status": "open"
   }
  ],
  "capped": false,
@@ -26200,7 +26262,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 6,
+ "koios_calls": 7,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
