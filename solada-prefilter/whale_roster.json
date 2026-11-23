@@ -5,7 +5,7 @@
   "measured_factor": true,
   "min_sample": 8,
   "dormant_count": 15,
-  "asof": "2026-11-23T17:18:44Z",
+  "asof": "2026-11-23T19:20:15Z",
   "note": "Research tally. A hit is an observed checkpoint where every measured series (price and liquidity) moves the whale's way at +1h, +6h, or +24h. A wrong-way observation is a miss. No observation is unobserved and is not a miss. n_observed is hits plus misses. Rates stay blank under 8 observed checkpoints on that horizon in that tally. scores.live is the forward quote path, or the lead's published private-cache tally. scores.backfill is approximate: nearest desk-data ADA/qty within 20 minutes at 1h, 60 minutes at 6h, and 3 hours at 24h, plus pool ADA when a snapshot is in that window. Backfill never replaces live. eligible_for_active needs at least 25 live observed checkpoints and a live hit rate above 55% at both 6h and 24h. promising_backfill means the approximate tally alone would clear that bar. Nothing is promoted automatically. Not a buy signal.",
   "whales": [
     {
@@ -13,28 +13,28 @@
       "role": "lead",
       "status": "active",
       "eligible_for_active": false,
-      "eligible_reason": "not eligible: live 6h observed 200, rate 0.465 (need > 0.55); live 24h observed 151, rate 0.43 (need > 0.55); promotion is a manual owner decision",
+      "eligible_reason": "not eligible: live 6h observed 205, rate 0.459 (need > 0.55); live 24h observed 152, rate 0.428 (need > 0.55); promotion is a manual owner decision",
       "promising_backfill": false,
       "scores": {
-        "events": 2278,
-        "accumulate": 2260,
+        "events": 2296,
+        "accumulate": 2278,
         "trim": 0,
         "exit": 18,
         "live": {
           "h1": {
-            "n_observed": 164,
+            "n_observed": 168,
             "hits": 83,
-            "hit_rate": 0.506
+            "hit_rate": 0.494
           },
           "h6": {
-            "n_observed": 200,
-            "hits": 93,
-            "hit_rate": 0.465
+            "n_observed": 205,
+            "hits": 94,
+            "hit_rate": 0.459
           },
           "h24": {
-            "n_observed": 151,
+            "n_observed": 152,
             "hits": 65,
-            "hit_rate": 0.43
+            "hit_rate": 0.428
           }
         },
         "backfill": {
@@ -56,18 +56,18 @@
           "approximate": true,
           "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
         },
-        "n_observed_h1": 164,
-        "priced_h1": 164,
+        "n_observed_h1": 168,
+        "priced_h1": 168,
         "hits_h1": 83,
-        "hit_rate_h1": 0.506,
-        "n_observed_h6": 200,
-        "priced_h6": 200,
-        "hits_h6": 93,
-        "hit_rate_h6": 0.465,
-        "n_observed_h24": 151,
-        "priced_h24": 151,
+        "hit_rate_h1": 0.494,
+        "n_observed_h6": 205,
+        "priced_h6": 205,
+        "hits_h6": 94,
+        "hit_rate_h6": 0.459,
+        "n_observed_h24": 152,
+        "priced_h24": 152,
         "hits_h24": 65,
-        "hit_rate_h24": 0.43,
+        "hit_rate_h24": 0.428,
         "small_sample": false,
         "social_moves_matched": null
       }
@@ -103,14 +103,14 @@
         },
         "backfill": {
           "h1": {
-            "n_observed": 51,
-            "hits": 17,
-            "hit_rate": 0.333
+            "n_observed": 53,
+            "hits": 18,
+            "hit_rate": 0.34
           },
           "h6": {
-            "n_observed": 69,
+            "n_observed": 70,
             "hits": 26,
-            "hit_rate": 0.377
+            "hit_rate": 0.371
           },
           "h24": {
             "n_observed": 68,
@@ -457,63 +457,63 @@
       }
     },
     {
-      "codename": "Wry Stoat",
+      "codename": "Lucky Corgi",
       "role": "watch",
       "status": "candidate",
       "eligible_for_active": false,
-      "eligible_reason": "not eligible: live 6h observed 3 (need 25), rate blank (need > 0.55); live 24h observed 2 (need 25), rate blank (need > 0.55); promotion is a manual owner decision",
+      "eligible_reason": "not eligible: live 6h observed 0 (need 25), rate blank (need > 0.55); live 24h observed 0 (need 25), rate blank (need > 0.55); promotion is a manual owner decision",
       "promising_backfill": false,
       "scores": {
-        "events": 36,
-        "accumulate": 14,
-        "trim": 22,
+        "events": 47,
+        "accumulate": 23,
+        "trim": 24,
         "exit": 0,
         "live": {
           "h1": {
-            "n_observed": 3,
-            "hits": 3,
+            "n_observed": 0,
+            "hits": 0,
             "hit_rate": null
           },
           "h6": {
-            "n_observed": 3,
-            "hits": 2,
+            "n_observed": 0,
+            "hits": 0,
             "hit_rate": null
           },
           "h24": {
-            "n_observed": 2,
+            "n_observed": 0,
             "hits": 0,
             "hit_rate": null
           }
         },
         "backfill": {
           "h1": {
-            "n_observed": 20,
-            "hits": 13,
-            "hit_rate": 0.65
+            "n_observed": 41,
+            "hits": 17,
+            "hit_rate": 0.415
           },
           "h6": {
-            "n_observed": 28,
-            "hits": 12,
-            "hit_rate": 0.429
+            "n_observed": 44,
+            "hits": 20,
+            "hit_rate": 0.455
           },
           "h24": {
-            "n_observed": 30,
-            "hits": 13,
-            "hit_rate": 0.433
+            "n_observed": 39,
+            "hits": 19,
+            "hit_rate": 0.487
           },
           "approximate": true,
           "note": "Approximate backfill from desk-data prints (ADA/qty and pool ADA), not a live quote."
         },
-        "n_observed_h1": 3,
-        "priced_h1": 3,
-        "hits_h1": 3,
+        "n_observed_h1": 0,
+        "priced_h1": 0,
+        "hits_h1": 0,
         "hit_rate_h1": null,
-        "n_observed_h6": 3,
-        "priced_h6": 3,
-        "hits_h6": 2,
+        "n_observed_h6": 0,
+        "priced_h6": 0,
+        "hits_h6": 0,
         "hit_rate_h6": null,
-        "n_observed_h24": 2,
-        "priced_h24": 2,
+        "n_observed_h24": 0,
+        "priced_h24": 0,
         "hits_h24": 0,
         "hit_rate_h24": null,
         "small_sample": true,
