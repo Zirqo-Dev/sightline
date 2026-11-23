@@ -6,7 +6,7 @@ import sys
 import unittest
 from pathlib import Path
 
-from tools.idle_books_check import idle_lines, load_state, main
+from tools.idle_books_check import _floors, idle_lines, load_state, main
 
 ROOT = Path(__file__).resolve().parents[2]
 NOW = 1_710_000_000
@@ -47,7 +47,7 @@ class IdleBooks(unittest.TestCase):
         ]))
         lines = idle_lines(load_state(root), NOW)
         self.assertEqual(lines, [
-            "IDLE book=F reason=cash_below_floor=no; passing leads in the last 24h with zero entries (leads=1 entries=0)",
+            "IDLE book=F reason=cash_below_floor=no; cash_below_cheapest=no; passing leads in the last 24h with zero entries (leads=1 entries=0)",
         ])
         _no_amounts(lines)
 
@@ -67,7 +67,7 @@ class IdleBooks(unittest.TestCase):
         _write(root, "tasks.csv", "time,result,book\n")
         lines = idle_lines(load_state(root), NOW)
         self.assertEqual(lines, [
-            "IDLE book=F reason=cash_below_floor=yes",
+            "IDLE book=F reason=cash_below_floor=yes; cash_below_cheapest=yes",
         ])
         _no_amounts(lines)
 
@@ -79,7 +79,7 @@ class IdleBooks(unittest.TestCase):
         _write(root, "tasks.csv", f"time,result,book\n{NOW - 10},pass,\n")
         lines = idle_lines(load_state(root), NOW)
         self.assertEqual(lines, [
-            "IDLE book=F reason=cash_below_floor=yes; passing leads in the last 24h with zero entries (leads=1 entries=0)",
+            "IDLE book=F reason=cash_below_floor=yes; cash_below_cheapest=yes; passing leads in the last 24h with zero entries (leads=1 entries=0)",
         ])
         _no_amounts(lines)
 
@@ -95,8 +95,8 @@ class IdleBooks(unittest.TestCase):
         _write(root, "tasks.csv", f"time,result,book\n{NOW - 60},pass,\n")
         lines = idle_lines(load_state(root), NOW)
         self.assertEqual(lines, [
-            "CAPPED book=F reason=open_cap cash_below_floor=no",
-            "CAPPED book=S reason=day_cap cash_below_floor=no",
+            "CAPPED book=F reason=open_cap cash_below_floor=no cash_below_cheapest=no",
+            "CAPPED book=S reason=day_cap cash_below_floor=no cash_below_cheapest=no",
         ])
         _no_amounts(lines)
 
@@ -136,7 +136,7 @@ class IdleBooks(unittest.TestCase):
         _write(root, "tasks.csv", f"time,result,book\n{NOW - 60},pass,F\n")
         lines = idle_lines(load_state(root), NOW)
         self.assertEqual(lines, [
-            "IDLE book=F reason=cash_below_floor=no; passing leads in the last 24h with zero entries (leads=1 entries=0)",
+            "IDLE book=F reason=cash_below_floor=no; cash_below_cheapest=no; passing leads in the last 24h with zero entries (leads=1 entries=0)",
         ])
 
     def test_cli_is_read_only_and_returns_status(self):
@@ -154,7 +154,7 @@ class IdleBooks(unittest.TestCase):
         self.assertEqual(proc.returncode, 1, proc.stderr)
         self.assertEqual(
             proc.stdout,
-            "IDLE book=F reason=cash_below_floor=no; passing leads in the last 24h with zero entries (leads=1 entries=0)\n",
+            "IDLE book=F reason=cash_below_floor=no; cash_below_cheapest=no; passing leads in the last 24h with zero entries (leads=1 entries=0)\n",
         )
         self.assertNotIn("9.0", proc.stdout)
         self.assertEqual(sorted(p.name for p in root.iterdir()), before)
@@ -182,7 +182,50 @@ class IdleBooks(unittest.TestCase):
         missing_pool = self._dir()
         _write(missing_pool, "positions.json", '{"books": {"F": {"cash": 9, "open": {}}}}')
         _write(missing_pool, "tasks.csv", "time,result,book\n")
-        self.assertEqual(main(["--data-dir", str(missing_pool), "--now", str(NOW)]), 2)
+        self.assertEqual(main(["--data-dir", str(missing_pool), "--now", str(NOW)]), 0)
+
+    def test_desk_shaped_book_uses_the_ten_sol_floor(self):
+        floor, cheapest = _floors()
+        self.assertGreater(floor, cheapest)
+        mid = (floor + cheapest) / 2
+        root = self._dir()
+        _write(root, "positions.json", json.dumps({
+            "books": {
+                "F": {
+                    "cash": mid,
+                    "open": {
+                        "F-run-aaaa": {
+                            "mint": "SYNTHMINT00000000000000000000000001",
+                            "liq0": 40.0,
+                            "opened": NOW - 3 * DAY,
+                            "entry_cost": floor,
+                        }
+                    },
+                    "closed": [],
+                    "fills_today": 0,
+                }
+            }
+        }))
+        _write(root, "tasks.csv", f"time,result,book\n{NOW - 60},pass,F\n")
+        lines = idle_lines(load_state(root), NOW)
+        self.assertEqual(lines, [
+            "IDLE book=F reason=cash_below_floor=yes; cash_below_cheapest=no; "
+            "passing leads in the last 24h with zero entries (leads=1 entries=0)",
+        ])
+        _no_amounts(lines)
+        healthy = self._dir()
+        _write(healthy, "positions.json", json.dumps({
+            "books": {
+                "F": {
+                    "cash": 9.0,
+                    "open": {"F-run-bbbb": {"mint": "SYNTHMINT00000000000000000000000002", "liq0": 80.0, "opened": NOW - 3 * DAY}},
+                    "closed": [],
+                    "fills_today": 1,
+                }
+            }
+        }))
+        _write(healthy, "tasks.csv", "time,result,book\n")
+        self.assertEqual(main(["--data-dir", str(healthy), "--now", str(NOW)]), 0)
 
 
 if __name__ == "__main__":

@@ -1,10 +1,12 @@
 """Read-only idle check for paper books.
 
 Prints one IDLE line when a book had passing leads and zero entries over the
-window (24h by default), or when its cash is below entry_cost. A book that
-missed entries only because it is at the open cap or the daily cap is CAPPED.
-Cash is reported as cash_below_floor=yes or no, never as an amount. Does not
-write, does not use the network, and is not on a schedule.
+window (24h by default), or when its cash is below entry_cost at the desk's
+smallest enterable pool (10 SOL). A second flag compares cash with the cheapest
+entry cost, the cost with no pool-impact term. A book that missed entries only
+because it is at the open cap or the daily cap is CAPPED. Cash is reported as
+cash_below_floor=yes|no and cash_below_cheapest=yes|no, never as an amount.
+Does not write, does not use the network, and is not on a schedule.
 
   python3 tools/idle_books_check.py --data-dir DIR [--now EPOCH|ISO] [--window-hours 24]
 
@@ -210,13 +212,19 @@ def _desk():
     return C, fills
 
 
-def _entry_floor(pool_sol) -> float:
-    """entry_cost for this book's own pool. No stand-in pool and not the bare ticket."""
-    if pool_sol is None:
-        raise ValueError("missing pool size")
-    _C, fills = _desk()
-    cost, _haircut = fills.entry_cost(pool_sol)
-    return float(cost)
+def _floors() -> tuple[float, float]:
+    """Floor at the 10 SOL pool, and the cheapest entry (no impact term).
+
+    Desk books store pool size on each position, not on the book. The floor is
+    entry_cost at the smallest pool the desk will enter, not a per-position size.
+    """
+    C, fills = _desk()
+    smallest = C.SKIP_IF["min_quote_liquidity_sol"]
+    if smallest is None:
+        raise ValueError("missing pool floor")
+    floor, _haircut = fills.entry_cost(float(smallest))
+    cheapest, _haircut = fills.entry_cost(None)
+    return float(floor), float(cheapest)
 
 
 def _pool_size(book: dict):
@@ -271,8 +279,6 @@ def load_state(data_dir: Path) -> dict:
     for book in books.values():
         if book.get("ticket") is None:
             book["ticket"] = ticket
-        if book.get("cash") is not None and book.get("pool_sol") is None:
-            raise ValueError("missing pool size")
     leads = _leads_from_tasks(tasks_path)
     return {"books": books, "leads": leads, "ticket": ticket}
 
@@ -290,17 +296,19 @@ def _entries_for(book: dict, now: float, window_s: float) -> int:
 
 
 def idle_lines(state: dict, now: float, window_s: float = WINDOW_H * 3600) -> list[str]:
-    """One line per idle or capped book. Cash is only cash_below_floor=yes|no."""
+    """One line per idle or capped book. Cash is only yes or no, never an amount."""
     C, _fills = _desk()
+    floor, cheapest = _floors()
     hours = window_s / 3600
     hour_label = str(int(hours)) if hours == int(hours) else str(hours)
     lines = []
     for name in sorted(state["books"]):
         book = state["books"][name]
-        floor = _entry_floor(book.get("pool_sol"))
         cash = book.get("cash")
         below = cash is not None and cash < floor
+        below_cheap = cash is not None and cash < cheapest
         flag = "yes" if below else "no"
+        cheap_flag = "yes" if below_cheap else "no"
         leads = _leads_for(name, state["leads"], now, window_s)
         entries = _entries_for(book, now, window_s)
         lead_idle = leads > 0 and entries == 0
@@ -310,7 +318,7 @@ def idle_lines(state: dict, now: float, window_s: float = WINDOW_H * 3600) -> li
         at_day = fills_today is not None and fills_today >= C.MAX_NEW_F_PER_DAY
         capped = lead_idle and not below and (at_open or at_day)
         if below or (lead_idle and not capped):
-            parts = [f"cash_below_floor={flag}"]
+            parts = [f"cash_below_floor={flag}", f"cash_below_cheapest={cheap_flag}"]
             if lead_idle:
                 parts.append(
                     f"passing leads in the last {hour_label}h with zero entries (leads={leads} entries=0)"
@@ -318,7 +326,9 @@ def idle_lines(state: dict, now: float, window_s: float = WINDOW_H * 3600) -> li
             lines.append(f"IDLE book={name} reason={'; '.join(parts)}")
         elif capped:
             which = ",".join([label for label, on in (("open_cap", at_open), ("day_cap", at_day)) if on])
-            lines.append(f"CAPPED book={name} reason={which} cash_below_floor={flag}")
+            lines.append(
+                f"CAPPED book={name} reason={which} cash_below_floor={flag} cash_below_cheapest={cheap_flag}"
+            )
     return lines
 
 

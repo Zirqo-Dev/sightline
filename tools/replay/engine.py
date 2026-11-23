@@ -452,8 +452,18 @@ def _mark_fixed(book: dict, pos: dict, bar: dict, exit_spec: dict, fee_override)
     return True
 
 
+def _held_mints(book: dict) -> set:
+    """Open names and unresolved names. A closed trade is not held."""
+    held = set(book["open"])
+    for pos in book["unresolved"]:
+        mint = pos.get("mint")
+        if mint:
+            held.add(mint)
+    return held
+
+
 def _try_enter(book: dict, bar: dict, rule: dict, fee_override, bound: dict, baseline: bool) -> bool:
-    if bar["mint"] in book["open"] or not _pool_ok(bar):
+    if bar["mint"] in _held_mints(book) or not _pool_ok(bar):
         return False
     day, _hour = _day_hour(bar["t_s"])
     cost, haircut = fills.entry_cost(bar["sol"])
@@ -552,9 +562,10 @@ def _run_book(bars: list[dict], rule: dict, fee_override, rng: random.Random | N
                 refresh = _mark_fixed(book, book["open"][mint], bar, exit_spec, fee_override)
             if refresh and mint in book["open"]:
                 book["open"][mint]["last_t"] = int(bar["t_s"])
+        held = _held_mints(book)
         candidates = []
         for _t, mint, i in batch:
-            if mint in busy or mint in book["open"]:
+            if mint in busy or mint in held:
                 continue
             bar = grouped[mint][i]
             if baseline:
@@ -787,14 +798,16 @@ def _refuse_blinded_bars(
     if datetime.now(timezone.utc) >= _until:
         return
     for bar in bars or []:
-        if not isinstance(bar, dict) or "t_s" not in bar:
+        if not isinstance(bar, dict):
             continue
+        if "t_s" not in bar:
+            raise RuleError("refused: bar time cannot be read")
         stamp = bar.get("t_s")
-        if isinstance(stamp, bool):
+        if isinstance(stamp, bool) or stamp is None:
             raise RuleError("refused: bar time cannot be read")
         try:
             stamp_i = int(stamp)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError, ArithmeticError):
             raise RuleError("refused: bar time cannot be read")
         if stamp_i >= _start:
             raise RuleError("refused: a bar is inside the blinded window")
@@ -878,17 +891,21 @@ def replay(bars: list[dict], rules, seed: int | None = None, n_draws: int | None
         rng = random.Random(seed)
         null_lower = []
         null_upper = []
+        null_shares = []
         for _ in range(n_draws):
             remaining = Counter(counts)
             draw = _run_book(bars, rule, override, rng=rng, remaining=remaining, baseline=True)
             lo_n, hi_n = _book_bounds(draw)
             null_lower.append(lo_n)
             null_upper.append(hi_n)
+            drawn = len(draw["trades"]) + len(draw["open"]) + len(draw["unresolved"])
+            null_shares.append((len(draw["unresolved"]) / drawn) if drawn else 0.0)
         ci_lo_l, ci_hi_l, ci_lo_u, ci_hi_u, n_eff, n_clusters = _bootstrap(holds, rng)
         p_lower = _percentile(net_lower, null_lower)
         p_upper = _percentile(net_upper, null_upper)
         entered = len(trades) + len(live["open"]) + len(live["unresolved"])
         share = (len(live["unresolved"]) / entered) if entered else 0.0
+        locked = sum(float(pos.get("entry_cost") or 0.0) for pos in live["unresolved"])
         rows.append({
             "id": rule["id"],
             "exit_mode": _exit_mode(rule),
@@ -896,6 +913,7 @@ def replay(bars: list[dict], rules, seed: int | None = None, n_draws: int | None
             "open_n": len(live["open"]),
             "unresolved_n": len(live["unresolved"]),
             "unresolved_share": _round(share),
+            "cash_locked_unresolved": _round(locked),
             "open": [
                 {"mint": pos["mint"], "entry_t": int(pos["opened"]), "exit_fixed": pos["exit_fixed"]}
                 for pos in live["open"].values()
@@ -919,13 +937,9 @@ def replay(bars: list[dict], rules, seed: int | None = None, n_draws: int | None
                 "statistic": "sum",
                 "percentile_lower": p_lower,
                 "percentile_upper": p_upper,
-                "null_mean": _round(sum(null_upper) / len(null_upper)) if null_upper else None,
                 "null_mean_lower": _round(sum(null_lower) / len(null_lower)) if null_lower else None,
                 "null_mean_upper": _round(sum(null_upper) / len(null_upper)) if null_upper else None,
-                "bootstrap_ci": [
-                    None if ci_lo_u is None else _round(ci_lo_u),
-                    None if ci_hi_u is None else _round(ci_hi_u),
-                ],
+                "unresolved_share": _round(sum(null_shares) / len(null_shares)) if null_shares else 0.0,
                 "bootstrap_ci_lower": [
                     None if ci_lo_l is None else _round(ci_lo_l),
                     None if ci_hi_l is None else _round(ci_hi_l),
@@ -977,6 +991,7 @@ def format_report(result: dict) -> str:
             f"rule {row['id']} trades={row['n']} hit_rate={_fmt_rate(row['hit_rate'])} "
             f"net_lower={row['net_lower']:.9f} net_upper={row['net_upper']:.9f} "
             f"unresolved_n={row['unresolved_n']} unresolved_share={row['unresolved_share']:.4f} "
+            f"cash_locked_unresolved_sol={row.get('cash_locked_unresolved', 0):.9f} "
             f"bounds={row['bounds']} verdict={row['verdict']} "
             f"gross_pnl_sol={row['gross_pnl']:.9f}"
         )
@@ -997,12 +1012,17 @@ def format_report(result: dict) -> str:
         def _pct(key):
             value = base.get(key)
             return "n/a" if value is None else f"{value:.2f}"
-        mean = "n/a" if base["null_mean"] is None else f"{base['null_mean']:.9f}"
+        def _sol(key):
+            value = base.get(key)
+            return "n/a" if value is None else f"{value:.9f}"
+        null_share = base.get("unresolved_share")
+        null_share_s = "n/a" if null_share is None else f"{null_share:.4f}"
         warn = " warning=fewer-than-5-clusters" if base.get("cluster_warning") else ""
         lines.append(
             f"baseline {row['id']} draws={base['draws']} statistic={base.get('statistic', 'sum')} "
             f"percentile_lower={_pct('percentile_lower')} percentile_upper={_pct('percentile_upper')} "
-            f"null_mean_sol={mean} "
+            f"null_mean_lower_sol={_sol('null_mean_lower')} null_mean_upper_sol={_sol('null_mean_upper')} "
+            f"null_unresolved_share={null_share_s} "
             f"bootstrap_ci_lower={_fmt_ci(base.get('bootstrap_ci_lower'))} "
             f"bootstrap_ci_upper={_fmt_ci(base.get('bootstrap_ci_upper'))} "
             f"cluster={base['cluster_by']} effective_n={base['effective_n']:.4f} seed={base['seed']}{warn}"

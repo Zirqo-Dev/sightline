@@ -237,7 +237,9 @@ class Replay(unittest.TestCase):
         self.assertTrue(row["baseline"]["cluster_warning"])
         self.assertLess(row["baseline"]["n_clusters"], 5)
         self.assertAlmostEqual(row["baseline"]["effective_n"], 1.0)
-        lo, hi = row["baseline"]["bootstrap_ci"]
+        lo, hi = row["baseline"]["bootstrap_ci_upper"]
+        self.assertNotIn("bootstrap_ci", row["baseline"])
+        self.assertNotIn("null_mean", row["baseline"])
         self.assertLessEqual(lo, hi)
         self.assertEqual({t["mint"] for t in row["open"]}, {"SYNTH-A", "SYNTH-B", "SYNTH-C", "SYNTH-D"})
         hours = set(row["baseline"]["hour_counts"])
@@ -534,6 +536,57 @@ class Replay(unittest.TestCase):
         row = replay(bars, {"rules": [_rule("route", entry={"min_sells_h1": 1})]})["rules"][0]
         self.assertEqual(row["unresolved_n"], 1)
         self.assertEqual(row["open_n"], 0)
+
+    def test_unresolved_mint_is_not_reentered(self):
+        gap = int(C.OUTAGE_VOID_H * 3600)
+        sol2 = _sol_for_return(100.0, 1000.0, 0.15)
+        later = T0 + 60 + gap + 10
+        bars = [
+            _bar(MINT_A, T0, 100.0, sells=2),
+            _bar(MINT_A, T0 + 60, sol2, sells=2),
+            _bar(MINT_A, later, 100.0, sells=2),
+            _bar(MINT_B, later, 100.0, sells=2),
+        ]
+        row = replay(bars, {"rules": [_rule("held", entry={"min_sells_h1": 1})]})["rules"][0]
+        self.assertEqual(row["unresolved_n"], 1)
+        self.assertEqual(row["open_n"], 1)
+        self.assertEqual(row["open"][0]["mint"], MINT_B)
+        cost, _haircut = fills.entry_cost(100.0)
+        self.assertAlmostEqual(row["cash_locked_unresolved"], cost)
+
+    def test_fixed_mode_and_null_report_unresolved_share(self):
+        late = T0 + 10000
+        bars = [
+            _bar(MINT_A, T0, 100.0, sells=2),
+            _bar(MINT_B, late, 100.0, sells=0),
+        ]
+        rule = _rule("fixgap", mode="fixed", exit_spec={"max_hold_s": 10**6, "max_gap_s": 3600})
+        result = replay(bars, {"rules": [rule]})
+        row = result["rules"][0]
+        self.assertEqual(row["exit_mode"], "fixed")
+        self.assertEqual(row["unresolved_n"], 1)
+        self.assertAlmostEqual(row["unresolved_share"], 1.0)
+        self.assertGreater(row["cash_locked_unresolved"], 0.5)
+        self.assertIn("unresolved_share", row["baseline"])
+        text = format_report(result)
+        self.assertIn("unresolved_share=1.0000", text)
+        self.assertIn("null_unresolved_share=", text)
+        self.assertIn("null_mean_lower_sol=", text)
+        self.assertIn("null_mean_upper_sol=", text)
+        self.assertNotIn("null_mean_sol=", text)
+        self.assertNotIn("null_mean", row["baseline"])
+        self.assertNotIn("bootstrap_ci", row["baseline"])
+
+    def test_infinity_and_missing_time_are_refusals(self):
+        rules = {"rules": [_rule("bad")]}
+        live = {"mint": MINT_A, "sol": 100.0, "token": 1000.0, "sells_h1": 2, "rules": {"s2": "pass"}}
+        for stamp in (float("inf"), float("-inf")):
+            with self.assertRaises(RuleError) as caught:
+                replay([dict(live, t_s=stamp)], rules)
+            self.assertIn("refused", str(caught.exception))
+        with self.assertRaises(RuleError) as missing:
+            replay([live], rules)
+        self.assertIn("refused", str(missing.exception))
 
     def test_sources_do_not_open_the_network(self):
         import re
