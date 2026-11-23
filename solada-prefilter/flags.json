@@ -1,37 +1,47 @@
 {
- "at": "2026-11-23T01:11:03Z",
+ "at": "2026-11-23T03:11:00Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
- "new": [],
+ "new": [
+  {
+   "kind": "whale_move",
+   "ticker": "NIGHT",
+   "tag": "w-f3186187",
+   "delta": -10000000000,
+   "decimals": 6,
+   "qty": -10000.0,
+   "ada_equiv": 3379,
+   "value_basis": "ada_leg",
+   "pct": 0.7,
+   "at": "2026-11-23T03:11:00Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "FLOW",
+   "tag": "w-f3186187",
+   "delta": 510947336,
+   "decimals": 6,
+   "qty": 510.9473,
+   "ada_equiv": 4196,
+   "value_basis": "ada_leg_rate",
+   "pct": 0.1,
+   "at": "2026-11-23T03:11:00Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "SHARKY",
+   "tag": "w-f3186187",
+   "delta": 618283392291,
+   "decimals": 6,
+   "qty": 618283.3923,
+   "ada_equiv": 71,
+   "value_basis": "ada_leg",
+   "pct": 31.0,
+   "at": "2026-11-23T03:11:00Z"
+  }
+ ],
  "recent": [
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-7748cd2e",
-   "launches": [
-    "NSNEK",
-    "ZAPZEKE"
-   ],
-   "at": "2026-11-16T07:11:18Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-9e14bd16",
-   "launches": [
-    "FLY",
-    "NSNEK"
-   ],
-   "at": "2026-11-16T07:11:18Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-a63fd8a9",
-   "launches": [
-    "MHOSKY",
-    "NSNEK"
-   ],
-   "at": "2026-11-16T07:11:18Z"
-  },
   {
    "kind": "repeat_early_buyer",
    "wallet": "w-b90abe62",
@@ -3156,6 +3166,42 @@
    "wallet": "w-03f22a75",
    "tags": [],
    "at": "2026-11-22T21:11:04Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "NIGHT",
+   "tag": "w-f3186187",
+   "delta": -10000000000,
+   "decimals": 6,
+   "qty": -10000.0,
+   "ada_equiv": 3379,
+   "value_basis": "ada_leg",
+   "pct": 0.7,
+   "at": "2026-11-23T03:11:00Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "FLOW",
+   "tag": "w-f3186187",
+   "delta": 510947336,
+   "decimals": 6,
+   "qty": 510.9473,
+   "ada_equiv": 4196,
+   "value_basis": "ada_leg_rate",
+   "pct": 0.1,
+   "at": "2026-11-23T03:11:00Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "SHARKY",
+   "tag": "w-f3186187",
+   "delta": 618283392291,
+   "decimals": 6,
+   "qty": 618283.3923,
+   "ada_equiv": 71,
+   "value_basis": "ada_leg",
+   "pct": 31.0,
+   "at": "2026-11-23T03:11:00Z"
   }
  ],
  "api_calls": {
