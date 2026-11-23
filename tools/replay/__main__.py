@@ -1,11 +1,10 @@
 """Read-only replay CLI.
 
   python3 -m tools.replay --series PATH --rules FILE [--seed N] [--json]
-      [--allow-blinded-window]
 
 PATH is a directory (or one file) of manifest-* and pool-snaps-* jsonl.
 FILE is a rule config. The default exit mode is desk_v65. Nothing is written.
-The process does not use the network.
+The process does not use the network. The blinded window follows the real UTC clock.
 """
 
 from __future__ import annotations
@@ -24,11 +23,9 @@ def main(argv=None) -> int:
     parser.add_argument("--rules", required=True, help="pluggable rule config (JSON)")
     parser.add_argument("--seed", type=int, default=None, help="null-draw seed")
     parser.add_argument("--json", action="store_true", help="print the report as JSON")
-    parser.add_argument("--allow-blinded-window", action="store_true",
-                        help="allow solana-desk/v2 and bars from 2026-10-26 through the Nov 25 read")
     args = parser.parse_args(argv)
     try:
-        bars = load_bars(args.series, allow_blinded=args.allow_blinded_window)
+        bars = load_bars(args.series)
         with open(args.rules, "r", encoding="utf-8") as handle:
             rules = json.load(handle)
         result = replay(bars, rules, seed=args.seed)

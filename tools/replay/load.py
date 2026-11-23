@@ -8,13 +8,14 @@ opened. A file whose text names a locked lst-count field is refused before
 that field is parsed.
 
 Until 2026-11-25T15:00:00Z the loader refuses bars at or after
-2026-10-26T00:00:00Z and any solana-desk/v2 path, unless the caller passes
-allow_blinded.
+2026-10-26T00:00:00Z and any realpath under solana-desk/v2. The clock is
+the real UTC clock. A caller cannot pass another clock or an override.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -96,18 +97,12 @@ def _finite(value) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool) and value == value
 
 
-def _as_now(now) -> datetime:
-    if now is None:
-        return datetime.now(timezone.utc)
-    if isinstance(now, datetime):
-        return now if now.tzinfo else now.replace(tzinfo=timezone.utc)
-    if isinstance(now, (int, float)) and not isinstance(now, bool):
-        return datetime.fromtimestamp(float(now), tz=timezone.utc)
-    raise ReplayRefused("refused: clock is not a time")
+def _clock_blinded() -> bool:
+    return datetime.now(timezone.utc) < BLIND_UNTIL
 
 
-def _blinded(now, allow_blinded: bool) -> bool:
-    return (not allow_blinded) and _as_now(now) < BLIND_UNTIL
+def _realpath(path: Path) -> Path:
+    return Path(os.path.realpath(path))
 
 
 def _under_solana_v2(path: Path) -> bool:
@@ -167,9 +162,23 @@ def _bar_from_mapping(row: dict) -> dict | None:
     buys = _buys(row)
     if buys is None:
         buys = _buys(inputs)
+    error = None
+    for src in (row, inputs, reserve):
+        if isinstance(src, dict) and src.get("error"):
+            error = str(src["error"])
+            break
+    # A dead pool is a row with null reserves and an error, not a dropped line.
+    if error and (not _finite(sol) or not _finite(token)):
+        bar = {
+            "mint": mint, "t_s": t_s, "sol": None, "token": None,
+            "age_s": age, "sells_h1": sells, "buys_h1": buys, "error": error,
+        }
+        if rules is not None:
+            bar["rules"] = {str(k): rules[k] for k in rules}
+        return bar
     if not _finite(sol) or not _finite(token):
         return None
-    bar = {"mint": mint, "t_s": t_s, "sol": float(sol), "token": float(token), "age_s": age, "sells_h1": sells, "buys_h1": buys}
+    bar = {"mint": mint, "t_s": t_s, "sol": float(sol), "token": float(token), "age_s": age, "sells_h1": sells, "buys_h1": buys, "error": error}
     if rules is not None:
         bar["rules"] = {str(k): rules[k] for k in rules}
     if row.get("status") in _STATUSES:
@@ -248,20 +257,26 @@ def _load_jsonl(path: Path) -> list[dict]:
     return _bars_from_rows(_lines(_read(path), path))
 
 
+def _blocked_v2(path: Path, blinded: bool) -> bool:
+    if not blinded:
+        return False
+    resolved = _realpath(path)
+    return _under_solana_v2(path) or _under_solana_v2(resolved)
+
+
 def _series_files(path: Path, blinded: bool) -> list[Path]:
     found = []
-    roots = [path]
-    v2 = path / "v2"
-    # solana-desk/v2 stays closed through the blinded window.
-    if v2.is_dir() and not (blinded and _under_solana_v2(v2)):
+    roots = [_realpath(path)]
+    v2 = roots[0] / "v2"
+    if v2.is_dir() and not _blocked_v2(v2, blinded):
         roots.append(v2)
     for root in roots:
-        if blinded and _under_solana_v2(root):
+        if _blocked_v2(root, blinded):
             continue
         for child in sorted(root.iterdir()):
             if not child.is_file() or _banned(child):
                 continue
-            if blinded and _under_solana_v2(child):
+            if _blocked_v2(child, blinded):
                 continue
             kind = _kind(child)
             if kind in {"manifest", "snap"}:
@@ -275,12 +290,16 @@ def _refuse_blind_bars(bars: list[dict]) -> None:
             raise ReplayRefused("refused: a bar is inside the blinded window")
 
 
-def load_bars(path, now=None, allow_blinded: bool = False) -> list[dict]:
-    """Bars sorted by mint, then time. Reads the path and does not write."""
-    src = Path(path)
+def load_bars(path) -> list[dict]:
+    """Bars sorted by mint, then time. Reads the path and does not write.
+
+    The blinded-window check uses the real UTC clock and the realpath.
+    """
+    given = Path(path)
+    src = _realpath(given)
     _guard(src)
-    blinded = _blinded(now, allow_blinded)
-    if blinded and _under_solana_v2(src):
+    blinded = _clock_blinded()
+    if _blocked_v2(given, blinded) or _blocked_v2(src, blinded):
         raise ReplayRefused("refused: solana-desk/v2 is inside the blinded window")
     if src.is_file():
         bars = _load_jsonl(src)

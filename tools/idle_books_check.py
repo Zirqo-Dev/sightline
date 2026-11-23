@@ -117,7 +117,7 @@ def _from_positions(doc: dict, ticket):
             "ticket": book_ticket if book_ticket is not None else ticket,
             "open_n": _open_count(book),
             "fills_today": _num(book.get("fills_today")),
-            "pool_sol": _num(book.get("liq0") if book.get("liq0") is not None else book.get("sol")),
+            "pool_sol": _pool_size(book),
         }
     return books, ticket
 
@@ -144,7 +144,7 @@ def _from_paper(doc: dict):
                 "ticket": book_ticket,
                 "open_n": _open_count(book),
                 "fills_today": _num(book.get("fills_today")),
-                "pool_sol": _num(book.get("liq0") if book.get("liq0") is not None else book.get("sol")),
+                "pool_sol": _pool_size(book),
             }
         for row in _ticket_rows(doc):
             stamp = parse_time(row.get("opened_at") if "opened_at" in row else row.get("opened"))
@@ -173,7 +173,7 @@ def _from_paper(doc: dict):
             "ticket": ticket,
             "open_n": open_n,
             "fills_today": _num(doc.get("fills_today")),
-            "pool_sol": _num(doc.get("sol")),
+            "pool_sol": _pool_size(doc),
         }
     }, ticket
 
@@ -210,11 +210,20 @@ def _desk():
     return C, fills
 
 
-def _entry_floor(pool_sol=None) -> float:
-    """Same cost fills.enter refuses when cash is below it. Not the bare ticket."""
+def _entry_floor(pool_sol) -> float:
+    """entry_cost for this book's own pool. No stand-in pool and not the bare ticket."""
+    if pool_sol is None:
+        raise ValueError("missing pool size")
     _C, fills = _desk()
     cost, _haircut = fills.entry_cost(pool_sol)
     return float(cost)
+
+
+def _pool_size(book: dict):
+    for key in ("pool_sol", "liq0", "sol"):
+        if key in book and book.get(key) is not None:
+            return _num(book.get(key))
+    return None
 
 
 def _open_count(book: dict):
@@ -257,10 +266,14 @@ def load_state(data_dir: Path) -> dict:
             books = pos_books
     if not books:
         raise FileNotFoundError("missing book state")
+    if not tasks_path.is_file():
+        raise FileNotFoundError("missing tasks")
     for book in books.values():
         if book.get("ticket") is None:
             book["ticket"] = ticket
-    leads = _leads_from_tasks(tasks_path) if tasks_path.is_file() else []
+        if book.get("cash") is not None and book.get("pool_sol") is None:
+            raise ValueError("missing pool size")
+    leads = _leads_from_tasks(tasks_path)
     return {"books": books, "leads": leads, "ticket": ticket}
 
 

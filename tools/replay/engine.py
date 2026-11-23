@@ -2,17 +2,19 @@
 
 The entry signal reads the decision bar only. It does not look ahead to see
 whether a later bar exists. The exit mode defaults to desk_v65, which calls
-desk.exits.check on each new bar. A gap longer than max_gap_s, or the end of
-the tape, closes at the last known mark (stale, or missed when that mark is
-unusable). A dead pool closes as pool_gone.
+desk.exits.check. A dead-pool error row (null reserves plus an error) is a
+pool_gone or no_route mark on that path. A gap longer than max_gap_s closes
+as missed at -entry_cost. There is no stale exit.
 
-Quotes are the constant-product fill for the paper ticket. The desk's COST
-block has no LP-fee field, so lp_fee_bps defaults to 0 and is applied only to
-this synthetic quote. Net PnL then uses desk.fills (v3-exit-aware haircut,
-stress add-on, network fee). Book limits are the desk's starting cash, the
-entry_cost check, the open cap, and the per-day cap.
+Quotes are constant-product pool math. Jupiter's outAmount is already net of
+the pool fee, so each side adds the PumpSwap total from
+https://pump.fun/docs/fees (16 November 2026). With no market cap on the bar
+the fee is 125 bps, the canonical total below 420 SOL. Net PnL then uses
+desk.fills. Book limits are the desk's starting cash, entry_cost, open cap,
+and per-day cap.
 
-This module does not write and does not use the network.
+The date guard uses the real UTC clock. A caller cannot pass a clock or an
+override. This module does not write and does not use the network.
 """
 
 from __future__ import annotations
@@ -30,6 +32,7 @@ if str(_DESK) not in sys.path:
 
 from desk import config as C  # noqa: E402
 from desk import exits, fills  # noqa: E402
+from .load import BLIND_START_S, BLIND_UNTIL  # noqa: E402
 
 # The desk's outage limit, used as the default gap between bars. Not a new exit rule.
 DEFAULT_MAX_GAP_S = float(C.OUTAGE_VOID_H) * 3600.0
@@ -37,19 +40,75 @@ MIN_DRAWS = 1000
 BOOTSTRAP_REPS = 1000
 DESK_MODE = "desk_v65"
 FIXED_MODE = "fixed"
+# Canonical PumpSwap total, per side. https://pump.fun/docs/fees (16 November 2026).
+# Lower edge of each SOL market-cap tier, then the total fee in bps.
+DEFAULT_SWAP_FEE_BPS = 125.0
+_FEE_LADDER = (
+    (0, 125.0),
+    (420, 120.0),
+    (1470, 115.0),
+    (2460, 110.0),
+    (3440, 105.0),
+    (4420, 100.0),
+    (9820, 95.0),
+    (14740, 90.0),
+    (19650, 85.0),
+    (24560, 80.0),
+    (29470, 75.0),
+    (34380, 70.0),
+    (39300, 65.0),
+    (44210, 60.0),
+    (49120, 55.0),
+    (54030, 52.5),
+    (58940, 50.0),
+    (63860, 47.5),
+    (68770, 45.0),
+    (73681, 42.5),
+    (78590, 40.0),
+    (83500, 37.5),
+    (88400, 35.0),
+    (93330, 32.5),
+    (98240, 30.0),
+)
+_NO_ROUTE_ERRORS = frozenset({"no_route"})
+PROXY_INPUTS = (
+    "proxy inputs: marks come from pool math; liquidity is the bar's SOL; "
+    "no_route_3x can't fire; marks happen only at snapshots; "
+    "entries use the v2 S2 rules rather than the EXEC and v6.5 filters"
+)
 
 
 class RuleError(ValueError):
     """The rule config cannot be replayed."""
 
 
-def buy_quote(sol: float, token: float, ticket: float, lp_fee_bps: float = 0.0) -> tuple[float, float]:
+def pumpswap_fee_bps(market_cap_sol: float) -> float:
+    """Total canonical PumpSwap fee for a SOL market cap. From the fees page, not a fit."""
+    fee = _FEE_LADDER[0][1]
+    for floor, bps in _FEE_LADDER:
+        if market_cap_sol >= floor:
+            fee = bps
+        else:
+            break
+    return fee
+
+
+def fee_bps_for(bar, override) -> float:
+    """Explicit swap_fee_bps wins. Otherwise the ladder, or 125 bps when cap is absent."""
+    if override is not None:
+        return float(override)
+    cap = bar.get("market_cap_sol") if isinstance(bar, dict) else None
+    if cap is None:
+        return DEFAULT_SWAP_FEE_BPS
+    return pumpswap_fee_bps(float(cap))
+
+
+def buy_quote(sol: float, token: float, ticket: float, swap_fee_bps: float = DEFAULT_SWAP_FEE_BPS) -> tuple[float, float]:
     """Constant-product buy. Returns (tokens_out, effective SOL per token).
 
-    lp_fee_bps is taken from the SOL in before the curve, the usual pool fee.
-    The desk cost functions do not take an LP fee, so the default is 0.
+    swap_fee_bps is taken from the SOL in before the curve, one side of the pool fee.
     """
-    fee = float(lp_fee_bps) / 10000.0
+    fee = float(swap_fee_bps) / 10000.0
     dx = ticket * (1.0 - fee)
     if dx <= 0 or sol <= 0 or token <= 0:
         return 0.0, 0.0
@@ -59,9 +118,9 @@ def buy_quote(sol: float, token: float, ticket: float, lp_fee_bps: float = 0.0) 
     return tokens, ticket / tokens
 
 
-def sell_mark(sol: float, token: float, tokens_to_sell: float, lp_fee_bps: float = 0.0) -> float:
+def sell_mark(sol: float, token: float, tokens_to_sell: float, swap_fee_bps: float = DEFAULT_SWAP_FEE_BPS) -> float:
     """Effective SOL per token for selling tokens_to_sell into the pool."""
-    fee = float(lp_fee_bps) / 10000.0
+    fee = float(swap_fee_bps) / 10000.0
     sold = tokens_to_sell * (1.0 - fee)
     if sold <= 0 or sol <= 0 or token <= 0 or tokens_to_sell <= 0:
         return 0.0
@@ -106,18 +165,18 @@ def _max_gap(rule: dict) -> float:
     return gap
 
 
-def _lp_fee_bps(rule: dict, top) -> float:
-    """Desk COST has no LP-fee input. Absent means 0, not a guessed pool fee."""
-    if "lp_fee_bps" in rule:
-        raw = rule["lp_fee_bps"]
+def _fee_override(rule: dict, top):
+    """None means use the PumpSwap ladder (125 bps when the bar has no market cap)."""
+    if "swap_fee_bps" in rule:
+        raw = rule["swap_fee_bps"]
     elif top is not None:
         raw = top
     else:
-        raw = 0
+        return None
     if isinstance(raw, bool) or not isinstance(raw, (int, float)):
-        raise RuleError(f"rule {rule.get('id')}: lp_fee_bps must be a number")
+        raise RuleError(f"rule {rule.get('id')}: swap_fee_bps must be a number")
     if raw < 0 or raw >= 10000:
-        raise RuleError(f"rule {rule.get('id')}: lp_fee_bps must be in [0, 10000)")
+        raise RuleError(f"rule {rule.get('id')}: swap_fee_bps must be in [0, 10000)")
     return float(raw)
 
 
@@ -208,6 +267,11 @@ def entry_match(bar: dict, entry: dict) -> bool:
         sells = bar.get("sells_h1")
         if sells is None or sells < float(entry["min_sells_h1"]):
             return False
+    # Logged v2 S2 verdicts, not the v6.5 EXEC checks.
+    rules = bar.get("rules")
+    if isinstance(rules, dict) and rules and not entry.get("rules_all_pass"):
+        if any(value != "pass" for value in rules.values()):
+            return False
     return True
 
 
@@ -279,22 +343,23 @@ def _force_close(book: dict, pos: dict, why: str, px: float, when: int, pool_sol
     _apply(book, pos, [("sell", pos["frac"], why, px)], pool_sol, when, lp_fee_bps)
 
 
-def _close_known(book: dict, pos: dict, why: str, when: int, lp_fee_bps: float) -> None:
-    """Close from the last mark. No later bar is an input."""
-    mark = pos.get("last_mark")
-    if not isinstance(mark, (int, float)) or isinstance(mark, bool) or mark <= 0:
-        _force_close(book, pos, "missed", 0.0, int(when), pos.get("liq0"), lp_fee_bps)
-        return
-    _force_close(book, pos, why, float(mark), int(when), pos.get("liq0"), lp_fee_bps)
+def _close_missed(book: dict, pos: dict, when: int, fee_override) -> None:
+    """Gap past max_gap_s. Price is zero, so the booked result is -entry_cost."""
+    _force_close(book, pos, "missed", 0.0, int(when), None, fee_override)
 
 
-def _expire(book: dict, now: int, max_gap: float, lp_fee_bps: float) -> None:
+def _expire(book: dict, now: int, max_gap: float, fee_override) -> None:
     for pos in list(book["open"].values()):
         if now - pos["last_t"] > max_gap:
-            _close_known(book, pos, "stale", pos["last_t"], lp_fee_bps)
+            _close_missed(book, pos, int(pos["last_t"] + max_gap), fee_override)
 
 
 def _status_of(bar: dict) -> str:
+    err = bar.get("error")
+    if err:
+        if str(err) in _NO_ROUTE_ERRORS:
+            return "no_route"
+        return "pool_gone"
     if not _pool_ok(bar):
         return "pool_gone"
     status = bar.get("status") or "ok"
@@ -303,10 +368,11 @@ def _status_of(bar: dict) -> str:
     return status
 
 
-def _mark_desk(book: dict, pos: dict, bar: dict, lp_fee_bps: float) -> None:
+def _mark_desk(book: dict, pos: dict, bar: dict, fee_override) -> None:
     status = _status_of(bar)
+    fee = fee_bps_for(bar, fee_override)
     if status == "ok":
-        mark = sell_mark(bar["sol"], bar["token"], pos["tokens"] * pos["frac"], lp_fee_bps)
+        mark = sell_mark(bar["sol"], bar["token"], pos["tokens"] * pos["frac"], fee)
         liq = bar["sol"]
         pool = bar["sol"]
     elif status == "pool_gone":
@@ -314,31 +380,38 @@ def _mark_desk(book: dict, pos: dict, bar: dict, lp_fee_bps: float) -> None:
         liq = None
         pool = None
     else:
+        # One snapshot is not the desk's three route checks, so no_route_3x does not fire.
         mark = pos["last_mark"]
         liq = None
         pool = None
+        pos["no_route_count"] = 0
     acts = exits.check(pos, mark, liq, int(bar["t_s"]), status)
-    _apply(book, pos, acts, pool, int(bar["t_s"]), lp_fee_bps)
+    if any(why == "no_route_3x" for _a, _f, why, _p in acts):
+        acts = [item for item in acts if item[2] != "no_route_3x"]
+    _apply(book, pos, acts, pool, int(bar["t_s"]), fee_override)
 
 
-def _mark_fixed(book: dict, pos: dict, bar: dict, exit_spec: dict, lp_fee_bps: float) -> None:
+def _mark_fixed(book: dict, pos: dict, bar: dict, exit_spec: dict, fee_override) -> None:
     status = _status_of(bar)
+    fee = fee_bps_for(bar, fee_override)
     if status == "pool_gone":
         acts = exits.check(pos, 0.0, None, int(bar["t_s"]), "pool_gone")
-        _apply(book, pos, acts, None, int(bar["t_s"]), lp_fee_bps)
+        _apply(book, pos, acts, None, int(bar["t_s"]), fee_override)
         return
     if status in {"temp_error", "no_route"}:
+        pos["no_route_count"] = 0
         acts = exits.check(pos, pos["last_mark"], None, int(bar["t_s"]), status)
-        _apply(book, pos, acts, None, int(bar["t_s"]), lp_fee_bps)
+        acts = [item for item in acts if item[2] != "no_route_3x"]
+        _apply(book, pos, acts, None, int(bar["t_s"]), fee_override)
         return
-    mark = sell_mark(bar["sol"], bar["token"], pos["tokens"] * pos["frac"], lp_fee_bps)
+    mark = sell_mark(bar["sol"], bar["token"], pos["tokens"] * pos["frac"], fee)
     pos["peak"] = max(pos["peak"], mark)
     ret = mark / pos["entry"] - 1 if pos["entry"] else 0.0
     if exit_spec.get("liq_drop") is not None and pos["liq0"] and bar["sol"] < pos["liq0"] * (1 - float(exit_spec["liq_drop"])):
-        _apply(book, pos, [("sell", pos["frac"], "liquidity_pulled", mark)], bar["sol"], int(bar["t_s"]), lp_fee_bps)
+        _apply(book, pos, [("sell", pos["frac"], "liquidity_pulled", mark)], bar["sol"], int(bar["t_s"]), fee_override)
         return
     if exit_spec.get("hard_stop") is not None and ret <= float(exit_spec["hard_stop"]):
-        _apply(book, pos, [("sell", pos["frac"], "hard_stop", mark)], bar["sol"], int(bar["t_s"]), lp_fee_bps)
+        _apply(book, pos, [("sell", pos["frac"], "hard_stop", mark)], bar["sol"], int(bar["t_s"]), fee_override)
         return
     acts = []
     for step_i, (level, frac) in enumerate(exit_spec.get("take_profit") or []):
@@ -350,14 +423,14 @@ def _mark_fixed(book: dict, pos: dict, bar: dict, exit_spec: dict, lp_fee_bps: f
     trail = exit_spec.get("trail")
     if trail is not None and pos["steps"] >= 1 and pos["frac"] > 1e-12 and mark <= pos["peak"] * (1 - float(trail)):
         acts.append(("sell", pos["frac"], "trailing_stop", mark))
-        _apply(book, pos, acts, bar["sol"], int(bar["t_s"]), lp_fee_bps)
+        _apply(book, pos, acts, bar["sol"], int(bar["t_s"]), fee_override)
         return
     if bar["t_s"] >= pos["opened"] + float(exit_spec["max_hold_s"]) and pos["frac"] > 1e-12:
         acts.append(("sell", pos["frac"], "max_hold", mark))
-    _apply(book, pos, acts, bar["sol"], int(bar["t_s"]), lp_fee_bps)
+    _apply(book, pos, acts, bar["sol"], int(bar["t_s"]), fee_override)
 
 
-def _try_enter(book: dict, bar: dict, rule: dict, lp_fee_bps: float, bound: dict, baseline: bool) -> bool:
+def _try_enter(book: dict, bar: dict, rule: dict, fee_override, bound: dict, baseline: bool) -> bool:
     if bar["mint"] in book["open"] or not _pool_ok(bar):
         return False
     day, _hour = _day_hour(bar["t_s"])
@@ -371,7 +444,8 @@ def _try_enter(book: dict, bar: dict, rule: dict, lp_fee_bps: float, bound: dict
     if book["fills"].get(day, 0) >= C.MAX_NEW_F_PER_DAY:
         book["skip_day"] += 1
         return False
-    tokens, px = buy_quote(bar["sol"], bar["token"], C.TICKET_SOL, lp_fee_bps)
+    fee = fee_bps_for(bar, fee_override)
+    tokens, px = buy_quote(bar["sol"], bar["token"], C.TICKET_SOL, fee)
     if tokens <= 0 or px <= 0:
         return False
     book["cash"] -= cost
@@ -394,7 +468,12 @@ def _try_enter(book: dict, bar: dict, rule: dict, lp_fee_bps: float, bound: dict
     return True
 
 
-def run_book(bars: list[dict], rule: dict, lp_fee_bps: float, rng: random.Random | None = None, remaining: Counter | None = None, baseline: bool = False) -> dict:
+def _base_universe(bar: dict) -> bool:
+    """Tradable bar. The null uses this set and not the rule's own filter."""
+    return _pool_ok(bar) and not bar.get("error")
+
+
+def run_book(bars: list[dict], rule: dict, fee_override, rng: random.Random | None = None, remaining: Counter | None = None, baseline: bool = False) -> dict:
     """One book. remaining limits null entries per UTC day and hour."""
     mode = _exit_mode(rule)
     gap = _max_gap(rule)
@@ -415,16 +494,16 @@ def run_book(bars: list[dict], rule: dict, lp_fee_bps: float, rng: random.Random
         while index < len(events) and events[index][0] == now:
             batch.append(events[index])
             index += 1
-        _expire(book, now, gap, lp_fee_bps)
+        _expire(book, now, gap, fee_override)
         busy = set(book["open"])
         for _t, mint, i in batch:
             if mint not in book["open"]:
                 continue
             bar = grouped[mint][i]
             if mode == DESK_MODE:
-                _mark_desk(book, book["open"][mint], bar, lp_fee_bps)
+                _mark_desk(book, book["open"][mint], bar, fee_override)
             else:
-                _mark_fixed(book, book["open"][mint], bar, exit_spec, lp_fee_bps)
+                _mark_fixed(book, book["open"][mint], bar, exit_spec, fee_override)
             if mint in book["open"]:
                 book["open"][mint]["last_t"] = int(bar["t_s"])
         candidates = []
@@ -432,7 +511,10 @@ def run_book(bars: list[dict], rule: dict, lp_fee_bps: float, rng: random.Random
             if mint in busy or mint in book["open"]:
                 continue
             bar = grouped[mint][i]
-            if not _pool_ok(bar) or not entry_match(bar, entry):
+            if baseline:
+                if not _base_universe(bar):
+                    continue
+            elif not _pool_ok(bar) or not entry_match(bar, entry):
                 continue
             candidates.append(bar)
         if rng is None:
@@ -443,11 +525,9 @@ def run_book(bars: list[dict], rule: dict, lp_fee_bps: float, rng: random.Random
             key = _day_hour(bar["t_s"])
             if remaining is not None and remaining.get(key, 0) <= 0:
                 continue
-            if _try_enter(book, bar, rule, lp_fee_bps, bound, baseline):
+            if _try_enter(book, bar, rule, fee_override, bound, baseline):
                 if remaining is not None:
                     remaining[key] -= 1
-    for pos in list(book["open"].values()):
-        _close_known(book, pos, "stale", pos["last_t"], lp_fee_bps)
     return book
 
 
@@ -490,11 +570,57 @@ def _effective_n(clusters: list[list[dict]]) -> float:
     return (n * n) / sum(size * size for size in sizes)
 
 
-def _cluster_choice(trades: list[dict]) -> str:
-    days = {_day_hour(trade["entry_t"])[0] for trade in trades}
-    if len(days) >= 2:
-        return "day"
-    return "mint"
+def _intervals_overlap(left: dict, right: dict) -> bool:
+    if left.get("mint") == right.get("mint"):
+        return False
+    a0, a1 = int(left["entry_t"]), left.get("exit_t")
+    b0, b1 = int(right["entry_t"]), right.get("exit_t")
+    a1 = 10**18 if a1 is None else int(a1)
+    b1 = 10**18 if b1 is None else int(b1)
+    return a0 < b1 and b0 < a1
+
+
+def _overlap_components(holds: list[dict]) -> list[list[dict]]:
+    """Holds that overlap in time across mints share one component."""
+    parent = list(range(len(holds)))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    for i in range(len(holds)):
+        for j in range(i + 1, len(holds)):
+            if _intervals_overlap(holds[i], holds[j]):
+                parent[find(j)] = find(i)
+    groups: dict[int, list] = {}
+    for i, hold in enumerate(holds):
+        groups.setdefault(find(i), []).append(hold)
+    return list(groups.values())
+
+
+def _holds(book: dict) -> list[dict]:
+    holds = []
+    for trade in book["trades"]:
+        holds.append({
+            "mint": trade["mint"],
+            "entry_t": trade["entry_t"],
+            "exit_t": trade["exit_t"],
+            "net_pnl": trade["net_pnl"],
+        })
+    for pos in book["open"].values():
+        holds.append({
+            "mint": pos["mint"],
+            "entry_t": pos["opened"],
+            "exit_t": None,
+            "net_pnl": pos["net"],
+        })
+    return holds
+
+
+def _realized(book: dict) -> float:
+    return sum(trade["net_pnl"] for trade in book["trades"]) + sum(pos["net"] for pos in book["open"].values())
 
 
 def _quantile(sorted_vals: list[float], p: float) -> float:
@@ -507,19 +633,19 @@ def _quantile(sorted_vals: list[float], p: float) -> float:
     return sorted_vals[lo] * (1 - weight) + sorted_vals[hi] * weight
 
 
-def _bootstrap(trades: list[dict], rng: random.Random, by: str) -> tuple[float | None, float | None, float]:
-    clusters = _clusters(trades, by)
+def _bootstrap(holds: list[dict], rng: random.Random):
+    """Resample overlap clusters. The statistic is the sum of net_pnl, same as the percentile."""
+    clusters = _overlap_components(holds)
     n_eff = _effective_n(clusters)
     if not clusters:
-        return None, None, n_eff
-    means = []
+        return None, None, n_eff, 0
+    sums = []
     width = len(clusters)
     for _ in range(BOOTSTRAP_REPS):
         drawn = [clusters[rng.randrange(width)] for _ in range(width)]
-        flat = [trade for cluster in drawn for trade in cluster]
-        means.append(sum(trade["net_pnl"] for trade in flat) / len(flat))
-    means.sort()
-    return _quantile(means, 0.025), _quantile(means, 0.975), n_eff
+        sums.append(sum(hold["net_pnl"] for cluster in drawn for hold in cluster))
+    sums.sort()
+    return _quantile(sums, 0.025), _quantile(sums, 0.975), n_eff, width
 
 
 def _public_trade(trade: dict) -> dict:
@@ -547,16 +673,40 @@ def _round(value: float) -> float:
     return round(float(value), 9)
 
 
+def _refuse_blinded_bars(bars) -> None:
+    """Real UTC clock only. A supplied timestamp cannot open the blinded window."""
+    if datetime.now(timezone.utc) >= BLIND_UNTIL:
+        return
+    for bar in bars or []:
+        if not isinstance(bar, dict):
+            continue
+        stamp = bar.get("t_s")
+        if isinstance(stamp, bool) or not isinstance(stamp, (int, float)):
+            continue
+        if int(stamp) >= BLIND_START_S:
+            raise RuleError("refused: a bar is inside the blinded window")
+
+
+def _reason_counts(trades: list[dict]) -> dict:
+    counts: dict[str, int] = {}
+    for trade in trades:
+        why = trade.get("exit_reason")
+        if why:
+            counts[why] = counts.get(why, 0) + 1
+    return dict(sorted(counts.items()))
+
+
 def replay(bars: list[dict], rules, seed: int | None = None, n_draws: int | None = None) -> dict:
     """Per-rule trades, net PnL, hit rate, and a 1000-draw null with a clustered CI."""
-    top_lp = None
+    _refuse_blinded_bars(bars)
+    top_fee = None
     if isinstance(rules, dict):
         if seed is None:
             seed = int(rules.get("seed", 1))
         if n_draws is None and rules.get("n_draws") is not None:
             n_draws = int(rules["n_draws"])
-        if "lp_fee_bps" in rules:
-            top_lp = rules["lp_fee_bps"]
+        if "swap_fee_bps" in rules:
+            top_fee = rules["swap_fee_bps"]
         rule_list = rules.get("rules") or []
     else:
         rule_list = list(rules)
@@ -570,29 +720,37 @@ def replay(bars: list[dict], rules, seed: int | None = None, n_draws: int | None
         raise RuleError("rules must be a non-empty list")
     for rule in rule_list:
         validate_rule(rule)
-        _lp_fee_bps(rule, top_lp)
+        _fee_override(rule, top_fee)
     rows = []
     for rule in rule_list:
-        lp_fee = _lp_fee_bps(rule, top_lp)
+        override = _fee_override(rule, top_fee)
         entry = rule.get("entry") or {}
-        live = run_book(bars, rule, lp_fee, rng=None, remaining=None, baseline=False)
+        live = run_book(bars, rule, override, rng=None, remaining=None, baseline=False)
         trades = live["trades"]
-        counts = _hour_counts(trades)
+        holds = _holds(live)
+        realized = _realized(live)
+        counts = _hour_counts(trades + [
+            {"entry_t": pos["opened"]} for pos in live["open"].values()
+        ])
         rng = random.Random(seed)
         nulls = []
         for _ in range(n_draws):
             remaining = Counter(counts)
-            draw = run_book(bars, rule, lp_fee, rng=rng, remaining=remaining, baseline=True)
-            nulls.append(sum(trade["net_pnl"] for trade in draw["trades"]))
-        by = _cluster_choice(trades)
-        lo, hi, n_eff = _bootstrap(trades, rng, by)
-        rule_net = _round(sum(trade["net_pnl"] for trade in trades))
+            draw = run_book(bars, rule, override, rng=rng, remaining=remaining, baseline=True)
+            nulls.append(_realized(draw))
+        lo, hi, n_eff, n_clusters = _bootstrap(holds, rng)
         rows.append({
             "id": rule["id"],
             "n": len(trades),
+            "open_n": len(live["open"]),
+            "open": [
+                {"mint": pos["mint"], "entry_t": int(pos["opened"]), "exit_fixed": pos["exit_fixed"]}
+                for pos in live["open"].values()
+            ],
             "hit_rate": _rate(trades),
-            "net_pnl": rule_net,
-            "gross_pnl": _round(sum(trade["gross_pnl"] for trade in trades)),
+            "net_pnl": _round(realized),
+            "gross_pnl": _round(sum(trade["gross_pnl"] for trade in trades) + sum(pos["gross"] for pos in live["open"].values())),
+            "close_reasons": _reason_counts(trades),
             "trades": [_public_trade(trade) for trade in trades],
             "skipped_cash": live["skip_cash"],
             "skipped_open_cap": live["skip_open"],
@@ -600,20 +758,25 @@ def replay(bars: list[dict], rules, seed: int | None = None, n_draws: int | None
             "baseline": {
                 "seed": seed,
                 "draws": n_draws,
-                "percentile": _percentile(sum(trade["net_pnl"] for trade in trades), nulls),
+                "statistic": "sum",
+                "percentile": _percentile(realized, nulls),
                 "null_mean": _round(sum(nulls) / len(nulls)) if nulls else None,
                 "bootstrap_ci": [None if lo is None else _round(lo), None if hi is None else _round(hi)],
-                "cluster_by": by,
+                "cluster_by": "overlap",
+                "n_clusters": n_clusters,
+                "cluster_warning": n_clusters < 5,
                 "effective_n": n_eff,
                 "eligible_n": _eligible_n(bars, entry),
+                "base_universe_n": sum(1 for bar in bars if _base_universe(bar)),
                 "hour_counts": {f"{day}T{hour:02d}": count for (day, hour), count in sorted(counts.items())},
             },
         })
     return {
         "cost_model": C.COST_MODEL,
         "ticket_sol": C.TICKET_SOL,
-        "lp_fee_bps_default": 0,
-        "lp_fee_in_desk_cost": False,
+        "swap_fee_bps_default": DEFAULT_SWAP_FEE_BPS,
+        "swap_fee_source": "https://pump.fun/docs/fees",
+        "proxy_inputs": PROXY_INPUTS,
         "starting_cash": C.START_BALANCE_SOL,
         "max_open": C.MAX_OPEN_F,
         "max_new_per_day": C.MAX_NEW_F_PER_DAY,
@@ -636,12 +799,15 @@ def _fmt_ci(bounds) -> str:
 
 def format_report(result: dict) -> str:
     """One block per rule: its trades, then the null percentile and clustered CI."""
-    lines = []
+    lines = [result.get("proxy_inputs") or PROXY_INPUTS]
     for row in result.get("rules") or []:
         lines.append(
             f"rule {row['id']} trades={row['n']} hit_rate={_fmt_rate(row['hit_rate'])} "
             f"net_pnl_sol={row['net_pnl']:.9f} gross_pnl_sol={row['gross_pnl']:.9f}"
         )
+        reasons = row.get("close_reasons") or {}
+        if reasons:
+            lines.append("close_reasons " + " ".join(f"{name}={count}" for name, count in reasons.items()))
         for trade in row["trades"]:
             lines.append(
                 f"  trade mint={trade['mint']} entry_t={trade['entry_t']} exit_t={trade['exit_t']} "
@@ -651,10 +817,12 @@ def format_report(result: dict) -> str:
         base = row["baseline"]
         pct = "n/a" if base["percentile"] is None else f"{base['percentile']:.2f}"
         mean = "n/a" if base["null_mean"] is None else f"{base['null_mean']:.9f}"
+        warn = " warning=fewer-than-5-clusters" if base.get("cluster_warning") else ""
         lines.append(
-            f"baseline {row['id']} draws={base['draws']} percentile={pct} null_mean_sol={mean} "
+            f"baseline {row['id']} draws={base['draws']} statistic={base.get('statistic', 'sum')} "
+            f"percentile={pct} null_mean_sol={mean} "
             f"bootstrap_ci={_fmt_ci(base['bootstrap_ci'])} cluster={base['cluster_by']} "
-            f"effective_n={base['effective_n']:.4f} seed={base['seed']}"
+            f"effective_n={base['effective_n']:.4f} seed={base['seed']}{warn}"
         )
     if not lines:
         return ""

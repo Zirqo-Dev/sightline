@@ -35,8 +35,8 @@ class IdleBooks(unittest.TestCase):
         root = self._dir()
         _write(root, "positions.json", json.dumps({
             "books": {
-                "F": {"cash": 9.5, "open": {}, "closed": [{"opened": NOW - 3 * DAY, "pnl": 99999}], "fills_today": 0},
-                "R": {"cash": 8.0, "open": {"x": {"opened": NOW - 1000}}, "closed": [], "fills_today": 1},
+                "F": {"cash": 9.5, "pool_sol": 100, "open": {}, "closed": [{"opened": NOW - 3 * DAY, "pnl": 99999}], "fills_today": 0},
+                "R": {"cash": 8.0, "pool_sol": 100, "open": {"x": {"opened": NOW - 1000}}, "closed": [], "fills_today": 1},
             }
         }))
         _write(root, "tasks.csv", "\n".join([
@@ -58,12 +58,13 @@ class IdleBooks(unittest.TestCase):
             "book": "F,R,S",
             "ticket_size": 0.5,
             "books": {
-                "F": {"cash": 0.5, "open": 0, "fills_today": 0},
-                "S": {"cash": 9.0, "open": 0, "fills_today": 0},
+                "F": {"cash": 0.5, "pool_sol": 100, "open": 0, "fills_today": 0},
+                "S": {"cash": 9.0, "pool_sol": 100, "open": 0, "fills_today": 0},
             },
             "open": [],
             "closed": [{"book": "S", "opened_at": "2024-03-09T16:00:00Z", "result": {"pnl": 424242}}],
         }))
+        _write(root, "tasks.csv", "time,result,book\n")
         lines = idle_lines(load_state(root), NOW)
         self.assertEqual(lines, [
             "IDLE book=F reason=cash_below_floor=yes",
@@ -73,7 +74,7 @@ class IdleBooks(unittest.TestCase):
     def test_both_reasons_are_one_line_without_amounts(self):
         root = self._dir()
         _write(root, "positions.json", json.dumps({
-            "books": {"F": {"cash": 0.1, "open": {}, "closed": [], "fills_today": 0}},
+            "books": {"F": {"cash": 0.1, "pool_sol": 100, "open": {}, "closed": [], "fills_today": 0}},
         }))
         _write(root, "tasks.csv", f"time,result,book\n{NOW - 10},pass,\n")
         lines = idle_lines(load_state(root), NOW)
@@ -87,8 +88,8 @@ class IdleBooks(unittest.TestCase):
         opens = {f"p{i}": {"opened": NOW - 3 * DAY} for i in range(4)}
         _write(root, "positions.json", json.dumps({
             "books": {
-                "F": {"cash": 9.0, "open": opens, "closed": [], "fills_today": 0},
-                "S": {"cash": 9.0, "open": {}, "closed": [], "fills_today": 8},
+                "F": {"cash": 9.0, "pool_sol": 100, "open": opens, "closed": [], "fills_today": 0},
+                "S": {"cash": 9.0, "pool_sol": 100, "open": {}, "closed": [], "fills_today": 8},
             }
         }))
         _write(root, "tasks.csv", f"time,result,book\n{NOW - 60},pass,\n")
@@ -103,7 +104,7 @@ class IdleBooks(unittest.TestCase):
         root = self._dir()
         opens = {f"p{i}": {"opened": NOW - 3 * DAY} for i in range(4)}
         _write(root, "positions.json", json.dumps({
-            "books": {"F": {"cash": 0.1, "open": opens, "closed": [], "fills_today": 0}},
+            "books": {"F": {"cash": 0.1, "pool_sol": 100, "open": opens, "closed": [], "fills_today": 0}},
         }))
         _write(root, "tasks.csv", f"time,result,book\n{NOW - 60},pass,\n")
         lines = idle_lines(load_state(root), NOW)
@@ -117,7 +118,7 @@ class IdleBooks(unittest.TestCase):
         root = self._dir()
         _write(root, "paper.json", json.dumps({
             "ticket_size": 0.5,
-            "books": {"F": {"cash": 4.0, "open": 1, "fills_today": 1}},
+            "books": {"F": {"cash": 4.0, "pool_sol": 100, "open": 1, "fills_today": 1}},
             "open": [{"book": "F", "opened_at": "2024-03-09T16:00:00Z"}],
             "closed": [],
         }))
@@ -128,8 +129,8 @@ class IdleBooks(unittest.TestCase):
         root = self._dir()
         _write(root, "positions.json", json.dumps({
             "books": {
-                "F": {"cash": 9.0, "open": {}, "closed": [], "fills_today": 0},
-                "S": {"cash": 9.0, "open": {}, "closed": [], "fills_today": 0},
+                "F": {"cash": 9.0, "pool_sol": 100, "open": {}, "closed": [], "fills_today": 0},
+                "S": {"cash": 9.0, "pool_sol": 100, "open": {}, "closed": [], "fills_today": 0},
             }
         }))
         _write(root, "tasks.csv", f"time,result,book\n{NOW - 60},pass,F\n")
@@ -141,7 +142,7 @@ class IdleBooks(unittest.TestCase):
     def test_cli_is_read_only_and_returns_status(self):
         root = self._dir()
         _write(root, "positions.json", json.dumps({
-            "books": {"F": {"cash": 9.0, "open": {}, "closed": [], "fills_today": 0}},
+            "books": {"F": {"cash": 9.0, "pool_sol": 100, "open": {}, "closed": [], "fills_today": 0}},
         }))
         _write(root, "tasks.csv", f"time,result,book\n{NOW - 60},pass,\n")
         before = sorted(p.name for p in root.iterdir())
@@ -172,9 +173,16 @@ class IdleBooks(unittest.TestCase):
         _write(root, "paper.json", '{"ticket_size": 0.5, "pnl": 777777,')
         self.assertEqual(main(["--data-dir", str(root), "--now", str(NOW)]), 2)
         other = self._dir()
-        _write(other, "positions.json", '{"books": {"F": {"cash": 9, "open": {}}}}')
+        _write(other, "positions.json", '{"books": {"F": {"cash": 9, "pool_sol": 100, "open": {}}}}')
         _write(other, "tasks.csv", "{not,a,header\n")
         self.assertEqual(main(["--data-dir", str(other), "--now", str(NOW)]), 2)
+        missing_tasks = self._dir()
+        _write(missing_tasks, "positions.json", '{"books": {"F": {"cash": 9, "pool_sol": 100, "open": {}}}}')
+        self.assertEqual(main(["--data-dir", str(missing_tasks), "--now", str(NOW)]), 2)
+        missing_pool = self._dir()
+        _write(missing_pool, "positions.json", '{"books": {"F": {"cash": 9, "open": {}}}}')
+        _write(missing_pool, "tasks.csv", "time,result,book\n")
+        self.assertEqual(main(["--data-dir", str(missing_pool), "--now", str(NOW)]), 2)
 
 
 if __name__ == "__main__":
