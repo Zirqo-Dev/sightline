@@ -1,0 +1,17 @@
+{
+  "seed": 7,
+  "rules": [
+    {
+      "id": "synth-hold",
+      "entry": {
+        "mints": ["SYNTHMINT00000000000000000000000001"],
+        "rules_all_pass": true,
+        "min_sol": 50
+      },
+      "exit": {
+        "hard_stop": -0.25,
+        "max_hold_s": 7200
+      }
+    }
+  ]
+}

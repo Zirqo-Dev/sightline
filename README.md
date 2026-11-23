@@ -34,3 +34,11 @@ The repository Pages source has to be **GitHub Actions** (Settings → Pages →
 ## Cloudflare later
 
 `dist/` is plain static files and the pages use relative URLs. Point Cloudflare Pages at this repo with build command `python3 scripts/build-site.py` and output directory `dist`, then put Cloudflare Access in front. Make the GitHub repo private too, or the JSON stays readable on GitHub. No frontend change.
+
+## Offline checks
+
+Two read-only tools sit beside the desks. They are not on a schedule, they do not change desk, book, config, fill, or heartbeat code, and they do not open the network.
+
+`python3 -m tools.replay --series PATH --rules FILE` replays pluggable entry rules over historical scan and pool-snapshot files already in the tree (a bar jsonl or JSON list, or a directory with a v2 manifest and pool snaps). Each rule copies its exit onto the position before any later bar is read. A rule without a positive `max_hold_s` is refused, so a simulated position cannot stay open. An entry is taken only when the tape already reaches that clock. The entry signal reads the decision bar only. Fills use the constant-product quote for the paper ticket, then the same slippage, stress-exit, and network-fee model as the paper desks (`v3-exit-aware` in `solana-desk/desk/config.py`). The report lists each rule's trades, net-of-cost PnL, and hit rate, plus a seeded random-entry baseline that uses those same exits. The loader does not read book ledgers, fill logs, or lst-count captures. `tools/replay/example-rules.json` is a config template. Tests under `tools/replay/tests/` use synthetic fixtures only.
+
+`python3 tools/idle_books_check.py --data-dir DIR` reads paper-book state and prints one `IDLE` line when a book had passing leads and zero entries for 24 hours, or when cash is below the ticket floor. It is not wired into a workflow.
