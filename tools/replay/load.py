@@ -1,14 +1,22 @@
 """Load historical scan and pool-snapshot series. Read-only. No network.
 
+Only manifest-* and pool-snaps-* files are read. Death-log rows are skipped.
+A row is a bar only when sol and token are both numbers.
+
 Book ledgers, fill logs, and lst-count captures are refused before they are
 opened. A file whose text names a locked lst-count field is refused before
 that field is parsed.
+
+Until 2026-11-25T15:00:00Z the loader refuses bars at or after
+2026-10-26T00:00:00Z and any solana-desk/v2 path, unless the caller passes
+allow_blinded.
 """
 
 from __future__ import annotations
 
 import json
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Names that are books, ledgers, or fills, not a scan/snapshot series.
@@ -23,6 +31,15 @@ BANNED_NAMES = frozenset({
 
 # Key names only. The pattern does not capture the value.
 _LOCKED_FIELD = re.compile(r'"(?:onset|d_bps)"\s*:')
+
+# Death-log lines are not prices. Manifest scan headers are not bars.
+_SKIP_TYPES = frozenset({"obs", "label", "skip", "death", "scan"})
+_STATUSES = frozenset({"ok", "temp_error", "no_route", "pool_gone"})
+
+# v6.5 freeze through the Nov 25 read. Dates only; no book outcomes.
+BLIND_START = datetime(2026, 10, 26, 0, 0, tzinfo=timezone.utc)
+BLIND_UNTIL = datetime(2026, 11, 25, 15, 0, tzinfo=timezone.utc)
+BLIND_START_S = int(BLIND_START.timestamp())
 
 
 class ReplayRefused(ValueError):
@@ -75,11 +92,48 @@ def _buys(row: dict):
     return None
 
 
+def _finite(value) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and value == value
+
+
+def _as_now(now) -> datetime:
+    if now is None:
+        return datetime.now(timezone.utc)
+    if isinstance(now, datetime):
+        return now if now.tzinfo else now.replace(tzinfo=timezone.utc)
+    if isinstance(now, (int, float)) and not isinstance(now, bool):
+        return datetime.fromtimestamp(float(now), tz=timezone.utc)
+    raise ReplayRefused("refused: clock is not a time")
+
+
+def _blinded(now, allow_blinded: bool) -> bool:
+    return (not allow_blinded) and _as_now(now) < BLIND_UNTIL
+
+
+def _under_solana_v2(path: Path) -> bool:
+    parts = path.parts
+    for i, part in enumerate(parts[:-1]):
+        if part == "solana-desk" and parts[i + 1] == "v2":
+            return True
+    return False
+
+
+def _kind(path: Path) -> str | None:
+    name = path.name
+    if name.startswith("death-"):
+        return "death"
+    if name.startswith("manifest-") and name.endswith(".jsonl"):
+        return "manifest"
+    if name.startswith("pool-snaps-") and name.endswith(".jsonl"):
+        return "snap"
+    return None
+
+
 def _bar_from_mapping(row: dict) -> dict | None:
     """One replay bar. Rules and reserves are copied; unknown keys are dropped."""
     if not isinstance(row, dict):
         return None
-    if row.get("type") == "scan":
+    if row.get("type") in _SKIP_TYPES:
         return None
     mint = row.get("mint")
     t_s = row.get("t_s")
@@ -113,9 +167,13 @@ def _bar_from_mapping(row: dict) -> dict | None:
     buys = _buys(row)
     if buys is None:
         buys = _buys(inputs)
-    bar = {"mint": mint, "t_s": t_s, "sol": sol, "token": token, "age_s": age, "sells_h1": sells, "buys_h1": buys}
+    if not _finite(sol) or not _finite(token):
+        return None
+    bar = {"mint": mint, "t_s": t_s, "sol": float(sol), "token": float(token), "age_s": age, "sells_h1": sells, "buys_h1": buys}
     if rules is not None:
         bar["rules"] = {str(k): rules[k] for k in rules}
+    if row.get("status") in _STATUSES:
+        bar["status"] = row["status"]
     return bar
 
 
@@ -182,79 +240,60 @@ def _bars_from_rows(rows: list[dict]) -> list[dict]:
     return _dedupe(bars)
 
 
-def _load_file(path: Path) -> list[dict]:
-    text = _read(path)
-    if path.suffix == ".json":
-        try:
-            doc = json.loads(text)
-        except json.JSONDecodeError as exc:
-            raise ReplayRefused(f"refused: {path.name} is not json") from exc
-        if isinstance(doc, dict) and isinstance(doc.get("bars"), list):
-            return _bars_from_rows(doc["bars"])
-        if isinstance(doc, list):
-            return _bars_from_rows(doc)
-        raise ReplayRefused(f"refused: {path.name} has no bar list")
-    rows = _lines(text, path)
-    return _bars_from_rows(rows)
+def _load_jsonl(path: Path) -> list[dict]:
+    if _kind(path) == "death":
+        return []
+    if _kind(path) not in {"manifest", "snap"}:
+        raise ReplayRefused("refused: only manifest-* and pool-snaps-* series are loaded")
+    return _bars_from_rows(_lines(_read(path), path))
 
 
-def _is_manifest(path: Path) -> bool:
-    return "manifest" in path.name
-
-
-def _is_snap(path: Path) -> bool:
-    return "pool-snap" in path.name or "pool_snap" in path.name
-
-
-def _series_files(path: Path) -> list[Path]:
+def _series_files(path: Path, blinded: bool) -> list[Path]:
     found = []
     roots = [path]
     v2 = path / "v2"
-    if v2.is_dir():
+    # solana-desk/v2 stays closed through the blinded window.
+    if v2.is_dir() and not (blinded and _under_solana_v2(v2)):
         roots.append(v2)
     for root in roots:
+        if blinded and _under_solana_v2(root):
+            continue
         for child in sorted(root.iterdir()):
-            if not child.is_file() or child.suffix not in {".jsonl", ".json"}:
+            if not child.is_file() or _banned(child):
                 continue
-            if _banned(child):
+            if blinded and _under_solana_v2(child):
                 continue
-            found.append(child)
+            kind = _kind(child)
+            if kind in {"manifest", "snap"}:
+                found.append(child)
     return found
 
 
-def load_bars(path) -> list[dict]:
+def _refuse_blind_bars(bars: list[dict]) -> None:
+    for bar in bars:
+        if int(bar["t_s"]) >= BLIND_START_S:
+            raise ReplayRefused("refused: a bar is inside the blinded window")
+
+
+def load_bars(path, now=None, allow_blinded: bool = False) -> list[dict]:
     """Bars sorted by mint, then time. Reads the path and does not write."""
     src = Path(path)
     _guard(src)
+    blinded = _blinded(now, allow_blinded)
+    if blinded and _under_solana_v2(src):
+        raise ReplayRefused("refused: solana-desk/v2 is inside the blinded window")
     if src.is_file():
-        return _load_file(src)
-    if not src.is_dir():
+        bars = _load_jsonl(src)
+    elif src.is_dir():
+        files = _series_files(src, blinded)
+        if not files:
+            raise ReplayRefused("refused: no manifest-* or pool-snaps-* series in the directory")
+        bars = []
+        for item in files:
+            bars.extend(_load_jsonl(item))
+        bars = _dedupe(bars)
+    else:
         raise ReplayRefused("refused: series path is not a file or directory")
-    files = _series_files(src)
-    if not files:
-        raise ReplayRefused("refused: no scan or snapshot series in the directory")
-    manifests = [p for p in files if _is_manifest(p)]
-    snaps = [p for p in files if _is_snap(p)]
-    plain = [p for p in files if p not in manifests and p not in snaps]
-    # A manifest directory is joined with its pool snaps. Other jsonl files in
-    # that directory are extra snapshot lines, not a second series.
-    if manifests:
-        rows: list[dict] = []
-        for item in manifests + snaps + plain:
-            text = _read(item)
-            if item.suffix == ".json":
-                try:
-                    doc = json.loads(text)
-                except json.JSONDecodeError as exc:
-                    raise ReplayRefused(f"refused: {item.name} is not json") from exc
-                if isinstance(doc, list):
-                    rows.extend(r for r in doc if isinstance(r, dict))
-                elif isinstance(doc, dict) and isinstance(doc.get("bars"), list):
-                    rows.extend(r for r in doc["bars"] if isinstance(r, dict))
-                continue
-            rows.extend(_lines(text, item))
-        return _bars_from_rows(rows)
-    bars: list[dict] = []
-    for item in plain:
-        bars.extend(_load_file(item))
-    return _dedupe(bars)
+    if blinded:
+        _refuse_blind_bars(bars)
+    return bars

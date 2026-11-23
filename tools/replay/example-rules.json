@@ -1,20 +1,16 @@
 {
   "seed": 1,
+  "lp_fee_bps": 0,
   "rules": [
     {
-      "id": "fixed-hold",
+      "id": "desk-v65",
+      "exit_mode": "desk_v65",
       "entry": {
         "rules_all_pass": true,
         "min_sol": 10,
         "min_sells_h1": 1
       },
-      "exit": {
-        "hard_stop": -0.25,
-        "take_profit": [[0.4, 0.3333333333333333], [1.0, 0.3333333333333333]],
-        "trail": 0.25,
-        "liq_drop": 0.4,
-        "max_hold_s": 7200
-      }
+      "exit": {}
     }
   ]
 }

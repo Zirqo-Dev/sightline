@@ -1,14 +1,18 @@
 """Replay pluggable rules over already-loaded bars.
 
-The entry signal reads the decision bar only. The exit object is copied onto
-the position before any later bar is read. Every rule needs a positive
-max_hold_s, and a position is opened only when the tape already reaches that
-clock, so nothing is left open.
+The entry signal reads the decision bar only. It does not look ahead to see
+whether a later bar exists. The exit mode defaults to desk_v65, which calls
+desk.exits.check on each new bar. A gap longer than max_gap_s, or the end of
+the tape, closes at the last known mark (stale, or missed when that mark is
+unusable). A dead pool closes as pool_gone.
 
-Quotes are the constant-product fill for the paper ticket (the same role as
-the desk's Jupiter outAmount). Net PnL then uses desk.fills: the v3-exit-aware
-haircut, the stress add-on on hard_stop, trailing_stop, and liquidity_pulled,
-and the network fee. This module does not write and does not use the network.
+Quotes are the constant-product fill for the paper ticket. The desk's COST
+block has no LP-fee field, so lp_fee_bps defaults to 0 and is applied only to
+this synthetic quote. Net PnL then uses desk.fills (v3-exit-aware haircut,
+stress add-on, network fee). Book limits are the desk's starting cash, the
+entry_cost check, the open cap, and the per-day cap.
+
+This module does not write and does not use the network.
 """
 
 from __future__ import annotations
@@ -16,6 +20,8 @@ from __future__ import annotations
 import copy
 import random
 import sys
+from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 
 _DESK = Path(__file__).resolve().parents[2] / "solana-desk"
@@ -23,37 +29,96 @@ if str(_DESK) not in sys.path:
     sys.path.insert(0, str(_DESK))
 
 from desk import config as C  # noqa: E402
-from desk import fills  # noqa: E402
+from desk import exits, fills  # noqa: E402
+
+# The desk's outage limit, used as the default gap between bars. Not a new exit rule.
+DEFAULT_MAX_GAP_S = float(C.OUTAGE_VOID_H) * 3600.0
+MIN_DRAWS = 1000
+BOOTSTRAP_REPS = 1000
+DESK_MODE = "desk_v65"
+FIXED_MODE = "fixed"
 
 
 class RuleError(ValueError):
     """The rule config cannot be replayed."""
 
 
-def buy_quote(sol: float, token: float, ticket: float) -> tuple[float, float]:
-    """Constant-product buy. Returns (tokens_out, effective SOL per token)."""
-    tokens = token * ticket / (sol + ticket)
+def buy_quote(sol: float, token: float, ticket: float, lp_fee_bps: float = 0.0) -> tuple[float, float]:
+    """Constant-product buy. Returns (tokens_out, effective SOL per token).
+
+    lp_fee_bps is taken from the SOL in before the curve, the usual pool fee.
+    The desk cost functions do not take an LP fee, so the default is 0.
+    """
+    fee = float(lp_fee_bps) / 10000.0
+    dx = ticket * (1.0 - fee)
+    if dx <= 0 or sol <= 0 or token <= 0:
+        return 0.0, 0.0
+    tokens = token * dx / (sol + dx)
+    if tokens <= 0:
+        return 0.0, 0.0
     return tokens, ticket / tokens
 
 
-def sell_mark(sol: float, token: float, tokens_to_sell: float) -> float:
+def sell_mark(sol: float, token: float, tokens_to_sell: float, lp_fee_bps: float = 0.0) -> float:
     """Effective SOL per token for selling tokens_to_sell into the pool."""
-    if tokens_to_sell <= 0 or sol <= 0 or token <= 0:
+    fee = float(lp_fee_bps) / 10000.0
+    sold = tokens_to_sell * (1.0 - fee)
+    if sold <= 0 or sol <= 0 or token <= 0 or tokens_to_sell <= 0:
         return 0.0
-    return sol / (token + tokens_to_sell)
+    sol_out = sol * sold / (token + sold)
+    return sol_out / tokens_to_sell
 
 
 def _pool_ok(bar: dict) -> bool:
     sol = bar.get("sol")
     token = bar.get("token")
-    return isinstance(sol, (int, float)) and isinstance(token, (int, float)) and sol > 0 and token > 0
+    return isinstance(sol, (int, float)) and not isinstance(sol, bool) and isinstance(token, (int, float)) and not isinstance(token, bool) and sol > 0 and token > 0
 
 
 def _require_number(spec: dict, key: str, rule_id: str) -> float:
     value = spec[key]
     if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise RuleError(f"rule {rule_id}: exit.{key} must be a number")
+        raise RuleError(f"rule {rule_id}: {key} must be a number")
     return float(value)
+
+
+def _exit_mode(rule: dict) -> str:
+    named = rule.get("exit_mode")
+    if named is None and isinstance(rule.get("exit"), dict):
+        named = rule["exit"].get("mode")
+    if named is None:
+        return DESK_MODE
+    if named not in {DESK_MODE, FIXED_MODE}:
+        raise RuleError(f"rule {rule.get('id')}: exit mode must be {DESK_MODE} or {FIXED_MODE}")
+    return named
+
+
+def _max_gap(rule: dict) -> float:
+    exit_spec = rule.get("exit") if isinstance(rule.get("exit"), dict) else {}
+    if "max_gap_s" in rule:
+        gap = _require_number(rule, "max_gap_s", str(rule.get("id")))
+    elif "max_gap_s" in exit_spec:
+        gap = _require_number(exit_spec, "max_gap_s", str(rule.get("id")))
+    else:
+        gap = DEFAULT_MAX_GAP_S
+    if gap <= 0:
+        raise RuleError(f"rule {rule.get('id')}: max_gap_s must be positive")
+    return gap
+
+
+def _lp_fee_bps(rule: dict, top) -> float:
+    """Desk COST has no LP-fee input. Absent means 0, not a guessed pool fee."""
+    if "lp_fee_bps" in rule:
+        raw = rule["lp_fee_bps"]
+    elif top is not None:
+        raw = top
+    else:
+        raw = 0
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        raise RuleError(f"rule {rule.get('id')}: lp_fee_bps must be a number")
+    if raw < 0 or raw >= 10000:
+        raise RuleError(f"rule {rule.get('id')}: lp_fee_bps must be in [0, 10000)")
+    return float(raw)
 
 
 def validate_rule(rule: dict) -> None:
@@ -63,47 +128,49 @@ def validate_rule(rule: dict) -> None:
     if not isinstance(rule_id, str) or not rule_id.strip():
         raise RuleError("a rule needs an id")
     entry = rule.get("entry", {})
+    if entry is None:
+        entry = {}
     if not isinstance(entry, dict):
         raise RuleError(f"rule {rule_id}: entry must be an object")
+    mode = _exit_mode(rule)
     exit_spec = rule.get("exit")
+    if exit_spec is None:
+        exit_spec = {}
     if not isinstance(exit_spec, dict):
-        raise RuleError(f"rule {rule_id}: exit must be an object bound before entry")
-    if "max_hold_s" not in exit_spec:
-        raise RuleError(f"rule {rule_id}: exit.max_hold_s is required so the position cannot stay open")
-    hold = _require_number(exit_spec, "max_hold_s", rule_id)
-    if hold <= 0:
-        raise RuleError(f"rule {rule_id}: exit.max_hold_s must be positive")
-    if "hard_stop" in exit_spec:
-        stop = _require_number(exit_spec, "hard_stop", rule_id)
-        if stop >= 0:
+        raise RuleError(f"rule {rule_id}: exit must be an object")
+    _max_gap(rule)
+    if "starting_cash" in rule:
+        cash = _require_number(rule, "starting_cash", rule_id)
+        if cash < 0:
+            raise RuleError(f"rule {rule_id}: starting_cash must be >= 0")
+    if mode == FIXED_MODE:
+        if "max_hold_s" not in exit_spec:
+            raise RuleError(f"rule {rule_id}: fixed exit needs max_hold_s so the position cannot stay open")
+        if _require_number(exit_spec, "max_hold_s", rule_id) <= 0:
+            raise RuleError(f"rule {rule_id}: exit.max_hold_s must be positive")
+        if "hard_stop" in exit_spec and _require_number(exit_spec, "hard_stop", rule_id) >= 0:
             raise RuleError(f"rule {rule_id}: exit.hard_stop must be negative")
-    if "trail" in exit_spec and exit_spec.get("trail") is not None:
-        trail = _require_number(exit_spec, "trail", rule_id)
-        if not 0 < trail < 1:
+        if exit_spec.get("trail") is not None and not 0 < _require_number(exit_spec, "trail", rule_id) < 1:
             raise RuleError(f"rule {rule_id}: exit.trail must be between 0 and 1")
-    if "liq_drop" in exit_spec and exit_spec.get("liq_drop") is not None:
-        drop = _require_number(exit_spec, "liq_drop", rule_id)
-        if not 0 < drop < 1:
+        if exit_spec.get("liq_drop") is not None and not 0 < _require_number(exit_spec, "liq_drop", rule_id) < 1:
             raise RuleError(f"rule {rule_id}: exit.liq_drop must be between 0 and 1")
-    ladder = exit_spec.get("take_profit") or []
-    if not isinstance(ladder, list):
-        raise RuleError(f"rule {rule_id}: exit.take_profit must be a list")
-    total = 0.0
-    prev = 0.0
-    for step in ladder:
-        if not isinstance(step, (list, tuple)) or len(step) != 2:
-            raise RuleError(f"rule {rule_id}: each take_profit step is [level, fraction]")
-        level, frac = step
-        if isinstance(level, bool) or isinstance(frac, bool):
-            raise RuleError(f"rule {rule_id}: take_profit values must be numbers")
-        if not isinstance(level, (int, float)) or not isinstance(frac, (int, float)):
-            raise RuleError(f"rule {rule_id}: take_profit values must be numbers")
-        if level <= prev or frac <= 0:
-            raise RuleError(f"rule {rule_id}: take_profit levels must rise and fractions must be positive")
-        total += float(frac)
-        prev = float(level)
-    if total > 1 + 1e-9:
-        raise RuleError(f"rule {rule_id}: take_profit fractions sum to more than 1")
+        ladder = exit_spec.get("take_profit") or []
+        if not isinstance(ladder, list):
+            raise RuleError(f"rule {rule_id}: exit.take_profit must be a list")
+        total = 0.0
+        prev = 0.0
+        for step in ladder:
+            if not isinstance(step, (list, tuple)) or len(step) != 2:
+                raise RuleError(f"rule {rule_id}: each take_profit step is [level, fraction]")
+            level, frac = step
+            if isinstance(level, bool) or isinstance(frac, bool) or not isinstance(level, (int, float)) or not isinstance(frac, (int, float)):
+                raise RuleError(f"rule {rule_id}: take_profit values must be numbers")
+            if level <= prev or frac <= 0:
+                raise RuleError(f"rule {rule_id}: take_profit levels must rise and fractions must be positive")
+            total += float(frac)
+            prev = float(level)
+        if total > 1 + 1e-9:
+            raise RuleError(f"rule {rule_id}: take_profit fractions sum to more than 1")
 
 
 def entry_match(bar: dict, entry: dict) -> bool:
@@ -144,65 +211,33 @@ def entry_match(bar: dict, entry: dict) -> bool:
     return True
 
 
+def _day_hour(t_s: int) -> tuple[str, int]:
+    stamp = datetime.fromtimestamp(int(t_s), tz=timezone.utc)
+    return stamp.strftime("%Y-%m-%d"), stamp.hour
+
+
 def _group(bars: list[dict]) -> dict[str, list[dict]]:
     grouped: dict[str, list[dict]] = {}
     for bar in bars:
         grouped.setdefault(bar["mint"], []).append(bar)
     for series in grouped.values():
-        series.sort(key=lambda b: b["t_s"])
+        series.sort(key=lambda b: (b["t_s"], b["mint"]))
     return grouped
 
 
-def _covered(series: list[dict], index: int, max_hold_s: float) -> bool:
-    """A later bar exists at or after the hold clock and has a positive pool."""
-    deadline = series[index]["t_s"] + max_hold_s
-    for bar in series[index + 1:]:
-        if bar["t_s"] >= deadline and _pool_ok(bar):
-            return True
-    return False
-
-
-def _decide(pos: dict, bar: dict, exit_spec: dict, deadline: float):
-    """Exit actions for one later bar. The exit object is the one bound at entry."""
-    if not _pool_ok(bar):
-        if bar["t_s"] >= deadline and pos["frac"] > 1e-12:
-            return [("sell", pos["frac"], "pool_gone", 0.0)], True
-        return [], False
-    mark = sell_mark(bar["sol"], bar["token"], pos["tokens"] * pos["frac"])
-    pos["peak"] = max(pos["peak"], mark)
-    ret = mark / pos["entry"] - 1
-    if exit_spec.get("liq_drop") is not None and pos["liq0"] and bar["sol"] < pos["liq0"] * (1 - float(exit_spec["liq_drop"])):
-        return [("sell", pos["frac"], "liquidity_pulled", mark)], True
-    if exit_spec.get("hard_stop") is not None and ret <= float(exit_spec["hard_stop"]):
-        return [("sell", pos["frac"], "hard_stop", mark)], True
-    acts = []
-    for step_i, (level, frac) in enumerate(exit_spec.get("take_profit") or []):
-        if pos["steps"] == step_i and ret >= float(level) and pos["frac"] > 1e-12:
-            sell_f = min(float(frac), pos["frac"])
-            acts.append(("sell", sell_f, f"take_profit_{int(round(float(level) * 100))}", mark))
-            pos["steps"] += 1
-            pos["frac"] -= sell_f
-    trail = exit_spec.get("trail")
-    if trail is not None and pos["steps"] >= 1 and pos["frac"] > 1e-12 and mark <= pos["peak"] * (1 - float(trail)):
-        acts.append(("sell", pos["frac"], "trailing_stop", mark))
-        return acts, True
-    if bar["t_s"] >= deadline and pos["frac"] > 1e-12:
-        acts.append(("sell", pos["frac"], "max_hold", mark))
-        return acts, True
-    return acts, pos["frac"] <= 1e-12
-
-
-def _apply(pos: dict, acts, pool_sol, when: int) -> list[dict]:
-    slices = []
-    for _action, frac, why, px in acts:
-        if frac <= 0:
+def _apply(book: dict, pos: dict, acts, pool_sol, when: int, lp_fee_bps: float) -> None:
+    for action, frac, why, px in acts:
+        if action != "sell" or frac <= 0:
             continue
         dx = fills.gross_proceeds(pos, frac, px) if px > 0 else 0.0
         verified = fills.verified_impact_bps(pool_sol, dx) if dx > 0 else None
         impact = 0.0 if verified is None else verified
         haircut = 0.0 if dx <= 0 else fills.haircut_frac(pool_sol, impact, why)
         gross, net = fills.slice_pnl(pos, frac, px, haircut)
-        slices.append({
+        book["cash"] += fills.net_proceeds(pos, frac, px, haircut)
+        pos["gross"] += gross
+        pos["net"] += net
+        pos["slices"].append({
             "t": int(when),
             "why": why,
             "frac": frac,
@@ -215,134 +250,279 @@ def _apply(pos: dict, acts, pool_sol, when: int) -> list[dict]:
         })
         if not str(why).startswith("take_profit"):
             pos["frac"] = 0.0
-    return slices
+    if pos["frac"] <= 1e-9 and pos["mint"] in book["open"]:
+        _archive(book, pos)
 
 
-def _walk(series: list[dict], index: int, exit_spec: dict, rule_id: str) -> tuple[dict, int]:
-    """Simulate one position. exit_spec is already a private copy."""
-    entry = series[index]
-    hold = float(exit_spec["max_hold_s"])
-    deadline = entry["t_s"] + hold
-    tokens, entry_px = buy_quote(entry["sol"], entry["token"], C.TICKET_SOL)
-    cost, h_entry = fills.entry_cost(entry["sol"])
-    pos = {
-        "entry": entry_px,
-        "tokens": tokens,
-        "frac": 1.0,
-        "peak": entry_px,
-        "opened": int(entry["t_s"]),
-        "steps": 0,
-        "liq0": entry["sol"],
-        "entry_cost": cost,
-        "entry_haircut": h_entry,
-    }
-    slices: list[dict] = []
-    j = index + 1
-    while j < len(series) and pos["frac"] > 1e-12:
-        bar = series[j]
-        acts, done = _decide(pos, bar, exit_spec, deadline)
-        pool = bar["sol"] if _pool_ok(bar) else None
-        slices.extend(_apply(pos, acts, pool, bar["t_s"]))
-        j += 1
-        if done or bar["t_s"] >= deadline:
-            break
-    if pos["frac"] > 1e-9 or not slices:
-        raise RuleError(f"rule {rule_id}: exit was not fixed before entry")
-    gross = sum(s["gross_pnl"] for s in slices)
-    net = sum(s["net_pnl"] for s in slices)
-    trade = {
-        "rule": rule_id,
-        "mint": entry["mint"],
-        "entry_t": int(entry["t_s"]),
-        "exit_t": int(slices[-1]["t"]),
-        "exit_reason": slices[-1]["why"],
-        "exit_fixed": exit_spec,
-        "entry_haircut": h_entry,
-        "entry_cost": cost,
-        "gross_pnl": gross,
-        "net_pnl": net,
-        "slices": slices,
-    }
-    return trade, j
+def _archive(book: dict, pos: dict) -> None:
+    book["open"].pop(pos["mint"], None)
+    if not pos["slices"]:
+        return
+    book["trades"].append({
+        "rule": pos["rule"],
+        "mint": pos["mint"],
+        "entry_t": int(pos["opened"]),
+        "exit_t": int(pos["slices"][-1]["t"]),
+        "exit_reason": pos["slices"][-1]["why"],
+        "exit_fixed": pos["exit_fixed"],
+        "gross_pnl": pos["gross"],
+        "net_pnl": pos["net"],
+        "slices": pos["slices"],
+        "baseline": pos["baseline"],
+    })
 
 
-def _simulate(grouped: dict[str, list[dict]], rule: dict, predicate) -> list[dict]:
-    rule_id = rule["id"]
-    hold = float(rule["exit"]["max_hold_s"])
-    trades = []
-    for mint in sorted(grouped):
-        series = grouped[mint]
-        i = 0
-        while i < len(series):
-            bar = series[i]
-            if not _pool_ok(bar) or not predicate(bar) or not _covered(series, i, hold):
-                i += 1
+def _force_close(book: dict, pos: dict, why: str, px: float, when: int, pool_sol, lp_fee_bps: float) -> None:
+    if pos["frac"] <= 1e-12:
+        book["open"].pop(pos["mint"], None)
+        return
+    _apply(book, pos, [("sell", pos["frac"], why, px)], pool_sol, when, lp_fee_bps)
+
+
+def _close_known(book: dict, pos: dict, why: str, when: int, lp_fee_bps: float) -> None:
+    """Close from the last mark. No later bar is an input."""
+    mark = pos.get("last_mark")
+    if not isinstance(mark, (int, float)) or isinstance(mark, bool) or mark <= 0:
+        _force_close(book, pos, "missed", 0.0, int(when), pos.get("liq0"), lp_fee_bps)
+        return
+    _force_close(book, pos, why, float(mark), int(when), pos.get("liq0"), lp_fee_bps)
+
+
+def _expire(book: dict, now: int, max_gap: float, lp_fee_bps: float) -> None:
+    for pos in list(book["open"].values()):
+        if now - pos["last_t"] > max_gap:
+            _close_known(book, pos, "stale", pos["last_t"], lp_fee_bps)
+
+
+def _status_of(bar: dict) -> str:
+    if not _pool_ok(bar):
+        return "pool_gone"
+    status = bar.get("status") or "ok"
+    if status not in {"ok", "temp_error", "no_route", "pool_gone"}:
+        return "ok"
+    return status
+
+
+def _mark_desk(book: dict, pos: dict, bar: dict, lp_fee_bps: float) -> None:
+    status = _status_of(bar)
+    if status == "ok":
+        mark = sell_mark(bar["sol"], bar["token"], pos["tokens"] * pos["frac"], lp_fee_bps)
+        liq = bar["sol"]
+        pool = bar["sol"]
+    elif status == "pool_gone":
+        mark = 0.0
+        liq = None
+        pool = None
+    else:
+        mark = pos["last_mark"]
+        liq = None
+        pool = None
+    acts = exits.check(pos, mark, liq, int(bar["t_s"]), status)
+    _apply(book, pos, acts, pool, int(bar["t_s"]), lp_fee_bps)
+
+
+def _mark_fixed(book: dict, pos: dict, bar: dict, exit_spec: dict, lp_fee_bps: float) -> None:
+    status = _status_of(bar)
+    if status == "pool_gone":
+        acts = exits.check(pos, 0.0, None, int(bar["t_s"]), "pool_gone")
+        _apply(book, pos, acts, None, int(bar["t_s"]), lp_fee_bps)
+        return
+    if status in {"temp_error", "no_route"}:
+        acts = exits.check(pos, pos["last_mark"], None, int(bar["t_s"]), status)
+        _apply(book, pos, acts, None, int(bar["t_s"]), lp_fee_bps)
+        return
+    mark = sell_mark(bar["sol"], bar["token"], pos["tokens"] * pos["frac"], lp_fee_bps)
+    pos["peak"] = max(pos["peak"], mark)
+    ret = mark / pos["entry"] - 1 if pos["entry"] else 0.0
+    if exit_spec.get("liq_drop") is not None and pos["liq0"] and bar["sol"] < pos["liq0"] * (1 - float(exit_spec["liq_drop"])):
+        _apply(book, pos, [("sell", pos["frac"], "liquidity_pulled", mark)], bar["sol"], int(bar["t_s"]), lp_fee_bps)
+        return
+    if exit_spec.get("hard_stop") is not None and ret <= float(exit_spec["hard_stop"]):
+        _apply(book, pos, [("sell", pos["frac"], "hard_stop", mark)], bar["sol"], int(bar["t_s"]), lp_fee_bps)
+        return
+    acts = []
+    for step_i, (level, frac) in enumerate(exit_spec.get("take_profit") or []):
+        if pos["steps"] == step_i and ret >= float(level) and pos["frac"] > 1e-12:
+            sell_f = min(float(frac), pos["frac"])
+            acts.append(("sell", sell_f, f"take_profit_{int(round(float(level) * 100))}", mark))
+            pos["steps"] += 1
+            pos["frac"] -= sell_f
+    trail = exit_spec.get("trail")
+    if trail is not None and pos["steps"] >= 1 and pos["frac"] > 1e-12 and mark <= pos["peak"] * (1 - float(trail)):
+        acts.append(("sell", pos["frac"], "trailing_stop", mark))
+        _apply(book, pos, acts, bar["sol"], int(bar["t_s"]), lp_fee_bps)
+        return
+    if bar["t_s"] >= pos["opened"] + float(exit_spec["max_hold_s"]) and pos["frac"] > 1e-12:
+        acts.append(("sell", pos["frac"], "max_hold", mark))
+    _apply(book, pos, acts, bar["sol"], int(bar["t_s"]), lp_fee_bps)
+
+
+def _try_enter(book: dict, bar: dict, rule: dict, lp_fee_bps: float, bound: dict, baseline: bool) -> bool:
+    if bar["mint"] in book["open"] or not _pool_ok(bar):
+        return False
+    day, _hour = _day_hour(bar["t_s"])
+    cost, haircut = fills.entry_cost(bar["sol"])
+    if book["cash"] < cost:
+        book["skip_cash"] += 1
+        return False
+    if len(book["open"]) >= C.MAX_OPEN_F:
+        book["skip_open"] += 1
+        return False
+    if book["fills"].get(day, 0) >= C.MAX_NEW_F_PER_DAY:
+        book["skip_day"] += 1
+        return False
+    tokens, px = buy_quote(bar["sol"], bar["token"], C.TICKET_SOL, lp_fee_bps)
+    if tokens <= 0 or px <= 0:
+        return False
+    book["cash"] -= cost
+    book["fills"][day] = book["fills"].get(day, 0) + 1
+    pos = exits.new_position(px, bar["sol"], int(bar["t_s"]))
+    pos.update(
+        mint=bar["mint"],
+        rule=rule["id"],
+        tokens=tokens,
+        entry_cost=cost,
+        entry_haircut=haircut,
+        last_t=int(bar["t_s"]),
+        slices=[],
+        gross=0.0,
+        net=0.0,
+        exit_fixed=bound,
+        baseline=baseline,
+    )
+    book["open"][bar["mint"]] = pos
+    return True
+
+
+def run_book(bars: list[dict], rule: dict, lp_fee_bps: float, rng: random.Random | None = None, remaining: Counter | None = None, baseline: bool = False) -> dict:
+    """One book. remaining limits null entries per UTC day and hour."""
+    mode = _exit_mode(rule)
+    gap = _max_gap(rule)
+    exit_spec = rule.get("exit") if isinstance(rule.get("exit"), dict) else {}
+    bound = {"mode": mode, "max_gap_s": gap}
+    if mode == FIXED_MODE:
+        bound.update(copy.deepcopy(exit_spec))
+    cash0 = float(rule["starting_cash"]) if "starting_cash" in rule else float(C.START_BALANCE_SOL)
+    book = {"cash": cash0, "open": {}, "trades": [], "fills": {}, "skip_cash": 0, "skip_open": 0, "skip_day": 0}
+    entry = rule.get("entry") or {}
+    grouped = _group(bars)
+    events = [(bar["t_s"], mint, i) for mint, series in grouped.items() for i, bar in enumerate(series)]
+    events.sort(key=lambda item: (item[0], item[1]))
+    index = 0
+    while index < len(events):
+        now = events[index][0]
+        batch = []
+        while index < len(events) and events[index][0] == now:
+            batch.append(events[index])
+            index += 1
+        _expire(book, now, gap, lp_fee_bps)
+        busy = set(book["open"])
+        for _t, mint, i in batch:
+            if mint not in book["open"]:
                 continue
-            bound = copy.deepcopy(rule["exit"])
-            trade, i = _walk(series, i, bound, rule_id)
-            trades.append(trade)
-    return trades
-
-
-def _baseline(grouped, rule: dict, trades: list[dict], seed: int) -> tuple[list[dict], int]:
-    """Random entries, same bound exit, same count. Rule entries are left out."""
-    used = {(t["mint"], t["entry_t"]) for t in trades}
-    hold = float(rule["exit"]["max_hold_s"])
-    candidates = []
-    for mint in sorted(grouped):
-        series = grouped[mint]
-        for i, bar in enumerate(series):
-            if (mint, bar["t_s"]) in used or not _pool_ok(bar) or not _covered(series, i, hold):
+            bar = grouped[mint][i]
+            if mode == DESK_MODE:
+                _mark_desk(book, book["open"][mint], bar, lp_fee_bps)
+            else:
+                _mark_fixed(book, book["open"][mint], bar, exit_spec, lp_fee_bps)
+            if mint in book["open"]:
+                book["open"][mint]["last_t"] = int(bar["t_s"])
+        candidates = []
+        for _t, mint, i in batch:
+            if mint in busy or mint in book["open"]:
                 continue
-            candidates.append((mint, i))
-    rng = random.Random(seed)
-    rng.shuffle(candidates)
-    picked = candidates[:len(trades)]
-    picked.sort(key=lambda item: (grouped[item[0]][item[1]]["t_s"], item[0]))
-    out = []
-    for mint, i in picked:
-        bound = copy.deepcopy(rule["exit"])
-        trade, _ = _walk(grouped[mint], i, bound, rule["id"])
-        trade["baseline"] = True
-        out.append(trade)
-    shortfall = len(trades) - len(out)
-    return out, shortfall
+            bar = grouped[mint][i]
+            if not _pool_ok(bar) or not entry_match(bar, entry):
+                continue
+            candidates.append(bar)
+        if rng is None:
+            candidates.sort(key=lambda bar: bar["mint"])
+        else:
+            rng.shuffle(candidates)
+        for bar in candidates:
+            key = _day_hour(bar["t_s"])
+            if remaining is not None and remaining.get(key, 0) <= 0:
+                continue
+            if _try_enter(book, bar, rule, lp_fee_bps, bound, baseline):
+                if remaining is not None:
+                    remaining[key] -= 1
+    for pos in list(book["open"].values()):
+        _close_known(book, pos, "stale", pos["last_t"], lp_fee_bps)
+    return book
 
 
-def _rate(trades: list[dict]):
-    if not trades:
+def _hour_counts(trades: list[dict]) -> Counter:
+    counts: Counter = Counter()
+    for trade in trades:
+        counts[_day_hour(trade["entry_t"])] += 1
+    return counts
+
+
+def _eligible_n(bars: list[dict], entry: dict) -> int:
+    return sum(1 for bar in bars if _pool_ok(bar) and entry_match(bar, entry))
+
+
+def _percentile(rule_net: float, nulls: list[float]):
+    if not nulls:
         return None
-    return sum(1 for t in trades if t["net_pnl"] > 0) / len(trades)
+    less = sum(1 for value in nulls if value < rule_net)
+    ties = sum(1 for value in nulls if value == rule_net)
+    return 100.0 * (less + 0.5 * ties) / len(nulls)
 
 
-def _round(value: float) -> float:
-    return round(float(value), 9)
+def _clusters(trades: list[dict], by: str) -> list[list[dict]]:
+    groups: dict = {}
+    for trade in trades:
+        if by == "day":
+            key = _day_hour(trade["entry_t"])[0]
+        else:
+            key = trade["mint"]
+        groups.setdefault(key, []).append(trade)
+    return list(groups.values())
 
 
-def _summary(trades: list[dict]) -> dict:
-    return {
-        "n": len(trades),
-        "hit_rate": _rate(trades),
-        "net_pnl": _round(sum(t["net_pnl"] for t in trades)),
-        "gross_pnl": _round(sum(t["gross_pnl"] for t in trades)),
-        "trades": trades,
-    }
+def _effective_n(clusters: list[list[dict]]) -> float:
+    """Kish effective sample size from cluster sizes."""
+    sizes = [len(cluster) for cluster in clusters if cluster]
+    n = sum(sizes)
+    if n == 0:
+        return 0.0
+    return (n * n) / sum(size * size for size in sizes)
+
+
+def _cluster_choice(trades: list[dict]) -> str:
+    days = {_day_hour(trade["entry_t"])[0] for trade in trades}
+    if len(days) >= 2:
+        return "day"
+    return "mint"
+
+
+def _quantile(sorted_vals: list[float], p: float) -> float:
+    if len(sorted_vals) == 1:
+        return sorted_vals[0]
+    idx = (len(sorted_vals) - 1) * p
+    lo = int(idx)
+    hi = min(lo + 1, len(sorted_vals) - 1)
+    weight = idx - lo
+    return sorted_vals[lo] * (1 - weight) + sorted_vals[hi] * weight
+
+
+def _bootstrap(trades: list[dict], rng: random.Random, by: str) -> tuple[float | None, float | None, float]:
+    clusters = _clusters(trades, by)
+    n_eff = _effective_n(clusters)
+    if not clusters:
+        return None, None, n_eff
+    means = []
+    width = len(clusters)
+    for _ in range(BOOTSTRAP_REPS):
+        drawn = [clusters[rng.randrange(width)] for _ in range(width)]
+        flat = [trade for cluster in drawn for trade in cluster]
+        means.append(sum(trade["net_pnl"] for trade in flat) / len(flat))
+    means.sort()
+    return _quantile(means, 0.025), _quantile(means, 0.975), n_eff
 
 
 def _public_trade(trade: dict) -> dict:
-    slices = []
-    for sl in trade["slices"]:
-        slices.append({
-            "t": sl["t"],
-            "why": sl["why"],
-            "frac": sl["frac"],
-            "px": sl["px"],
-            "gross_pnl": sl["gross_pnl"],
-            "net_pnl": sl["net_pnl"],
-            "exit_haircut": sl["exit_haircut"],
-            "pool_sol": sl["pool_sol"],
-            "dx_sol": sl["dx_sol"],
-        })
     return {
         "rule": trade["rule"],
         "mint": trade["mint"],
@@ -352,51 +532,94 @@ def _public_trade(trade: dict) -> dict:
         "exit_fixed": trade["exit_fixed"],
         "gross_pnl": trade["gross_pnl"],
         "net_pnl": trade["net_pnl"],
-        "slices": slices,
+        "slices": [dict(sl) for sl in trade["slices"]],
         "baseline": bool(trade.get("baseline")),
     }
 
 
-def replay(bars: list[dict], rules, seed: int | None = None) -> dict:
-    """Per-rule trades, net-of-cost PnL, hit rate, and a random-entry baseline."""
+def _rate(trades: list[dict]):
+    if not trades:
+        return None
+    return sum(1 for trade in trades if trade["net_pnl"] > 0) / len(trades)
+
+
+def _round(value: float) -> float:
+    return round(float(value), 9)
+
+
+def replay(bars: list[dict], rules, seed: int | None = None, n_draws: int | None = None) -> dict:
+    """Per-rule trades, net PnL, hit rate, and a 1000-draw null with a clustered CI."""
+    top_lp = None
     if isinstance(rules, dict):
         if seed is None:
             seed = int(rules.get("seed", 1))
+        if n_draws is None and rules.get("n_draws") is not None:
+            n_draws = int(rules["n_draws"])
+        if "lp_fee_bps" in rules:
+            top_lp = rules["lp_fee_bps"]
         rule_list = rules.get("rules") or []
     else:
         rule_list = list(rules)
         if seed is None:
             seed = 1
+    if n_draws is None:
+        n_draws = MIN_DRAWS
+    if n_draws < MIN_DRAWS:
+        raise RuleError(f"n_draws must be at least {MIN_DRAWS}")
     if not isinstance(rule_list, list) or not rule_list:
         raise RuleError("rules must be a non-empty list")
     for rule in rule_list:
         validate_rule(rule)
-    grouped = _group(bars)
+        _lp_fee_bps(rule, top_lp)
     rows = []
     for rule in rule_list:
+        lp_fee = _lp_fee_bps(rule, top_lp)
         entry = rule.get("entry") or {}
-        trades = _simulate(grouped, rule, lambda bar, entry=entry: entry_match(bar, entry))
-        base, shortfall = _baseline(grouped, rule, trades, seed)
-        rule_sum = _summary(trades)
-        base_sum = _summary(base)
+        live = run_book(bars, rule, lp_fee, rng=None, remaining=None, baseline=False)
+        trades = live["trades"]
+        counts = _hour_counts(trades)
+        rng = random.Random(seed)
+        nulls = []
+        for _ in range(n_draws):
+            remaining = Counter(counts)
+            draw = run_book(bars, rule, lp_fee, rng=rng, remaining=remaining, baseline=True)
+            nulls.append(sum(trade["net_pnl"] for trade in draw["trades"]))
+        by = _cluster_choice(trades)
+        lo, hi, n_eff = _bootstrap(trades, rng, by)
+        rule_net = _round(sum(trade["net_pnl"] for trade in trades))
         rows.append({
             "id": rule["id"],
-            "n": rule_sum["n"],
-            "hit_rate": rule_sum["hit_rate"],
-            "net_pnl": rule_sum["net_pnl"],
-            "gross_pnl": rule_sum["gross_pnl"],
-            "trades": [_public_trade(t) for t in rule_sum["trades"]],
+            "n": len(trades),
+            "hit_rate": _rate(trades),
+            "net_pnl": rule_net,
+            "gross_pnl": _round(sum(trade["gross_pnl"] for trade in trades)),
+            "trades": [_public_trade(trade) for trade in trades],
+            "skipped_cash": live["skip_cash"],
+            "skipped_open_cap": live["skip_open"],
+            "skipped_day_cap": live["skip_day"],
             "baseline": {
                 "seed": seed,
-                "n": base_sum["n"],
-                "hit_rate": base_sum["hit_rate"],
-                "net_pnl": base_sum["net_pnl"],
-                "gross_pnl": base_sum["gross_pnl"],
-                "shortfall": shortfall,
-                "trades": [_public_trade(t) for t in base_sum["trades"]],
+                "draws": n_draws,
+                "percentile": _percentile(sum(trade["net_pnl"] for trade in trades), nulls),
+                "null_mean": _round(sum(nulls) / len(nulls)) if nulls else None,
+                "bootstrap_ci": [None if lo is None else _round(lo), None if hi is None else _round(hi)],
+                "cluster_by": by,
+                "effective_n": n_eff,
+                "eligible_n": _eligible_n(bars, entry),
+                "hour_counts": {f"{day}T{hour:02d}": count for (day, hour), count in sorted(counts.items())},
             },
         })
-    return {"cost_model": C.COST_MODEL, "ticket_sol": C.TICKET_SOL, "rules": rows}
+    return {
+        "cost_model": C.COST_MODEL,
+        "ticket_sol": C.TICKET_SOL,
+        "lp_fee_bps_default": 0,
+        "lp_fee_in_desk_cost": False,
+        "starting_cash": C.START_BALANCE_SOL,
+        "max_open": C.MAX_OPEN_F,
+        "max_new_per_day": C.MAX_NEW_F_PER_DAY,
+        "max_gap_s_default": DEFAULT_MAX_GAP_S,
+        "rules": rows,
+    }
 
 
 def _fmt_rate(rate) -> str:
@@ -405,8 +628,14 @@ def _fmt_rate(rate) -> str:
     return f"{rate:.4f}"
 
 
+def _fmt_ci(bounds) -> str:
+    if not bounds or bounds[0] is None or bounds[1] is None:
+        return "n/a"
+    return f"[{bounds[0]:.9f},{bounds[1]:.9f}]"
+
+
 def format_report(result: dict) -> str:
-    """One block per rule: the rule's trades, then the random-entry baseline."""
+    """One block per rule: its trades, then the null percentile and clustered CI."""
     lines = []
     for row in result.get("rules") or []:
         lines.append(
@@ -420,17 +649,13 @@ def format_report(result: dict) -> str:
                 f"gross_pnl_sol={trade['gross_pnl']:.9f}"
             )
         base = row["baseline"]
+        pct = "n/a" if base["percentile"] is None else f"{base['percentile']:.2f}"
+        mean = "n/a" if base["null_mean"] is None else f"{base['null_mean']:.9f}"
         lines.append(
-            f"baseline {row['id']} trades={base['n']} hit_rate={_fmt_rate(base['hit_rate'])} "
-            f"net_pnl_sol={base['net_pnl']:.9f} gross_pnl_sol={base['gross_pnl']:.9f} "
-            f"seed={base['seed']} shortfall={base['shortfall']}"
+            f"baseline {row['id']} draws={base['draws']} percentile={pct} null_mean_sol={mean} "
+            f"bootstrap_ci={_fmt_ci(base['bootstrap_ci'])} cluster={base['cluster_by']} "
+            f"effective_n={base['effective_n']:.4f} seed={base['seed']}"
         )
-        for trade in base["trades"]:
-            lines.append(
-                f"  trade mint={trade['mint']} entry_t={trade['entry_t']} exit_t={trade['exit_t']} "
-                f"exit={trade['exit_reason']} net_pnl_sol={trade['net_pnl']:.9f} "
-                f"gross_pnl_sol={trade['gross_pnl']:.9f}"
-            )
     if not lines:
         return ""
     return "\n".join(lines) + "\n"

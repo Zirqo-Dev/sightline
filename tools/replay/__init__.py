@@ -1,7 +1,7 @@
-"""Replay fixed entry and exit rules over historical scan and pool snapshots.
+"""Replay entry rules over historical scan and pool snapshots.
 
-Read-only and offline. A position is opened only when its exit rule, including
-a finite max hold, is already bound.
+Read-only and offline. The default exit is the desk's check. An entry does not
+depend on a later bar existing.
 """
 
 from .engine import RuleError, format_report, replay

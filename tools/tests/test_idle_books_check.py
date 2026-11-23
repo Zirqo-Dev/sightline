@@ -17,6 +17,13 @@ def _write(dirpath: Path, name: str, body: str) -> None:
     (dirpath / name).write_text(body, encoding="utf-8")
 
 
+def _no_amounts(lines):
+    text = "\n".join(lines)
+    for token in ("0.20000000", "0.50000000", "0.10000000", "99999", "424242", "9.0", "9.5"):
+        if token in text:
+            raise AssertionError(token)
+
+
 class IdleBooks(unittest.TestCase):
     def _dir(self):
         import tempfile
@@ -28,8 +35,8 @@ class IdleBooks(unittest.TestCase):
         root = self._dir()
         _write(root, "positions.json", json.dumps({
             "books": {
-                "F": {"cash": 9.5, "open": {}, "closed": [{"opened": NOW - 3 * DAY, "pnl": 99999}]},
-                "R": {"cash": 8.0, "open": {"x": {"opened": NOW - 1000}}, "closed": []},
+                "F": {"cash": 9.5, "open": {}, "closed": [{"opened": NOW - 3 * DAY, "pnl": 99999}], "fills_today": 0},
+                "R": {"cash": 8.0, "open": {"x": {"opened": NOW - 1000}}, "closed": [], "fills_today": 1},
             }
         }))
         _write(root, "tasks.csv", "\n".join([
@@ -38,51 +45,79 @@ class IdleBooks(unittest.TestCase):
             f"{NOW - 2 * DAY},R0,pass,",
             f"{NOW - 500},R1,skip,",
         ]))
-        state = load_state(root)
-        lines = idle_lines(state, NOW)
+        lines = idle_lines(load_state(root), NOW)
         self.assertEqual(lines, [
-            "IDLE book=F reason=passing leads in the last 24h with zero entries (leads=1 entries=0)",
+            "IDLE book=F reason=cash_below_floor=no; passing leads in the last 24h with zero entries (leads=1 entries=0)",
         ])
-        self.assertNotIn("99999", "\n".join(lines))
+        _no_amounts(lines)
 
-    def test_cash_below_ticket_floor(self):
+    def test_cash_below_entry_cost_not_the_bare_ticket(self):
         root = self._dir()
         _write(root, "paper.json", json.dumps({
             "schema_version": 2,
             "book": "F,R,S",
             "ticket_size": 0.5,
             "books": {
-                "F": {"cash": 0.2},
-                "S": {"cash": 0.5},
+                "F": {"cash": 0.5, "open": 0, "fills_today": 0},
+                "S": {"cash": 9.0, "open": 0, "fills_today": 0},
             },
             "open": [],
             "closed": [{"book": "S", "opened_at": "2024-03-09T16:00:00Z", "result": {"pnl": 424242}}],
         }))
-        state = load_state(root)
-        lines = idle_lines(state, NOW)
+        lines = idle_lines(load_state(root), NOW)
         self.assertEqual(lines, [
-            "IDLE book=F reason=cash 0.20000000 is below the ticket floor 0.50000000",
+            "IDLE book=F reason=cash_below_floor=yes",
         ])
-        self.assertNotIn("424242", "\n".join(lines))
+        _no_amounts(lines)
 
-    def test_both_reasons_are_one_line(self):
+    def test_both_reasons_are_one_line_without_amounts(self):
         root = self._dir()
         _write(root, "positions.json", json.dumps({
-            "ticket_sol": 0.5,
-            "books": {"F": {"cash": 0.1, "open": {}, "closed": []}},
+            "books": {"F": {"cash": 0.1, "open": {}, "closed": [], "fills_today": 0}},
         }))
         _write(root, "tasks.csv", f"time,result,book\n{NOW - 10},pass,\n")
         lines = idle_lines(load_state(root), NOW)
+        self.assertEqual(lines, [
+            "IDLE book=F reason=cash_below_floor=yes; passing leads in the last 24h with zero entries (leads=1 entries=0)",
+        ])
+        _no_amounts(lines)
+
+    def test_open_cap_and_day_cap_are_capped_not_idle(self):
+        root = self._dir()
+        opens = {f"p{i}": {"opened": NOW - 3 * DAY} for i in range(4)}
+        _write(root, "positions.json", json.dumps({
+            "books": {
+                "F": {"cash": 9.0, "open": opens, "closed": [], "fills_today": 0},
+                "S": {"cash": 9.0, "open": {}, "closed": [], "fills_today": 8},
+            }
+        }))
+        _write(root, "tasks.csv", f"time,result,book\n{NOW - 60},pass,\n")
+        lines = idle_lines(load_state(root), NOW)
+        self.assertEqual(lines, [
+            "CAPPED book=F reason=open_cap cash_below_floor=no",
+            "CAPPED book=S reason=day_cap cash_below_floor=no",
+        ])
+        _no_amounts(lines)
+
+    def test_cash_below_floor_stays_idle_even_at_the_open_cap(self):
+        root = self._dir()
+        opens = {f"p{i}": {"opened": NOW - 3 * DAY} for i in range(4)}
+        _write(root, "positions.json", json.dumps({
+            "books": {"F": {"cash": 0.1, "open": opens, "closed": [], "fills_today": 0}},
+        }))
+        _write(root, "tasks.csv", f"time,result,book\n{NOW - 60},pass,\n")
+        lines = idle_lines(load_state(root), NOW)
         self.assertEqual(len(lines), 1)
-        self.assertTrue(lines[0].startswith("IDLE book=F reason="))
-        self.assertIn("cash 0.10000000 is below the ticket floor 0.50000000", lines[0])
-        self.assertIn("passing leads in the last 24h with zero entries (leads=1 entries=0)", lines[0])
+        self.assertTrue(lines[0].startswith("IDLE book=F "))
+        self.assertIn("cash_below_floor=yes", lines[0])
+        self.assertNotIn("CAPPED", lines[0])
+        _no_amounts(lines)
 
     def test_recent_entry_and_healthy_cash_are_not_idle(self):
         root = self._dir()
         _write(root, "paper.json", json.dumps({
             "ticket_size": 0.5,
-            "books": {"F": {"cash": 4.0}},
+            "books": {"F": {"cash": 4.0, "open": 1, "fills_today": 1}},
             "open": [{"book": "F", "opened_at": "2024-03-09T16:00:00Z"}],
             "closed": [],
         }))
@@ -93,20 +128,20 @@ class IdleBooks(unittest.TestCase):
         root = self._dir()
         _write(root, "positions.json", json.dumps({
             "books": {
-                "F": {"cash": 9.0, "open": {}, "closed": []},
-                "S": {"cash": 9.0, "open": {}, "closed": []},
+                "F": {"cash": 9.0, "open": {}, "closed": [], "fills_today": 0},
+                "S": {"cash": 9.0, "open": {}, "closed": [], "fills_today": 0},
             }
         }))
         _write(root, "tasks.csv", f"time,result,book\n{NOW - 60},pass,F\n")
         lines = idle_lines(load_state(root), NOW)
         self.assertEqual(lines, [
-            "IDLE book=F reason=passing leads in the last 24h with zero entries (leads=1 entries=0)",
+            "IDLE book=F reason=cash_below_floor=no; passing leads in the last 24h with zero entries (leads=1 entries=0)",
         ])
 
     def test_cli_is_read_only_and_returns_status(self):
         root = self._dir()
         _write(root, "positions.json", json.dumps({
-            "books": {"F": {"cash": 9.0, "open": {}, "closed": []}},
+            "books": {"F": {"cash": 9.0, "open": {}, "closed": [], "fills_today": 0}},
         }))
         _write(root, "tasks.csv", f"time,result,book\n{NOW - 60},pass,\n")
         before = sorted(p.name for p in root.iterdir())
@@ -118,8 +153,9 @@ class IdleBooks(unittest.TestCase):
         self.assertEqual(proc.returncode, 1, proc.stderr)
         self.assertEqual(
             proc.stdout,
-            "IDLE book=F reason=passing leads in the last 24h with zero entries (leads=1 entries=0)\n",
+            "IDLE book=F reason=cash_below_floor=no; passing leads in the last 24h with zero entries (leads=1 entries=0)\n",
         )
+        self.assertNotIn("9.0", proc.stdout)
         self.assertEqual(sorted(p.name for p in root.iterdir()), before)
         quiet = subprocess.run(
             [sys.executable, str(ROOT / "tools" / "idle_books_check.py"),
@@ -129,12 +165,16 @@ class IdleBooks(unittest.TestCase):
         self.assertEqual(quiet.returncode, 0)
         self.assertEqual(quiet.stdout, "")
         self.assertEqual(main(["--data-dir", str(root / "missing")]), 2)
+        self.assertEqual(main(["--data-dir", str(self._dir())]), 2)
 
-    def test_bad_json_does_not_echo_the_file(self):
+    def test_bad_json_and_bad_tasks_do_not_echo_the_file(self):
         root = self._dir()
         _write(root, "paper.json", '{"ticket_size": 0.5, "pnl": 777777,')
-        code = main(["--data-dir", str(root), "--now", str(NOW)])
-        self.assertEqual(code, 2)
+        self.assertEqual(main(["--data-dir", str(root), "--now", str(NOW)]), 2)
+        other = self._dir()
+        _write(other, "positions.json", '{"books": {"F": {"cash": 9, "open": {}}}}')
+        _write(other, "tasks.csv", "{not,a,header\n")
+        self.assertEqual(main(["--data-dir", str(other), "--now", str(NOW)]), 2)
 
 
 if __name__ == "__main__":

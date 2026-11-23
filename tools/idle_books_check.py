@@ -1,8 +1,10 @@
 """Read-only idle check for paper books.
 
 Prints one IDLE line when a book had passing leads and zero entries over the
-window (24h by default), or when its cash is below the ticket floor. Does not
-write, does not open a socket, and is not on a schedule.
+window (24h by default), or when its cash is below entry_cost. A book that
+missed entries only because it is at the open cap or the daily cap is CAPPED.
+Cash is reported as cash_below_floor=yes or no, never as an amount. Does not
+write, does not use the network, and is not on a schedule.
 
   python3 tools/idle_books_check.py --data-dir DIR [--now EPOCH|ISO] [--window-hours 24]
 
@@ -113,6 +115,9 @@ def _from_positions(doc: dict, ticket):
             "cash": _num(book.get("cash")),
             "entries": _entries_from_positions_book(book),
             "ticket": book_ticket if book_ticket is not None else ticket,
+            "open_n": _open_count(book),
+            "fills_today": _num(book.get("fills_today")),
+            "pool_sol": _num(book.get("liq0") if book.get("liq0") is not None else book.get("sol")),
         }
     return books, ticket
 
@@ -137,6 +142,9 @@ def _from_paper(doc: dict):
                 "cash": _num(book.get("cash")),
                 "entries": [],
                 "ticket": book_ticket,
+                "open_n": _open_count(book),
+                "fills_today": _num(book.get("fills_today")),
+                "pool_sol": _num(book.get("liq0") if book.get("liq0") is not None else book.get("sol")),
             }
         for row in _ticket_rows(doc):
             stamp = parse_time(row.get("opened_at") if "opened_at" in row else row.get("opened"))
@@ -154,10 +162,32 @@ def _from_paper(doc: dict):
         stamp = parse_time(row.get("opened_at") if "opened_at" in row else row.get("opened"))
         if stamp is not None:
             entries.append(stamp)
-    return {name: {"cash": _num(doc.get("cash")), "entries": entries, "ticket": ticket}}, ticket
+    if isinstance(doc.get("open"), list):
+        open_n = len([row for row in doc["open"] if isinstance(row, dict)])
+    else:
+        open_n = _open_count(doc)
+    return {
+        name: {
+            "cash": _num(doc.get("cash")),
+            "entries": entries,
+            "ticket": ticket,
+            "open_n": open_n,
+            "fills_today": _num(doc.get("fills_today")),
+            "pool_sol": _num(doc.get("sol")),
+        }
+    }, ticket
 
 
 def _leads_from_tasks(path: Path) -> list[tuple[float, str]]:
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        sample = handle.read(4096)
+    header = ""
+    for line in sample.splitlines():
+        if line.strip():
+            header = line
+            break
+    if header and "result" not in {part.strip().lower() for part in header.split(",")}:
+        raise csv.Error("malformed tasks")
     leads = []
     with path.open("r", encoding="utf-8", newline="") as handle:
         for row in csv.DictReader(handle):
@@ -170,13 +200,34 @@ def _leads_from_tasks(path: Path) -> list[tuple[float, str]]:
     return leads
 
 
-def _default_ticket() -> float:
+def _desk():
     root = Path(__file__).resolve().parents[1]
     desk = root / "solana-desk"
     if str(desk) not in sys.path:
         sys.path.insert(0, str(desk))
-    from desk.config import TICKET_SOL
-    return float(TICKET_SOL)
+    from desk import config as C
+    from desk import fills
+    return C, fills
+
+
+def _entry_floor(pool_sol=None) -> float:
+    """Same cost fills.enter refuses when cash is below it. Not the bare ticket."""
+    _C, fills = _desk()
+    cost, _haircut = fills.entry_cost(pool_sol)
+    return float(cost)
+
+
+def _open_count(book: dict):
+    raw = book.get("open")
+    if isinstance(raw, bool):
+        return None
+    if isinstance(raw, int):
+        return raw
+    if isinstance(raw, dict):
+        return len(raw)
+    if isinstance(raw, list):
+        return len([row for row in raw if isinstance(row, dict)])
+    return None
 
 
 def load_state(data_dir: Path) -> dict:
@@ -187,20 +238,25 @@ def load_state(data_dir: Path) -> dict:
     positions_path = data_dir / "positions.json"
     paper_path = data_dir / "paper.json"
     tasks_path = data_dir / "tasks.csv"
+    if not positions_path.is_file() and not paper_path.is_file():
+        raise FileNotFoundError("missing book state")
     ticket = None
     books: dict = {}
     if paper_path.is_file():
-        paper_books, ticket = _from_paper(_read_json(paper_path))
+        paper = _read_json(paper_path)
+        if not isinstance(paper, dict):
+            raise ValueError("malformed book state")
+        paper_books, ticket = _from_paper(paper)
         books = paper_books
-    from_positions = False
     if positions_path.is_file():
-        pos_books, ticket = _from_positions(_read_json(positions_path), ticket)
+        positions = _read_json(positions_path)
+        if not isinstance(positions, dict) or not isinstance(positions.get("books"), dict):
+            raise ValueError("malformed book state")
+        pos_books, ticket = _from_positions(positions, ticket)
         if pos_books:
-            # Paper tickets are the published view of the same positions.
             books = pos_books
-            from_positions = True
-    if ticket is None and from_positions:
-        ticket = _default_ticket()
+    if not books:
+        raise FileNotFoundError("missing book state")
     for book in books.values():
         if book.get("ticket") is None:
             book["ticket"] = ticket
@@ -221,25 +277,35 @@ def _entries_for(book: dict, now: float, window_s: float) -> int:
 
 
 def idle_lines(state: dict, now: float, window_s: float = WINDOW_H * 3600) -> list[str]:
-    """One line per idle book. Empty when nothing is idle."""
+    """One line per idle or capped book. Cash is only cash_below_floor=yes|no."""
+    C, _fills = _desk()
     hours = window_s / 3600
     hour_label = str(int(hours)) if hours == int(hours) else str(hours)
     lines = []
     for name in sorted(state["books"]):
         book = state["books"][name]
-        reasons = []
+        floor = _entry_floor(book.get("pool_sol"))
         cash = book.get("cash")
-        ticket = book.get("ticket")
-        if cash is not None and ticket is not None and cash < ticket:
-            reasons.append(f"cash {cash:.8f} is below the ticket floor {ticket:.8f}")
+        below = cash is not None and cash < floor
+        flag = "yes" if below else "no"
         leads = _leads_for(name, state["leads"], now, window_s)
         entries = _entries_for(book, now, window_s)
-        if leads > 0 and entries == 0:
-            reasons.append(
-                f"passing leads in the last {hour_label}h with zero entries (leads={leads} entries=0)"
-            )
-        if reasons:
-            lines.append(f"IDLE book={name} reason={'; '.join(reasons)}")
+        lead_idle = leads > 0 and entries == 0
+        open_n = book.get("open_n")
+        fills_today = book.get("fills_today")
+        at_open = open_n is not None and open_n >= C.MAX_OPEN_F
+        at_day = fills_today is not None and fills_today >= C.MAX_NEW_F_PER_DAY
+        capped = lead_idle and not below and (at_open or at_day)
+        if below or (lead_idle and not capped):
+            parts = [f"cash_below_floor={flag}"]
+            if lead_idle:
+                parts.append(
+                    f"passing leads in the last {hour_label}h with zero entries (leads={leads} entries=0)"
+                )
+            lines.append(f"IDLE book={name} reason={'; '.join(parts)}")
+        elif capped:
+            which = ",".join([label for label, on in (("open_cap", at_open), ("day_cap", at_day)) if on])
+            lines.append(f"CAPPED book={name} reason={which} cash_below_floor={flag}")
     return lines
 
 
@@ -261,7 +327,7 @@ def main(argv=None) -> int:
     except FileNotFoundError as exc:
         print(f"idle-books: {exc}", file=sys.stderr)
         return 2
-    except (OSError, json.JSONDecodeError, csv.Error) as exc:
+    except (OSError, json.JSONDecodeError, csv.Error, ValueError) as exc:
         print(f"idle-books: could not read book state ({type(exc).__name__})", file=sys.stderr)
         return 2
     lines = idle_lines(state, now, args.window_hours * 3600)
