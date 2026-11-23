@@ -29,12 +29,14 @@ BEFORE = datetime(2026, 11, 25, 14, 59, tzinfo=timezone.utc)
 AT = datetime(2026, 11, 25, 15, 0, tzinfo=timezone.utc)
 
 
-def _bar(mint, t_s, sol, token=1000.0, rules=None, sells=2, age=3000, status=None):
+def _bar(mint, t_s, sol, token=1000.0, rules=None, sells=2, age=3000, status=None, origin=None):
     bar = {"mint": mint, "t_s": t_s, "sol": sol, "token": token, "sells_h1": sells, "age_s": age}
     if rules is not None:
         bar["rules"] = rules
     if status is not None:
         bar["status"] = status
+    if origin is not None:
+        bar["origin"] = origin
     return bar
 
 
@@ -93,12 +95,12 @@ class Replay(unittest.TestCase):
         ]
         rule = _rule(entry={"min_sells_h1": 1}, exit_spec={"max_gap_s": C.OUTAGE_VOID_H * 3600})
         row = replay(bars, {"rules": [rule]})["rules"][0]
-        trade = row["trades"][0]
         cost, _h = fills.entry_cost(100.0)
-        self.assertEqual(trade["exit_reason"], "missed")
-        self.assertAlmostEqual(trade["net_pnl"], -cost)
-        self.assertEqual(trade["slices"][-1]["px"], 0.0)
-        self.assertEqual(row["close_reasons"].get("missed"), 1)
+        self.assertEqual(row["n"], 0)
+        self.assertEqual(row["unresolved_n"], 1)
+        self.assertAlmostEqual(row["net_lower"], -cost)
+        self.assertGreater(row["net_upper"], row["net_lower"])
+        self.assertNotIn("missed", row["close_reasons"])
         self.assertNotIn("stale", row["close_reasons"])
 
     def test_rug_is_entered_and_closed_pool_gone(self):
@@ -242,11 +244,12 @@ class Replay(unittest.TestCase):
         self.assertIn("effective_n=", format_report(first))
         self.assertIn("warning=fewer-than-5-clusters", format_report(first))
         # Caps do not bind: one winner the rule takes, one loser outside the rule's filter.
+        passed = {"s2": "pass"}
         loose = [
-            _bar("SYNTH-WIN", T0, 100.0, sells=2),
-            _bar("SYNTH-WIN", T0 + 60, 200.0, sells=0),
-            _bar("SYNTH-LOSE", T0, 100.0, sells=2),
-            _bar("SYNTH-LOSE", T0 + 60, 40.0, sells=0),
+            _bar("SYNTH-WIN", T0, 100.0, sells=2, rules=passed),
+            _bar("SYNTH-WIN", T0 + 60, 200.0, sells=0, rules=passed),
+            _bar("SYNTH-LOSE", T0, 100.0, sells=2, rules=passed),
+            _bar("SYNTH-LOSE", T0 + 60, 40.0, sells=0, rules=passed),
         ]
         picked = _rule("one", entry={"mints": ["SYNTH-WIN"], "min_sells_h1": 1})
         wide = replay(loose, {"seed": 5, "rules": [picked]})["rules"][0]
@@ -390,6 +393,70 @@ class Replay(unittest.TestCase):
         self.assertIn("effective_n=", proc.stdout)
         after = {p: p.stat().st_mtime_ns for p in FIXTURES.iterdir() if p.is_file()}
         self.assertEqual(before, after)
+
+    def test_stopped_winner_is_unresolved_not_a_total_loss(self):
+        sol2 = _sol_for_return(100.0, 1000.0, 0.15)
+        stop = C.EXIT["time_stop_min"] * 60
+        gap = int(C.OUTAGE_VOID_H * 3600)
+        bars = [
+            _bar("SYNTH-WIN", T0, 100.0, sells=2),
+            _bar("SYNTH-WIN", T0 + stop, sol2, sells=2),
+            _bar("SYNTH-OTHER", T0 + stop + gap + 30, 100.0, sells=0),
+        ]
+        row = replay(bars, {"rules": [_rule("kept", entry={"min_sells_h1": 1})]})["rules"][0]
+        self.assertEqual(row["unresolved_n"], 1)
+        self.assertEqual(row["open_n"], 0)
+        self.assertLess(row["net_lower"], 0)
+        self.assertGreater(row["net_upper"], 0)
+        self.assertEqual(row["verdict"], "INCONCLUSIVE")
+        self.assertIn("percentile_lower", row["baseline"])
+        self.assertIn("percentile_upper", row["baseline"])
+        self.assertIn("bootstrap_ci_lower", row["baseline"])
+        self.assertIn("bootstrap_ci_upper", row["baseline"])
+
+    def test_each_reserve_error(self):
+        def row_for(error):
+            bars = [
+                _bar(MINT_A, T0, 100.0, sells=2),
+                {"mint": MINT_A, "t_s": T0 + 30, "sol": None, "token": None, "error": error},
+                _bar(MINT_A, T0 + 60, 110.0, sells=0),
+            ]
+            return replay(bars, {"rules": [_rule(error, entry={"min_sells_h1": 1})]})["rules"][0]
+        gone = row_for("no_pool")
+        self.assertEqual(gone["close_reasons"].get("pool_gone"), 1)
+        self.assertEqual(gone["open_n"], 0)
+        for error in ("lookup_failed", "reserves_incomplete", "not_a_known_error"):
+            held = row_for(error)
+            self.assertEqual(held["open_n"], 1, error)
+            self.assertEqual(held["unresolved_n"], 0, error)
+            self.assertNotIn("pool_gone", held["close_reasons"])
+
+    def test_tiny_pool_and_follow_snap_are_outside_the_null(self):
+        rules = {"s2": "pass"}
+        bars = [
+            _bar("SYNTH-GOOD", T0, 100.0, sells=2, rules=rules),
+            _bar("SYNTH-TINY", T0, 0.05, sells=2, rules=rules),
+            _bar("SYNTH-FOLLOW", T0, 100.0, sells=2, rules=rules, origin="follow"),
+        ]
+        row = replay(bars, {"rules": [_rule("scan", entry={"mints": ["SYNTH-GOOD"]})]})["rules"][0]
+        self.assertEqual(row["baseline"]["base_universe_n"], 1)
+        self.assertEqual(row["open_n"], 1)
+
+    def test_run_book_guard_ignores_a_patched_clock(self):
+        import tools.replay.engine as eng
+        import tools.replay.load as load
+        saved = eng.BLIND_UNTIL, load.BLIND_UNTIL
+        eng.BLIND_UNTIL = datetime(1999, 1, 1, tzinfo=timezone.utc)
+        load.BLIND_UNTIL = eng.BLIND_UNTIL
+        try:
+            with self.assertRaises(RuleError):
+                eng._run_book(
+                    [{"mint": MINT_A, "t_s": BLIND_START_S, "sol": 100.0, "token": 1000.0}],
+                    _rule("guard"),
+                    None,
+                )
+        finally:
+            eng.BLIND_UNTIL, load.BLIND_UNTIL = saved
 
     def test_sources_do_not_open_the_network(self):
         import re

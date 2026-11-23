@@ -175,6 +175,8 @@ def _bar_from_mapping(row: dict) -> dict | None:
         }
         if rules is not None:
             bar["rules"] = {str(k): rules[k] for k in rules}
+        if row.get("origin") in {"scan", "follow"}:
+            bar["origin"] = row["origin"]
         return bar
     if not _finite(sol) or not _finite(token):
         return None
@@ -183,6 +185,8 @@ def _bar_from_mapping(row: dict) -> dict | None:
         bar["rules"] = {str(k): rules[k] for k in rules}
     if row.get("status") in _STATUSES:
         bar["status"] = row["status"]
+    if row.get("origin") in {"scan", "follow"}:
+        bar["origin"] = row["origin"]
     return bar
 
 
