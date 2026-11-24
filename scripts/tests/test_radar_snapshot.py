@@ -249,7 +249,7 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertEqual(stood[0]["kind"], "coin")
         apes = next(row for row in doc["rows"] if row["name"] == "Bored Apes")
         self.assertEqual(apes["name"], "Bored Apes")
-        self.assertEqual(apes["image"], "https://cdn.example/bored-apes.png")
+        self.assertIsNone(apes["image"])
         sol = next(row for row in doc["rows"] if row["name"] == "SOL #1")
         self.assertEqual(sol["chain"], "SOL")
         self.assertEqual(sol["price_unit"], "SOL")
@@ -342,7 +342,7 @@ class RadarSnapshotTest(unittest.TestCase):
             self.assertNotEqual(row["change"], -75.0)
             self.assertNotEqual(row["change"], -90.0)
         apes = next(row for row in doc["rows"] if row["name"] == "Bored Apes")
-        self.assertEqual(apes["image"], "https://cdn.example/bored-apes.png")
+        self.assertIsNone(apes["image"])
         keeper = next(row for row in doc["rows"] if row["kind"] == "coin")
         self.assertEqual(keeper["name"], "somehandle club")
         self.assertEqual(keeper["image"], "https://cdn.example/somehandle-logo.png")
@@ -376,13 +376,10 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertNotIn("Dots", names)
         self.assertNotIn("Plain", names)
         gallery = next(row for row in doc["rows"] if row["name"] == "Gallery")
-        self.assertEqual(gallery["image"], "https://cdn.example/gallery.png")
+        self.assertIsNone(gallery["image"])
         apes = next(row for row in doc["rows"] if row["name"] == "Bored Apes")
-        self.assertEqual(apes["image"], "https://cdn.example/bored-apes.png")
-        for row in doc["rows"]:
-            if row.get("image"):
-                self.assertNotIn("?", row["image"])
-                self.assertNotIn("#", row["image"])
+        self.assertIsNone(apes["image"])
+        self.assertNotIn("https://", blob)
 
     def test_image_url_marks_hide_the_row_and_queries_are_stripped(self):
         def row(name, slug, image, volume):
@@ -413,7 +410,10 @@ class RadarSnapshotTest(unittest.TestCase):
         frame = next(item for item in doc["rows"] if item["name"] == "Frame")
         self.assertIsNone(frame["image"])
         gallery = next(item for item in doc["rows"] if item["name"] == "Gallery")
-        self.assertEqual(gallery["image"], "https://cdn.example/gallery.png")
+        self.assertIsNone(gallery["image"])
+        for item in doc["rows"]:
+            if item.get("kind") == "nft":
+                self.assertIsNone(item["image"])
         blob = json.dumps(doc)
         for secret in (
             "companions-by-maker", "companions%252Dby", "%2540maker", "files.by.cdn",
@@ -424,6 +424,35 @@ class RadarSnapshotTest(unittest.TestCase):
             if item.get("image"):
                 self.assertNotIn("?", item["image"])
                 self.assertNotIn("#", item["image"])
+
+    def test_nft_rows_publish_no_image(self):
+        hood = {"generated_at": "2026-11-24T18:00:00Z", "tokens": [{
+            "symbol": "CAT", "tier": "WATCH", "price_usd": 1, "chg_h24": 1,
+            "vol24_usd": 9, "buyers24": 2, "image_url": "https://cdn.example/cat.png",
+        }]}
+        discover = {"collections": [
+            {"name": "Bored Apes", "slug": "bored-apes", "floor_price": 3, "floor_symbol": "ETH",
+             "volume_24h": 80, "image_url": "https://cdn.example/bored-apes.png?w=1"},
+            {"name": "Plain", "slug": "plain", "floor_price": 1, "floor_symbol": "ETH",
+             "volume_24h": 5, "image_url": "https://cdn.example/plain.png?src=name-by-maker"},
+        ]}
+        units = [{"chain": "eip155:1", "slug": "sample-collection", "floor_eth": 1,
+                  "snapshot_t": "2026-11-24T12:00:00Z"}]
+        doc = build_from({"hood": hood, "nft_discover": discover, "units": units}, NOW)
+        nfts = [row for row in doc["rows"] if row["kind"] == "nft"]
+        self.assertTrue(any(row["chain"] == "RH" for row in nfts))
+        self.assertTrue(any(row["chain"] == "ETH" for row in nfts))
+        for row in nfts:
+            self.assertIsNone(row["image"])
+        blob = json.dumps(doc)
+        self.assertNotIn("bored-apes.png", blob)
+        self.assertNotIn("name-by-maker", blob)
+        self.assertNotIn("Plain", {row["name"] for row in doc["rows"]})
+        cat = next(row for row in doc["rows"] if row["name"] == "CAT")
+        self.assertEqual(cat["kind"], "coin")
+        self.assertEqual(cat["image"], "https://cdn.example/cat.png")
+        self.assertEqual(doc["hidden_note"], "1 collections hidden for creator attribution")
+        self.assertNotIn("maker", doc["hidden_note"])
 
     def test_snapshot_error_skips_the_file(self):
         import importlib.util

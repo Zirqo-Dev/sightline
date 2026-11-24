@@ -215,37 +215,13 @@ def _has_by_mark(text):
     return "@" in folded or _BY_MARK.search(folded) is not None
 
 
-def _proxy_image(path, query):
-    """A path that is not a picture once the query is removed."""
-    folder = path.rstrip("/")
-    if folder.endswith("/_next/image") or folder == "_next/image":
-        return True
-    return folder.endswith("/image") and ("http://" in query or "https://" in query)
-
-
-def _nft_image(url):
-    """NFT image as scheme, host, and path. A creator credit hides the row."""
-    if not isinstance(url, str) or not url.startswith("https://"):
-        return False, None
+def _image_hides(url):
+    """True when the source image URL credits a creator. The URL is not published."""
+    if not isinstance(url, str) or not url.strip():
+        return False
     parsed = urllib.parse.urlsplit(url)
-    if not parsed.hostname:
-        return False, None
-    pieces = (parsed.hostname, parsed.path, parsed.query, parsed.fragment)
-    if any(_has_by_mark(piece) for piece in pieces):
-        return True, None
-    if _MINT.search(url) or _ETH.search(url) or _STAKE.search(url):
-        return False, None
-    path = _norm_piece(parsed.path)
-    query = _norm_piece(parsed.query)
-    if _proxy_image(path, query):
-        return False, None
-    netloc = parsed.hostname
-    if parsed.port and parsed.port != 443:
-        netloc = "%s:%d" % (parsed.hostname, parsed.port)
-    published = urllib.parse.urlunsplit(("https", netloc, parsed.path or "/", "", ""))
-    if "?" in published or "#" in published:
-        return False, None
-    return False, published
+    pieces = (url, parsed.hostname or "", parsed.path or "", parsed.query or "", parsed.fragment or "")
+    return any(_has_by_mark(piece) for piece in pieces)
 
 
 def _raw_label(name, slug):
@@ -743,8 +719,7 @@ def _hood_nfts(doc):
             continue
         raw_name = item.get("name") if isinstance(item.get("name"), str) else ""
         raw_slug = item.get("slug") if isinstance(item.get("slug"), str) else ""
-        hide, image = _nft_image(item.get("image_url"))
-        if _creator_credit(raw_name, raw_slug) or hide:
+        if _creator_credit(raw_name, raw_slug) or _image_hides(item.get("image_url")):
             hidden += 1
             continue
         name = _raw_label(raw_name, raw_slug)
@@ -780,7 +755,7 @@ def _hood_nfts(doc):
             "seen_at": seen_at,
             "kind": "nft",
             "chain": "RH",
-            "image": image,
+            "image": None,
             "price": None if floor is None else round(floor, 8),
             "price_unit": symbol,
             "change": None if change is None else round(change, 4),
