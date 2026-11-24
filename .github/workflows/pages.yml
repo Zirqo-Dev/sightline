@@ -37,6 +37,8 @@ jobs:
           python3 scripts/validate-desks.py
       - name: Dashboard smoke checks
         run: node scripts/smoke-dashboard.mjs
+      - name: Radar smoke checks
+        run: node scripts/smoke-radar.mjs
       - name: Fill missing icons (best effort)
         continue-on-error: true
         run: |

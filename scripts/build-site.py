@@ -91,6 +91,40 @@ def bust_revamp(html):
     )
 
 
+def radar_version():
+    """Content hash of the Radar preview. Kept off the legacy dashboard hash."""
+    h = hashlib.sha256()
+    for rel in ("radar.html", "radar/radar.css", "radar/radar.js"):
+        path = ROOT / rel
+        h.update(rel.encode())
+        h.update(path.read_bytes())
+    return h.hexdigest()[:10]
+
+
+def bust_radar(html):
+    """Append ?v=<hash> to radar/*.css|js on the published preview page."""
+    v = radar_version()
+    return re.sub(
+        r'((?:href|src)="radar/[^"?]+\.(?:css|js))"',
+        lambda m: f'{m.group(1)}?v={v}"',
+        html,
+    )
+
+
+def publish_radar(dest):
+    """Copy /radar.html and write the slim radar.json snapshot. Additive."""
+    page = ROOT / "radar.html"
+    assets = ROOT / "radar"
+    if not page.is_file() or not (assets / "radar.js").is_file() or not (assets / "radar.css").is_file():
+        sys.exit("build-site: radar.html, radar/radar.js, and radar/radar.css are required")
+    (dest / "radar.html").write_text(bust_radar(page.read_text(encoding="utf-8")), encoding="utf-8")
+    shutil.copytree(assets, dest / "radar")
+    sys.path.insert(0, str(ROOT))
+    from scripts.radar_snapshot import write_snapshot
+    write_snapshot(dest / "radar.json")
+    print(f"  radar assets ?v={radar_version()}")
+
+
 def copy_desk(desk_id):
     src = ROOT / desk_id
     dest = DIST / desk_id
@@ -293,6 +327,7 @@ def main():
     write_picks(str(DIST), str(DIST / "dashboard" / "picks.json"))
     print("  picks dashboard/picks.json")
     briefs = write_brief_indexes(desks)
+    publish_radar(DIST)
     # The legacy NFT site lives inside nft/ and is copied with that desk.
     if not (DIST / "nft" / "site" / "index.html").is_file():
         sys.exit("build-site: nft/site/index.html was not copied")

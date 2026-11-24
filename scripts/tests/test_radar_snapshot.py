@@ -1,0 +1,148 @@
+"""Radar snapshot: derived chips, placeholders, and the embargo allowlist."""
+import datetime
+import json
+import os
+import sys
+import unittest
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+
+from scripts.radar_snapshot import build_from, buy_streak, second_leg
+
+NOW = datetime.datetime(2026, 11, 24, 18, 0, tzinfo=datetime.timezone.utc)
+MINT_A = "Mint1111111111111111111111111111pump"
+MINT_B = "Mint2222222222222222222222222222pump"
+ETH_ADDR = "0x" + ("ab" * 20)
+
+
+def _snap(mint, t, sol, buys, sells):
+    return {
+        "mint": mint, "pool": "Pool1111111111111111111111111111111111",
+        "t_s": t, "sol": sol, "token": 1000.0,
+        "txns_h1": {"buys": buys, "sells": sells},
+    }
+
+
+class RadarSnapshotTest(unittest.TestCase):
+    def test_streak_and_second_leg_rules(self):
+        self.assertTrue(buy_streak([{"buys": 3, "sells": 1}, {"buys": 2, "sells": 1}]))
+        self.assertFalse(buy_streak([{"buys": 3, "sells": 1}, {"buys": 1, "sells": 2}]))
+        self.assertFalse(buy_streak([{"buys": 3, "sells": 1}]))
+        self.assertTrue(second_leg([1, 1.5, 0.9, 1.6]))
+        self.assertFalse(second_leg([1, 1.1, 1.2, 1.3]))
+        self.assertFalse(second_leg([1, 2, 1.9, 1.8]))
+
+    def test_solana_placeholder_and_derived_chips(self):
+        holders = [[5, 0, 0] for _ in range(10)]
+        manifest = [
+            {"type": "scan", "t": "2026-11-24T17:30:00Z"},
+            {"type": "candidate", "mint": MINT_A, "t_s": 1000, "first_pick": True,
+             "inputs": {"age_s": 600, "holders": holders, "sol": 1000, "token": 1000}},
+            {"type": "candidate", "mint": MINT_B, "t_s": 1000, "first_pick": False,
+             "inputs": {"age_s": 7200, "holders": [[1, 0, 0]], "sol": 10, "token": 1000}},
+        ]
+        snaps = [
+            _snap(MINT_A, 1000, 1000, 5, 1),
+            _snap(MINT_A, 2800, 1500, 4, 1),
+            _snap(MINT_A, 4600, 900, 6, 2),
+            _snap(MINT_A, 6400, 1600, 3, 1),
+            _snap(MINT_B, 1000, 10, 1, 4),
+            _snap(MINT_B, 2800, 10, 1, 4),
+        ]
+        deaths = [{"type": "label", "mint": MINT_A, "dead": True, "reason": "price"}]
+        doc = build_from({"manifest": manifest, "snaps": snaps, "deaths": deaths}, NOW)
+        sol = [row for row in doc["rows"] if row["chain"] == "SOL"]
+        self.assertEqual([row["name"] for row in sol], ["SOL #1", "SOL #2"])
+        self.assertEqual(sol[0]["age"], "10m")
+        chips = [chip["id"] for chip in sol[0]["chips"]]
+        for needed in ("seen", "pool", "desk", "skull", "heavy", "streak", "leg"):
+            self.assertIn(needed, chips)
+        self.assertNotIn("thin", chips)
+        self.assertIn("thin", [chip["id"] for chip in sol[1]["chips"]])
+        self.assertNotIn("streak", [chip["id"] for chip in sol[1]["chips"]])
+        self.assertNotIn("leg", [chip["id"] for chip in sol[1]["chips"]])
+        blob = json.dumps(doc)
+        self.assertNotIn(MINT_A, blob)
+        self.assertNotIn(MINT_B, blob)
+        self.assertNotIn("NIX", blob)
+        self.assertNotRegex(sol[0]["name"], r"[1-9A-HJ-NP-Za-km-z]{32,44}")
+        self.assertLess(abs(sol[0]["change"]), 1000)
+
+    def test_dust_reserve_does_not_invent_a_runner(self):
+        mint = "Mint3333333333333333333333333333pump"
+        snaps = [
+            _snap(mint, 1000, 0.08, 2, 1),
+            {"mint": mint, "t_s": 2800, "sol": 0.002, "token": 1e-6, "txns_h1": {"buys": 9, "sells": 1}},
+        ]
+        # The second snap's token amount is below 1, so the pair is not a price path.
+        snaps[0]["token"] = 1000.0
+        doc = build_from({"snaps": snaps, "manifest": [], "deaths": []}, NOW)
+        self.assertFalse(any(row["chain"] == "SOL" for row in doc["rows"]))
+        self.assertNotIn(mint, json.dumps(doc))
+
+    def test_null_floor_stays_null_and_addresses_are_dropped(self):
+        hood = {"generated_at": "2026-11-24T18:15:00Z", "tokens": [{
+            "symbol": "CAT", "tier": "BEST", "price_usd": 1.2, "chg_h24": 10,
+            "vol24_usd": 1000, "buyers24": 4, "ca": ETH_ADDR, "image_url": "https://cdn.example/cat.png",
+        }]}
+        discover = {"generated_at": "2026-11-24T05:20:00Z", "collections": [{
+            "name": "Cash Cats", "slug": "cash-cats", "floor_price": 1.25,
+            "floor_symbol": "ETH", "floor_chg_pct": None, "volume_24h": 2, "sales_24h": 1,
+        }]}
+        doc = build_from({"hood": hood, "nft_discover": discover}, NOW)
+        cat = next(row for row in doc["rows"] if row["name"] == "CAT")
+        cats = next(row for row in doc["rows"] if row["name"] == "Cash Cats")
+        self.assertIsNone(cats["change"])
+        self.assertEqual(cat["chain"], "RH")
+        blob = json.dumps(doc)
+        self.assertNotIn(ETH_ADDR, blob)
+        self.assertNotIn('"ca"', blob)
+
+    def test_lst_and_outcome_fields_stay_out(self):
+        doc = build_from({
+            "lst": {
+                "written_at": "2026-11-24T18:17:19Z",
+                "runs_ok": True,
+                "chain_ok": True,
+                "onset": 4,
+                "d_bps": 30,
+                "verdict": "go",
+                "coverage": "0.9",
+                "freeze_log": [{"mint": MINT_A}],
+            },
+            "nft_ran_at": "2026-11-24T17:27:14Z",
+            "units": [{
+                "chain": "eip155:1", "slug": "sample-collection", "floor_eth": 0.2,
+                "snapshot_t": "2026-11-24T12:00:00Z", "contract": ETH_ADDR,
+                "nh04_verdict": "go", "asset_id": "nft_collection:eip155:1:" + ETH_ADDR,
+            }],
+            "flags": {"new": [{"kind": "whale_move", "ticker": "NJAK", "tag": "w-aaaaaaaa", "at": "2026-11-24T17:10:00Z"}]},
+            "last_run": {"at": "2026-11-24T17:17:38Z", "results": [{
+                "ticker": "NJAK", "price_ada": 0.01, "vol_h24_ada": 10,
+                "native_holders": 3, "unit": "ab" * 28, "verdict": "pass",
+            }], "triggers": [{"kind": "whale_move", "name": "Lead whale", "metrics": {"tag": "w-aaaaaaaa"}}]},
+        }, NOW)
+        blob = json.dumps(doc)
+        for banned in ("onset", "d_bps", "verdict", "nh04", "coverage", "freeze_log", MINT_A, ETH_ADDR, "w-aaaaaaaa"):
+            self.assertNotIn(banned, blob)
+        lst = next(feed for feed in doc["feeds"] if feed["id"] == "LST")
+        self.assertEqual(lst["status"], "green")
+        self.assertEqual(lst["at"], "2026-11-24T18:17:19Z")
+        njak = next(row for row in doc["rows"] if row["name"] == "NJAK")
+        self.assertEqual([chip["id"] for chip in njak["chips"]], ["whale"])
+        self.assertTrue(any("Lead whale" in fact for fact in njak["facts"]))
+        eth = next(row for row in doc["rows"] if row["chain"] == "ETH")
+        self.assertEqual(eth["name"], "sample collection")
+        self.assertNotIn("BASE", [row["chain"] for row in doc["rows"]])
+
+    def test_builder_does_not_name_the_embargoed_log(self):
+        path = os.path.join(os.path.dirname(__file__), "..", "radar_snapshot.py")
+        with open(path, encoding="utf-8") as handle:
+            source = handle.read()
+        self.assertNotRegex(source, r"https://\S*captures\.jsonl")
+        self.assertIn("lst-count-data/status.json", source)
+        self.assertIn("status.json only", source)
+
+
+if __name__ == "__main__":
+    unittest.main()
