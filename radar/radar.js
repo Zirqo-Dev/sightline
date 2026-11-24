@@ -107,8 +107,11 @@
     return (now - asof) > 48 * 60 * 60 * 1000;
   }
   function snapStale(doc, now) {
-    var built = Date.parse(doc.built_at);
-    return isFinite(built) && (now - built) > 2 * 60 * 60 * 1000;
+    var built = Date.parse(doc && doc.built_at);
+    if (!isFinite(built)) return "missing";
+    if (now - built > 2 * 60 * 60 * 1000) return "old";
+    if (built - now > 10 * 60 * 1000) return "future";
+    return "";
   }
   function pill(change) {
     var n = finite(change);
@@ -206,9 +209,13 @@
       return '<button type="button" class="feed is-' + esc(status) + '" data-feed="' + esc(feed.id) + '">'
         + "<i></i><span>" + esc(feed.label) + "</span></button>";
     }).join("");
-    var banner = snapStale(doc, now)
-      ? '<p class="banner">This snapshot is more than 2 hours old. Built ' + esc(clock(doc.built_at)) + ".</p>"
-      : "";
+    var staleKind = snapStale(doc, now);
+    var banner = "";
+    if (staleKind === "old") {
+      banner = '<p class="banner">This snapshot is more than 2 hours old. Built ' + esc(clock(doc.built_at)) + ".</p>";
+    } else if (staleKind) {
+      banner = '<p class="banner">This snapshot is stale.</p>';
+    }
     var chips = FILTERS.map(function (name) {
       var on = name === filter ? " on" : "";
       return '<button type="button" class="chip' + on + '" data-filter="' + esc(name) + '" aria-pressed="' + (on ? "true" : "false") + '">' + esc(name) + "</button>";
@@ -255,6 +262,7 @@
     var scan = document.getElementById("scan");
     if (!app) return;
     if (!doc) {
+      if (scan) scan.textContent = "Snapshot is unavailable.";
       app.innerHTML = renderHtml(null, state);
       return;
     }

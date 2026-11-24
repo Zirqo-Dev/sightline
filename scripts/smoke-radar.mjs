@@ -44,6 +44,8 @@ assert(js.includes("No Base coin feed is published. This cut stays empty."), "Ba
 assert(js.includes("Not a Hood tier and not a Solana pick."), "desk legend matches the Cardano flag");
 assert(js.includes("more than 2 hours old"), "stale snapshot banner is present");
 assert(!js.includes("next_read") && !js.includes("Next read"), "the next read is not hardcoded");
+assert(js.includes("Snapshot is unavailable.") && html.includes("Snapshot is unavailable."), "a missing snapshot says it is unavailable");
+assert(!js.includes("Loading the latest") && !html.includes("Loading the latest"), "a missing snapshot does not stay on the loading line");
 for (const phrase of ["Seen at", "New pool", "Desk flag", "Snipers out", "Coordinated", "Top-heavy", "Thin start", "Kill line", "Buy streak", "Second leg", "LP locked", "Dev sold", "Holders up", "Floor sweep", "Whale count", "Not live"]) {
   assert(js.includes(phrase), "legend is missing " + phrase);
 }
@@ -100,6 +102,13 @@ assert(scan.includes("Built 2026-11-24 17:30:00Z"), "the build time is shown");
 assert(scan.includes("last scan 10m"), "last scan age is computed from the timestamp");
 const old = Object.assign({}, doc, { built_at: "2026-11-24T10:00:00Z" });
 assert(radar.renderHtml(old, { filter: "All", sort: "heat" }, now).includes("more than 2 hours old"), "an old snapshot shows a banner");
+const bare = { rows: [], feeds: [], x: {}, lead_count: 0, gaps: [] };
+assert(radar.renderHtml(bare, { filter: "All", sort: "heat" }, now).includes("This snapshot is stale."), "a missing build time is stale");
+assert(radar.renderHtml(Object.assign({}, bare, { built_at: "not-a-time" }), { filter: "All", sort: "heat" }, now).includes("This snapshot is stale."), "an invalid build time is stale");
+const future = new Date(now + 11 * 60 * 1000).toISOString().replace(".000Z", "Z");
+assert(radar.renderHtml(Object.assign({}, bare, { built_at: future }), { filter: "All", sort: "heat" }, now).includes("This snapshot is stale."), "a build time more than 10 minutes ahead is stale");
+const soon = new Date(now + 5 * 60 * 1000).toISOString().replace(".000Z", "Z");
+assert(!radar.renderHtml(Object.assign({}, bare, { built_at: soon }), { filter: "All", sort: "heat" }, now).includes("This snapshot is stale."), "a build time a few minutes ahead is still fresh");
 const legend = radar.legendHtml();
 assert(legend.includes("not a buy signal") && legend.includes("Not a Hood tier"), "legend matches the desk flag");
 

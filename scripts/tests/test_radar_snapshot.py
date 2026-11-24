@@ -195,14 +195,35 @@ class RadarSnapshotTest(unittest.TestCase):
             {"symbol": "NVDA", "tier": "WATCH", "price_usd": 2, "chg_h24": 2, "age_days": 2,
              "ca": other, "vol24_usd": 11, "buyers24": 3},
         ]}
-        discover = {"collections": [{"name": "Companions by WFit", "slug": "companions", "floor_price": 1,
-                                     "floor_symbol": "ETH", "floor_chg_pct": None}]}
+        discover = {"collections": [
+            {"name": "Companions by WFit", "slug": "companions-by-wfit", "floor_price": 1,
+             "floor_symbol": "ETH", "floor_chg_pct": None,
+             "image_url": "https://cdn.example/companions-by-wfit/a.png"},
+            {"name": "Cats @wfit", "floor_price": 1, "floor_symbol": "ETH", "floor_chg_pct": None,
+             "image_url": "https://cdn.example/wfit/cat.png"},
+            {"name": "Quotrons (by WFit)", "floor_price": 1, "floor_symbol": "ETH", "floor_chg_pct": None},
+            {"name": "Stand by Me", "floor_price": 2, "floor_symbol": "ETH", "floor_chg_pct": None,
+             "image_url": "https://cdn.example/stand-by-me.png"},
+        ]}
+        hood["tokens"].append({
+            "symbol": "KEEP", "tier": "WATCH", "price_usd": 1, "chg_h24": 1,
+            "vol24_usd": 5, "buyers24": 1,
+        })
         doc = build_from({"hood": hood, "nft_discover": discover}, NOW)
         blob = json.dumps(doc)
         self.assertNotIn("WFit", blob)
+        self.assertNotIn("wfit", blob.lower())
+        self.assertNotIn("companions-by", blob.lower())
+        self.assertNotIn("https://cdn.example/companions-by-wfit/a.png", blob)
+        self.assertNotIn("https://cdn.example/wfit/cat.png", blob)
         self.assertNotIn(ETH_ADDR, blob)
         self.assertNotIn(other, blob)
-        self.assertTrue(any(row["name"] == "Companions" for row in doc["rows"]))
+        companions = next(row for row in doc["rows"] if row["name"] == "Companions")
+        self.assertIsNone(companions["image"])
+        self.assertTrue(any(row["name"] == "Cats" for row in doc["rows"]))
+        self.assertTrue(any(row["name"] == "Quotrons" for row in doc["rows"]))
+        stood = next(row for row in doc["rows"] if row["name"] == "Stand by Me")
+        self.assertEqual(stood["image"], "https://cdn.example/stand-by-me.png")
         nvda = [row for row in doc["rows"] if row["name"] == "NVDA"]
         self.assertEqual(len(nvda), 2)
         self.assertEqual(len({row["id"] for row in nvda}), 2)
