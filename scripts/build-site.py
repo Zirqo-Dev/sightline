@@ -121,7 +121,15 @@ def publish_radar(dest):
     shutil.copytree(assets, dest / "radar")
     sys.path.insert(0, str(ROOT))
     from scripts.radar_snapshot import write_snapshot
-    write_snapshot(dest / "radar.json")
+    # A snapshot failure must not fail the Pages deploy. The page then
+    # shows its empty state because radar.json is absent.
+    try:
+        write_snapshot(dest / "radar.json")
+    except Exception as exc:
+        partial = dest / "radar.json"
+        if partial.is_file():
+            partial.unlink()
+        print("  radar.json skipped (%s)" % type(exc).__name__)
     print(f"  radar assets ?v={radar_version()}")
 
 

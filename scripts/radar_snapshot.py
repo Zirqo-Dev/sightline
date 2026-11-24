@@ -4,8 +4,15 @@
 The phone reads radar.json. This step runs inside the existing Pages build.
 It does not change a schedule, a secret, or a scan log.
 
-Solana scan lines have no ticker. Rows are named SOL #1, SOL #2, … with the
-age from the log. Mint and pool addresses are dropped before the file is written.
+Solana scan lines have no ticker. Rows are named SOL #1, SOL #2, … from
+the raw pool snaps. Mint and pool addresses are dropped before the file is
+written. Ages are absolute timestamps; the page computes the labels.
+
+Fetches, each with a 12 second timeout:
+health-data/health.json, desk-data x_buzz.json, solada-prefilter flags,
+kill status, last-run, and whale_roster, lst-count-data/status.json,
+nft-pilot status.json and units.jsonl, HoodScout daily and NFT files,
+and the Solana pool-snaps plus manifest for the latest day.
 
 LST input is status.json only. The snapshot keeps written_at, runs_ok, and
 chain_ok for the health dot. It does not keep coverage, freeze logs, or any
@@ -26,7 +33,9 @@ LST_URL = "https://raw.githubusercontent.com/Zirqo-Dev/sightline/lst-count-data/
 NFT_STATUS_URL = "https://raw.githubusercontent.com/Zirqo-Dev/sightline/nft-data/nft-pilot/status.json"
 UNITS_URL = "https://raw.githubusercontent.com/Zirqo-Dev/sightline/nft-data/nft-pilot/units.jsonl"
 HOOD = "https://raw.githubusercontent.com/Zirqo-Dev/hoodscout-data/main/data/"
-NEXT_READ = "2026-11-25T15:00:00Z"
+# Every live fetch uses this socket timeout. A slow source is skipped.
+# The Pages build still publishes if the snapshot step fails.
+FETCH_TIMEOUT_S = 12
 UA = {"user-agent": "sightline-radar"}
 
 _MINT = re.compile(r"[1-9A-HJ-NP-Za-km-z]{32,44}")
@@ -39,7 +48,8 @@ _BANNED_KEYS = {
     "freeze_log", "coverage", "coverage_per_lst", "pnl", "positions",
 }
 _SYMBOL = re.compile(r"[A-Za-z0-9][A-Za-z0-9 ._$-]{0,19}")
-_CODENAME = re.compile(r"[A-Za-z][A-Za-z ]{1,40}")
+_CREATOR = re.compile(r"\s+by\s+.+$", re.I)
+_FULL_ADDR = re.compile(r"^0x[0-9a-fA-F]{40}$")
 
 
 def parse_time(value):
@@ -196,7 +206,7 @@ def _symbol(value):
 def _display_name(value, limit=48):
     if not isinstance(value, str):
         return None
-    text = " ".join(value.replace("-", " ").split())
+    text = _strip_text(" ".join(value.replace("-", " ").split()))
     if not text or len(text) > limit:
         return None
     if _MINT.search(text) or _ETH.search(text) or _STAKE.search(text):
@@ -288,14 +298,104 @@ def _workflow(doc, filename, title):
 
 
 def _feed(feed_id, label, status, at, now, detail):
+    """Age is not baked. The page computes it from `at`."""
+    del now
     return {
         "id": feed_id,
         "label": label,
         "status": status,
-        "age": age_label(at, now) if at else "no time",
         "at": at,
         "detail": detail,
     }
+
+
+def _iso(when):
+    if isinstance(when, (int, float)) and not isinstance(when, bool):
+        when = datetime.datetime.fromtimestamp(when, datetime.timezone.utc)
+    if not isinstance(when, datetime.datetime):
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=datetime.timezone.utc)
+    return when.astimezone(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _seen_from_days(generated_at, days):
+    base = parse_time(generated_at)
+    if base is None or not isinstance(days, (int, float)) or isinstance(days, bool) or days < 0:
+        return None
+    return _iso(base - datetime.timedelta(days=float(days)))
+
+
+def _short_addr(value):
+    """First and last four characters of a full address. The full value is not kept."""
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not _FULL_ADDR.fullmatch(text):
+        return None
+    return text[:4] + "…" + text[-4:]
+
+
+def _strip_text(value):
+    if not isinstance(value, str) or value.startswith("https://"):
+        return value
+    return _CREATOR.sub("", value).strip()
+
+
+def _strip_tree(value):
+    if isinstance(value, dict):
+        return {key: _strip_tree(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_strip_tree(item) for item in value]
+    if isinstance(value, str):
+        return _strip_text(value)
+    return value
+
+
+def roster_names(doc):
+    """Exact codenames from the public roster. No pattern match."""
+    names = set()
+    if not isinstance(doc, dict):
+        return names
+    for whale in doc.get("whales") or []:
+        if not isinstance(whale, dict):
+            continue
+        name = whale.get("codename")
+        if isinstance(name, str) and name.strip():
+            names.add(name.strip())
+    return names
+
+
+def _disambiguate(rows):
+    """Unique ids. Same-ticker rows get a short contract or an age hint."""
+    groups = {}
+    for row in rows:
+        key = (row.get("chain"), str(row.get("name") or "").casefold())
+        groups.setdefault(key, []).append(row)
+    for group in groups.values():
+        if len(group) < 2:
+            for row in group:
+                row.pop("_hint", None)
+            continue
+        used = set()
+        for index, row in enumerate(group, start=1):
+            hint = row.pop("_hint", None)
+            if hint and hint not in used:
+                row["hint"] = hint
+                used.add(hint)
+            else:
+                row["show_age"] = True
+            suffix = re.sub(r"[^a-z0-9]+", "-", (hint or str(index)).lower()).strip("-") or str(index)
+            row["id"] = "%s-%s" % (row.get("id") or "row", suffix)
+    seen = {}
+    for row in rows:
+        base = row.get("id") or "row"
+        if base in seen:
+            seen[base] += 1
+            row["id"] = "%s-%d" % (base, seen[base])
+        else:
+            seen[base] = 1
+            row["id"] = base
 
 
 def _hood_status(at, now):
@@ -349,7 +449,9 @@ def _fresh(value, now, hours):
     return (now - parsed).total_seconds() <= hours * 3600
 
 
-def _whale_name(doc):
+def _whale_name(doc, allowed):
+    """Use a trigger name only when it is exactly one roster codename."""
+    allowed = set(allowed or ())
     names = []
     if not isinstance(doc, dict):
         return None
@@ -357,7 +459,7 @@ def _whale_name(doc):
         if not isinstance(item, dict) or item.get("kind") != "whale_move":
             continue
         name = item.get("name")
-        if isinstance(name, str) and _CODENAME.fullmatch(name.strip()):
+        if isinstance(name, str) and name.strip() in allowed:
             names.append(name.strip())
     unique = sorted(set(names))
     if len(unique) == 1:
@@ -382,23 +484,17 @@ def _finish(rows, limit):
     return out
 
 
-def _solana_rows(manifest_lines, snap_lines, death_lines):
+def _solana_rows(manifest_lines, snap_lines, death_lines=None):
+    """Rows from pool snaps only. Death labels and S2 picks are not read."""
+    del death_lines
     first = {}
-    dead = set()
-    for line in death_lines or []:
-        if not isinstance(line, dict) or line.get("type") != "label":
-            continue
-        if line.get("dead") is True and isinstance(line.get("mint"), str):
-            dead.add(line["mint"])
     for line in manifest_lines or []:
         if not isinstance(line, dict) or line.get("type") != "candidate":
             continue
         mint = line.get("mint")
         if not isinstance(mint, str):
             continue
-        slot = first.setdefault(mint, {"age_s": None, "t": None, "holders": None, "first_pick": False})
-        if line.get("first_pick") is True:
-            slot["first_pick"] = True
+        slot = first.setdefault(mint, {"age_s": None, "t": None, "holders": None})
         inputs = line.get("inputs") if isinstance(line.get("inputs"), dict) else {}
         age = _num(inputs.get("age_s"))
         when = _num(line.get("t_s"))
@@ -410,7 +506,7 @@ def _solana_rows(manifest_lines, snap_lines, death_lines):
         holders = inputs.get("holders")
         if isinstance(holders, list):
             slot["holders"] = holders
-            slot["holders_t"] = when or 0
+    seen_mints = set()
     series = {}
     for line in snap_lines or []:
         if not isinstance(line, dict):
@@ -422,6 +518,7 @@ def _solana_rows(manifest_lines, snap_lines, death_lines):
         # Dust reserves are bad parses (a token amount of 1e-6) and blow up sol/token.
         if not isinstance(mint, str) or sol is None or token is None or when is None:
             continue
+        seen_mints.add(mint)
         if sol < 0.05 or token < 1:
             continue
         buys, sells = _txns(line.get("txns_h1"))
@@ -429,32 +526,32 @@ def _solana_rows(manifest_lines, snap_lines, death_lines):
             "t": when, "price": sol / token, "sol": sol, "buys": buys, "sells": sells,
         })
     rows = []
+    rejected = set(seen_mints - set(series))
     for mint, points in series.items():
         points.sort(key=lambda item: item["t"])
-        if len(points) < 2 or points[0]["price"] <= 0:
+        prices = [item["price"] for item in points if item["price"] > 0]
+        if len(prices) < 2 or max(prices) / min(prices) > 25:
+            rejected.add(mint)
             continue
-        prices = [item["price"] for item in points]
-        if min(prices) <= 0 or max(prices) / min(prices) > 25:
-            continue
+        points = [item for item in points if item["price"] > 0]
         move = (prices[-1] / prices[0] - 1.0) * 100.0
         meta = first.get(mint) or {}
-        age = age_from_seconds(meta.get("age_s"))
+        birth = None
+        if meta.get("t") is not None and isinstance(meta.get("age_s"), (int, float)):
+            birth = meta["t"] - meta["age_s"]
+        elif points:
+            birth = points[0]["t"]
+        seen_at = _iso(birth) if birth is not None else None
         share = top10_pct(meta.get("holders"))
         tx_snaps = [{"buys": item["buys"], "sells": item["sells"]} for item in points]
         labels = {}
         chip_ids = []
-        if age:
-            labels["seen"] = "seen %s" % age
+        if seen_at:
+            labels["seen"] = "seen"
             chip_ids.append("seen")
         if isinstance(meta.get("age_s"), (int, float)) and meta["age_s"] < 3600:
             labels["pool"] = "new pool"
             chip_ids.append("pool")
-        if meta.get("first_pick"):
-            labels["desk"] = "desk"
-            chip_ids.append("desk")
-        if mint in dead:
-            labels["skull"] = "kill line"
-            chip_ids.append("skull")
         if share is not None and share >= 30:
             labels["heavy"] = "top-heavy"
             chip_ids.append("heavy")
@@ -472,14 +569,8 @@ def _solana_rows(manifest_lines, snap_lines, death_lines):
         if last["buys"] is not None and last["sells"] is not None and last["buys"] + last["sells"] > 0:
             buy_pct = last["buys"] / (last["buys"] + last["sells"])
         facts = []
-        if age:
-            facts.append("First logged at %s old." % age)
         if "pool" in labels:
             facts.append("Pool age at the first log was under 1 hour.")
-        if "desk" in labels:
-            facts.append("The scan marked this as a first pick.")
-        if "skull" in labels:
-            facts.append("The follow labelled the price dead.")
         if share is not None and share >= 30:
             facts.append("Top 10 holders, excluding the pool, are %s%%." % round(share, 1))
         if "thin" in labels:
@@ -488,17 +579,12 @@ def _solana_rows(manifest_lines, snap_lines, death_lines):
             facts.append("Buys beat sells on every 30-minute snap in this window.")
         if "leg" in labels:
             facts.append("Price spiked, dipped, then pushed again.")
-        multiple = prices[-1] / prices[0]
-        if multiple >= 1:
-            facts.append("Price is %s× the first snap." % round(multiple, 2))
-        else:
-            facts.append("Price is %s%% under the first snap." % round((1 - multiple) * 100, 1))
         facts.append("Pool reserve moved from %s SOL to %s SOL." % (round(points[0]["sol"], 1), round(last["sol"], 1)))
         interest = last["buys"] if last["buys"] is not None else None
         rows.append({
             "id": "",
             "name": "",
-            "age": age,
+            "seen_at": seen_at,
             "kind": "coin",
             "chain": "SOL",
             "image": None,
@@ -514,7 +600,7 @@ def _solana_rows(manifest_lines, snap_lines, death_lines):
             "spark": _sample(prices),
             "chips": _chips(chip_ids, labels),
             "facts": facts,
-            "why": facts[0] if facts else "Solana 30-minute snaps.",
+            "why": "Solana 30-minute snaps.",
             "source": "Solana 30-minute snaps",
             "_raw": raw_score(move, last["sol"], interest),
             "_mint": mint,
@@ -527,15 +613,12 @@ def _solana_rows(manifest_lines, snap_lines, death_lines):
         row.pop("_raw", None)
         row["name"] = "SOL #%d" % index
         row["id"] = "sol-%d" % index
-        if row.get("age"):
-            row["why"] = "%s · %s" % (row["name"], row["age"])
-        else:
-            row["why"] = row["name"]
+        row["why"] = row["name"]
         try:
             out.append(_public_row(row))
         except ValueError:
             continue
-    return out
+    return out, len(rejected)
 
 
 def _hood_coins(doc):
@@ -546,7 +629,7 @@ def _hood_coins(doc):
             continue
         if token.get("tier") not in ("BEST", "WATCH"):
             continue
-        name = _symbol(token.get("symbol"))
+        name = _symbol(_strip_text(token.get("symbol") or ""))
         if not name:
             continue
         price = _num(token.get("price_usd"))
@@ -558,19 +641,16 @@ def _hood_coins(doc):
         buyers = _num(token.get("buyers24"))
         buys = _num(token.get("buys24"))
         sells = _num(token.get("sells24"))
-        age = age_from_days(_num(token.get("age_days")))
+        days = _num(token.get("age_days"))
+        seen_at = _seen_from_days(doc.get("generated_at"), days)
         labels = {}
         chip_ids = []
-        if age:
-            labels["seen"] = "seen %s" % age
+        if seen_at:
+            labels["seen"] = "seen"
             chip_ids.append("seen")
-        days = _num(token.get("age_days"))
         if days is not None and days < 1:
             labels["pool"] = "new pool"
             chip_ids.append("pool")
-        if token.get("tier") == "BEST":
-            labels["desk"] = "desk"
-            chip_ids.append("desk")
         if token.get("watch_reason") == "thin_depth":
             labels["thin"] = "thin start"
             chip_ids.append("thin")
@@ -578,10 +658,6 @@ def _hood_coins(doc):
         if buys is not None and sells is not None and buys + sells > 0:
             buy_pct = buys / (buys + sells)
         facts = []
-        if age:
-            facts.append("HoodScout age %s." % age)
-        if "desk" in labels:
-            facts.append("HoodScout tier BEST.")
         if "thin" in labels:
             facts.append("HoodScout watch reason is thin depth.")
         if change is not None:
@@ -593,9 +669,10 @@ def _hood_coins(doc):
         rows.append({
             "id": "rh-" + re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-"),
             "name": name,
-            "age": age,
+            "seen_at": seen_at,
             "kind": "coin",
             "chain": "RH",
+            "_hint": _short_addr(token.get("ca")),
             "image": _https(token.get("image_url")),
             "price": None if price is None else round(price, 8),
             "price_unit": "USD",
@@ -634,11 +711,11 @@ def _hood_nfts(doc):
         symbol = item.get("floor_symbol") if isinstance(item.get("floor_symbol"), str) else "ETH"
         if _ETH.fullmatch(symbol) or len(symbol) > 8:
             symbol = "ETH"
-        age = age_from_days(_num(item.get("age_days")))
+        seen_at = _seen_from_days(doc.get("generated_at"), _num(item.get("age_days")))
         labels = {}
         chip_ids = []
-        if age:
-            labels["seen"] = "seen %s" % age
+        if seen_at:
+            labels["seen"] = "seen"
             chip_ids.append("seen")
         if item.get("flag_new") is True:
             labels["pool"] = "new"
@@ -653,7 +730,7 @@ def _hood_nfts(doc):
         rows.append({
             "id": "nft-" + re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-"),
             "name": name,
-            "age": age,
+            "seen_at": seen_at,
             "kind": "nft",
             "chain": "RH",
             "image": _https(item.get("image_url")),
@@ -789,11 +866,11 @@ def _eth_rows(units):
             if (last_at - when).total_seconds() >= 20 * 3600:
                 prior = floor
         change = None if not prior else (last_floor / prior - 1.0) * 100.0
-        age = age_label(points[0][0].strftime("%Y-%m-%dT%H:%M:%SZ"), last_at)
+        seen_at = _iso(points[0][0])
         labels = {}
         chip_ids = []
-        if age not in (None, "no time", "0m"):
-            labels["seen"] = "seen %s" % age
+        if seen_at and seen_at != _iso(last_at):
+            labels["seen"] = "seen"
             chip_ids.append("seen")
         facts = ["Floor from ETH collection snaps."]
         if change is None:
@@ -804,7 +881,7 @@ def _eth_rows(units):
         rows.append({
             "id": "eth-" + re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-"),
             "name": name,
-            "age": None if age == "no time" else age,
+            "seen_at": seen_at,
             "kind": "nft",
             "chain": "ETH",
             "image": None,
@@ -901,8 +978,11 @@ def build_from(payloads, now=None):
     if isinstance(nft_at, str):
         scan_times.append(nft_at)
     rows = []
-    rows.extend(_solana_rows(payloads.get("manifest"), payloads.get("snaps"), payloads.get("deaths")))
-    if not any(row["chain"] == "SOL" for row in rows):
+    sol_rows, sol_dropped = _solana_rows(payloads.get("manifest"), payloads.get("snaps"))
+    rows.extend(sol_rows)
+    if sol_dropped:
+        gaps.append("Solana reserve filter dropped %d series (dust or a move over 25×)." % sol_dropped)
+    if not sol_rows:
         gaps.append("No Solana 30-minute snaps were readable for this snapshot.")
     else:
         gaps.append("Solana scan lines have no ticker. Names are SOL #1, SOL #2, and so on.")
@@ -913,39 +993,34 @@ def build_from(payloads, now=None):
     if nft_doc:
         rows.extend(_hood_nfts(nft_doc))
     if last_run:
-        rows.extend(_cardano_rows(last_run, payloads.get("flags"), payloads.get("kill"), _whale_name(last_run), now))
+        allowed = roster_names(payloads.get("whale_roster"))
+        rows.extend(_cardano_rows(last_run, payloads.get("flags"), payloads.get("kill"), _whale_name(last_run, allowed), now))
     else:
         gaps.append("Cardano last-run was not readable.")
     rows.extend(_eth_rows(payloads.get("units")))
     gaps.append("Base has no coin feed. The BASE cut stays empty.")
+    _disambiguate(rows)
     rows.sort(key=lambda row: (-row["heat"], row["chain"], row["name"]))
     for index, row in enumerate(rows, start=1):
         row["rank"] = index
     last = _stamp(scan_times)
-    x_age = age_label(buzz_at, now) if buzz_at else "no time"
     doc = {
         "schema": 1,
         "built_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "last_scan": last,
-        "last_scan_age": age_label(last, now) if last else "no time",
         "lead_count": len(rows),
-        "next_read": NEXT_READ,
-        "x": {
-            "asof": buzz_at,
-            "stale": buzz_stale,
-            "hollow": buzz_stale,
-            "label": "X buzz stale · %s" % x_age if buzz_stale else "X buzz · %s" % x_age,
-        },
+        "x": {"asof": buzz_at},
         "feeds": feeds,
         "rows": rows,
         "gaps": gaps,
         "heat_note": "Heat is a ranking, not a buy signal.",
     }
+    doc = _strip_tree(doc)
     _walk(doc)
     return doc
 
 
-def _fetch(url, timeout=90):
+def _fetch(url, timeout=FETCH_TIMEOUT_S):
     req = urllib.request.Request(url, headers=UA)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return resp.read()
@@ -955,7 +1030,7 @@ def _fetch_json(url):
     return json.loads(_fetch(url))
 
 
-def _fetch_jsonl(url, timeout=120):
+def _fetch_jsonl(url, timeout=FETCH_TIMEOUT_S):
     raw = _fetch(url, timeout=timeout)
     rows = []
     for line in raw.splitlines():
@@ -991,6 +1066,7 @@ def load_live(now=None):
     take("flags", DESK + "solada-prefilter/flags.json")
     take("kill", DESK + "solada-prefilter/kill_status.json")
     take("last_run", DESK + "solada-prefilter/last-run.json")
+    take("whale_roster", DESK + "solada-prefilter/whale_roster.json")
     take("lst", LST_URL)
     try:
         status = _fetch_json(NFT_STATUS_URL)
@@ -1012,12 +1088,11 @@ def load_live(now=None):
         try:
             payloads["snaps"] = _fetch_jsonl(DESK + "solana-desk/v2/pool-snaps-%s.jsonl" % stem)
             payloads["manifest"] = _fetch_jsonl(DESK + "solana-desk/v2/manifest-%s.jsonl" % stem)
-            payloads["deaths"] = _fetch_jsonl(DESK + "solana-desk/v2/death-%s.jsonl" % stem)
             break
         except Exception as exc:
             errors.append("solana %s (%s)" % (stem, type(exc).__name__))
     try:
-        payloads["units"] = _fetch_jsonl(UNITS_URL, timeout=180)
+        payloads["units"] = _fetch_jsonl(UNITS_URL)
     except Exception as exc:
         errors.append("units (%s)" % type(exc).__name__)
     payloads["_errors"] = errors

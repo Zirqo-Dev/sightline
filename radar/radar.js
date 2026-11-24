@@ -30,7 +30,7 @@
   var LEGEND = [
     ["seen", "Seen at", "How old the name was when the desk first logged it."],
     ["pool", "New pool", "Under an hour old, or a HoodScout NFT marked new."],
-    ["desk", "Desk flag", "The desk kept this name."],
+    ["desk", "Desk flag", "The Cardano screen passed this name. Not a Hood tier and not a Solana pick."],
     ["whale", "Whale", "A tracked whale moved. The detail uses the codename."],
     ["buzz", "X buzz", "Hollow while the feed is stale. Fresh buzz stays off the rows."],
     ["snipers", "Snipers out", "A sniper exit is on the flag file."],
@@ -82,9 +82,33 @@
     return text + (unit ? " " + unit : "");
   }
   function sizeText(row) {
-    if (row.size == null) return "";
-    var body = row.size_unit === "USD" ? "$" + compact(row.size) : compact(row.size) + (row.size_unit ? " " + row.size_unit : "");
+    var n = finite(row.size);
+    if (n == null) return "—";
+    var body = row.size_unit === "USD" ? "$" + compact(n) : compact(n) + (row.size_unit ? " " + row.size_unit : "");
     return body;
+  }
+  function ageLabel(iso, now) {
+    var t = Date.parse(iso);
+    if (!isFinite(t)) return "";
+    var mins = Math.max(0, Math.round((now - t) / 60000));
+    if (mins < 90) return mins + "m";
+    var hours = Math.round(mins / 60);
+    if (hours < 48) return hours + "h";
+    return Math.round(hours / 24) + "d";
+  }
+  function clock(iso) {
+    var t = Date.parse(iso);
+    if (!isFinite(t)) return "no time";
+    return new Date(t).toISOString().replace(".000Z", "Z").replace("T", " ");
+  }
+  function xStale(doc, now) {
+    var asof = doc.x && Date.parse(doc.x.asof);
+    if (!isFinite(asof)) return true;
+    return (now - asof) > 48 * 60 * 60 * 1000;
+  }
+  function snapStale(doc, now) {
+    var built = Date.parse(doc.built_at);
+    return isFinite(built) && (now - built) > 2 * 60 * 60 * 1000;
   }
   function pill(change) {
     var n = finite(change);
@@ -109,16 +133,6 @@
     var tone = values[values.length - 1] >= values[0] ? "var(--up)" : "var(--down)";
     return '<svg class="spark" viewBox="0 0 64 22" aria-hidden="true"><polyline points="' + pts + '" fill="none" stroke="' + tone + '" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>';
   }
-  function nextRead(iso, now) {
-    var t = Date.parse(iso);
-    if (!isFinite(t)) return "Next read not set";
-    var d = new Date(t);
-    var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    var hh = String(d.getUTCHours()).padStart(2, "0");
-    var mm = String(d.getUTCMinutes()).padStart(2, "0");
-    var label = months[d.getUTCMonth()] + " " + d.getUTCDate() + ", " + hh + ":" + mm + "Z";
-    return (now < t ? "Next read " : "Read was ") + label;
-  }
   function accept(row, filter) {
     if (!filter || filter === "All") return true;
     if (filter === "Coins") return row.kind === "coin";
@@ -139,18 +153,24 @@
     return copy;
   }
   function scanLine(doc, now) {
-    var hollow = !doc.x || doc.x.hollow !== false;
+    var hollow = xStale(doc, now);
     var xClass = hollow ? "xmark" : "xmark filled";
-    return '<span class="buddy">[•_•]</span> Last scan ' + esc(doc.last_scan_age || "no time")
+    var xAge = doc.x && doc.x.asof ? ageLabel(doc.x.asof, now) : "";
+    var xText = hollow ? "X buzz stale" + (xAge ? " · " + xAge : "") : "X buzz" + (xAge ? " · " + xAge : "");
+    var scanAge = ageLabel(doc.last_scan, now) || "no time";
+    return '<span class="buddy">[•_•]</span> Built ' + esc(clock(doc.built_at))
+      + " · last scan " + esc(scanAge)
       + " · " + esc(doc.lead_count == null ? 0 : doc.lead_count) + " leads<br>"
-      + '<span class="' + xClass + '">' + icon("buzz") + "</span> "
-      + esc(doc.x && doc.x.label ? doc.x.label : "X buzz")
-      + " · " + esc(nextRead(doc.next_read, now));
+      + '<span class="' + xClass + '">' + icon("buzz") + "</span> " + esc(xText);
   }
-  function rowHtml(row, rank, open) {
+  function rowHtml(row, rank, open, now) {
+    var seen = ageLabel(row.seen_at, now);
     var chips = (row.chips || []).map(function (chip) {
-      return '<span class="sig sig-' + esc(chip.id) + '">' + icon(chip.id) + esc(chip.label) + "</span>";
+      var label = chip.label;
+      if (chip.id === "seen" && seen) label = "seen " + seen;
+      return '<span class="sig sig-' + esc(chip.id) + '">' + icon(chip.id) + esc(label) + "</span>";
     }).join("");
+    var hint = row.hint ? '<span class="hint">' + esc(row.hint) + "</span>" : (row.show_age && seen ? '<span class="hint">' + esc(seen) + "</span>" : "");
     var heat = finite(row.heat);
     var heatChip = heat == null ? "" : '<span class="sig sig-heat">' + icon("heat") + "heat " + esc(heat) + "</span>";
     var letter = esc(String(row.name || "?").trim().charAt(0) || "?");
@@ -168,7 +188,7 @@
       + '<button type="button" class="row-btn" data-id="' + esc(row.id) + '" aria-expanded="' + (open ? "true" : "false") + '">'
       + '<span class="rank">' + rank + "</span>" + mark
       + '<span class="main"><span class="name-line"><span class="name">' + esc(row.name) + "</span>"
-      + '<span class="tag">' + esc(row.chain) + "</span>" + chips + heatChip + "</span>"
+      + hint + '<span class="tag">' + esc(row.chain) + "</span>" + chips + heatChip + "</span>"
       + '<span class="stat-line"><span class="stat">' + esc(row.stat || "") + "</span>" + barHtml + spark(row.spark) + "</span></span>"
       + '<span class="metrics"><span class="price">' + esc(priceText(finite(row.price), row.price_unit)) + "</span>"
       + pill(row.change) + '<span class="size">' + esc(sizeText(row)) + "</span></span></button>"
@@ -182,9 +202,13 @@
     }
     var filter = state.filter || "All";
     var feeds = (doc.feeds || []).map(function (feed) {
-      return '<button type="button" class="feed is-' + esc(feed.status || "unknown") + '" data-feed="' + esc(feed.id) + '">'
+      var status = feed.id === "X" ? (xStale(doc, now) ? "hollow" : "green") : (feed.status || "unknown");
+      return '<button type="button" class="feed is-' + esc(status) + '" data-feed="' + esc(feed.id) + '">'
         + "<i></i><span>" + esc(feed.label) + "</span></button>";
     }).join("");
+    var banner = snapStale(doc, now)
+      ? '<p class="banner">This snapshot is more than 2 hours old. Built ' + esc(clock(doc.built_at)) + ".</p>"
+      : "";
     var chips = FILTERS.map(function (name) {
       var on = name === filter ? " on" : "";
       return '<button type="button" class="chip' + on + '" data-filter="' + esc(name) + '" aria-pressed="' + (on ? "true" : "false") + '">' + esc(name) + "</button>";
@@ -202,12 +226,12 @@
       list = '<p class="empty">Nothing in this cut.</p>';
     } else {
       list = rows.map(function (row, index) {
-        return rowHtml(row, index + 1, state.open === row.id);
+        return rowHtml(row, index + 1, state.open === row.id, now);
       }).join("");
     }
     var note = state.feedNote ? '<p class="note" id="feed-note">' + esc(state.feedNote) + "</p>" : '<p class="note" id="feed-note"></p>';
     var gaps = (doc.gaps || []).map(function (gap) { return "<li>" + esc(gap) + "</li>"; }).join("");
-    return '<div class="feeds" role="group" aria-label="Feed health">' + feeds + "</div>" + note
+    return banner + '<div class="feeds" role="group" aria-label="Feed health">' + feeds + "</div>" + note
       + '<div class="filters" role="group" aria-label="Filter">' + chips + "</div>"
       + '<div class="sorts" role="group" aria-label="Sort">' + sorts + "</div>"
       + '<p class="caption">Heat is a ranking, not a buy signal.</p>'
@@ -266,7 +290,8 @@
       if (feed && doc) {
         var id = feed.getAttribute("data-feed");
         var row = (doc.feeds || []).filter(function (item) { return item.id === id; })[0];
-        state.feedNote = row ? row.label + " · " + (row.detail || row.status) + " · " + (row.age || "") : "";
+        var age = row && row.at ? ageLabel(row.at, Date.now()) : "";
+        state.feedNote = row ? row.label + " · " + (row.detail || row.status) + (age ? " · " + age : "") : "";
         paint();
         return;
       }

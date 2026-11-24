@@ -41,6 +41,9 @@ assert(!/<button[^>]*>\s*buy\b/i.test(html + js), "no buy control");
 assert(!/connect wallet|wallet-connect|connectWallet/i.test(html + js), "no wallet connect control");
 assert(js.includes("Heat is a ranking, not a buy signal."), "heat caption is present");
 assert(js.includes("No Base coin feed is published. This cut stays empty."), "Base empty state is present");
+assert(js.includes("Not a Hood tier and not a Solana pick."), "desk legend matches the Cardano flag");
+assert(js.includes("more than 2 hours old"), "stale snapshot banner is present");
+assert(!js.includes("next_read") && !js.includes("Next read"), "the next read is not hardcoded");
 for (const phrase of ["Seen at", "New pool", "Desk flag", "Snipers out", "Coordinated", "Top-heavy", "Thin start", "Kill line", "Buy streak", "Second leg", "LP locked", "Dev sold", "Holders up", "Floor sweep", "Whale count", "Not live"]) {
   assert(js.includes(phrase), "legend is missing " + phrase);
 }
@@ -55,23 +58,23 @@ vm.runInNewContext(js, sandbox);
 const radar = sandbox.SightlineRadar;
 const now = Date.parse("2026-11-24T18:00:00Z");
 const doc = {
-  last_scan_age: "5m",
+  built_at: "2026-11-24T17:30:00Z",
+  last_scan: "2026-11-24T17:50:00Z",
   lead_count: 2,
-  next_read: "2026-11-25T15:00:00Z",
-  x: { hollow: true, stale: true, label: "X buzz stale · 19d" },
-  feeds: [{ id: "X", label: "X", status: "hollow", age: "19d", detail: "X buzz stale" }],
+  x: { asof: "2026-11-05T01:39:00Z" },
+  feeds: [{ id: "X", label: "X", status: "green", at: "2026-11-05T01:39:00Z", detail: "X buzz" }],
   rows: [
     {
-      id: "sol-1", name: "SOL #1", age: "10m", chain: "SOL", kind: "coin",
+      id: "sol-1", name: "SOL #1", seen_at: "2026-11-24T17:00:00Z", chain: "SOL", kind: "coin",
       price: 0.0016, price_unit: "SOL", change: 60, size: 1.6, size_unit: "SOL", size_kind: "liq",
       stat: "h1 buys 75%", heat: 90, buy_pct: 0.75, spark: [1, 1.5, 0.9, 1.6],
-      chips: [{ id: "streak", label: "buy streak" }, { id: "leg", label: "second leg" }],
+      chips: [{ id: "seen", label: "seen" }, { id: "streak", label: "buy streak" }, { id: "leg", label: "second leg" }],
       facts: ["Buys beat sells on every 30-minute snap in this window."],
-      why: "SOL #1 · 10m", source: "Solana 30-minute snaps"
+      why: "SOL #1", source: "Solana 30-minute snaps"
     },
     {
       id: "nft-1", name: "Cash Cats", chain: "RH", kind: "nft",
-      price: 1.25, price_unit: "ETH", change: null, size: 2, size_unit: "ETH",
+      price: 1.25, price_unit: "ETH", change: null, size: null, size_unit: "ETH",
       stat: "1 sales", heat: 40, chips: [],
       facts: ["Floor change is blank, so the pill is an em dash."],
       why: "Cash Cats", source: "HoodScout NFT"
@@ -81,18 +84,23 @@ const doc = {
 };
 const view = radar.renderHtml(doc, { filter: "All", sort: "heat", open: "sol-1" }, now);
 assert(view.includes('class="pill flat">—<'), "null change renders an em dash, got a missing pill");
+assert(view.includes('class="size">—<'), "missing size renders an em dash");
 assert(!/>\s*[+-]?0%<\/span>/.test(view), "null change is not rendered as 0%");
-assert(view.includes("SOL #1") && view.includes("second leg") && view.includes("buy streak"), "derived chips render");
-assert(view.includes("is-hollow"), "stale X feed is hollow");
-assert(!/onset|d_bps|nh04|verdict|captures\.jsonl/.test(view), "rendered view has no embargoed field");
+assert(view.includes("seen 60m") && view.includes("second leg") && view.includes("buy streak"), "age and derived chips render from the timestamp");
+assert(view.includes("is-hollow"), "stale X feed is hollow even if the stored status is green");
+assert(!view.includes("more than 2 hours old"), "a fresh build does not show the stale banner");
+assert(!/onset|d_bps|nh04|verdict|captures\.jsonl|next_read|Next read/.test(view), "rendered view has no embargoed field or next read");
 assert(!/[1-9A-HJ-NP-Za-km-z]{32,44}/.test(view), "rendered view has no mint string");
 const base = radar.renderHtml(doc, { filter: "BASE", sort: "heat", open: null }, now);
 assert(base.includes(radar.BASE_EMPTY), "BASE filter explains the empty cut");
 assert(!base.includes("SOL #1"), "BASE filter does not keep other rows");
 const scan = radar.scanLine(doc, now);
 assert(scan.includes("xmark") && !scan.includes("filled"), "header X stays hollow when the feed is stale");
-assert(scan.includes("Next read Nov 25, 15:00Z"), "next read is the Nov 25 checkpoint");
+assert(scan.includes("Built 2026-11-24 17:30:00Z"), "the build time is shown");
+assert(scan.includes("last scan 10m"), "last scan age is computed from the timestamp");
+const old = Object.assign({}, doc, { built_at: "2026-11-24T10:00:00Z" });
+assert(radar.renderHtml(old, { filter: "All", sort: "heat" }, now).includes("more than 2 hours old"), "an old snapshot shows a banner");
 const legend = radar.legendHtml();
-assert(legend.includes("not a buy signal") && legend.includes("Not live"), "legend covers heat and the off-row chips");
+assert(legend.includes("not a buy signal") && legend.includes("Not a Hood tier"), "legend matches the desk flag");
 
 console.log("radar smoke ok");

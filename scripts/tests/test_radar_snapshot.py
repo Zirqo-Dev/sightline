@@ -7,7 +7,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from scripts.radar_snapshot import build_from, buy_streak, second_leg
+from scripts.radar_snapshot import FETCH_TIMEOUT_S, build_from, buy_streak, second_leg
 
 NOW = datetime.datetime(2026, 11, 24, 18, 0, tzinfo=datetime.timezone.utc)
 MINT_A = "Mint1111111111111111111111111111pump"
@@ -53,14 +53,23 @@ class RadarSnapshotTest(unittest.TestCase):
         doc = build_from({"manifest": manifest, "snaps": snaps, "deaths": deaths}, NOW)
         sol = [row for row in doc["rows"] if row["chain"] == "SOL"]
         self.assertEqual([row["name"] for row in sol], ["SOL #1", "SOL #2"])
-        self.assertEqual(sol[0]["age"], "10m")
+        self.assertEqual(sol[0]["seen_at"], "1970-01-01T00:06:40Z")
+        self.assertNotIn("age", sol[0])
+        self.assertNotIn("next_read", doc)
         chips = [chip["id"] for chip in sol[0]["chips"]]
-        for needed in ("seen", "pool", "desk", "skull", "heavy", "streak", "leg"):
+        for needed in ("seen", "pool", "heavy", "streak", "leg"):
             self.assertIn(needed, chips)
+        self.assertNotIn("desk", chips)
+        self.assertNotIn("skull", chips)
         self.assertNotIn("thin", chips)
         self.assertIn("thin", [chip["id"] for chip in sol[1]["chips"]])
         self.assertNotIn("streak", [chip["id"] for chip in sol[1]["chips"]])
         self.assertNotIn("leg", [chip["id"] for chip in sol[1]["chips"]])
+        # The flat name is first_pick and dead. That must not outrank the raw move.
+        self.assertGreater(sol[0]["change"], sol[1]["change"])
+        row_blob = json.dumps(sol).lower()
+        for banned in ("desk", "first_pick", "kill", "dead", "skull", "outcome", "verdict", "first snap"):
+            self.assertNotIn(banned, row_blob)
         blob = json.dumps(doc)
         self.assertNotIn(MINT_A, blob)
         self.assertNotIn(MINT_B, blob)
@@ -79,6 +88,7 @@ class RadarSnapshotTest(unittest.TestCase):
         doc = build_from({"snaps": snaps, "manifest": [], "deaths": []}, NOW)
         self.assertFalse(any(row["chain"] == "SOL" for row in doc["rows"]))
         self.assertNotIn(mint, json.dumps(doc))
+        self.assertTrue(any("dropped 1 series" in gap for gap in doc["gaps"]))
 
     def test_null_floor_stays_null_and_addresses_are_dropped(self):
         hood = {"generated_at": "2026-11-24T18:15:00Z", "tokens": [{
@@ -94,6 +104,7 @@ class RadarSnapshotTest(unittest.TestCase):
         cats = next(row for row in doc["rows"] if row["name"] == "Cash Cats")
         self.assertIsNone(cats["change"])
         self.assertEqual(cat["chain"], "RH")
+        self.assertNotIn("desk", [chip["id"] for chip in cat["chips"]])
         blob = json.dumps(doc)
         self.assertNotIn(ETH_ADDR, blob)
         self.assertNotIn('"ca"', blob)
@@ -117,10 +128,14 @@ class RadarSnapshotTest(unittest.TestCase):
                 "nh04_verdict": "go", "asset_id": "nft_collection:eip155:1:" + ETH_ADDR,
             }],
             "flags": {"new": [{"kind": "whale_move", "ticker": "NJAK", "tag": "w-aaaaaaaa", "at": "2026-11-24T17:10:00Z"}]},
+            "whale_roster": {"whales": [{"codename": "Lead whale"}]},
             "last_run": {"at": "2026-11-24T17:17:38Z", "results": [{
                 "ticker": "NJAK", "price_ada": 0.01, "vol_h24_ada": 10,
                 "native_holders": 3, "unit": "ab" * 28, "verdict": "pass",
-            }], "triggers": [{"kind": "whale_move", "name": "Lead whale", "metrics": {"tag": "w-aaaaaaaa"}}]},
+            }], "triggers": [
+                {"kind": "whale_move", "name": "Lead whale", "metrics": {"tag": "w-aaaaaaaa"}},
+                {"kind": "whale_move", "name": "Not A Real Whale"},
+            ]},
         }, NOW)
         blob = json.dumps(doc)
         for banned in ("onset", "d_bps", "verdict", "nh04", "coverage", "freeze_log", MINT_A, ETH_ADDR, "w-aaaaaaaa"):
@@ -131,6 +146,7 @@ class RadarSnapshotTest(unittest.TestCase):
         njak = next(row for row in doc["rows"] if row["name"] == "NJAK")
         self.assertEqual([chip["id"] for chip in njak["chips"]], ["whale"])
         self.assertTrue(any("Lead whale" in fact for fact in njak["facts"]))
+        self.assertNotIn("Not A Real Whale", blob)
         eth = next(row for row in doc["rows"] if row["chain"] == "ETH")
         self.assertEqual(eth["name"], "sample collection")
         self.assertNotIn("BASE", [row["chain"] for row in doc["rows"]])
@@ -142,6 +158,83 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertNotRegex(source, r"https://\S*captures\.jsonl")
         self.assertIn("lst-count-data/status.json", source)
         self.assertIn("status.json only", source)
+        self.assertNotIn("death-", source)
+        self.assertLessEqual(FETCH_TIMEOUT_S, 15)
+
+
+    def test_reserve_filter_edges(self):
+        kept_ratio = "Mint4444444444444444444444444444pump"
+        kept_token = "Mint5555555555555555555555555555pump"
+        over = "Mint6666666666666666666666666666pump"
+        dust = "Mint7777777777777777777777777777pump"
+        single = "Mint8888888888888888888888888888pump"
+        snaps = [
+            _snap(kept_ratio, 1, 0.05, 3, 1),
+            _snap(kept_ratio, 2, 1.25, 3, 1),
+            {"mint": kept_token, "t_s": 1, "sol": 1, "token": 1, "txns_h1": {"buys": 3, "sells": 1}},
+            {"mint": kept_token, "t_s": 2, "sol": 1, "token": 1, "txns_h1": {"buys": 3, "sells": 1}},
+            _snap(over, 1, 1, 3, 1),
+            _snap(over, 2, 25.01, 3, 1),
+            _snap(dust, 1, 0.049, 3, 1),
+            {"mint": dust, "t_s": 2, "sol": 1, "token": 0.5, "txns_h1": {"buys": 3, "sells": 1}},
+            _snap(single, 1, 10, 3, 1),
+        ]
+        doc = build_from({"snaps": snaps}, NOW)
+        names = [row["name"] for row in doc["rows"] if row["chain"] == "SOL"]
+        self.assertEqual(len(names), 2)
+        self.assertTrue(any("dropped 3 series" in gap for gap in doc["gaps"]))
+        blob = json.dumps(doc)
+        for mint in (kept_ratio, kept_token, over, dust, single):
+            self.assertNotIn(mint, blob)
+
+    def test_creator_handle_and_duplicate_tickers(self):
+        other = "0x" + ("cd" * 20)
+        hood = {"generated_at": "2026-11-24T18:00:00Z", "tokens": [
+            {"symbol": "NVDA", "tier": "WATCH", "price_usd": 1, "chg_h24": 1, "age_days": 10,
+             "ca": ETH_ADDR, "vol24_usd": 10, "buyers24": 2},
+            {"symbol": "NVDA", "tier": "WATCH", "price_usd": 2, "chg_h24": 2, "age_days": 2,
+             "ca": other, "vol24_usd": 11, "buyers24": 3},
+        ]}
+        discover = {"collections": [{"name": "Companions by WFit", "slug": "companions", "floor_price": 1,
+                                     "floor_symbol": "ETH", "floor_chg_pct": None}]}
+        doc = build_from({"hood": hood, "nft_discover": discover}, NOW)
+        blob = json.dumps(doc)
+        self.assertNotIn("WFit", blob)
+        self.assertNotIn(ETH_ADDR, blob)
+        self.assertNotIn(other, blob)
+        self.assertTrue(any(row["name"] == "Companions" for row in doc["rows"]))
+        nvda = [row for row in doc["rows"] if row["name"] == "NVDA"]
+        self.assertEqual(len(nvda), 2)
+        self.assertEqual(len({row["id"] for row in nvda}), 2)
+        self.assertEqual(len({row["hint"] for row in nvda}), 2)
+        for row in nvda:
+            self.assertLess(len(row["hint"]), 20)
+            self.assertNotIn(ETH_ADDR, row["hint"])
+
+    def test_snapshot_error_skips_the_file(self):
+        import importlib.util
+        import pathlib
+        import tempfile
+        root = os.path.join(os.path.dirname(__file__), "..", "..")
+        spec = importlib.util.spec_from_file_location("build_site", os.path.join(root, "scripts", "build-site.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        import scripts.radar_snapshot as snap
+        original = snap.write_snapshot
+
+        def boom(dest, now=None):
+            pathlib.Path(dest).write_text("{", encoding="utf-8")
+            raise RuntimeError("boom")
+
+        snap.write_snapshot = boom
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                dest = pathlib.Path(tmp)
+                mod.publish_radar(dest)
+                self.assertFalse((dest / "radar.json").exists())
+                self.assertTrue((dest / "radar.html").is_file())
+        finally:
+            snap.write_snapshot = original
 
 
 if __name__ == "__main__":
