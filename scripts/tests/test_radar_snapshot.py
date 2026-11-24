@@ -198,9 +198,10 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertEqual(_name_and_slugs("Cats @wfit")[0], "Cats")
         self.assertIn("wfit", _name_and_slugs("Cats @wfit")[1])
         self.assertEqual(_name_and_slugs("Quotrons (by WFit)")[0], "Quotrons")
-        self.assertEqual(_name_and_slugs("Killed by death"), ("Killed by death", []))
-        self.assertEqual(_name_and_slugs("Made by apes"), ("Made by apes", []))
-        self.assertEqual(_name_and_slugs("Stand by Me"), ("Stand by Me", []))
+        self.assertEqual(_name_and_slugs("Killed by death")[:2], ("Killed by death", []))
+        self.assertEqual(_name_and_slugs("Made by apes")[:2], ("Made by apes", []))
+        self.assertEqual(_name_and_slugs("Stand by Me")[:2], ("Stand by Me", []))
+        self.assertFalse(_name_and_slugs("Killed by death")[2])
         self.assertEqual(_name_and_slugs("Punks @eth")[0], "Punks")
         self.assertEqual(_name_and_slugs("Mood (by sol)")[0], "Mood")
         discover = {"collections": [
@@ -240,7 +241,7 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertNotIn(other, blob)
         companions = next(row for row in doc["rows"] if row["name"] == "Companions")
         self.assertIsNone(companions["image"])
-        self.assertEqual(next(row for row in doc["rows"] if row["name"] == "Punks")["image"], "https://cdn.example/punks.png")
+        self.assertIsNone(next(row for row in doc["rows"] if row["name"] == "Punks")["image"])
         self.assertTrue(any(row["name"] == "Mood" for row in doc["rows"]))
         self.assertTrue(any(row["name"] == "Made by apes" for row in doc["rows"]))
         self.assertTrue(any(row["name"] == "Killed by death" for row in doc["rows"]))
@@ -260,6 +261,67 @@ class RadarSnapshotTest(unittest.TestCase):
         for row in nvda:
             self.assertLess(len(row["hint"]), 20)
             self.assertNotIn(ETH_ADDR, row["hint"])
+
+    def test_slug_creator_marks_stay_on_their_row(self):
+        hood = {"generated_at": "2026-11-24T18:00:00Z", "tokens": [{
+            "symbol": "somehandle club", "tier": "WATCH", "price_usd": 1, "chg_h24": 1,
+            "vol24_usd": 9, "buyers24": 2,
+            "image_url": "https://cdn.example/somehandle-logo.png",
+        }]}
+        discover = {"collections": [
+            {"name": "companions-by-somehandle", "floor_price": 1, "floor_symbol": "ETH",
+             "volume_24h": 90, "image_url": "https://cdn.example/companions-by-somehandle/a.png"},
+            {"name": "cats_by_lowcase", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 80,
+             "image_url": "https://cdn.example/cats_by_lowcase.png"},
+            {"name": "buddies by zxqw", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 70,
+             "image_url": "https://cdn.example/buddies.png"},
+            {"name": "mosaic-by-café", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 60,
+             "image_url": "https://cdn.example/mosaic-by-café/a.png"},
+            {"name": "crew-by-Apes_1", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 50,
+             "image_url": "https://cdn.example/crew-by-Apes_1.png"},
+            {"name": "Dots @abc", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 40,
+             "image_url": "https://cdn.example/dots.png"},
+        ]}
+        doc = build_from({
+            "hood": hood,
+            "nft_discover": discover,
+            "snaps": [_snap(MINT_A, 1000, 80, 4, 1), _snap(MINT_A, 2800, 120, 4, 1)],
+            "manifest": [{"type": "candidate", "mint": MINT_A, "t_s": 1000,
+                          "inputs": {"age_s": 8000, "sol": 80, "token": 1000}}],
+        }, NOW)
+        names = {row["name"] for row in doc["rows"]}
+        self.assertIn("companions", names)
+        self.assertIn("cats", names)
+        self.assertIn("buddies", names)
+        self.assertIn("mosaic", names)
+        self.assertIn("crew", names)
+        self.assertIn("Dots", names)
+        self.assertIn("somehandle club", names)
+        self.assertIn("SOL #1", names)
+        marked = {row["name"]: row for row in doc["rows"] if row["name"] in (
+            "companions", "cats", "buddies", "mosaic", "crew", "Dots")}
+        for row in marked.values():
+            self.assertIsNone(row["image"], row["name"])
+        self.assertNotIn("somehandle", json.dumps(marked["companions"]))
+        self.assertNotIn("lowcase", json.dumps(marked["cats"]))
+        self.assertNotIn("zxqw", json.dumps(marked["buddies"]))
+        self.assertNotIn("café", json.dumps(marked["mosaic"]))
+        self.assertNotIn("Apes_1", json.dumps(marked["crew"]))
+        self.assertNotIn("@abc", json.dumps(marked["Dots"]))
+        keeper = next(row for row in doc["rows"] if row["name"] == "somehandle club")
+        self.assertEqual(keeper["image"], "https://cdn.example/somehandle-logo.png")
+        self.assertIn("somehandle", keeper["name"])
+        sol = next(row for row in doc["rows"] if row["name"] == "SOL #1")
+        self.assertEqual(sol["chain"], "SOL")
+        self.assertEqual(sol["price_unit"], "SOL")
+        self.assertEqual(sol["size_unit"], "SOL")
+        blob = json.dumps(doc)
+        self.assertNotIn("companions-by-somehandle", blob)
+        self.assertNotIn("cats_by_lowcase", blob)
+        self.assertNotIn("mosaic-by-", blob)
+        self.assertNotIn("Apes_1", blob)
+        self.assertIn("somehandle-logo", blob)
+        self.assertIn("SOL #1", blob)
 
     def test_snapshot_error_skips_the_file(self):
         import importlib.util

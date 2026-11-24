@@ -202,29 +202,43 @@ def _symbol(value):
     return text
 
 
-_AT_HANDLE = re.compile(r"@([A-Za-z0-9_]{2,})")
+# 3-character @handles count. Checked before '-' and '_' are turned into spaces.
+_AT_HANDLE = re.compile(r"@([^\s@]{3,})")
 _PAREN_BY = re.compile(r"\(\s*by\s+([^)]+?)\s*\)", re.I)
-_TRAIL_BY = re.compile(r"^(.*)\s+by\s+(\S+)\s*$", re.I)
-
+_SLUG_BY = re.compile(r"^(?P<head>.*?)(?P<sep>[-_])by(?P=sep)(?P<handle>.+)$", re.I)
+_SPACE_BY = re.compile(r"^(?P<head>.*\S)\s+by\s+(?P<handle>\S+)\s*$", re.I)
 
 _RESERVED_SLUGS = {"sol", "eth", "ada", "usd", "nft", "coin", "base", "rh"}
+# Ordinary title words. A lowercase "by <word>" is not a creator for these.
+_TITLE_WORDS = {"me", "death", "apes"}
 
 
-def _handleish(token):
-    """A creator handle, not a title word such as Me, death, or apes."""
+def _creator_suffix(token):
+    """Space-separated 'by <handle>'. Not 'by Me', 'by death', or 'by apes'."""
     token = token.strip().strip(".,")
-    if len(token) < 2 or token.lower() in _RESERVED_SLUGS:
+    if not token:
         return False
+    folded = token.casefold()
+    if folded in _RESERVED_SLUGS or folded in _TITLE_WORDS:
+        return False
+    if any(ord(ch) > 127 for ch in token):
+        return True
     if any(ch.isdigit() or ch == "_" for ch in token):
         return True
-    return any(ch.isupper() for ch in token[1:])
+    if any(ch.isupper() for ch in token[1:]):
+        return True
+    return token.isascii() and token.isalpha() and folded == token.lower() and len(token) >= 4
 
 
 def _qualifying_slug(fragment):
-    slug = _slugify(fragment)
-    if len(slug) < 4 or slug in _RESERVED_SLUGS:
+    """Whole-token purge key. Short tokens and chain words are not purged."""
+    text = fragment.strip().strip(".,")
+    if not text:
         return None
-    return slug
+    folded = text.casefold()
+    if len(folded) < 4 or folded in _RESERVED_SLUGS:
+        return None
+    return folded
 
 
 def _slugify(text):
@@ -232,17 +246,18 @@ def _slugify(text):
 
 
 def _name_and_slugs(value, limit=48):
-    """Clean a name only. Other fields are left alone, so 'Stand by Me' can stay.
+    """Clean a name. Returns (name, purge slugs, whether a creator mark was removed).
 
-    Returns (name, creator slugs). A slug is the creator token and the
-    hyphenated 'name-by-creator' form that shows up in image URLs.
+    '-by-' and '_by_' are always creator marks, before '-' or '_' become spaces.
+    A removed mark drops the row image even when the handle is too short to purge.
     """
     if not isinstance(value, str):
-        return None, []
+        return None, [], False
     original = " ".join(value.split())
     if not original:
-        return None, []
+        return None, [], False
     slugs = []
+    marked = False
 
     def take(fragment):
         slug = _qualifying_slug(fragment)
@@ -251,30 +266,39 @@ def _name_and_slugs(value, limit=48):
 
     text = original
     for match in list(_AT_HANDLE.finditer(text)):
+        marked = True
         take(match.group(1))
     text = _AT_HANDLE.sub(" ", text)
     for match in list(_PAREN_BY.finditer(text)):
+        marked = True
         take(match.group(1))
     text = _PAREN_BY.sub(" ", text)
-    spaced = " ".join(text.replace("-", " ").replace("_", " ").split())
-    trail = _TRAIL_BY.match(spaced)
-    if trail and _handleish(trail.group(2)):
-        take(trail.group(2))
-        spaced = trail.group(1).strip()
-    if slugs:
-        full = _slugify(original)
+    text = " ".join(text.split())
+    # Slug forms first, while '-' and '_' are still separators.
+    slug_by = _SLUG_BY.match(text)
+    if slug_by:
+        marked = True
+        take(slug_by.group("handle"))
+        full = slug_by.group(0).casefold()
         if len(full) >= 4 and full not in _RESERVED_SLUGS and full not in slugs:
             slugs.append(full)
-    text = " ".join(spaced.split())
+        text = slug_by.group("head").strip()
+    else:
+        space_by = _SPACE_BY.match(text)
+        if space_by and _creator_suffix(space_by.group("handle")):
+            marked = True
+            take(space_by.group("handle"))
+            text = space_by.group("head").strip()
+    text = " ".join(text.replace("-", " ").replace("_", " ").split())
     if not text or len(text) > limit:
-        return None, slugs
+        return None, slugs, marked
     if _MINT.search(text) or _ETH.search(text) or _STAKE.search(text):
-        return None, slugs
-    return text, slugs
+        return None, slugs, marked
+    return text, slugs, marked
 
 
 def _display_name(value, limit=48, creators=None):
-    text, slugs = _name_and_slugs(value, limit)
+    text, slugs, _marked = _name_and_slugs(value, limit)
     if creators is not None:
         creators.extend(slugs)
     return text
@@ -782,7 +806,15 @@ def _hood_nfts(doc):
         if not isinstance(item, dict):
             continue
         raw_name = item.get("name") or item.get("slug")
-        name, slugs = _name_and_slugs(raw_name)
+        name, slugs, marked = _name_and_slugs(raw_name)
+        if item.get("slug") and item.get("slug") != raw_name:
+            _slug_name, extra, extra_marked = _name_and_slugs(item.get("slug"))
+            marked = marked or extra_marked
+            for slug in extra:
+                if slug not in slugs:
+                    slugs.append(slug)
+            if not name:
+                name = _slug_name
         if not name or _is_rwa(name, item.get("floor_symbol")):
             continue
         change = _num(item.get("floor_chg_pct"))
@@ -814,7 +846,7 @@ def _hood_nfts(doc):
             "seen_at": seen_at,
             "kind": "nft",
             "chain": "RH",
-            "image": None if slugs else _https(item.get("image_url")),
+            "image": None if marked else _https(item.get("image_url")),
             "price": None if floor is None else round(floor, 8),
             "price_unit": symbol,
             "change": None if change is None else round(change, 4),
@@ -934,7 +966,7 @@ def _eth_rows(units):
             continue
         if line.get("chain") != "eip155:1":
             continue
-        name, slugs = _name_and_slugs(line.get("name") or line.get("slug"))
+        name, slugs, _marked = _name_and_slugs(line.get("name") or line.get("slug"))
         floor = _num(line.get("floor_eth"))
         when = parse_time(line.get("snapshot_t"))
         if not name or floor is None or when is None:
