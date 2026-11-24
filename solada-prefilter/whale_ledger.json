@@ -1,11 +1,11 @@
 {
- "at": "2026-11-24T17:12:35Z",
+ "at": "2026-11-24T19:12:59Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14242957,
+ "height": 14243508,
  "baseline_at": "2026-11-14T17:13:24Z",
- "ada_balance": 3330.741234,
+ "ada_balance": 3262.454888,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 309983267013,
@@ -44,7 +44,7 @@
   "Dgens.fun": 8172515,
   "Excalibur": 218,
   "FEED": 25000000099015,
-  "FLOW": 400005306271,
+  "FLOW": 400005742383,
   "FUSH": 10549228,
   "GUINEA": 87507229937873,
   "Guinea Pig": 21641748,
@@ -65,7 +65,7 @@
   "MISS": 8375000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1420780013252,
+  "NIGHT": 1420795984006,
   "NIKY": 26285265786372,
   "NSNEK": 3127235605656,
   "NVL": 2,
@@ -86,7 +86,7 @@
   "SHARKY": 5295497544657,
   "SNEK": 15000000,
   "SOLABLUE": 1438534570029,
-  "SOLADA": 21111159,
+  "SOLADA": 21115239,
   "STABLE": 20165843834023,
   "STRIKE": 218170,
   "SUNDAE": 65,
@@ -99,7 +99,7 @@
   "VAL": 92072020,
   "VAMP": 25213901392298,
   "Viperions_2558": 1,
-  "WJB": 115521823,
+  "WJB": 120781845,
   "cock-whale": 1,
   "cockwhale": 1,
   "f5808c+f7db6b52": 202909919,
@@ -154,7 +154,7 @@
   "Dgens.fun": 8172515,
   "Excalibur": 218,
   "FEED": 25000000099015,
-  "FLOW": 400005306271,
+  "FLOW": 400005742383,
   "FUSH": 10549228,
   "GUINEA": 87507229937873,
   "Guinea Pig": 21641748,
@@ -175,7 +175,7 @@
   "MISS": 8375000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1420780013252,
+  "NIGHT": 1420795984006,
   "NIKY": 26285265786372,
   "NSNEK": 3127235605656,
   "NVL": 2,
@@ -196,7 +196,7 @@
   "SHARKY": 5295497544657,
   "SNEK": 15000000,
   "SOLABLUE": 1438534570029,
-  "SOLADA": 21111159,
+  "SOLADA": 21115239,
   "STABLE": 20165843834023,
   "STRIKE": 218170,
   "SUNDAE": 65,
@@ -209,7 +209,7 @@
   "VAL": 92072020,
   "VAMP": 25213901392298,
   "Viperions_2558": 1,
-  "WJB": 115521823,
+  "WJB": 120781845,
   "cock-whale": 1,
   "cockwhale": 1,
   "f5808c+f7db6b52": 202909919,
@@ -415,7 +415,7 @@
   {
    "token": "FLOW",
    "policy": "2d9db8a8",
-   "qty": 400005306271
+   "qty": 400005742383
   },
   {
    "token": "FUSH",
@@ -520,7 +520,7 @@
   {
    "token": "NIGHT",
    "policy": "0691b2fe",
-   "qty": 1420780013252
+   "qty": 1420795984006
   },
   {
    "token": "NIKY",
@@ -625,7 +625,7 @@
   {
    "token": "SOLADA",
    "policy": "e7c77b27",
-   "qty": 21111159
+   "qty": 21115239
   },
   {
    "token": "STABLE",
@@ -690,7 +690,7 @@
   {
    "token": "WJB",
    "policy": "0ca18f46",
-   "qty": 115521823
+   "qty": 120781845
   },
   {
    "token": "cock-whale",
@@ -10168,6 +10168,20 @@
    "closed_at": "2026-11-24T16:09:11Z",
    "filled_token": "ASCEND",
    "filled_qty": 42918113
+  },
+  "8e9c87d2bf#0": {
+   "ref_short": "8e9c87d2bf#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "filled",
+   "opened_tx": "8e9c87d2bf",
+   "opened_at": "2026-11-24T19:06:27Z",
+   "own_stake": true,
+   "closed_tx": "d8496f41db",
+   "closed_at": "2026-11-24T19:06:27Z",
+   "filled_token": "WJB",
+   "filled_qty": 5260022
   }
  },
  "rows": [
@@ -30791,6 +30805,56 @@
    "ada_leg": 73.0,
    "counterparty_tag": null,
    "order_ref_short": "865494a214#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-24T18:23:18Z",
+   "tx_short": "3f984d629a",
+   "kind": "transfer_in",
+   "token": "NIGHT",
+   "qty": 15970754,
+   "ada_leg": null,
+   "counterparty_tag": null
+  },
+  {
+   "time": "2026-11-24T18:23:18Z",
+   "tx_short": "3f984d629a",
+   "kind": "transfer_in",
+   "token": "FLOW",
+   "qty": 436112,
+   "ada_leg": null,
+   "counterparty_tag": null
+  },
+  {
+   "time": "2026-11-24T18:23:18Z",
+   "tx_short": "3f984d629a",
+   "kind": "transfer_in",
+   "token": "SOLADA",
+   "qty": 4080,
+   "ada_leg": null,
+   "counterparty_tag": null
+  },
+  {
+   "time": "2026-11-24T19:06:27Z",
+   "tx_short": "8e9c87d2bf",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "8e9c87d2bf#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-24T19:06:27Z",
+   "tx_short": "d8496f41db",
+   "kind": "order_fill",
+   "token": "WJB",
+   "qty": 5260022,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "8e9c87d2bf#0",
    "order_status": "filled",
    "sold": "ADA"
   }

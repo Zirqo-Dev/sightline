@@ -1,5 +1,5 @@
 {
- "at": "2026-11-24T17:16:25Z",
+ "at": "2026-11-24T19:16:14Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -80,10 +80,9 @@
    "policy_short": "49e42316",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~71183c8b",
-   "reserve_ada": 169340.27,
-   "reserve_qty": 43545607,
-   "asof": "2026-11-23T12:29:17Z",
-   "stale": true
+   "reserve_ada": 166435.06,
+   "reserve_qty": 43643509,
+   "asof": "2026-11-21T23:50:23Z"
   },
   {
    "ticker": "IAG",
@@ -159,7 +158,8 @@
    "pool_key": "minswap_v2~d494ef2a",
    "reserve_ada": 9594.92,
    "reserve_qty": 5148334,
-   "asof": "2026-11-23T19:26:56Z"
+   "asof": "2026-11-23T19:26:56Z",
+   "stale": true
   },
   {
    "ticker": "STRIKE",
@@ -232,7 +232,7 @@
    "policy_short": "49e42316",
    "rank": 8,
    "unit_source": "listed",
-   "last_checked": "2026-11-24T05:15:29Z"
+   "last_checked": "2026-11-24T19:16:14Z"
   },
   {
    "ticker": "SOLADA",
@@ -256,20 +256,10 @@
   }
  ],
  "coverage": {
-  "SOLADA": {
-   "read": 15,
+  "COCK": {
+   "read": 27,
    "complete": false,
    "pools": 1
-  },
-  "IAG": {
-   "read": 0,
-   "complete": false,
-   "pools": 0
-  },
-  "COCK": {
-   "read": 0,
-   "complete": false,
-   "skipped": "budget"
   },
   "MIN": {
    "read": 0,
@@ -300,18 +290,28 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "IAG": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
+  },
+  "SOLADA": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "SOLADA",
-  "IAG",
   "COCK",
   "MIN",
   "SNEK",
   "ASCEND",
   "CLOVE",
   "NIGHT",
-  "STRIKE"
+  "STRIKE",
+  "IAG",
+  "SOLADA"
  ],
  "koios_calls": 7,
  "blockfrost_calls": 0,
