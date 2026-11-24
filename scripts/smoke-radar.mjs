@@ -111,5 +111,18 @@ const soon = new Date(now + 5 * 60 * 1000).toISOString().replace(".000Z", "Z");
 assert(!radar.renderHtml(Object.assign({}, bare, { built_at: soon }), { filter: "All", sort: "heat" }, now).includes("This snapshot is stale."), "a build time a few minutes ahead is still fresh");
 const legend = radar.legendHtml();
 assert(legend.includes("not a buy signal") && legend.includes("Not a Hood tier"), "legend matches the desk flag");
+const scanEl = { textContent: "Loading the latest snapshot…" };
+const appEl = { innerHTML: "" };
+sandbox.document = {
+  getElementById(id) {
+    if (id === "scan") return scanEl;
+    if (id === "app") return appEl;
+    return null;
+  }
+};
+assert(typeof radar.paint === "function", "paint is exported");
+radar.paint();
+assert(scanEl.textContent === "Snapshot is unavailable.", "paint with no radar.json says the snapshot is unavailable, got " + scanEl.textContent);
+assert(!String(scanEl.textContent).includes("Loading"), "paint does not leave the loading line");
 
 console.log("radar smoke ok");

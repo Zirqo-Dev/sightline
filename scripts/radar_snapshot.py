@@ -207,16 +207,24 @@ _PAREN_BY = re.compile(r"\(\s*by\s+([^)]+?)\s*\)", re.I)
 _TRAIL_BY = re.compile(r"^(.*)\s+by\s+(\S+)\s*$", re.I)
 
 
+_RESERVED_SLUGS = {"sol", "eth", "ada", "usd", "nft", "coin", "base", "rh"}
+
+
 def _handleish(token):
-    """A creator token, not an ordinary title word such as Me."""
+    """A creator handle, not a title word such as Me, death, or apes."""
     token = token.strip().strip(".,")
-    if len(token) < 2:
+    if len(token) < 2 or token.lower() in _RESERVED_SLUGS:
         return False
     if any(ch.isdigit() or ch == "_" for ch in token):
         return True
-    if any(ch.isupper() for ch in token[1:]):
-        return True
-    return token.lower() == token and len(token) >= 4
+    return any(ch.isupper() for ch in token[1:])
+
+
+def _qualifying_slug(fragment):
+    slug = _slugify(fragment)
+    if len(slug) < 4 or slug in _RESERVED_SLUGS:
+        return None
+    return slug
 
 
 def _slugify(text):
@@ -237,12 +245,9 @@ def _name_and_slugs(value, limit=48):
     slugs = []
 
     def take(fragment):
-        slug = _slugify(fragment)
-        if len(slug) >= 3 and slug not in slugs:
+        slug = _qualifying_slug(fragment)
+        if slug and slug not in slugs:
             slugs.append(slug)
-            marked = "by-" + slug
-            if marked not in slugs:
-                slugs.append(marked)
 
     text = original
     for match in list(_AT_HANDLE.finditer(text)):
@@ -258,7 +263,7 @@ def _name_and_slugs(value, limit=48):
         spaced = trail.group(1).strip()
     if slugs:
         full = _slugify(original)
-        if len(full) >= 3 and full not in slugs:
+        if len(full) >= 4 and full not in _RESERVED_SLUGS and full not in slugs:
             slugs.append(full)
     text = " ".join(spaced.split())
     if not text or len(text) > limit:
@@ -397,34 +402,35 @@ def _short_addr(value):
     return text[:4] + "…" + text[-4:]
 
 
-def _purge_slugs(value, slugs):
-    """Remove creator slugs from every string, including URLs."""
-    ordered = sorted({slug for slug in slugs if slug}, key=len, reverse=True)
-    if not ordered:
-        return value
+def _token_re(slug):
+    return re.compile(r"(?<![A-Za-z0-9])" + re.escape(slug) + r"(?![A-Za-z0-9])", re.I)
 
-    def scrub(text):
-        hit = False
-        for slug in ordered:
-            if re.search(re.escape(slug), text, re.I):
-                hit = True
-                break
-        if not hit:
-            return text
-        if text.startswith("https://") or text.startswith("http://"):
-            return None
-        new = text
-        for slug in ordered:
-            new = re.sub(re.escape(slug), "", new, flags=re.I)
-        return " ".join(new.split())
 
-    if isinstance(value, dict):
-        return {key: _purge_slugs(item, ordered) for key, item in value.items()}
-    if isinstance(value, list):
-        return [_purge_slugs(item, ordered) for item in value]
-    if isinstance(value, str):
-        return scrub(value)
-    return value
+def _strip_tokens(text, slugs):
+    new = text
+    for slug in sorted(slugs, key=len, reverse=True):
+        new = _token_re(slug).sub("", new)
+    return " ".join(new.split())
+
+
+def _scrub_row(row, slugs):
+    """Scrub one row's name, why, facts, and image. Nothing else."""
+    kept = [slug for slug in slugs if slug and len(slug) >= 4 and slug not in _RESERVED_SLUGS]
+    if not kept:
+        return row
+    for key in ("name", "why"):
+        if isinstance(row.get(key), str):
+            row[key] = _strip_tokens(row[key], kept)
+    facts = row.get("facts")
+    if isinstance(facts, list):
+        row["facts"] = [_strip_tokens(item, kept) if isinstance(item, str) else item for item in facts]
+    image = row.get("image")
+    if isinstance(image, str) and any(_token_re(slug).search(image) for slug in kept):
+        row["image"] = None
+    elif kept and isinstance(image, str):
+        # The name lost a creator. Drop the picture so a creator slug in the URL cannot ship.
+        row["image"] = None
+    return row
 
 
 def roster_names(doc):
@@ -769,7 +775,7 @@ def _hood_coins(doc):
     return _finish(rows, 10)
 
 
-def _hood_nfts(doc, creators=None):
+def _hood_nfts(doc):
     collections = doc.get("collections") if isinstance(doc, dict) else None
     rows = []
     for item in collections or []:
@@ -777,8 +783,6 @@ def _hood_nfts(doc, creators=None):
             continue
         raw_name = item.get("name") or item.get("slug")
         name, slugs = _name_and_slugs(raw_name)
-        if creators is not None:
-            creators.extend(slugs)
         if not name or _is_rwa(name, item.get("floor_symbol")):
             continue
         change = _num(item.get("floor_chg_pct"))
@@ -827,6 +831,7 @@ def _hood_nfts(doc, creators=None):
             "source": "HoodScout NFT",
             "_raw": raw_score(change, vol, sales),
         })
+        _scrub_row(rows[-1], slugs)
     return _finish(rows, 6)
 
 
@@ -921,21 +926,24 @@ def _cardano_rows(last_run, flags, kill, whale, now):
     return _finish(rows, 8)
 
 
-def _eth_rows(units, creators=None):
+def _eth_rows(units):
     series = {}
+    series_slugs = {}
     for line in units or []:
         if not isinstance(line, dict):
             continue
         if line.get("chain") != "eip155:1":
             continue
         name, slugs = _name_and_slugs(line.get("name") or line.get("slug"))
-        if creators is not None:
-            creators.extend(slugs)
         floor = _num(line.get("floor_eth"))
         when = parse_time(line.get("snapshot_t"))
         if not name or floor is None or when is None:
             continue
         series.setdefault(name, []).append((when, floor))
+        kept = series_slugs.setdefault(name, [])
+        for slug in slugs:
+            if slug not in kept:
+                kept.append(slug)
     rows = []
     for name, points in series.items():
         points.sort(key=lambda item: item[0])
@@ -980,6 +988,7 @@ def _eth_rows(units, creators=None):
             "source": "ETH floor snaps",
             "_raw": raw_score(change, last_floor, None),
         })
+        _scrub_row(rows[-1], series_slugs.get(name) or [])
     return _finish(rows, 6)
 
 
@@ -998,7 +1007,6 @@ def build_from(payloads, now=None):
         now = now.replace(tzinfo=datetime.timezone.utc)
     payloads = payloads or {}
     gaps = []
-    creators = []
     health = payloads.get("health") if isinstance(payloads.get("health"), dict) else {}
     feeds = []
     wanted = (
@@ -1071,13 +1079,13 @@ def build_from(payloads, now=None):
         gaps.append("HoodScout speculative and dead tiers are not on this list.")
     nft_doc = discover or (payloads.get("nft_latest") if isinstance(payloads.get("nft_latest"), dict) else {})
     if nft_doc:
-        rows.extend(_hood_nfts(nft_doc, creators))
+        rows.extend(_hood_nfts(nft_doc))
     if last_run:
         allowed = roster_names(payloads.get("whale_roster"))
         rows.extend(_cardano_rows(last_run, payloads.get("flags"), payloads.get("kill"), _whale_name(last_run, allowed), now))
     else:
         gaps.append("Cardano last-run was not readable.")
-    rows.extend(_eth_rows(payloads.get("units"), creators))
+    rows.extend(_eth_rows(payloads.get("units")))
     gaps.append("Base has no coin feed. The BASE cut stays empty.")
     _disambiguate(rows)
     rows.sort(key=lambda row: (-row["heat"], row["chain"], row["name"]))
@@ -1095,7 +1103,6 @@ def build_from(payloads, now=None):
         "gaps": gaps,
         "heat_note": "Heat is a ranking, not a buy signal.",
     }
-    doc = _purge_slugs(doc, creators)
     _walk(doc)
     return doc
 

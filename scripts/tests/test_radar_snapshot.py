@@ -7,7 +7,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from scripts.radar_snapshot import FETCH_TIMEOUT_S, build_from, buy_streak, second_leg
+from scripts.radar_snapshot import FETCH_TIMEOUT_S, _name_and_slugs, build_from, buy_streak, second_leg
 
 NOW = datetime.datetime(2026, 11, 24, 18, 0, tzinfo=datetime.timezone.utc)
 MINT_A = "Mint1111111111111111111111111111pump"
@@ -195,21 +195,41 @@ class RadarSnapshotTest(unittest.TestCase):
             {"symbol": "NVDA", "tier": "WATCH", "price_usd": 2, "chg_h24": 2, "age_days": 2,
              "ca": other, "vol24_usd": 11, "buyers24": 3},
         ]}
+        self.assertEqual(_name_and_slugs("Cats @wfit")[0], "Cats")
+        self.assertIn("wfit", _name_and_slugs("Cats @wfit")[1])
+        self.assertEqual(_name_and_slugs("Quotrons (by WFit)")[0], "Quotrons")
+        self.assertEqual(_name_and_slugs("Killed by death"), ("Killed by death", []))
+        self.assertEqual(_name_and_slugs("Made by apes"), ("Made by apes", []))
+        self.assertEqual(_name_and_slugs("Stand by Me"), ("Stand by Me", []))
+        self.assertEqual(_name_and_slugs("Punks @eth")[0], "Punks")
+        self.assertEqual(_name_and_slugs("Mood (by sol)")[0], "Mood")
         discover = {"collections": [
             {"name": "Companions by WFit", "slug": "companions-by-wfit", "floor_price": 1,
-             "floor_symbol": "ETH", "floor_chg_pct": None,
+             "floor_symbol": "ETH", "volume_24h": 50, "floor_chg_pct": None,
              "image_url": "https://cdn.example/companions-by-wfit/a.png"},
-            {"name": "Cats @wfit", "floor_price": 1, "floor_symbol": "ETH", "floor_chg_pct": None,
-             "image_url": "https://cdn.example/wfit/cat.png"},
-            {"name": "Quotrons (by WFit)", "floor_price": 1, "floor_symbol": "ETH", "floor_chg_pct": None},
-            {"name": "Stand by Me", "floor_price": 2, "floor_symbol": "ETH", "floor_chg_pct": None,
-             "image_url": "https://cdn.example/stand-by-me.png"},
+            {"name": "Punks @eth", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 40,
+             "image_url": "https://cdn.example/punks.png"},
+            {"name": "Mood (by sol)", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 30},
+            {"name": "Made by apes", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 20},
+            {"name": "Bored Apes", "floor_price": 3, "floor_symbol": "ETH", "volume_24h": 80,
+             "image_url": "https://cdn.example/bored-apes.png"},
+            {"name": "Killed by death", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 10},
+            {"name": "Ghost @ethereum", "floor_price": None, "floor_symbol": "ETH"},
         ]}
         hood["tokens"].append({
-            "symbol": "KEEP", "tier": "WATCH", "price_usd": 1, "chg_h24": 1,
+            "symbol": "Stand by Me", "tier": "WATCH", "price_usd": 1, "chg_h24": 1,
             "vol24_usd": 5, "buyers24": 1,
         })
-        doc = build_from({"hood": hood, "nft_discover": discover}, NOW)
+        doc = build_from({
+            "hood": hood,
+            "nft_discover": discover,
+            "snaps": [
+                _snap(MINT_A, 1000, 80, 4, 1),
+                _snap(MINT_A, 2800, 120, 4, 1),
+            ],
+            "manifest": [{"type": "candidate", "mint": MINT_A, "t_s": 1000,
+                          "inputs": {"age_s": 8000, "sol": 80, "token": 1000}}],
+        }, NOW)
         blob = json.dumps(doc)
         self.assertNotIn("WFit", blob)
         self.assertNotIn("wfit", blob.lower())
@@ -220,10 +240,19 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertNotIn(other, blob)
         companions = next(row for row in doc["rows"] if row["name"] == "Companions")
         self.assertIsNone(companions["image"])
-        self.assertTrue(any(row["name"] == "Cats" for row in doc["rows"]))
-        self.assertTrue(any(row["name"] == "Quotrons" for row in doc["rows"]))
-        stood = next(row for row in doc["rows"] if row["name"] == "Stand by Me")
-        self.assertEqual(stood["image"], "https://cdn.example/stand-by-me.png")
+        self.assertEqual(next(row for row in doc["rows"] if row["name"] == "Punks")["image"], "https://cdn.example/punks.png")
+        self.assertTrue(any(row["name"] == "Mood" for row in doc["rows"]))
+        self.assertTrue(any(row["name"] == "Made by apes" for row in doc["rows"]))
+        self.assertTrue(any(row["name"] == "Killed by death" for row in doc["rows"]))
+        self.assertTrue(any(row["name"] == "Stand by Me" for row in doc["rows"]))
+        apes = next(row for row in doc["rows"] if row["name"] == "Bored Apes")
+        self.assertEqual(apes["image"], "https://cdn.example/bored-apes.png")
+        sol = next(row for row in doc["rows"] if row["name"] == "SOL #1")
+        self.assertEqual(sol["chain"], "SOL")
+        self.assertEqual(sol["price_unit"], "SOL")
+        self.assertEqual(sol["size_unit"], "SOL")
+        self.assertTrue(any(feed["id"] == "SOL" and feed["label"] == "SOL" for feed in doc["feeds"]))
+        self.assertTrue(any("SOL #1" in gap for gap in doc["gaps"]))
         nvda = [row for row in doc["rows"] if row["name"] == "NVDA"]
         self.assertEqual(len(nvda), 2)
         self.assertEqual(len({row["id"] for row in nvda}), 2)

@@ -329,6 +329,7 @@
     renderHtml: renderHtml,
     scanLine: scanLine,
     legendHtml: legendHtml,
+    paint: paint,
     BASE_EMPTY: BASE_EMPTY,
     LEGEND: LEGEND,
     NOT_LIVE: NOT_LIVE
