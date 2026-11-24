@@ -28,6 +28,7 @@ import math
 import pathlib
 import re
 import sys
+import urllib.parse
 import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -66,39 +67,6 @@ def parse_time(value):
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=datetime.timezone.utc)
     return parsed.astimezone(datetime.timezone.utc)
-
-
-def age_label(value, now):
-    parsed = parse_time(value) if isinstance(value, str) else None
-    if parsed is None and isinstance(value, (int, float)):
-        parsed = datetime.datetime.fromtimestamp(value, datetime.timezone.utc)
-    if parsed is None:
-        return "no time"
-    mins = max(0, int(round((now - parsed).total_seconds() / 60.0)))
-    if mins < 90:
-        return "%dm" % mins
-    hours = int(round(mins / 60.0))
-    if hours < 48:
-        return "%dh" % hours
-    return "%dd" % int(round(hours / 24.0))
-
-
-def age_from_seconds(seconds):
-    if not isinstance(seconds, (int, float)) or seconds < 0:
-        return None
-    if seconds < 90 * 60:
-        return "%dm" % max(1, int(round(seconds / 60.0)))
-    if seconds < 48 * 3600:
-        return "%dh" % int(round(seconds / 3600.0))
-    return "%dd" % int(round(seconds / 86400.0))
-
-
-def age_from_days(days):
-    if not isinstance(days, (int, float)) or days < 0:
-        return None
-    if days < 1:
-        return "%dh" % max(1, int(round(days * 24.0)))
-    return "%dd" % int(round(days))
 
 
 def _num(value):
@@ -224,6 +192,14 @@ def _creator_credit(name, slug):
         if text and _SLUG_MARK.search(text):
             return True
     return bool(name and _NAME_BY.search(name))
+
+
+def _image_path_credit(url):
+    """True when the image path, not the query, carries a creator credit."""
+    if not isinstance(url, str) or not url.strip():
+        return False
+    path = urllib.parse.unquote(urllib.parse.urlparse(url).path).casefold()
+    return "-by-" in path or "_by_" in path or "@" in path
 
 
 def _raw_label(name, slug):
@@ -721,7 +697,7 @@ def _hood_nfts(doc):
             continue
         raw_name = item.get("name") if isinstance(item.get("name"), str) else ""
         raw_slug = item.get("slug") if isinstance(item.get("slug"), str) else ""
-        if _creator_credit(raw_name, raw_slug):
+        if _creator_credit(raw_name, raw_slug) or _image_path_credit(item.get("image_url")):
             hidden += 1
             continue
         name = _raw_label(raw_name, raw_slug)

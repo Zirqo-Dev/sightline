@@ -347,6 +347,36 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertEqual(keeper["name"], "somehandle club")
         self.assertEqual(keeper["image"], "https://cdn.example/somehandle-logo.png")
 
+    def test_image_path_credit_hides_the_row(self):
+        discover = {"collections": [
+            {"name": "Companions", "slug": "companions", "floor_price": 1, "floor_symbol": "ETH",
+             "volume_24h": 20, "image_url": "https://cdn.example/Companions-BY-maker/x.png"},
+            {"name": "Cats", "slug": "cats", "floor_price": 1, "floor_symbol": "ETH",
+             "volume_24h": 15, "image_url": "https://cdn.example/cats_by_maker/a.png"},
+            {"name": "Dots", "slug": "dots", "floor_price": 1, "floor_symbol": "ETH",
+             "volume_24h": 12, "image_url": "https://cdn.example/pics/%40maker/x.png"},
+            {"name": "Plain", "slug": "plain", "floor_price": 1, "floor_symbol": "ETH",
+             "volume_24h": 11, "image_url": "https://cdn.example/plain.png?src=companions-by-maker"},
+            {"name": "Bored Apes", "slug": "bored-apes", "floor_price": 3, "floor_symbol": "ETH",
+             "volume_24h": 80, "image_url": "https://cdn.example/bored-apes.png"},
+        ]}
+        doc = build_from({"nft_discover": discover}, NOW)
+        note = doc["hidden_note"]
+        self.assertEqual(note, "3 collections hidden for creator attribution")
+        for secret in ("maker", "Companions", "cats_by", "@", "bored"):
+            self.assertNotIn(secret, note)
+        blob = json.dumps(doc)
+        for secret in ("Companions-BY-maker", "cats_by_maker", "%40maker", "@maker", "Companions", "Cats", "Dots"):
+            self.assertNotIn(secret, blob)
+        names = {row["name"] for row in doc["rows"]}
+        self.assertNotIn("Companions", names)
+        self.assertNotIn("Cats", names)
+        self.assertNotIn("Dots", names)
+        plain = next(row for row in doc["rows"] if row["name"] == "Plain")
+        self.assertEqual(plain["image"], "https://cdn.example/plain.png?src=companions-by-maker")
+        apes = next(row for row in doc["rows"] if row["name"] == "Bored Apes")
+        self.assertEqual(apes["image"], "https://cdn.example/bored-apes.png")
+
     def test_snapshot_error_skips_the_file(self):
         import importlib.util
         import pathlib
