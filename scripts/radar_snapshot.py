@@ -28,6 +28,7 @@ import math
 import pathlib
 import re
 import sys
+import unicodedata
 import urllib.parse
 import urllib.request
 
@@ -194,12 +195,57 @@ def _creator_credit(name, slug):
     return bool(name and _NAME_BY.search(name))
 
 
-def _image_path_credit(url):
-    """True when the image path, not the query, carries a creator credit."""
-    if not isinstance(url, str) or not url.strip():
-        return False
-    path = urllib.parse.unquote(urllib.parse.urlparse(url).path).casefold()
-    return "-by-" in path or "_by_" in path or "@" in path
+# 'by' with a separator on both sides, or '@' after NFKC (full-width at becomes @).
+_BY_MARK = re.compile(r"[-_.\u2010-\u2015\u2212\ufe63\uff0d]by[-_.\u2010-\u2015\u2212\ufe63\uff0d]")
+
+
+def _norm_piece(text):
+    """Percent-decode until stable, then NFKC and lowercase."""
+    current = text or ""
+    for _ in range(3):
+        nxt = urllib.parse.unquote(current)
+        if nxt == current:
+            break
+        current = nxt
+    return unicodedata.normalize("NFKC", current).lower()
+
+
+def _has_by_mark(text):
+    folded = _norm_piece(text)
+    return "@" in folded or _BY_MARK.search(folded) is not None
+
+
+def _proxy_image(path, query):
+    """A path that is not a picture once the query is removed."""
+    folder = path.rstrip("/")
+    if folder.endswith("/_next/image") or folder == "_next/image":
+        return True
+    return folder.endswith("/image") and ("http://" in query or "https://" in query)
+
+
+def _nft_image(url):
+    """NFT image as scheme, host, and path. A creator credit hides the row."""
+    if not isinstance(url, str) or not url.startswith("https://"):
+        return False, None
+    parsed = urllib.parse.urlsplit(url)
+    if not parsed.hostname:
+        return False, None
+    pieces = (parsed.hostname, parsed.path, parsed.query, parsed.fragment)
+    if any(_has_by_mark(piece) for piece in pieces):
+        return True, None
+    if _MINT.search(url) or _ETH.search(url) or _STAKE.search(url):
+        return False, None
+    path = _norm_piece(parsed.path)
+    query = _norm_piece(parsed.query)
+    if _proxy_image(path, query):
+        return False, None
+    netloc = parsed.hostname
+    if parsed.port and parsed.port != 443:
+        netloc = "%s:%d" % (parsed.hostname, parsed.port)
+    published = urllib.parse.urlunsplit(("https", netloc, parsed.path or "/", "", ""))
+    if "?" in published or "#" in published:
+        return False, None
+    return False, published
 
 
 def _raw_label(name, slug):
@@ -697,7 +743,8 @@ def _hood_nfts(doc):
             continue
         raw_name = item.get("name") if isinstance(item.get("name"), str) else ""
         raw_slug = item.get("slug") if isinstance(item.get("slug"), str) else ""
-        if _creator_credit(raw_name, raw_slug) or _image_path_credit(item.get("image_url")):
+        hide, image = _nft_image(item.get("image_url"))
+        if _creator_credit(raw_name, raw_slug) or hide:
             hidden += 1
             continue
         name = _raw_label(raw_name, raw_slug)
@@ -733,7 +780,7 @@ def _hood_nfts(doc):
             "seen_at": seen_at,
             "kind": "nft",
             "chain": "RH",
-            "image": _https(item.get("image_url")),
+            "image": image,
             "price": None if floor is None else round(floor, 8),
             "price_unit": symbol,
             "change": None if change is None else round(change, 4),

@@ -357,25 +357,73 @@ class RadarSnapshotTest(unittest.TestCase):
              "volume_24h": 12, "image_url": "https://cdn.example/pics/%40maker/x.png"},
             {"name": "Plain", "slug": "plain", "floor_price": 1, "floor_symbol": "ETH",
              "volume_24h": 11, "image_url": "https://cdn.example/plain.png?src=companions-by-maker"},
+            {"name": "Gallery", "slug": "gallery", "floor_price": 1, "floor_symbol": "ETH",
+             "volume_24h": 9, "image_url": "https://cdn.example/gallery.png?w=32"},
             {"name": "Bored Apes", "slug": "bored-apes", "floor_price": 3, "floor_symbol": "ETH",
              "volume_24h": 80, "image_url": "https://cdn.example/bored-apes.png"},
         ]}
         doc = build_from({"nft_discover": discover}, NOW)
         note = doc["hidden_note"]
-        self.assertEqual(note, "3 collections hidden for creator attribution")
-        for secret in ("maker", "Companions", "cats_by", "@", "bored"):
+        self.assertEqual(note, "4 collections hidden for creator attribution")
+        for secret in ("maker", "Companions", "cats_by", "@", "bored", "Plain"):
             self.assertNotIn(secret, note)
         blob = json.dumps(doc)
-        for secret in ("Companions-BY-maker", "cats_by_maker", "%40maker", "@maker", "Companions", "Cats", "Dots"):
+        for secret in ("Companions-BY-maker", "cats_by_maker", "%40maker", "@maker", "Companions", "Cats", "Dots", "Plain"):
             self.assertNotIn(secret, blob)
         names = {row["name"] for row in doc["rows"]}
         self.assertNotIn("Companions", names)
         self.assertNotIn("Cats", names)
         self.assertNotIn("Dots", names)
-        plain = next(row for row in doc["rows"] if row["name"] == "Plain")
-        self.assertEqual(plain["image"], "https://cdn.example/plain.png?src=companions-by-maker")
+        self.assertNotIn("Plain", names)
+        gallery = next(row for row in doc["rows"] if row["name"] == "Gallery")
+        self.assertEqual(gallery["image"], "https://cdn.example/gallery.png")
         apes = next(row for row in doc["rows"] if row["name"] == "Bored Apes")
         self.assertEqual(apes["image"], "https://cdn.example/bored-apes.png")
+        for row in doc["rows"]:
+            if row.get("image"):
+                self.assertNotIn("?", row["image"])
+                self.assertNotIn("#", row["image"])
+
+    def test_image_url_marks_hide_the_row_and_queries_are_stripped(self):
+        def row(name, slug, image, volume):
+            return {"name": name, "slug": slug, "floor_price": 1, "floor_symbol": "ETH",
+                    "volume_24h": volume, "image_url": image}
+
+        discover = {"collections": [
+            row("Query", "query", "https://cdn.example/pic.png?src=companions-by-maker", 30),
+            row("Fragment", "fragment", "https://cdn.example/pic.png#companions-by-maker", 29),
+            row("Hosted", "hosted", "https://files.by.cdn.example/pic.png", 28),
+            row("Encoded", "encoded", "https://cdn.example/companions%252Dby%252Dmaker/x.png", 27),
+            row("Atmark", "atmark", "https://cdn.example/pics/%2540maker/x.png", 26),
+            row("Dash", "dash", "https://cdn.example/companions\u2010by\u2010maker/x.png", 25),
+            row("Wide", "wide", "https://cdn.example/pics/\uff20maker/x.png", 24),
+            row("Dotted", "dotted", "https://cdn.example/companions.by.maker/x.png", 23),
+            row("Frame", "frame", "https://cdn.example/_next/image?url=https%3A%2F%2Fcdn.example%2Fpic.png", 22),
+            row("Gallery", "gallery", "https://cdn.example/gallery.png?w=32#top", 21),
+        ]}
+        doc = build_from({"nft_discover": discover}, NOW)
+        note = doc["hidden_note"]
+        self.assertEqual(note, "8 collections hidden for creator attribution")
+        self.assertRegex(note, r"^[1-9]\d* collections hidden for creator attribution$")
+        for secret in ("maker", "Query", "Fragment", "files.by", "companions", "@", "Frame", "Gallery"):
+            self.assertNotIn(secret, note)
+        names = {item["name"] for item in doc["rows"]}
+        for gone in ("Query", "Fragment", "Hosted", "Encoded", "Atmark", "Dash", "Wide", "Dotted"):
+            self.assertNotIn(gone, names)
+        frame = next(item for item in doc["rows"] if item["name"] == "Frame")
+        self.assertIsNone(frame["image"])
+        gallery = next(item for item in doc["rows"] if item["name"] == "Gallery")
+        self.assertEqual(gallery["image"], "https://cdn.example/gallery.png")
+        blob = json.dumps(doc)
+        for secret in (
+            "companions-by-maker", "companions%252Dby", "%2540maker", "files.by.cdn",
+            "companions.by.maker", "\uff20maker", "_next/image",
+        ):
+            self.assertNotIn(secret, blob)
+        for item in doc["rows"]:
+            if item.get("image"):
+                self.assertNotIn("?", item["image"])
+                self.assertNotIn("#", item["image"])
 
     def test_snapshot_error_skips_the_file(self):
         import importlib.util
