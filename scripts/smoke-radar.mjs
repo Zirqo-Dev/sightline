@@ -85,6 +85,13 @@ const doc = {
   gaps: []
 };
 const view = radar.renderHtml(doc, { filter: "All", sort: "heat", open: "sol-1" }, now);
+assert(!view.includes('id="hidden-note"'), "a zero hide count omits the note");
+const noted = radar.renderHtml(Object.assign({}, doc, {
+  hidden_note: "3 collections hidden for creator attribution"
+}), { filter: "All", sort: "heat", open: "sol-1" }, now);
+assert(noted.includes('id="hidden-note"'), "a hide count renders one note line");
+assert(noted.includes("3 collections hidden for creator attribution"), "the note is the count only");
+assert(!noted.includes("hidden_note"), "the field name is not shown");
 assert(view.includes('class="pill flat">—<'), "null change renders an em dash, got a missing pill");
 assert(view.includes('class="size">—<'), "missing size renders an em dash");
 assert(!/>\s*[+-]?0%<\/span>/.test(view), "null change is not rendered as 0%");

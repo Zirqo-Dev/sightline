@@ -7,7 +7,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from scripts.radar_snapshot import FETCH_TIMEOUT_S, _name_and_slugs, build_from, buy_streak, second_leg
+from scripts.radar_snapshot import FETCH_TIMEOUT_S, build_from, buy_streak, second_leg
 
 NOW = datetime.datetime(2026, 11, 24, 18, 0, tzinfo=datetime.timezone.utc)
 MINT_A = "Mint1111111111111111111111111111pump"
@@ -102,7 +102,9 @@ class RadarSnapshotTest(unittest.TestCase):
         doc = build_from({"hood": hood, "nft_discover": discover}, NOW)
         cat = next(row for row in doc["rows"] if row["name"] == "CAT")
         cats = next(row for row in doc["rows"] if row["name"] == "Cash Cats")
+        self.assertEqual(cats["name"], "Cash Cats")
         self.assertIsNone(cats["change"])
+        self.assertNotIn("hidden_note", doc)
         self.assertEqual(cat["chain"], "RH")
         self.assertNotIn("desk", [chip["id"] for chip in cat["chips"]])
         blob = json.dumps(doc)
@@ -148,7 +150,8 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertTrue(any("Lead whale" in fact for fact in njak["facts"]))
         self.assertNotIn("Not A Real Whale", blob)
         eth = next(row for row in doc["rows"] if row["chain"] == "ETH")
-        self.assertEqual(eth["name"], "sample collection")
+        self.assertEqual(eth["name"], "sample-collection")
+        self.assertNotIn("hidden_note", doc)
         self.assertNotIn("BASE", [row["chain"] for row in doc["rows"]])
 
     def test_builder_does_not_name_the_embargoed_log(self):
@@ -158,6 +161,9 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertNotRegex(source, r"https://\S*captures\.jsonl")
         self.assertIn("lst-count-data/status.json", source)
         self.assertIn("status.json only", source)
+        self.assertNotIn("def _scrub_row", source)
+        self.assertNotIn("def _name_and_slugs", source)
+        self.assertNotIn("_TITLE_WORDS", source)
         self.assertNotIn("death-", source)
         self.assertLessEqual(FETCH_TIMEOUT_S, 15)
 
@@ -195,15 +201,6 @@ class RadarSnapshotTest(unittest.TestCase):
             {"symbol": "NVDA", "tier": "WATCH", "price_usd": 2, "chg_h24": 2, "age_days": 2,
              "ca": other, "vol24_usd": 11, "buyers24": 3},
         ]}
-        self.assertEqual(_name_and_slugs("Cats @wfit")[0], "Cats")
-        self.assertIn("wfit", _name_and_slugs("Cats @wfit")[1])
-        self.assertEqual(_name_and_slugs("Quotrons (by WFit)")[0], "Quotrons")
-        self.assertEqual(_name_and_slugs("Killed by death")[:2], ("Killed by death", []))
-        self.assertEqual(_name_and_slugs("Made by apes")[:2], ("Made by apes", []))
-        self.assertEqual(_name_and_slugs("Stand by Me")[:2], ("Stand by Me", []))
-        self.assertFalse(_name_and_slugs("Killed by death")[2])
-        self.assertEqual(_name_and_slugs("Punks @eth")[0], "Punks")
-        self.assertEqual(_name_and_slugs("Mood (by sol)")[0], "Mood")
         discover = {"collections": [
             {"name": "Companions by WFit", "slug": "companions-by-wfit", "floor_price": 1,
              "floor_symbol": "ETH", "volume_24h": 50, "floor_chg_pct": None,
@@ -236,17 +233,22 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertNotIn("wfit", blob.lower())
         self.assertNotIn("companions-by", blob.lower())
         self.assertNotIn("https://cdn.example/companions-by-wfit/a.png", blob)
-        self.assertNotIn("https://cdn.example/wfit/cat.png", blob)
+        self.assertNotIn("Made by apes", blob)
+        self.assertNotIn("Killed by death", blob)
         self.assertNotIn(ETH_ADDR, blob)
         self.assertNotIn(other, blob)
-        companions = next(row for row in doc["rows"] if row["name"] == "Companions")
-        self.assertIsNone(companions["image"])
-        self.assertIsNone(next(row for row in doc["rows"] if row["name"] == "Punks")["image"])
-        self.assertTrue(any(row["name"] == "Mood" for row in doc["rows"]))
-        self.assertTrue(any(row["name"] == "Made by apes" for row in doc["rows"]))
-        self.assertTrue(any(row["name"] == "Killed by death" for row in doc["rows"]))
-        self.assertTrue(any(row["name"] == "Stand by Me" for row in doc["rows"]))
+        self.assertEqual(doc["hidden_note"], "6 collections hidden for creator attribution")
+        self.assertNotIn("WFit", doc["hidden_note"])
+        names = {row["name"] for row in doc["rows"]}
+        for gone in ("Companions", "Punks", "Mood", "Made by apes", "Killed by death", "Ghost"):
+            self.assertNotIn(gone, names)
+        self.assertTrue(all(row["name"] for row in doc["rows"]))
+        self.assertEqual(len({row["id"] for row in doc["rows"]}), len(doc["rows"]))
+        stood = [row for row in doc["rows"] if row["name"] == "Stand by Me"]
+        self.assertEqual(len(stood), 1)
+        self.assertEqual(stood[0]["kind"], "coin")
         apes = next(row for row in doc["rows"] if row["name"] == "Bored Apes")
+        self.assertEqual(apes["name"], "Bored Apes")
         self.assertEqual(apes["image"], "https://cdn.example/bored-apes.png")
         sol = next(row for row in doc["rows"] if row["name"] == "SOL #1")
         self.assertEqual(sol["chain"], "SOL")
@@ -262,66 +264,88 @@ class RadarSnapshotTest(unittest.TestCase):
             self.assertLess(len(row["hint"]), 20)
             self.assertNotIn(ETH_ADDR, row["hint"])
 
-    def test_slug_creator_marks_stay_on_their_row(self):
+    def test_creator_credits_are_dropped_and_slugs_stay_apart(self):
         hood = {"generated_at": "2026-11-24T18:00:00Z", "tokens": [{
             "symbol": "somehandle club", "tier": "WATCH", "price_usd": 1, "chg_h24": 1,
             "vol24_usd": 9, "buyers24": 2,
             "image_url": "https://cdn.example/somehandle-logo.png",
         }]}
         discover = {"collections": [
-            {"name": "companions-by-somehandle", "floor_price": 1, "floor_symbol": "ETH",
-             "volume_24h": 90, "image_url": "https://cdn.example/companions-by-somehandle/a.png"},
-            {"name": "cats_by_lowcase", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 80,
-             "image_url": "https://cdn.example/cats_by_lowcase.png"},
-            {"name": "buddies by zxqw", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 70,
-             "image_url": "https://cdn.example/buddies.png"},
-            {"name": "mosaic-by-café", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 60,
-             "image_url": "https://cdn.example/mosaic-by-café/a.png"},
-            {"name": "crew-by-Apes_1", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 50,
-             "image_url": "https://cdn.example/crew-by-Apes_1.png"},
-            {"name": "Dots @abc", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 40,
-             "image_url": "https://cdn.example/dots.png"},
+            {"name": "Pixels @x", "slug": "pixels", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 10},
+            {"name": "Quotrons (by x)", "slug": "quotrons", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 10},
+            {"name": "Crew", "slug": "crew-by-someone", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 10,
+             "image_url": "https://cdn.example/crew-by-someone.png"},
+            {"name": "Cats", "slug": "cats_by_lowcase", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 10},
+            {"name": "Powered by Ethereum", "slug": "powered", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 10},
+            {"name": "Art by eta-labs", "slug": "art-by-eta-labs", "floor_price": 1, "floor_symbol": "ETH",
+             "volume_24h": 40, "image_url": "https://cdn.example/art-by-eta-labs.png"},
+            {"name": "Art by Mike", "slug": "art-mike", "floor_price": 1, "floor_symbol": "ETH", "volume_24h": 10},
+            {"name": "companions-by-somehandle", "slug": "companions-by-somehandle", "floor_price": 1,
+             "floor_symbol": "ETH", "volume_24h": 90,
+             "image_url": "https://cdn.example/companions-by-somehandle/a.png"},
+            {"name": "Bored Apes", "slug": "bored-apes", "floor_price": 3, "floor_symbol": "ETH", "volume_24h": 80,
+             "image_url": "https://cdn.example/bored-apes.png"},
         ]}
-        doc = build_from({
-            "hood": hood,
-            "nft_discover": discover,
-            "snaps": [_snap(MINT_A, 1000, 80, 4, 1), _snap(MINT_A, 2800, 120, 4, 1)],
-            "manifest": [{"type": "candidate", "mint": MINT_A, "t_s": 1000,
-                          "inputs": {"age_s": 8000, "sol": 80, "token": 1000}}],
-        }, NOW)
-        names = {row["name"] for row in doc["rows"]}
-        self.assertIn("companions", names)
-        self.assertIn("cats", names)
-        self.assertIn("buddies", names)
-        self.assertIn("mosaic", names)
-        self.assertIn("crew", names)
-        self.assertIn("Dots", names)
-        self.assertIn("somehandle club", names)
-        self.assertIn("SOL #1", names)
-        marked = {row["name"]: row for row in doc["rows"] if row["name"] in (
-            "companions", "cats", "buddies", "mosaic", "crew", "Dots")}
-        for row in marked.values():
-            self.assertIsNone(row["image"], row["name"])
-        self.assertNotIn("somehandle", json.dumps(marked["companions"]))
-        self.assertNotIn("lowcase", json.dumps(marked["cats"]))
-        self.assertNotIn("zxqw", json.dumps(marked["buddies"]))
-        self.assertNotIn("café", json.dumps(marked["mosaic"]))
-        self.assertNotIn("Apes_1", json.dumps(marked["crew"]))
-        self.assertNotIn("@abc", json.dumps(marked["Dots"]))
-        keeper = next(row for row in doc["rows"] if row["name"] == "somehandle club")
-        self.assertEqual(keeper["image"], "https://cdn.example/somehandle-logo.png")
-        self.assertIn("somehandle", keeper["name"])
-        sol = next(row for row in doc["rows"] if row["name"] == "SOL #1")
-        self.assertEqual(sol["chain"], "SOL")
-        self.assertEqual(sol["price_unit"], "SOL")
-        self.assertEqual(sol["size_unit"], "SOL")
+        early = "2026-11-23T12:00:00Z"
+        late = "2026-11-24T12:00:00Z"
+        later = "2026-11-24T13:00:00Z"
+
+        def eth(slug, name, floor, when):
+            return {"chain": "eip155:1", "slug": slug, "name": name, "floor_eth": floor, "snapshot_t": when}
+
+        units = [
+            eth("art-by-alice", "art", 10, early),
+            eth("art-by-bob", "art", 1, late),
+            eth("made-by-hand-club", "made", 8, early),
+            eth("made-by-hand-club", "made", 2, late),
+            eth("side-by-side", "side-by-side", 1, early),
+            eth("step-by-step", "step-by-step", 1, early),
+            eth("made", "made", 10, early),
+            eth("made", "made", 9, late),
+            eth("blue-one", "Blue", 10, early),
+            eth("blue-one", "Blue", 8, late),
+            eth("blue-two", "Blue", 10, early),
+            eth("blue-two", "Blue", 5, later),
+        ]
+        doc = build_from({"hood": hood, "nft_discover": discover, "units": units}, NOW)
+        note = doc["hidden_note"]
+        self.assertEqual(note, "13 collections hidden for creator attribution")
+        self.assertRegex(note, r"^[1-9]\d* collections hidden for creator attribution$")
+        for secret in (
+            "@x", "(by x)", "crew-by-someone", "cats_by_lowcase", "eta-labs", "art-by-alice",
+            "art-by-bob", "side-by-side", "step-by-step", "somehandle", "Mike", "Ethereum",
+        ):
+            self.assertNotIn(secret, note)
         blob = json.dumps(doc)
-        self.assertNotIn("companions-by-somehandle", blob)
-        self.assertNotIn("cats_by_lowcase", blob)
-        self.assertNotIn("mosaic-by-", blob)
-        self.assertNotIn("Apes_1", blob)
-        self.assertIn("somehandle-logo", blob)
-        self.assertIn("SOL #1", blob)
+        for secret in (
+            "Pixels @x", "Quotrons (by x)", "crew-by-someone", "cats_by_lowcase",
+            "Powered by Ethereum", "Art by eta-labs", "art-by-eta-labs", "Art by Mike",
+            "companions-by-somehandle", "art-by-alice", "art-by-bob", "made-by-hand-club",
+            "side-by-side", "step-by-step", "https://cdn.example/art-by-eta-labs.png",
+            "https://cdn.example/companions-by-somehandle/a.png",
+        ):
+            self.assertNotIn(secret, blob, secret)
+        names = [row["name"] for row in doc["rows"]]
+        self.assertNotIn("", names)
+        self.assertEqual(len({row["id"] for row in doc["rows"]}), len(doc["rows"]))
+        self.assertEqual(names.count("made"), 1)
+        made = next(row for row in doc["rows"] if row["name"] == "made")
+        self.assertEqual(made["id"], "eth-made")
+        self.assertEqual(made["change"], -10.0)
+        blues = [row for row in doc["rows"] if row["name"] == "Blue"]
+        self.assertEqual(sorted(row["change"] for row in blues), [-50.0, -20.0])
+        self.assertEqual(len({row["id"] for row in blues}), 2)
+        for row in blues:
+            self.assertTrue(row["id"].startswith("eth-blue-"))
+        self.assertTrue(all(row["name"] == "Blue" for row in blues))
+        for row in doc["rows"]:
+            self.assertNotEqual(row["change"], -75.0)
+            self.assertNotEqual(row["change"], -90.0)
+        apes = next(row for row in doc["rows"] if row["name"] == "Bored Apes")
+        self.assertEqual(apes["image"], "https://cdn.example/bored-apes.png")
+        keeper = next(row for row in doc["rows"] if row["kind"] == "coin")
+        self.assertEqual(keeper["name"], "somehandle club")
+        self.assertEqual(keeper["image"], "https://cdn.example/somehandle-logo.png")
 
     def test_snapshot_error_skips_the_file(self):
         import importlib.util

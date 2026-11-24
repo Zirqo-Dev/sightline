@@ -242,6 +242,7 @@
       + '<div class="filters" role="group" aria-label="Filter">' + chips + "</div>"
       + '<div class="sorts" role="group" aria-label="Sort">' + sorts + "</div>"
       + '<p class="caption">Heat is a ranking, not a buy signal.</p>'
+      + (doc.hidden_note ? '<p class="hidden-note" id="hidden-note">' + esc(doc.hidden_note) + "</p>" : "")
       + '<div class="list">' + list + "</div>"
       + (gaps ? '<details class="gaps"><summary>Data notes</summary><ul>' + gaps + "</ul></details>" : "");
   }

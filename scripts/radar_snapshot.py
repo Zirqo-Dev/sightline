@@ -17,6 +17,10 @@ and the Solana pool-snaps plus manifest for the latest day.
 LST input is status.json only. The snapshot keeps written_at, runs_ok, and
 chain_ok for the health dot. It does not keep coverage, freeze logs, or any
 experiment result.
+
+An NFT row whose raw name or slug credits a creator is left out. ETH floors
+are grouped by the raw slug. The file records only how many collections were
+left out.
 """
 import datetime
 import json
@@ -202,106 +206,45 @@ def _symbol(value):
     return text
 
 
-# 3-character @handles count. Checked before '-' and '_' are turned into spaces.
-_AT_HANDLE = re.compile(r"@([^\s@]{3,})")
-_PAREN_BY = re.compile(r"\(\s*by\s+([^)]+?)\s*\)", re.I)
-_SLUG_BY = re.compile(r"^(?P<head>.*?)(?P<sep>[-_])by(?P=sep)(?P<handle>.+)$", re.I)
-_SPACE_BY = re.compile(r"^(?P<head>.*\S)\s+by\s+(?P<handle>\S+)\s*$", re.I)
-
-_RESERVED_SLUGS = {"sol", "eth", "ada", "usd", "nft", "coin", "base", "rh"}
-# Ordinary title words. A lowercase "by <word>" is not a creator for these.
-_TITLE_WORDS = {"me", "death", "apes"}
+# Creator credits drop the whole NFT row. Nothing is rewritten.
+_AT_WORD = re.compile(r"@[^\s@]+")
+_PAREN_BY = re.compile(r"\(\s*by\s+[^)]+\)", re.I)
+_SLUG_MARK = re.compile(r"[-_]by[-_]", re.I)
+_NAME_BY = re.compile(r"\bby\s+\S+", re.I)
 
 
-def _creator_suffix(token):
-    """Space-separated 'by <handle>'. Not 'by Me', 'by death', or 'by apes'."""
-    token = token.strip().strip(".,")
-    if not token:
-        return False
-    folded = token.casefold()
-    if folded in _RESERVED_SLUGS or folded in _TITLE_WORDS:
-        return False
-    if any(ord(ch) > 127 for ch in token):
-        return True
-    if any(ch.isdigit() or ch == "_" for ch in token):
-        return True
-    if any(ch.isupper() for ch in token[1:]):
-        return True
-    return token.isascii() and token.isalpha() and folded == token.lower() and len(token) >= 4
+def _creator_credit(name, slug):
+    """True when a raw name or slug credits a creator. The row is left out."""
+    name = name.strip() if isinstance(name, str) else ""
+    slug = slug.strip() if isinstance(slug, str) else ""
+    for text in (name, slug):
+        if text and (_AT_WORD.search(text) or _PAREN_BY.search(text)):
+            return True
+    for text in (slug, name):
+        if text and _SLUG_MARK.search(text):
+            return True
+    return bool(name and _NAME_BY.search(name))
 
 
-def _qualifying_slug(fragment):
-    """Whole-token purge key. Short tokens and chain words are not purged."""
-    text = fragment.strip().strip(".,")
-    if not text:
-        return None
-    folded = text.casefold()
-    if len(folded) < 4 or folded in _RESERVED_SLUGS:
-        return None
-    return folded
-
-
-def _slugify(text):
-    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
-
-
-def _name_and_slugs(value, limit=48):
-    """Clean a name. Returns (name, purge slugs, whether a creator mark was removed).
-
-    '-by-' and '_by_' are always creator marks, before '-' or '_' become spaces.
-    A removed mark drops the row image even when the handle is too short to purge.
-    """
-    if not isinstance(value, str):
-        return None, [], False
-    original = " ".join(value.split())
-    if not original:
-        return None, [], False
-    slugs = []
-    marked = False
-
-    def take(fragment):
-        slug = _qualifying_slug(fragment)
-        if slug and slug not in slugs:
-            slugs.append(slug)
-
-    text = original
-    for match in list(_AT_HANDLE.finditer(text)):
-        marked = True
-        take(match.group(1))
-    text = _AT_HANDLE.sub(" ", text)
-    for match in list(_PAREN_BY.finditer(text)):
-        marked = True
-        take(match.group(1))
-    text = _PAREN_BY.sub(" ", text)
-    text = " ".join(text.split())
-    # Slug forms first, while '-' and '_' are still separators.
-    slug_by = _SLUG_BY.match(text)
-    if slug_by:
-        marked = True
-        take(slug_by.group("handle"))
-        full = slug_by.group(0).casefold()
-        if len(full) >= 4 and full not in _RESERVED_SLUGS and full not in slugs:
-            slugs.append(full)
-        text = slug_by.group("head").strip()
+def _raw_label(name, slug):
+    """The source name, or the source slug when the name is blank. Not rewritten."""
+    if isinstance(name, str) and name.strip():
+        text = name.strip()
+    elif isinstance(slug, str) and slug.strip():
+        text = slug.strip()
     else:
-        space_by = _SPACE_BY.match(text)
-        if space_by and _creator_suffix(space_by.group("handle")):
-            marked = True
-            take(space_by.group("handle"))
-            text = space_by.group("head").strip()
-    text = " ".join(text.replace("-", " ").replace("_", " ").split())
-    if not text or len(text) > limit:
-        return None, slugs, marked
+        return None
     if _MINT.search(text) or _ETH.search(text) or _STAKE.search(text):
-        return None, slugs, marked
-    return text, slugs, marked
-
-
-def _display_name(value, limit=48, creators=None):
-    text, slugs, _marked = _name_and_slugs(value, limit)
-    if creators is not None:
-        creators.extend(slugs)
+        return None
     return text
+
+
+def _public_id(prefix, slug, name):
+    source = slug.strip() if isinstance(slug, str) and slug.strip() else (name or "")
+    token = re.sub(r"[^a-z0-9]+", "-", source.lower()).strip("-")
+    if not token:
+        return None
+    return prefix + token
 
 
 def _walk(value):
@@ -424,37 +367,6 @@ def _short_addr(value):
     if not _FULL_ADDR.fullmatch(text):
         return None
     return text[:4] + "…" + text[-4:]
-
-
-def _token_re(slug):
-    return re.compile(r"(?<![A-Za-z0-9])" + re.escape(slug) + r"(?![A-Za-z0-9])", re.I)
-
-
-def _strip_tokens(text, slugs):
-    new = text
-    for slug in sorted(slugs, key=len, reverse=True):
-        new = _token_re(slug).sub("", new)
-    return " ".join(new.split())
-
-
-def _scrub_row(row, slugs):
-    """Scrub one row's name, why, facts, and image. Nothing else."""
-    kept = [slug for slug in slugs if slug and len(slug) >= 4 and slug not in _RESERVED_SLUGS]
-    if not kept:
-        return row
-    for key in ("name", "why"):
-        if isinstance(row.get(key), str):
-            row[key] = _strip_tokens(row[key], kept)
-    facts = row.get("facts")
-    if isinstance(facts, list):
-        row["facts"] = [_strip_tokens(item, kept) if isinstance(item, str) else item for item in facts]
-    image = row.get("image")
-    if isinstance(image, str) and any(_token_re(slug).search(image) for slug in kept):
-        row["image"] = None
-    elif kept and isinstance(image, str):
-        # The name lost a creator. Drop the picture so a creator slug in the URL cannot ship.
-        row["image"] = None
-    return row
 
 
 def roster_names(doc):
@@ -800,22 +712,21 @@ def _hood_coins(doc):
 
 
 def _hood_nfts(doc):
+    """Kept HoodScout NFT rows, and how many collections were left out."""
     collections = doc.get("collections") if isinstance(doc, dict) else None
     rows = []
+    hidden = 0
     for item in collections or []:
         if not isinstance(item, dict):
             continue
-        raw_name = item.get("name") or item.get("slug")
-        name, slugs, marked = _name_and_slugs(raw_name)
-        if item.get("slug") and item.get("slug") != raw_name:
-            _slug_name, extra, extra_marked = _name_and_slugs(item.get("slug"))
-            marked = marked or extra_marked
-            for slug in extra:
-                if slug not in slugs:
-                    slugs.append(slug)
-            if not name:
-                name = _slug_name
-        if not name or _is_rwa(name, item.get("floor_symbol")):
+        raw_name = item.get("name") if isinstance(item.get("name"), str) else ""
+        raw_slug = item.get("slug") if isinstance(item.get("slug"), str) else ""
+        if _creator_credit(raw_name, raw_slug):
+            hidden += 1
+            continue
+        name = _raw_label(raw_name, raw_slug)
+        row_id = _public_id("nft-", raw_slug, name)
+        if not name or not row_id or _is_rwa(name, item.get("floor_symbol")):
             continue
         change = _num(item.get("floor_chg_pct"))
         floor = _num(item.get("floor_price"))
@@ -841,12 +752,12 @@ def _hood_nfts(doc):
         if floor is not None:
             facts.append("Floor %s %s." % (round(floor, 4), symbol))
         rows.append({
-            "id": "nft-" + re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-"),
+            "id": row_id,
             "name": name,
             "seen_at": seen_at,
             "kind": "nft",
             "chain": "RH",
-            "image": None if marked else _https(item.get("image_url")),
+            "image": _https(item.get("image_url")),
             "price": None if floor is None else round(floor, 8),
             "price_unit": symbol,
             "change": None if change is None else round(change, 4),
@@ -863,8 +774,7 @@ def _hood_nfts(doc):
             "source": "HoodScout NFT",
             "_raw": raw_score(change, vol, sales),
         })
-        _scrub_row(rows[-1], slugs)
-    return _finish(rows, 6)
+    return _finish(rows, 6), hidden
 
 
 def _cardano_rows(last_run, flags, kill, whale, now):
@@ -959,29 +869,45 @@ def _cardano_rows(last_run, flags, kill, whale, now):
 
 
 def _eth_rows(units):
+    """One row per raw slug. A credited slug is counted and never grouped."""
     series = {}
-    series_slugs = {}
+    hidden = set()
+    loose = 0
     for line in units or []:
-        if not isinstance(line, dict):
+        if not isinstance(line, dict) or line.get("chain") != "eip155:1":
             continue
-        if line.get("chain") != "eip155:1":
+        raw_name = line.get("name") if isinstance(line.get("name"), str) else ""
+        raw_slug = line.get("slug") if isinstance(line.get("slug"), str) else ""
+        slug = raw_slug.strip()
+        if _creator_credit(raw_name, raw_slug):
+            if slug:
+                hidden.add(slug)
+            else:
+                loose += 1
             continue
-        name, slugs, _marked = _name_and_slugs(line.get("name") or line.get("slug"))
+        if not slug:
+            continue
         floor = _num(line.get("floor_eth"))
         when = parse_time(line.get("snapshot_t"))
-        if not name or floor is None or when is None:
+        if floor is None or when is None:
             continue
-        series.setdefault(name, []).append((when, floor))
-        kept = series_slugs.setdefault(name, [])
-        for slug in slugs:
-            if slug not in kept:
-                kept.append(slug)
+        series.setdefault(slug, []).append((when, floor, raw_name.strip()))
     rows = []
-    for name, points in series.items():
+    for slug, points in series.items():
         points.sort(key=lambda item: item[0])
-        last_at, last_floor = points[-1]
+        last_at, last_floor, last_name = points[-1]
+        label = ""
+        for _when, _floor, raw_name in points:
+            if raw_name:
+                label = raw_name
+        if not label:
+            label = slug
+        name = _raw_label(label, slug)
+        row_id = _public_id("eth-", slug, name)
+        if not name or not row_id:
+            continue
         prior = None
-        for when, floor in points:
+        for when, floor, _raw_name in points:
             if (last_at - when).total_seconds() >= 20 * 3600:
                 prior = floor
         change = None if not prior else (last_floor / prior - 1.0) * 100.0
@@ -998,7 +924,7 @@ def _eth_rows(units):
             facts.append("Floor change about 24h: %s%%." % round(change, 2))
         facts.append("Latest floor %s ETH." % round(last_floor, 4))
         rows.append({
-            "id": "eth-" + re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-"),
+            "id": row_id,
             "name": name,
             "seen_at": seen_at,
             "kind": "nft",
@@ -1013,15 +939,14 @@ def _eth_rows(units):
             "buyers": None,
             "buy_pct": None,
             "stat": "floor",
-            "spark": _sample([floor for _, floor in points]),
+            "spark": _sample([floor for _when, floor, _raw_name in points]),
             "chips": _chips(chip_ids, labels),
             "facts": facts,
             "why": name,
             "source": "ETH floor snaps",
             "_raw": raw_score(change, last_floor, None),
         })
-        _scrub_row(rows[-1], series_slugs.get(name) or [])
-    return _finish(rows, 6)
+    return _finish(rows, 6), len(hidden) + loose
 
 
 def _stamp(values):
@@ -1110,14 +1035,16 @@ def build_from(payloads, now=None):
         rows.extend(_hood_coins(hood))
         gaps.append("HoodScout speculative and dead tiers are not on this list.")
     nft_doc = discover or (payloads.get("nft_latest") if isinstance(payloads.get("nft_latest"), dict) else {})
-    if nft_doc:
-        rows.extend(_hood_nfts(nft_doc))
+    nft_rows, nft_hidden = _hood_nfts(nft_doc) if nft_doc else ([], 0)
+    rows.extend(nft_rows)
     if last_run:
         allowed = roster_names(payloads.get("whale_roster"))
         rows.extend(_cardano_rows(last_run, payloads.get("flags"), payloads.get("kill"), _whale_name(last_run, allowed), now))
     else:
         gaps.append("Cardano last-run was not readable.")
-    rows.extend(_eth_rows(payloads.get("units")))
+    eth_rows, eth_hidden = _eth_rows(payloads.get("units"))
+    rows.extend(eth_rows)
+    hidden = nft_hidden + eth_hidden
     gaps.append("Base has no coin feed. The BASE cut stays empty.")
     _disambiguate(rows)
     rows.sort(key=lambda row: (-row["heat"], row["chain"], row["name"]))
@@ -1135,6 +1062,8 @@ def build_from(payloads, now=None):
         "gaps": gaps,
         "heat_note": "Heat is a ranking, not a buy signal.",
     }
+    if hidden:
+        doc["hidden_note"] = "%d collections hidden for creator attribution" % hidden
     _walk(doc)
     return doc
 
