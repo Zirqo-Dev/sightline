@@ -1,5 +1,5 @@
 {
- "at": "2026-11-24T11:16:08Z",
+ "at": "2026-11-24T13:14:05Z",
  "phase": 1,
  "source": "snek_cardano_top10",
  "note": "Research only, for Snek. Swaps are read at pool level: the batcher signs the transaction, so a sell is tagged only when a key wallet in that transaction spent the token. actor_tag is a w- hash or a role label, on a liquidity add or pull and on such a sell. ADA is the pool reserve's ADA leg, not raw quantity times price. LP tokens are labelled LP.",
@@ -58,10 +58,9 @@
    "policy_short": "eb7a93eb",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~c9d8143f",
-   "reserve_ada": 1323135.38,
-   "reserve_qty": 951244560311,
-   "asof": "2026-11-20T23:34:32Z",
-   "stale": true
+   "reserve_ada": 1414569.05,
+   "reserve_qty": 873075929835,
+   "asof": "2026-11-24T13:12:43Z"
   },
   {
    "ticker": "CLOVE",
@@ -69,10 +68,9 @@
    "policy_short": "c1b89ed4",
    "dex": "minswap_v2",
    "pool_key": "minswap_v2~511d5cf7",
-   "reserve_ada": 12590.48,
-   "reserve_qty": 189061779917599,
-   "asof": "2026-11-23T16:17:28Z",
-   "stale": true
+   "reserve_ada": 12426.46,
+   "reserve_qty": 191711879843915,
+   "asof": "2026-11-24T12:55:46Z"
   },
   {
    "ticker": "COCK",
@@ -191,7 +189,7 @@
    "policy_short": "eb7a93eb",
    "rank": 1,
    "unit_source": "cache",
-   "last_checked": "2026-11-23T21:14:49Z"
+   "last_checked": "2026-11-24T13:14:05Z"
   },
   {
    "ticker": "NIGHT",
@@ -247,7 +245,7 @@
    "policy_short": "c1b89ed4",
    "rank": 10,
    "unit_source": "listed",
-   "last_checked": "2026-11-23T19:19:11Z"
+   "last_checked": "2026-11-24T13:14:05Z"
   }
  ],
  "skipped": [
@@ -257,20 +255,15 @@
   }
  ],
  "coverage": {
-  "SNEK": {
-   "read": 0,
-   "complete": false,
-   "pools": 0
-  },
   "CLOVE": {
-   "read": 0,
-   "complete": false,
-   "skipped": "budget"
+   "read": 6,
+   "complete": true,
+   "pools": 1
   },
   "ASCEND": {
-   "read": 0,
+   "read": 27,
    "complete": false,
-   "skipped": "budget"
+   "pools": 1
   },
   "NIGHT": {
    "read": 0,
@@ -301,20 +294,24 @@
    "read": 0,
    "complete": false,
    "skipped": "budget"
+  },
+  "SNEK": {
+   "read": 0,
+   "complete": false,
+   "skipped": "budget"
   }
  },
  "capped": [
-  "SNEK",
-  "CLOVE",
   "ASCEND",
   "NIGHT",
   "STRIKE",
   "SOLADA",
   "IAG",
   "COCK",
-  "MIN"
+  "MIN",
+  "SNEK"
  ],
- "koios_calls": 4,
+ "koios_calls": 8,
  "blockfrost_calls": 0,
  "blockfrost_fallbacks": 0,
  "blockfrost_available": true,

@@ -1,24 +1,23 @@
 {
- "at": "2026-11-24T11:10:48Z",
+ "at": "2026-11-24T13:11:10Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
- "new": [],
- "recent": [
+ "new": [
   {
-   "kind": "coordinated_buys",
-   "ticker": "BEPE",
-   "wallets": [
-    "w-0211aec3",
-    "w-095576b3",
-    "w-c2963304",
-    "w-d9bcb4ca",
-    "w-e18ae92d",
-    "w-ee4307c1"
-   ],
-   "window_s": 120,
-   "at": "2026-11-16T16:04:44Z"
-  },
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 42128600,
+   "decimals": 6,
+   "qty": 42.1286,
+   "ada_equiv": 71,
+   "value_basis": "ada_leg",
+   "pct": 0.0,
+   "at": "2026-11-24T13:11:10Z"
+  }
+ ],
+ "recent": [
   {
    "kind": "repeat_early_buyer",
    "wallet": "w-0211aec3",
@@ -3241,6 +3240,18 @@
    "value_basis": "ada_leg_rate",
    "pct": 0.0,
    "at": "2026-11-24T05:11:06Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 42128600,
+   "decimals": 6,
+   "qty": 42.1286,
+   "ada_equiv": 71,
+   "value_basis": "ada_leg",
+   "pct": 0.0,
+   "at": "2026-11-24T13:11:10Z"
   }
  ],
  "api_calls": {
