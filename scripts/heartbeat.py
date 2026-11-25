@@ -24,6 +24,13 @@ than the later of the workflow's created_at and the commit that added its
 file to main are ignored.
 ua-f1-data can skip a commit when a run has nothing new, so that branch is
 judged from the later of its tip and its last success.
+
+Two extra flags are recorded and do not change status or missed_count. One
+is an nft-data snapshot saved as ok whose Ethereum or Base lane screened no
+collections, unless that lane stopped for budget or deadline. The other is
+N consecutive prefilter webhook failures, read from desk-data last-run.json
+when that field exists and the file is recent. Hoodscout's snapshot commits
+are not in this repo, so that check is not made here.
 """
 
 from __future__ import annotations
@@ -56,6 +63,13 @@ SLOT_SKEW = timedelta(minutes=2)
 DAY_MINUTES = 24 * 60
 DISABLED_STATES = {"disabled_inactivity", "disabled_manually"}
 WAITING_FOR_FIRST = "waiting for first scheduled run"
+# Three failed prefilter posts in a row. One miss still retries.
+WEBHOOK_FAIL_FLAG = 3
+_NFT_LANES = ("ethereum", "base")
+_FLAG_FIELDS = {
+    "nft_empty_lane": {"code", "level", "lane", "screened"},
+    "webhook_consecutive_failures": {"code", "level", "count"},
+}
 _STATES = DISABLED_STATES | {"active", "disabled_fork", "deleted"}
 
 _CRON_LINE = re.compile(
@@ -82,6 +96,7 @@ _TOP_KEYS = {
     "disable_after_days",
     "red_within_days",
     "workflows",
+    "flags",
 }
 _WF_KEYS = {
     "name",
@@ -537,7 +552,87 @@ def _status(miss, branch_level, failures, disable_red, days, state, waiting):
     return "green"
 
 
-def build_health(workflows, runs_by_file, branch_commits, now, main_commit_at=None):
+# A lane that stopped for these reasons did not screen. Base is requested even
+# then. That is not an empty screen.
+_LANE_NOT_RUN = frozenset({"not_run_budget", "deadline"})
+_FLAG_MAX_AGE = timedelta(hours=6)
+
+
+def nft_empty_lanes(status):
+    """Lanes on an ok snapshot that screened no collections after they ran.
+
+    A lane that was not requested and spent no calls is not a flag. A lane
+    whose stop is not_run_budget or deadline is not a flag. A snapshot that
+    was not saved as ok is not a flag either.
+    """
+    if not isinstance(status, dict) or status.get("status") != "ok":
+        return []
+    by_chain = status.get("by_chain")
+    if not isinstance(by_chain, dict):
+        return []
+    empty = []
+    for lane in _NFT_LANES:
+        row = by_chain.get(lane)
+        if not isinstance(row, dict):
+            continue
+        if row.get("stop") in _LANE_NOT_RUN:
+            continue
+        screened = row.get("screened")
+        if isinstance(screened, bool) or not isinstance(screened, int) or screened != 0:
+            continue
+        calls = row.get("calls")
+        requested = row.get("requested") is True
+        spent = isinstance(calls, int) and not isinstance(calls, bool) and calls > 0
+        if requested or spent:
+            empty.append(lane)
+    return empty
+
+
+def webhook_fail_count(doc):
+    """consecutive_failures from a prefilter last-run, or None when it is absent.
+
+    A missing file, a missing field, or a value that is not a count is None.
+    That keeps this check quiet until the field is written.
+    """
+    if not isinstance(doc, dict):
+        return None
+    hook = doc.get("webhook")
+    if not isinstance(hook, dict):
+        return None
+    count = hook.get("consecutive_failures")
+    if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+        return None
+    return count
+
+
+def _recent_enough(doc, now, key):
+    """True when the document has no stamp, or the stamp is within six hours.
+
+    A missing stamp is not treated as old. A stamp older than six hours is
+    ignored so a stale file cannot keep a flag up.
+    """
+    if now is None or not isinstance(doc, dict):
+        return True
+    stamp = parse_time(doc.get(key))
+    if stamp is None:
+        return True
+    return now - stamp <= _FLAG_MAX_AGE
+
+
+def health_flags(nft_status, prefilter_run, fail_after=WEBHOOK_FAIL_FLAG, now=None):
+    """Report-only flags. They do not change status, misses, or a lane."""
+    flags = []
+    if _recent_enough(nft_status, now, "ran_at"):
+        for lane in nft_empty_lanes(nft_status):
+            flags.append({"code": "nft_empty_lane", "level": "red", "lane": lane, "screened": 0})
+    if _recent_enough(prefilter_run, now, "at"):
+        count = webhook_fail_count(prefilter_run)
+        if count is not None and count >= fail_after:
+            flags.append({"code": "webhook_consecutive_failures", "level": "red", "count": count})
+    return flags
+
+
+def build_health(workflows, runs_by_file, branch_commits, now, main_commit_at=None, nft_status=None, prefilter_run=None):
     now = now.astimezone(timezone.utc)
     # Repo activity is the tip of main. Data-branch commits do not count.
     days = days_until_disable(parse_time(main_commit_at) if not isinstance(main_commit_at, datetime) else main_commit_at, now)
@@ -600,12 +695,15 @@ def build_health(workflows, runs_by_file, branch_commits, now, main_commit_at=No
     for row in rows:
         if rank[row["status"]] > rank[overall]:
             overall = row["status"]
+    # Flags are an extra field. They do not change this status.
+    flags = health_flags(nft_status, prefilter_run, now=now)
     return {
         "generated_at": iso(now),
         "status": overall,
         "disable_after_days": DISABLE_AFTER_DAYS,
         "red_within_days": RED_WITHIN_DAYS,
         "workflows": rows,
+        "flags": flags,
     }
 
 
@@ -643,6 +741,20 @@ def assert_public(doc):
         _reject("has a bad generated_at")
     if not isinstance(doc["workflows"], list):
         _reject("workflows is not a list")
+    if not isinstance(doc.get("flags"), list):
+        _reject("flags is not a list")
+    for flag in doc["flags"]:
+        if not isinstance(flag, dict) or flag.get("code") not in _FLAG_FIELDS:
+            _reject("has a bad flag")
+        if set(flag) != _FLAG_FIELDS[flag["code"]] or flag.get("level") != "red":
+            _reject("has a bad flag")
+        if flag["code"] == "nft_empty_lane":
+            if flag.get("lane") not in _NFT_LANES or flag.get("screened") != 0:
+                _reject("has a bad flag")
+        else:
+            count = flag.get("count")
+            if isinstance(count, bool) or not isinstance(count, int) or count < WEBHOOK_FAIL_FLAG:
+                _reject("has a bad flag")
     _walk_keys(doc, "$")
     for row in doc["workflows"]:
         if not isinstance(row, dict) or set(row) != _WF_KEYS:
@@ -797,15 +909,46 @@ def collect(workflows, repo, token, api):
         if any(spec.get("data_branch") == name for spec in workflows):
             commits[name] = _commit_time(api, repo, token, name)
     # Last commit on main only. Data-branch bot commits are not activity.
-    return runs, commits, _commit_time(api, repo, token, "main")
+    # Hoodscout commits are not in this repository, so they are not read here.
+    extras = {
+        "nft_status": _json_at(api, repo, token, "nft-data", "nft-pilot/status.json"),
+        "prefilter_run": _json_at(api, repo, token, "desk-data", "solada-prefilter/last-run.json"),
+    }
+    return runs, commits, _commit_time(api, repo, token, "main"), extras
+
+
+def _json_at(api, repo, token, branch, path):
+    """One JSON object from a data branch, or None. The body is not logged."""
+    quoted = urllib.parse.quote(path)
+    ref = urllib.parse.quote(branch)
+    url = "%s/repos/%s/contents/%s?ref=%s" % (api.rstrip("/"), repo, quoted, ref)
+    request = urllib.request.Request(url, headers={
+        "Authorization": "Bearer " + token,
+        "Accept": "application/vnd.github.raw",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "sightline-heartbeat",
+    })
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            text = response.read().decode("utf-8")
+    except Exception:
+        return None
+    try:
+        doc = json.loads(text)
+    except ValueError:
+        return None
+    return doc if isinstance(doc, dict) else None
 
 
 def write_health(workflows_dir, dest, now=None, repo=None, token=None, api=None):
     workflows = load_workflow_files(workflows_dir)
     if not token or not repo:
         raise SystemExit("GITHUB_TOKEN and GITHUB_REPOSITORY are required")
-    runs, commits, main_at = collect(workflows, repo, token, api or "https://api.github.com")
-    doc = build_health(workflows, runs, commits, now or datetime.now(timezone.utc), main_commit_at=main_at)
+    runs, commits, main_at, extras = collect(workflows, repo, token, api or "https://api.github.com")
+    doc = build_health(
+        workflows, runs, commits, now or datetime.now(timezone.utc), main_commit_at=main_at,
+        nft_status=extras.get("nft_status"), prefilter_run=extras.get("prefilter_run"),
+    )
     assert_public(doc)
     text = json.dumps(doc, indent=2) + "\n"
     parent = os.path.dirname(dest)
