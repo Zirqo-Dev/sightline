@@ -34,7 +34,16 @@ assert(sizes.length > 0, "radar styles declare a font size");
 for (const size of sizes) {
   assert(size >= 12, "font size under 12px: " + size);
 }
-assert(css.includes(".row-btn,.chip,.q,.feed{min-height:32px}"), "tap controls are at least 32px");
+assert(css.includes(".row-btn,.chip,.q,.feed,.sort{min-height:32px}"), "tap controls are at least 32px");
+assert(css.includes(".legend svg{width:16px;height:16px"), "legend icons are 16px");
+assert(css.includes(".legend-close{padding:4px 12px}"), "the legend close control has its own padding");
+assert(css.includes(".detail{padding:8px 10px 10px 74px"), "detail lines up with the name column");
+assert(css.includes(".mark img{position:absolute;inset:0"), "a logo sits over the fallback letter");
+assert(html.includes('class="q" id="legend-open"'), "the header help keeps the q sizing");
+assert(html.includes('class="q legend-close"'), "close uses a dedicated class");
+assert(js.includes('referrerpolicy="no-referrer"') && js.includes('loading="lazy"'), "remote logos do not send a referrer");
+assert(js.includes("dashboard/icons/chains/solana.svg"), "a missing coin mark can fall back to the chain logo");
+assert(!js.includes("toExponential"), "amounts and prices are not printed as exponents");
 assert(html.includes("&gt;sight<span>line</span><i>_</i>"), "logo marks line and the cursor");
 assert(html.includes("Research only"), "page says research only");
 assert(!/<button[^>]*>\s*buy\b/i.test(html + js), "no buy control");
@@ -93,6 +102,11 @@ assert(noted.includes('id="hidden-note"'), "a hide count renders one note line")
 assert(noted.includes("3 collections hidden for creator attribution"), "the note is the count only");
 assert(!noted.includes("hidden_note"), "the field name is not shown");
 assert(view.includes('class="pill flat">—<'), "null change renders an em dash, got a missing pill");
+assert(view.includes("+60%"), "a modest move stays a percent");
+assert(view.includes("dashboard/icons/chains/solana.svg"), "SOL rows use the chain logo");
+assert(view.includes("dashboard/icons/chains/multi.svg"), "a chain without its own mark uses the shared chain logo");
+assert(!view.includes("dashboard/icons/coin-"), "anonymized SOL rows do not get a token logo");
+assert(view.includes('referrerpolicy="no-referrer"') && view.includes('loading="lazy"'), "row logos set referrerpolicy and lazy");
 assert(view.includes('class="size">—<'), "missing size renders an em dash");
 assert(!/>\s*[+-]?0%<\/span>/.test(view), "null change is not rendered as 0%");
 assert(view.includes("seen 60m") && view.includes("second leg") && view.includes("buy streak"), "age and derived chips render from the timestamp");
@@ -105,10 +119,13 @@ assert(base.includes(radar.BASE_EMPTY), "BASE filter explains the empty cut");
 assert(!base.includes("SOL #1"), "BASE filter does not keep other rows");
 const scan = radar.scanLine(doc, now);
 assert(scan.includes("xmark") && !scan.includes("filled"), "header X stays hollow when the feed is stale");
-assert(scan.includes("Built 2026-11-24 17:30:00Z"), "the build time is shown");
+assert(scan.includes("Built Nov 24, 12:30 PM ET"), "the build time is America/Toronto, short form");
+assert(!scan.includes("17:30:00Z"), "the header clock is not a UTC stamp");
 assert(scan.includes("last scan 10m"), "last scan age is computed from the timestamp");
 const old = Object.assign({}, doc, { built_at: "2026-11-24T10:00:00Z" });
-assert(radar.renderHtml(old, { filter: "All", sort: "heat" }, now).includes("more than 2 hours old"), "an old snapshot shows a banner");
+const oldView = radar.renderHtml(old, { filter: "All", sort: "heat" }, now);
+assert(oldView.includes("more than 2 hours old"), "an old snapshot shows a banner");
+assert(oldView.includes("Built Nov 24, 5:00 AM ET"), "the stale banner clock is America/Toronto");
 const bare = { rows: [], feeds: [], x: {}, lead_count: 0, gaps: [] };
 assert(radar.renderHtml(bare, { filter: "All", sort: "heat" }, now).includes("This snapshot is stale."), "a missing build time is stale");
 assert(radar.renderHtml(Object.assign({}, bare, { built_at: "not-a-time" }), { filter: "All", sort: "heat" }, now).includes("This snapshot is stale."), "an invalid build time is stale");
@@ -118,6 +135,53 @@ const soon = new Date(now + 5 * 60 * 1000).toISOString().replace(".000Z", "Z");
 assert(!radar.renderHtml(Object.assign({}, bare, { built_at: soon }), { filter: "All", sort: "heat" }, now).includes("This snapshot is stale."), "a build time a few minutes ahead is still fresh");
 const legend = radar.legendHtml();
 assert(legend.includes("not a buy signal") && legend.includes("Not a Hood tier"), "legend matches the desk flag");
+assert(legend.includes('class="leg-heat tone-lime"') && legend.includes('class="leg-skull tone-down"') && legend.includes('class="leg-seen"'), "legend icons use the chip colours");
+const formats = radar.renderHtml({
+  built_at: "2026-11-24T17:30:00Z",
+  last_scan: "2026-11-24T17:50:00Z",
+  lead_count: 2,
+  x: { asof: "2026-11-05T01:39:00Z" },
+  feeds: [],
+  rows: [
+    {
+      id: "ada-cock", name: "COCK", chain: "ADA", kind: "coin",
+      price: 0.000028, price_unit: "ADA", change: 116045.9, size: 0.51, size_unit: "ETH",
+      image: "dashboard/icons/coin-cock.png", stat: "9 holders", heat: 2, chips: [], spark: [],
+      why: "COCK", source: "Cardano last-run"
+    },
+    {
+      id: "ada-low", name: "LOW", chain: "ADA", kind: "coin",
+      price: 5.5e-7, price_unit: "USD", change: -1300, size: 0.5, size_unit: "ADA",
+      stat: "", heat: 1, chips: [], spark: [],
+      why: "LOW", source: "Cardano last-run"
+    }
+  ],
+  gaps: []
+}, { filter: "All", sort: "heat" }, now);
+assert(formats.includes('class="size">0.51 ETH<'), "sizes under 1 are plain decimals");
+assert(!/>[^<]*e[+-]\d/i.test(formats), "rendered numbers are not exponents");
+assert(formats.includes("0.0₄28") && formats.includes('aria-label="0.000028 ADA"'), "tiny prices use subscript zeros and a plain name");
+assert(formats.includes("0.0₆55") && formats.includes('aria-label="$0.00000055"'), "usd tiny prices keep a plain name");
+assert(formats.includes("+1161×"), "a move above 1000% is a multiple");
+assert(formats.includes("−12×"), "a large drop is a multiple");
+const edge = radar.renderHtml({
+  built_at: "2026-11-24T17:30:00Z", last_scan: "2026-11-24T17:50:00Z", lead_count: 1,
+  x: {}, feeds: [], gaps: [],
+  rows: [{
+    id: "edge", name: "EDGE", chain: "ADA", kind: "coin", price: 1, price_unit: "ADA",
+    change: 1000, size: 1, size_unit: "ADA", heat: 1, chips: [], spark: [], why: "EDGE", source: "Cardano last-run"
+  }]
+}, { filter: "All", sort: "heat" }, now);
+assert(edge.includes("+1000%"), "1000% stays a percent");
+const over = radar.renderHtml({
+  built_at: "2026-11-24T17:30:00Z", last_scan: "2026-11-24T17:50:00Z", lead_count: 1,
+  x: {}, feeds: [], gaps: [],
+  rows: [{
+    id: "over", name: "OVER", chain: "ADA", kind: "coin", price: 1, price_unit: "ADA",
+    change: -1000.1, size: 1, size_unit: "ADA", heat: 1, chips: [], spark: [], why: "OVER", source: "Cardano last-run"
+  }]
+}, { filter: "All", sort: "heat" }, now);
+assert(over.includes("−9×"), "a move just past 1000% is a multiple");
 const scanEl = { textContent: "Loading the latest snapshot…" };
 const appEl = { innerHTML: "" };
 sandbox.document = {

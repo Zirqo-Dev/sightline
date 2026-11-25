@@ -7,7 +7,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from scripts.radar_snapshot import FETCH_TIMEOUT_S, build_from, buy_streak, second_leg
+from scripts.radar_snapshot import FETCH_TIMEOUT_S, _local_coin_icon, build_from, buy_streak, second_leg
 
 NOW = datetime.datetime(2026, 11, 24, 18, 0, tzinfo=datetime.timezone.utc)
 MINT_A = "Mint1111111111111111111111111111pump"
@@ -76,6 +76,9 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertNotIn("NIX", blob)
         self.assertNotRegex(sol[0]["name"], r"[1-9A-HJ-NP-Za-km-z]{32,44}")
         self.assertLess(abs(sol[0]["change"]), 1000)
+        self.assertIsNone(sol[0]["image"])
+        self.assertIsNone(sol[1]["image"])
+        self.assertNotIn("dashboard/icons/coin-", row_blob)
 
     def test_dust_reserve_does_not_invent_a_runner(self):
         mint = "Mint3333333333333333333333333333pump"
@@ -453,6 +456,93 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertEqual(cat["image"], "https://cdn.example/cat.png")
         self.assertEqual(doc["hidden_note"], "1 collections hidden for creator attribution")
         self.assertNotIn("maker", doc["hidden_note"])
+
+    def test_local_icons_match_ticker_and_chain(self):
+        icons = {
+            "coins": {
+                "COCK": {"chain": "cardano", "src": "dashboard/icons/coin-cock.png"},
+                "AAPL": {"chain": "solana", "src": "dashboard/icons/coin-aapl.png"},
+                "OK": {"chain": "cardano", "src": "dashboard/icons/coin-ok.svg", "source": "monogram"},
+                "REMOTE": {"chain": "cardano", "src": "https://cdn.example/remote.png"},
+            },
+            "nft_names": {
+                "companions by maker": "companions-by-maker",
+                "plain cats": "plain",
+            },
+            "nfts": {
+                "companions-by-maker": {"name": "Companions by maker", "src": "dashboard/icons/nft-by.png"},
+                "plain": {"name": "Plain Cats", "src": "dashboard/icons/nft-plain.png"},
+            },
+        }
+        self.assertEqual(_local_coin_icon("COCK", "ADA", icons), "dashboard/icons/coin-cock.png")
+        self.assertIsNone(_local_coin_icon("COCK", "SOL", icons))
+        self.assertIsNone(_local_coin_icon("AAPL", "ADA", icons))
+        self.assertIsNone(_local_coin_icon("SOL #1", "SOL", icons))
+        self.assertIsNone(_local_coin_icon("OK", "ADA", icons))
+        self.assertIsNone(_local_coin_icon("REMOTE", "ADA", icons))
+        self.assertIsNone(_local_coin_icon("Companions by maker", "ETH", icons))
+        self.assertIsNone(_local_coin_icon("Plain Cats", "ETH", icons))
+        self.assertIsNone(_local_coin_icon("COCK", "RH", icons))
+        self.assertEqual(_local_coin_icon("COCK", "ADA"), "dashboard/icons/coin-cock.png")
+        self.assertTrue(os.path.isfile(os.path.join(
+            os.path.dirname(__file__), "..", "..", "dashboard", "icons", "coin-cock.png")))
+
+    def test_cardano_rows_use_local_icons_and_real_fields(self):
+        names = ["COCK", "SHARKY", "SOLADA", "SER", "CLOVE", "HIVE", "HOWDY", "GOLFY"]
+        last_run = {
+            "at": "2026-11-24T17:17:38Z",
+            "results": [
+                {"ticker": name, "price_ada": 1, "holders": 10 + index, "vol_h24_ada": 100}
+                for index, name in enumerate(names)
+            ],
+        }
+        doc = build_from({"last_run": last_run}, NOW)
+        rows = {row["name"]: row for row in doc["rows"] if row["chain"] == "ADA"}
+        self.assertEqual(set(rows), set(names))
+        root = os.path.join(os.path.dirname(__file__), "..", "..")
+        for name, row in rows.items():
+            self.assertTrue(str(row["image"]).startswith("dashboard/icons/coin-"))
+            self.assertTrue(os.path.isfile(os.path.join(root, row["image"])))
+            self.assertNotIn("age", row)
+            self.assertIsNone(row["seen_at"])
+            self.assertIsNone(row["change"])
+            self.assertEqual(row["spark"], [])
+            self.assertNotEqual(row["stat"], "Cardano")
+            self.assertIn("holders", row["stat"])
+        self.assertNotEqual(rows["COCK"]["seen_at"], last_run["at"])
+        blob = json.dumps(doc)
+        self.assertNotIn("https://", blob)
+        with open(os.path.join(root, "scripts", "build-site.py"), encoding="utf-8") as handle:
+            build = handle.read()
+        self.assertIn('shutil.copytree(ROOT / "dashboard", DIST / "dashboard")', build)
+
+    def test_cardano_stat_and_seen_at_follow_the_run(self):
+        last_run = {
+            "at": "2026-11-24T17:17:38Z",
+            "results": [
+                {"ticker": "NOICON", "price_ada": 1, "vol_h24_ada": 5},
+                {"ticker": "BARE", "price_ada": 1},
+                {"ticker": "BOTH", "price_ada": 1, "native_holders": 4, "holders": 9},
+                {"ticker": "SEEN", "price_ada": 1, "first_seen": "2026-10-01T00:00:00Z", "vol_h24_ada": 1},
+                {"ticker": "CLOCK", "price_ada": 1, "vol_h24_ada": 2, "at": "2026-11-24T17:17:38Z"},
+                {"ticker": "AAPL", "price_ada": 1, "holders": 3, "vol_h24_ada": 8},
+            ],
+        }
+        doc = build_from({"last_run": last_run}, NOW)
+        rows = {row["name"]: row for row in doc["rows"] if row["chain"] == "ADA"}
+        self.assertEqual(rows["NOICON"]["stat"], "5 ADA vol")
+        self.assertEqual(rows["NOICON"]["image"], None)
+        self.assertEqual(rows["BARE"]["stat"], "")
+        self.assertEqual(rows["BOTH"]["stat"], "4 holders")
+        self.assertEqual(rows["SEEN"]["seen_at"], "2026-10-01T00:00:00Z")
+        self.assertIn("seen", [chip["id"] for chip in rows["SEEN"]["chips"]])
+        self.assertIsNone(rows["CLOCK"]["seen_at"])
+        self.assertIsNone(rows["AAPL"]["image"])
+        for row in rows.values():
+            self.assertIsNone(row["change"])
+            self.assertEqual(row["spark"], [])
+            self.assertNotIn("age", row)
+            self.assertNotEqual(row["stat"], "Cardano")
 
     def test_snapshot_error_skips_the_file(self):
         import importlib.util

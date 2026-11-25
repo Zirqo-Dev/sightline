@@ -62,24 +62,97 @@
     var n = Number(value);
     return value == null || value === "" || !isFinite(n) ? null : n;
   }
+  function trimFixed(n, places) {
+    return n.toFixed(places).replace(/0+$/, "").replace(/\.$/, "");
+  }
   function compact(n) {
     var abs = Math.abs(n);
     if (abs >= 1e6) return (n / 1e6).toFixed(1) + "m";
     if (abs >= 1e3) return (n / 1e3).toFixed(1) + "k";
     if (abs >= 1) return String(Math.round(n));
     if (abs === 0) return "0";
-    return n.toExponential(1);
+    return trimFixed(n, abs >= 0.01 ? 2 : 4);
   }
-  function priceText(n, unit) {
-    if (n == null) return "—";
-    var abs = Math.abs(n);
-    var text;
-    if (abs === 0) text = "0";
-    else if (abs >= 1) text = n.toFixed(2);
-    else if (abs >= 0.0001) text = n.toFixed(abs >= 0.01 ? 4 : 6).replace(/0+$/, "").replace(/\.$/, "");
-    else text = n.toExponential(1);
+  var SUBSCRIPT = "₀₁₂₃₄₅₆₇₈₉";
+  function plainAbs(abs) {
+    var exp = Math.floor(Math.log10(abs));
+    var places = Math.min(20, Math.max(0, -exp + 2));
+    var text = abs.toFixed(places);
+    if (/e/i.test(text)) return null;
+    return text.replace(/0+$/, "").replace(/\.$/, "");
+  }
+  function subscriptForm(abs) {
+    if (!(abs > 0) || abs >= 0.0001) return null;
+    var exp = Math.floor(Math.log10(abs));
+    var rounded = Math.round((abs / Math.pow(10, exp)) * 10) / 10;
+    if (rounded >= 10) {
+      rounded = rounded / 10;
+      exp += 1;
+    }
+    var zeros = -exp - 1;
+    if (zeros < 1 || zeros > 18) return null;
+    var digits = rounded.toFixed(1).replace(".", "");
+    var sub = String(zeros).replace(/\d/g, function (d) { return SUBSCRIPT.charAt(Number(d)); });
+    return "0.0" + sub + digits;
+  }
+  function subscriptsOk() {
+    if (subscriptsOk.known != null) return subscriptsOk.known;
+    var ok = true;
+    try {
+      var doc = root.document;
+      if (!doc || !doc.createElement) return true;
+      var canvas = doc.createElement("canvas");
+      if (!canvas || !canvas.getContext) return true;
+      canvas.width = 32;
+      canvas.height = 32;
+      var ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, 32, 32);
+      ctx.font = "20px sans-serif";
+      ctx.fillStyle = "#fff";
+      ctx.fillText("\u2084", 4, 24);
+      var data = ctx.getImageData(0, 0, 32, 32).data;
+      var lit = 0;
+      for (var i = 0; i < data.length; i += 4) {
+        if (data[i] + data[i + 1] + data[i + 2] > 400) lit++;
+      }
+      ok = lit > 12;
+    } catch (err) {
+      ok = true;
+    }
+    subscriptsOk.known = ok;
+    return ok;
+  }
+  function withUnit(text, unit) {
     if (unit === "USD") return "$" + text;
     return text + (unit ? " " + unit : "");
+  }
+  function pricePieces(n, unit) {
+    if (n == null) return { shown: "—", plain: "—" };
+    var abs = Math.abs(n);
+    var shown;
+    var plain;
+    if (abs === 0) {
+      shown = "0";
+      plain = "0";
+    } else if (abs >= 1) {
+      shown = n.toFixed(2);
+      plain = shown;
+    } else if (abs >= 0.0001) {
+      shown = trimFixed(n, abs >= 0.01 ? 4 : 6);
+      plain = shown;
+    } else {
+      var body = plainAbs(abs);
+      plain = (n < 0 ? "-" : "") + (body == null ? trimFixed(n, 8) : body);
+      var sub = body == null ? null : subscriptForm(abs);
+      shown = sub && subscriptsOk() ? (n < 0 ? "-" : "") + sub : plain;
+    }
+    return { shown: withUnit(shown, unit), plain: withUnit(plain, unit) };
+  }
+  function priceHtml(n, unit) {
+    var parts = pricePieces(n, unit);
+    if (parts.shown === parts.plain) return esc(parts.shown);
+    return '<span aria-label="' + esc(parts.plain) + '">' + esc(parts.shown) + "</span>";
   }
   function sizeText(row) {
     var n = finite(row.size);
@@ -96,10 +169,26 @@
     if (hours < 48) return hours + "h";
     return Math.round(hours / 24) + "d";
   }
+  function nthSunday(year, month, n) {
+    var first = new Date(Date.UTC(year, month, 1));
+    var day = first.getUTCDay();
+    return 1 + (day === 0 ? 0 : 7 - day) + (n - 1) * 7;
+  }
   function clock(iso) {
     var t = Date.parse(iso);
     if (!isFinite(t)) return "no time";
-    return new Date(t).toISOString().replace(".000Z", "Z").replace("T", " ");
+    var year = new Date(t).getUTCFullYear();
+    var start = Date.UTC(year, 2, nthSunday(year, 2, 2), 7, 0, 0);
+    var end = Date.UTC(year, 10, nthSunday(year, 10, 1), 6, 0, 0);
+    var offset = t >= start && t < end ? 4 : 5;
+    var wall = new Date(t - offset * 3600000);
+    var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    var hour24 = wall.getUTCHours();
+    var minute = wall.getUTCMinutes();
+    var hour = hour24 % 12;
+    if (hour === 0) hour = 12;
+    var min = minute < 10 ? "0" + minute : String(minute);
+    return months[wall.getUTCMonth()] + " " + wall.getUTCDate() + ", " + hour + ":" + min + " " + (hour24 >= 12 ? "PM" : "AM") + " ET";
   }
   function xStale(doc, now) {
     var asof = doc.x && Date.parse(doc.x.asof);
@@ -113,12 +202,24 @@
     if (built - now > 10 * 60 * 1000) return "future";
     return "";
   }
+  function roundAway(n) {
+    if (n < 0) return -Math.round(-n);
+    return Math.round(n);
+  }
   function pill(change) {
     var n = finite(change);
     if (n == null) return '<span class="pill flat">—</span>';
     var cls = n > 0 ? "up" : n < 0 ? "down" : "flat";
     var rounded = Math.round(n * 10) / 10;
-    var text = (rounded > 0 ? "+" : "") + rounded + "%";
+    var text;
+    if (Math.abs(rounded) > 1000) {
+      // New price divided by the old one. +116045.9% is about 1161×.
+      var multiple = roundAway(1 + rounded / 100);
+      var sign = multiple > 0 ? "+" : multiple < 0 ? "−" : "";
+      text = sign + Math.abs(multiple) + "×";
+    } else {
+      text = (rounded > 0 ? "+" : "") + rounded + "%";
+    }
     return '<span class="pill ' + cls + '">' + text + "</span>";
   }
   function spark(values) {
@@ -177,7 +278,15 @@
     var heat = finite(row.heat);
     var heatChip = heat == null ? "" : '<span class="sig sig-heat">' + icon("heat") + "heat " + esc(heat) + "</span>";
     var letter = esc(String(row.name || "?").trim().charAt(0) || "?");
-    var mark = '<span class="mark">' + letter + (row.image ? '<img alt="" src="' + esc(row.image) + '" onerror="this.remove()">' : "") + "</span>";
+    var chainLogo = {
+      SOL: "dashboard/icons/chains/solana.svg",
+      ADA: "dashboard/icons/chains/cardano.svg",
+      ETH: "dashboard/icons/chains/ethereum.svg",
+      BASE: "dashboard/icons/chains/base.svg",
+      RH: "dashboard/icons/chains/multi.svg"
+    }[row.chain] || "";
+    var src = row.image || chainLogo;
+    var mark = '<span class="mark">' + letter + (src ? '<img alt="" src="' + esc(src) + '" referrerpolicy="no-referrer" loading="lazy" onerror="this.remove()">' : "") + "</span>";
     var bar = finite(row.buy_pct);
     var barHtml = bar == null ? "" : '<span class="bar" aria-hidden="true"><i style="width:' + Math.round(bar * 100) + '%"></i></span>';
     var detail = "";
@@ -193,7 +302,7 @@
       + '<span class="main"><span class="name-line"><span class="name">' + esc(row.name) + "</span>"
       + hint + '<span class="tag">' + esc(row.chain) + "</span>" + chips + heatChip + "</span>"
       + '<span class="stat-line"><span class="stat">' + esc(row.stat || "") + "</span>" + barHtml + spark(row.spark) + "</span></span>"
-      + '<span class="metrics"><span class="price">' + esc(priceText(finite(row.price), row.price_unit)) + "</span>"
+      + '<span class="metrics"><span class="price">' + priceHtml(finite(row.price), row.price_unit) + "</span>"
       + pill(row.change) + '<span class="size">' + esc(sizeText(row)) + "</span></span></button>"
       + detail + "</article>";
   }
@@ -246,10 +355,13 @@
       + '<div class="list">' + list + "</div>"
       + (gaps ? '<details class="gaps"><summary>Data notes</summary><ul>' + gaps + "</ul></details>" : "");
   }
+  var LIME_ICON = { streak: 1, leg: 1, desk: 1, pool: 1, heat: 1 };
+  var DOWN_ICON = { skull: 1, snipers: 1, heavy: 1, thin: 1 };
   function legendHtml() {
     function items(list) {
       return list.map(function (item) {
-        return "<li>" + icon(item[0]) + "<p><strong>" + esc(item[1]) + "</strong> " + esc(item[2]) + "</p></li>";
+        var tone = LIME_ICON[item[0]] ? " tone-lime" : DOWN_ICON[item[0]] ? " tone-down" : "";
+        return '<li class="leg-' + esc(item[0]) + tone + '">' + icon(item[0]) + "<p><strong>" + esc(item[1]) + "</strong> " + esc(item[2]) + "</p></li>";
       }).join("");
     }
     return '<ul class="legend">' + items(LEGEND) + '</ul><p class="not-live">Not on live rows</p><ul class="legend">' + items(NOT_LIVE) + "</ul>";

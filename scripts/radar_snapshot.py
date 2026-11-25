@@ -164,6 +164,72 @@ def _https(value):
     return value
 
 
+# Coin marks come from the committed icon catalog. The chain on the row has to
+# match the catalog chain. SOL #N rows stay nameless, so they never get one.
+_ICON_CHAIN = {"ADA": "cardano", "ETH": "ethereum", "BASE": "base"}
+_ICON_SRC = re.compile(r"dashboard/icons/[A-Za-z0-9][A-Za-z0-9._/-]*\.(?:png|svg|webp|gif|jpe?g)\Z")
+_ICONS_CACHE = None
+
+
+def _load_icons():
+    global _ICONS_CACHE
+    if _ICONS_CACHE is not None:
+        return _ICONS_CACHE
+    path = ROOT / "dashboard" / "icons" / "icons.json"
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        loaded = {}
+    _ICONS_CACHE = loaded if isinstance(loaded, dict) else {}
+    return _ICONS_CACHE
+
+
+def _icon_src(entry):
+    """A committed local file. Remote URLs and generated letter circles are not used."""
+    if not isinstance(entry, dict) or entry.get("source") == "monogram":
+        return None
+    src = entry.get("src")
+    if not isinstance(src, str) or not _ICON_SRC.fullmatch(src) or ".." in src.split("/"):
+        return None
+    return src
+
+
+def _local_coin_icon(ticker, chain, icons=None):
+    """Local coin path when the ticker and the chain both match.
+
+    nft_names is not a source. A creator-credited name in that map is skipped.
+    """
+    if not isinstance(ticker, str) or not isinstance(chain, str):
+        return None
+    text = ticker.strip()
+    if chain == "SOL" or re.fullmatch(r"SOL #\d+", text):
+        return None
+    want = _ICON_CHAIN.get(chain)
+    if not want:
+        return None
+    doc = icons if icons is not None else _load_icons()
+    if not isinstance(doc, dict):
+        return None
+    nft_names = doc.get("nft_names") if isinstance(doc.get("nft_names"), dict) else {}
+    folded = text.lower()
+    if folded in nft_names and _creator_credit(folded, str(nft_names.get(folded) or "")):
+        return None
+    coins = doc.get("coins") if isinstance(doc.get("coins"), dict) else {}
+    entry = coins.get(text)
+    if not isinstance(entry, dict):
+        entry = coins.get(text.upper())
+    if not isinstance(entry, dict):
+        return None
+    if str(entry.get("chain") or "").lower() != want:
+        return None
+    src = _icon_src(entry)
+    if not src:
+        return None
+    if icons is None and not (ROOT / src).is_file():
+        return None
+    return src
+
+
 def _symbol(value):
     if not isinstance(value, str):
         return None
@@ -688,7 +754,7 @@ def _hood_coins(doc):
             "kind": "coin",
             "chain": "RH",
             "_hint": _short_addr(token.get("ca")),
-            "image": _https(token.get("image_url")),
+            "image": _local_coin_icon(name, "RH") or _https(token.get("image_url")),
             "price": None if price is None else round(price, 8),
             "price_unit": "USD",
             "change": None if change is None else round(change, 4),
@@ -775,6 +841,44 @@ def _hood_nfts(doc):
     return _finish(rows, 6), hidden
 
 
+# First-seen on a Cardano row. The run clock (`at`) is not one of these.
+_CARDANO_SEEN = ("first_seen", "seen_at", "first_logged", "listed_at")
+
+
+def _cardano_seen(item):
+    """Absolute first-seen time, or None when the row does not carry one."""
+    if not isinstance(item, dict):
+        return None
+    for key in _CARDANO_SEEN:
+        if key not in item:
+            continue
+        parsed = parse_time(item.get(key))
+        if parsed is not None:
+            return _iso(parsed)
+    return None
+
+
+def _cardano_holders(item):
+    """Holder count from the last-run row. Tracked rows publish `holders`."""
+    if not isinstance(item, dict):
+        return None
+    holders = _num(item.get("native_holders"))
+    if holders is None:
+        holders = _num(item.get("holders"))
+    return holders
+
+
+def _cardano_stat(item):
+    """Holders when the run has them, otherwise volume. Never the chain name."""
+    holders = _cardano_holders(item)
+    if holders is not None:
+        return "%s holders" % format(int(holders), ",")
+    vol = _num(item.get("vol_h24_ada")) if isinstance(item, dict) else None
+    if vol is not None:
+        return "%s ADA vol" % format(int(vol), ",")
+    return ""
+
+
 def _cardano_rows(last_run, flags, kill, whale, now):
     results = last_run.get("results") if isinstance(last_run, dict) else None
     passed = set()
@@ -792,11 +896,15 @@ def _cardano_rows(last_run, flags, kill, whale, now):
             continue
         price = _num(item.get("price_ada"))
         vol = _num(item.get("vol_h24_ada"))
-        holders = _num(item.get("native_holders"))
+        holders = _cardano_holders(item)
         side = _num(item.get("ada_side"))
+        seen_at = _cardano_seen(item)
         kinds = flagged.get(name) or set()
         labels = {}
         chip_ids = []
+        if seen_at:
+            labels["seen"] = "seen"
+            chip_ids.append("seen")
         if name in passed:
             labels["desk"] = "desk"
             chip_ids.append("desk")
@@ -842,10 +950,10 @@ def _cardano_rows(last_run, flags, kill, whale, now):
         rows.append({
             "id": "ada-" + name.lower(),
             "name": name,
-            "age": None,
+            "seen_at": seen_at,
             "kind": "coin",
             "chain": "ADA",
-            "image": None,
+            "image": _local_coin_icon(name, "ADA"),
             "price": None if price is None else round(price, 8),
             "price_unit": "ADA",
             "change": None,
@@ -855,7 +963,7 @@ def _cardano_rows(last_run, flags, kill, whale, now):
             "liq": None if side is None else round(side, 2),
             "buyers": None,
             "buy_pct": None,
-            "stat": "%s holders" % format(int(holders), ",") if holders is not None else "Cardano",
+            "stat": _cardano_stat(item),
             "spark": [],
             "chips": _chips(chip_ids, labels),
             "facts": facts,
