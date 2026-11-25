@@ -1,18 +1,21 @@
 """Caps, costs, dry-run files, and the first two run call counts."""
 
 import hashlib
+import io
 import json
 import os
 import re
 import subprocess
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from datetime import datetime, timezone
 from pathlib import Path
 
+from races.__main__ import main
 from races.dry import DryTransport
 from races.impact import buy_impact_bps, sell_impact_bps, side_cost_bps
-from races.run import load_config, run_once
+from races.run import load_config, run_once, run_slot
 
 ROOT = Path(__file__).resolve().parents[2]
 CFG, _locked = load_config(ROOT / "races")
@@ -92,6 +95,71 @@ class DryRun(unittest.TestCase):
             self.assertEqual(cleaned["symbol"], "MEME")
             self.assertEqual(cleaned["action"], "buy")
             self.assertEqual(cleaned["mint"], kept["mint"])
+
+
+class DuplicateSlot(unittest.TestCase):
+    def test_a_second_run_in_the_same_slot_does_nothing(self):
+        first_at = datetime(2026, 11, 11, 12, 15, tzinfo=timezone.utc)
+        again_at = datetime(2026, 11, 11, 12, 40, tzinfo=timezone.utc)
+        slot = run_slot(first_at)
+        self.assertEqual(run_slot(again_at), slot)
+        self.assertEqual(slot.strftime("%Y-%m-%dT%H:%M:00Z"), "2026-11-11T12:12:00Z")
+
+        class Boom:
+            def request(self, *args, **kwargs):
+                raise AssertionError("second run must not call out")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            run_once(path, first_at, dry_run=True, transport=DryTransport())
+            state = json.loads((path / "state.json").read_text(encoding="utf-8"))
+            self.assertEqual(state["last_slot"], "2026-11-11T12:12:00Z")
+            before = {
+                item.name: item.read_bytes()
+                for item in path.iterdir()
+                if item.is_file()
+            }
+            trades = (path / "trades.jsonl").read_text(encoding="utf-8")
+            self.assertTrue(trades.strip())
+            decisions = (path / "decisions.jsonl").read_text(encoding="utf-8").splitlines()
+            others = {name: blob for name, blob in before.items() if name != "decisions.jsonl"}
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                result = run_once(path, again_at, dry_run=True, transport=Boom())
+            self.assertTrue(result["duplicate_slot"])
+            self.assertEqual(result["slot"], "2026-11-11T12:12:00Z")
+            self.assertIn("duplicate_slot", buf.getvalue().splitlines())
+            after = {
+                item.name: item.read_bytes()
+                for item in path.iterdir()
+                if item.is_file()
+            }
+            self.assertEqual(
+                {name: blob for name, blob in after.items() if name != "decisions.jsonl"},
+                others,
+            )
+            self.assertEqual((path / "trades.jsonl").read_text(encoding="utf-8"), trades)
+            logged = (path / "decisions.jsonl").read_text(encoding="utf-8").splitlines()
+            self.assertEqual(logged[:-1], decisions)
+            skip = json.loads(logged[-1])
+            self.assertEqual(skip, {"kind": "duplicate_slot", "ts": "2026-11-11T12:12:00Z"})
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                code = main(["--data-dir", str(path), "--dry-run", "--now", "2026-11-11T12:40:00Z"])
+            self.assertEqual(code, 0)
+            self.assertIn("duplicate_slot", buf.getvalue().splitlines())
+            still = {
+                item.name: item.read_bytes()
+                for item in path.iterdir()
+                if item.is_file()
+            }
+            self.assertEqual(
+                {name: blob for name, blob in still.items() if name != "decisions.jsonl"},
+                others,
+            )
+            twice = (path / "decisions.jsonl").read_text(encoding="utf-8").splitlines()
+            self.assertEqual(twice[:-1], logged)
+            self.assertEqual(json.loads(twice[-1])["kind"], "duplicate_slot")
 
 
 class Isolation(unittest.TestCase):

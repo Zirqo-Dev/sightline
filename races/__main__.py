@@ -22,6 +22,8 @@ def main(argv=None):
         now = now.replace(tzinfo=timezone.utc)
     transport = DryTransport() if args.dry_run else None
     result = run_once(Path(args.data_dir), now, dry_run=args.dry_run, transport=transport)
+    if result.get("duplicate_slot"):
+        return 0
     calls = result["calls"]
     order = ("R1", "R2", "R3", "R4", "SOL", "R5")
     print("slot", result["slot"])

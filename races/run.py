@@ -87,6 +87,13 @@ def run_once(data_dir, now, dry_run=False, transport=None):
     slot = run_slot(now)
     slot_iso = slot.strftime("%Y-%m-%dT%H:%M:00Z")
     ledger = Ledger(data_dir, {cfg["wsol_mint"], cfg["usdc_mint"]})
+    state = ledger.read_json("state.json", {})
+    # A second run of the same slot must not enter, exit, or close.
+    if state.get("last_slot") == slot_iso:
+        prereg.check_prereg(cfg)
+        ledger.append("decisions.jsonl", {"ts": slot_iso, "kind": "duplicate_slot"})
+        print("duplicate_slot")
+        return {"slot": slot_iso, "duplicate_slot": True, "calls": None, "draw": None}
     lines = []
 
     def log(wallet, kind, detail):
@@ -100,7 +107,6 @@ def run_once(data_dir, now, dry_run=False, transport=None):
         lines.append(row)
 
     prereg.check_prereg(cfg, log=lambda message: log("race", "decision", {"action": "prereg", "message": message}))
-    state = ledger.read_json("state.json", {})
     if not state.get("started_at"):
         state["started_at"] = slot_iso
     budget = Budget(cfg)
@@ -250,6 +256,7 @@ def _snapshots(ctx, budget, locked, dry_run, data_dir):
     }
     ctx.ledger.write_json("positions.json", {"schema_version": 1, "asof": ctx.slot_iso, "positions": positions})
     ctx.ledger.write_json("summary.json", summary)
+    ctx.state["last_slot"] = ctx.slot_iso
     ctx.ledger.write_json("state.json", ctx.state)
     ctx.ledger.append("runs.jsonl", {"ts": ctx.slot_iso, "calls": calls, "wallets": {k: calls[k] for k in ("R1", "R2", "R3", "R4", "SOL", "R5")}})
     if not dry_run and not locked:

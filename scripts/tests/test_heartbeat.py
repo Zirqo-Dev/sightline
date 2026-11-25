@@ -2,6 +2,8 @@
 
 import json
 import os
+import re
+import subprocess
 import sys
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -21,10 +23,12 @@ def at(delta):
     return (NOW + delta).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def run(minutes, conclusion="success", event="schedule", head_branch=None):
+def run(minutes, conclusion="success", event="schedule", head_branch=None, attempt=None):
     row = {"at": at(timedelta(minutes=minutes)), "conclusion": conclusion, "event": event}
     if head_branch is not None:
         row["head_branch"] = head_branch
+    if attempt is not None:
+        row["run_attempt"] = attempt
     return row
 
 
@@ -445,6 +449,145 @@ class LiveFiles(unittest.TestCase):
             self.assertNotIn("git push origin " + forbidden, text)
         for name in ("main", "desk-data", "races-data", "ua-f1-data"):
             self.assertIn(name, text)
+
+    def test_live_dispatch_sits_on_top_of_the_frozen_races_cron(self):
+        with open(os.path.join(ROOT, ".github", "workflows", "races.yml"), encoding="utf-8") as handle:
+            races_text = handle.read()
+        with open(os.path.join(ROOT, ".github", "workflows", "heartbeat.yml"), encoding="utf-8") as handle:
+            heart_text = handle.read()
+        self.assertIn('cron: "12,42 * * * *"', races_text)
+        self.assertNotIn("19 */3 * * * *", races_text)
+        specs = heartbeat.load_workflow_files(os.path.join(ROOT, ".github", "workflows"))
+        races = [item for item in specs if item["file"] == RACES][0]
+        self.assertEqual(races["crons"], ["12,42 * * * *"])
+        self.assertEqual(heartbeat.interval_minutes(tuple(races["crons"])), 30)
+        dispatch = _job(heart_text, "dispatch-races")
+        publish = _job(heart_text, "publish")
+        self.assertIn("actions: write", dispatch)
+        self.assertIn("contents: none", dispatch)
+        self.assertNotIn("contents: write", dispatch)
+        self.assertIn("github.ref == 'refs/heads/main'", dispatch)
+        self.assertIn("github.run_attempt == 1", dispatch)
+        self.assertIn("github.event_name == 'schedule'", dispatch)
+        self.assertNotIn("github.actor", dispatch)
+        self.assertIn("hour % 3 == 2", dispatch)
+        self.assertIn("30 <= stamp.minute <= 44", dispatch)
+        self.assertIn("run_started_at", dispatch)
+        self.assertIn("actions/workflows/races.yml/dispatches", dispatch)
+        self.assertIn('"mode":"live"', dispatch)
+        self.assertIn("30-minute", dispatch)
+        self.assertIn("actions: read", publish)
+        self.assertNotIn("actions: write", publish)
+        self.assertNotIn("races.yml/dispatches", publish)
+        self.assertIn("git push origin HEAD:health-data", publish)
+        code = _window_check(dispatch)
+        for stamp, allowed in _WINDOW_CASES:
+            proc = subprocess.run(
+                [sys.executable, "-c", code, stamp],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(proc.returncode == 0, allowed, stamp)
+            self.assertEqual(heartbeat.in_dispatch_window(stamp), allowed, stamp)
+
+
+def _job(text, name):
+    lines = text.splitlines()
+    start = None
+    for index, line in enumerate(lines):
+        if line == "  %s:" % name:
+            start = index
+            break
+    if start is None:
+        raise AssertionError("missing job %s" % name)
+    end = len(lines)
+    for index in range(start + 1, len(lines)):
+        if len(lines[index]) >= 2 and not lines[index].startswith(" ") and lines[index].endswith(":"):
+            end = index
+            break
+        if lines[index].startswith("  ") and not lines[index].startswith("   ") and lines[index].rstrip().endswith(":"):
+            end = index
+            break
+    return "\n".join(lines[start:end])
+
+
+_WINDOW_CASES = (
+    ("2026-11-11T02:30:00Z", True),
+    ("2026-11-11T02:44:00Z", True),
+    ("2026-11-11T02:29:00Z", False),
+    ("2026-11-11T02:45:00Z", False),
+    ("2026-11-11T11:42:00Z", True),
+    ("2026-11-11T11:50:00Z", False),
+    ("2026-11-11T12:37:00Z", False),
+    ("2026-11-11T14:37:00Z", True),
+    ("2026-11-11T23:44:00Z", True),
+    ("2026-11-11T23:45:00Z", False),
+)
+
+
+def _window_check(dispatch):
+    match = re.search(r"python3 -c '([^']*hour % 3 == 2[^']*)'", dispatch)
+    if match is None:
+        raise AssertionError("dispatch window check is missing")
+    return match.group(1)
+
+
+class RacesCounter(unittest.TestCase):
+    def _races(self, runs):
+        item = spec(RACES, "wallet races", ["12,42 * * * *"], "races-data")
+        return health([item], {RACES: runs}, {"races-data": at(timedelta(minutes=-4))})["workflows"][0]
+
+    def _user_dispatch(self, minutes, attempt, branch="main", event="workflow_dispatch"):
+        stamp = at(timedelta(minutes=minutes))
+        return heartbeat.public_run({
+            "run_started_at": stamp,
+            "conclusion": "success",
+            "event": event,
+            "head_branch": branch,
+            "run_attempt": attempt,
+            "actor": {"login": "octocat", "type": "User"},
+            "triggering_actor": {"login": "octocat", "type": "User"},
+            "html_url": "https://github.com/example/example/actions/runs/9",
+        })
+
+    def test_a_user_dispatch_counts_only_inside_the_window_and_only_once(self):
+        # 11:42 is inside the window and covers the newest due races slot.
+        inside = self._user_dispatch(-18, 1)
+        self.assertNotIn("octocat", json.dumps(inside))
+        self.assertEqual(inside["run_attempt"], 1)
+        counted = self._races([inside])
+        self.assertEqual(counted["missed_count"], 0)
+        self.assertEqual(counted["status"], "green")
+        # The same User actor ten minutes later is outside the window.
+        outside = self._races([self._user_dispatch(-10, 1)])
+        self.assertGreaterEqual(outside["missed_count"], 2)
+        self.assertEqual(outside["status"], "red")
+        # A re-run keeps the event. Attempt 2 does not count, inside or as a schedule.
+        rerun = self._races([self._user_dispatch(-18, 2)])
+        self.assertGreaterEqual(rerun["missed_count"], 2)
+        self.assertEqual(rerun["status"], "red")
+        scheduled_rerun = self._races([self._user_dispatch(-18, 2, event="schedule")])
+        self.assertGreaterEqual(scheduled_rerun["missed_count"], 2)
+        # A scheduled first attempt counts even outside the window.
+        scheduled = self._races([self._user_dispatch(-10, 1, event="schedule")])
+        self.assertEqual(scheduled["missed_count"], 0)
+        self.assertEqual(scheduled["status"], "green")
+        off_main = self._races([self._user_dispatch(-18, 1, branch="feature")])
+        self.assertGreaterEqual(off_main["missed_count"], 2)
+        # Other workflows still count a workflow_dispatch on main from anyone.
+        desk = health(
+            [spec(DESK, "Solana desk scan", ["*/30 * * * *"], "desk-data")],
+            {DESK: [run(-10, "success", "workflow_dispatch", "main")]},
+            {"desk-data": at(timedelta(minutes=-4))},
+        )["workflows"][0]
+        self.assertEqual(desk["missed_count"], 0)
+        self.assertEqual(desk["status"], "green")
+        doc = health(
+            [spec(RACES, "wallet races", ["12,42 * * * *"], "races-data")],
+            {RACES: [inside]},
+            {"races-data": at(timedelta(minutes=-4))},
+        )
+        heartbeat.assert_public(doc)
+        self.assertNotIn("octocat", json.dumps(doc))
 
 
 def _nft(status="ok", **lanes):
