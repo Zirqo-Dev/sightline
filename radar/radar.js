@@ -62,24 +62,77 @@
     var n = Number(value);
     return value == null || value === "" || !isFinite(n) ? null : n;
   }
+  var CHAIN_LOGO = {
+    SOL: "dashboard/icons/chains/solana.svg",
+    ADA: "dashboard/icons/chains/cardano.svg",
+    ETH: "dashboard/icons/chains/ethereum.svg",
+    BASE: "dashboard/icons/chains/base.svg",
+    RH: "dashboard/icons/chains/multi.svg"
+  };
+  var SUB_DIGITS = "₀₁₂₃₄₅₆₇₈₉";
+  var subscriptOk = true;
+
+  function anonSol(row) {
+    return !!(row && row.chain === "SOL" && /^SOL #\d+$/.test(String(row.name || "")));
+  }
+  function markSrc(row) {
+    if (anonSol(row)) return CHAIN_LOGO.SOL;
+    if (row.image) return row.image;
+    return CHAIN_LOGO[row.chain] || "";
+  }
   function compact(n) {
     var abs = Math.abs(n);
     if (abs >= 1e6) return (n / 1e6).toFixed(1) + "m";
     if (abs >= 1e3) return (n / 1e3).toFixed(1) + "k";
     if (abs >= 1) return String(Math.round(n));
     if (abs === 0) return "0";
-    return n.toExponential(1);
+    var exp = Math.floor(Math.log10(abs));
+    var places = Math.min(8, Math.max(0, -exp + 1));
+    var text = abs.toFixed(places).replace(/0+$/, "").replace(/\.$/, "");
+    return (n < 0 ? "-" : "") + text;
   }
-  function priceText(n, unit) {
-    if (n == null) return "—";
-    var abs = Math.abs(n);
-    var text;
-    if (abs === 0) text = "0";
-    else if (abs >= 1) text = n.toFixed(2);
-    else if (abs >= 0.0001) text = n.toFixed(abs >= 0.01 ? 4 : 6).replace(/0+$/, "").replace(/\.$/, "");
-    else text = n.toExponential(1);
+  function plainDecimal(abs) {
+    return abs.toFixed(12).replace(/0+$/, "").replace(/\.$/, "") || "0";
+  }
+  function subscriptDigits(value) {
+    return String(value).replace(/[0-9]/g, function (digit) {
+      return SUB_DIGITS.charAt(Number(digit));
+    });
+  }
+  function tinyParts(abs) {
+    if (!(abs > 0) || abs >= 0.0001 || !subscriptOk) return null;
+    var exp = Math.floor(Math.log10(abs));
+    if (!isFinite(exp)) return null;
+    var zeros = -exp - 1;
+    var rounded = Number((abs / Math.pow(10, exp)).toFixed(1));
+    if (rounded >= 10) {
+      rounded = 1;
+      zeros -= 1;
+    }
+    if (zeros < 4 || zeros > 18) return null;
+    return { zeros: zeros, digits: rounded.toFixed(1).replace(".", "") };
+  }
+  function withUnit(text, unit) {
     if (unit === "USD") return "$" + text;
     return text + (unit ? " " + unit : "");
+  }
+  function priceHtml(n, unit) {
+    if (n == null) return esc("—");
+    var abs = Math.abs(n);
+    var sign = n < 0 ? "-" : "";
+    if (abs === 0) return esc(withUnit("0", unit));
+    if (abs >= 1) return esc(withUnit(n.toFixed(2), unit));
+    if (abs >= 0.0001) {
+      var mid = sign + abs.toFixed(abs >= 0.01 ? 4 : 6).replace(/0+$/, "").replace(/\.$/, "");
+      return esc(withUnit(mid, unit));
+    }
+    var tiny = tinyParts(abs);
+    var plain = withUnit(sign + plainDecimal(abs), unit);
+    if (!tiny) return esc(plain);
+    var visual = esc(sign + "0.0") + '<span class="subz">' + esc(subscriptDigits(tiny.zeros)) + "</span>" + esc(tiny.digits);
+    if (unit === "USD") visual = "$" + visual;
+    else if (unit) visual += " " + esc(unit);
+    return '<span aria-label="' + esc(plain) + '"><span aria-hidden="true">' + visual + "</span></span>";
   }
   function sizeText(row) {
     var n = finite(row.size);
@@ -99,7 +152,18 @@
   function clock(iso) {
     var t = Date.parse(iso);
     if (!isFinite(t)) return "no time";
-    return new Date(t).toISOString().replace(".000Z", "Z").replace("T", " ");
+    try {
+      return new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Toronto",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hourCycle: "h12"
+      }).format(new Date(t)).replace(/\u202f/g, " ").replace(/\u00a0/g, " ");
+    } catch (err) {
+      return new Date(t).toISOString().replace(".000Z", "Z").replace("T", " ");
+    }
   }
   function xStale(doc, now) {
     var asof = doc.x && Date.parse(doc.x.asof);
@@ -117,8 +181,13 @@
     var n = finite(change);
     if (n == null) return '<span class="pill flat">—</span>';
     var cls = n > 0 ? "up" : n < 0 ? "down" : "flat";
-    var rounded = Math.round(n * 10) / 10;
-    var text = (rounded > 0 ? "+" : "") + rounded + "%";
+    var text;
+    if (Math.abs(n) > 1000) {
+      text = (n > 0 ? "+" : "-") + Math.round(Math.abs(n) / 100) + "\u00d7";
+    } else {
+      var rounded = Math.round(n * 10) / 10;
+      text = (rounded > 0 ? "+" : "") + rounded + "%";
+    }
     return '<span class="pill ' + cls + '">' + text + "</span>";
   }
   function spark(values) {
@@ -177,7 +246,9 @@
     var heat = finite(row.heat);
     var heatChip = heat == null ? "" : '<span class="sig sig-heat">' + icon("heat") + "heat " + esc(heat) + "</span>";
     var letter = esc(String(row.name || "?").trim().charAt(0) || "?");
-    var mark = '<span class="mark">' + letter + (row.image ? '<img alt="" src="' + esc(row.image) + '" onerror="this.remove()">' : "") + "</span>";
+    var src = markSrc(row);
+    var img = src ? '<img alt="" src="' + esc(src) + '" referrerpolicy="no-referrer" loading="lazy" onerror="this.remove()">' : "";
+    var mark = '<span class="mark">' + letter + img + "</span>";
     var bar = finite(row.buy_pct);
     var barHtml = bar == null ? "" : '<span class="bar" aria-hidden="true"><i style="width:' + Math.round(bar * 100) + '%"></i></span>';
     var detail = "";
@@ -193,7 +264,7 @@
       + '<span class="main"><span class="name-line"><span class="name">' + esc(row.name) + "</span>"
       + hint + '<span class="tag">' + esc(row.chain) + "</span>" + chips + heatChip + "</span>"
       + '<span class="stat-line"><span class="stat">' + esc(row.stat || "") + "</span>" + barHtml + spark(row.spark) + "</span></span>"
-      + '<span class="metrics"><span class="price">' + esc(priceText(finite(row.price), row.price_unit)) + "</span>"
+      + '<span class="metrics"><span class="price">' + priceHtml(finite(row.price), row.price_unit) + "</span>"
       + pill(row.change) + '<span class="size">' + esc(sizeText(row)) + "</span></span></button>"
       + detail + "</article>";
   }
@@ -249,7 +320,7 @@
   function legendHtml() {
     function items(list) {
       return list.map(function (item) {
-        return "<li>" + icon(item[0]) + "<p><strong>" + esc(item[1]) + "</strong> " + esc(item[2]) + "</p></li>";
+        return '<li class="leg-' + esc(item[0]) + '">' + icon(item[0]) + "<p><strong>" + esc(item[1]) + "</strong> " + esc(item[2]) + "</p></li>";
       }).join("");
     }
     return '<ul class="legend">' + items(LEGEND) + '</ul><p class="not-live">Not on live rows</p><ul class="legend">' + items(NOT_LIVE) + "</ul>";
@@ -270,7 +341,29 @@
     if (scan) scan.innerHTML = scanLine(doc, Date.now());
     app.innerHTML = renderHtml(doc, state, Date.now());
   }
+  function glyphsOk() {
+    try {
+      if (!root.document || !root.document.createElement) return true;
+      var canvas = root.document.createElement("canvas");
+      if (!canvas || !canvas.getContext) return true;
+      var ctx = canvas.getContext("2d");
+      if (!ctx || !ctx.fillText || !ctx.getImageData) return true;
+      canvas.width = 32;
+      canvas.height = 32;
+      ctx.font = "20px sans-serif";
+      ctx.fillStyle = "#000";
+      ctx.fillText("\u2084", 0, 24);
+      var data = ctx.getImageData(0, 0, 32, 32).data;
+      for (var i = 3; i < data.length; i += 4) {
+        if (data[i] !== 0) return true;
+      }
+      return false;
+    } catch (err) {
+      return false;
+    }
+  }
   function boot() {
+    subscriptOk = glyphsOk();
     var openLegend = document.getElementById("legend-open");
     var legend = document.getElementById("legend");
     var legendBody = document.getElementById("legend-body");
