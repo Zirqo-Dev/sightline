@@ -1,14 +1,14 @@
 {
- "at": "2026-11-25T19:13:11Z",
+ "at": "2026-11-25T21:12:04Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14247672,
+ "height": 14247957,
  "baseline_at": "2026-11-14T17:13:24Z",
- "ada_balance": 423.356168,
+ "ada_balance": 208.676871,
  "positions": {
   "6e917b+fda00259": 2790905,
-  "ASCEND": 311034422788,
+  "ASCEND": 311079573403,
   "ATM": 19024975734573,
   "BABYBOLT": 13368031015248,
   "BANK": 127518706,
@@ -47,7 +47,7 @@
   "FLOW": 400005742383,
   "FUSH": 10549228,
   "GUINEA": 87507229937873,
-  "Guinea Pig": 21641748,
+  "Guinea Pig": 24113481,
   "HEN": 31304917420332,
   "HOSKITO": 3231757310682,
   "Hoskilien": 4000000,
@@ -118,7 +118,7 @@
  },
  "positions_counted": {
   "6e917b+fda00259": 2790905,
-  "ASCEND": 311034422788,
+  "ASCEND": 311079573403,
   "ATM": 19024975734573,
   "BABYBOLT": 13368031015248,
   "BANK": 127518706,
@@ -157,7 +157,7 @@
   "FLOW": 400005742383,
   "FUSH": 10549228,
   "GUINEA": 87507229937873,
-  "Guinea Pig": 21641748,
+  "Guinea Pig": 24113481,
   "HEN": 31304917420332,
   "HOSKITO": 3231757310682,
   "Hoskilien": 4000000,
@@ -235,7 +235,7 @@
   {
    "token": "ASCEND",
    "policy": "eb7a93eb",
-   "qty": 311034422788
+   "qty": 311079573403
   },
   {
    "token": "ATM",
@@ -430,7 +430,7 @@
   {
    "token": "Guinea Pig",
    "policy": "ffc3c757",
-   "qty": 21641748
+   "qty": 24113481
   },
   {
    "token": "HEN",
@@ -11203,6 +11203,39 @@
    "closed_at": "2026-11-25T18:32:03Z",
    "filled_token": "ASCEND",
    "filled_qty": 45389689
+  },
+  "f5192365b0#0": {
+   "ref_short": "f5192365b0#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "f5192365b0",
+   "opened_at": "2026-11-25T19:37:46Z",
+   "own_stake": true,
+   "closed_at": "2026-11-25T21:12:04Z"
+  },
+  "cd9ded6eb8#0": {
+   "ref_short": "cd9ded6eb8#0",
+   "token": "ADA",
+   "qty_raw": 73500000,
+   "ada": 73.5,
+   "status": "closed_elsewhere",
+   "opened_tx": "cd9ded6eb8",
+   "opened_at": "2026-11-25T20:00:52Z",
+   "own_stake": true,
+   "closed_at": "2026-11-25T21:12:04Z"
+  },
+  "d75382173d#0": {
+   "ref_short": "d75382173d#0",
+   "token": "ADA",
+   "qty_raw": 73500000,
+   "ada": 73.5,
+   "status": "closed_elsewhere",
+   "opened_tx": "d75382173d",
+   "opened_at": "2026-11-25T20:00:52Z",
+   "own_stake": true,
+   "closed_at": "2026-11-25T21:12:04Z"
   }
  },
  "rows": [
@@ -33941,6 +33974,69 @@
    "order_ref_short": "64f12a7e50#0",
    "order_status": "filled",
    "sold": "ADA"
+  },
+  {
+   "time": "2026-11-25T19:37:46Z",
+   "tx_short": "5657096a7a",
+   "kind": "swap",
+   "token": "ASCEND",
+   "qty": 45150615,
+   "ada_leg": 71.0,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-25T19:37:46Z",
+   "tx_short": "f5192365b0",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "f5192365b0#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-25T20:00:52Z",
+   "tx_short": "2058f853f7",
+   "kind": "swap",
+   "token": "Guinea Pig",
+   "qty": 1230704,
+   "ada_leg": 71.566559,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-25T20:00:52Z",
+   "tx_short": "86bc853943",
+   "kind": "swap",
+   "token": "Guinea Pig",
+   "qty": 1241029,
+   "ada_leg": 71.566559,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-25T20:00:52Z",
+   "tx_short": "cd9ded6eb8",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73500000,
+   "ada_leg": 73.5,
+   "counterparty_tag": null,
+   "order_ref_short": "cd9ded6eb8#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-25T20:00:52Z",
+   "tx_short": "d75382173d",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73500000,
+   "ada_leg": 73.5,
+   "counterparty_tag": null,
+   "order_ref_short": "d75382173d#0",
+   "order_status": "open"
   }
  ],
  "capped": false,
