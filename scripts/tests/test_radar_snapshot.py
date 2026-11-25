@@ -7,7 +7,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from scripts.radar_snapshot import FETCH_TIMEOUT_S, build_from, buy_streak, second_leg
+from scripts.radar_snapshot import FETCH_TIMEOUT_S, _apply_coin_icon, build_from, buy_streak, second_leg
 
 NOW = datetime.datetime(2026, 11, 24, 18, 0, tzinfo=datetime.timezone.utc)
 MINT_A = "Mint1111111111111111111111111111pump"
@@ -478,6 +478,164 @@ class RadarSnapshotTest(unittest.TestCase):
                 self.assertTrue((dest / "radar.html").is_file())
         finally:
             snap.write_snapshot = original
+
+
+    def test_coin_icons_match_ticker_and_chain(self):
+        tickers = ["COCK", "SHARKY", "SOLADA", "SER", "CLOVE", "HIVE", "HOWDY", "GOLFY"]
+        root = os.path.join(os.path.dirname(__file__), "..", "..")
+        with open(os.path.join(root, "dashboard", "icons", "icons.json"), encoding="utf-8") as handle:
+            icons = json.load(handle)
+        last_run = {"at": "2026-11-25T15:39:46Z", "results": [
+            {"ticker": name, "price_ada": 0.01, "vol_h24_ada": 1000 + index, "holders": 10 + index}
+            for index, name in enumerate(tickers)
+        ]}
+        hood = {"generated_at": "2026-11-24T18:00:00Z", "tokens": [{
+            "symbol": "COCK", "tier": "WATCH", "price_usd": 1, "chg_h24": 1,
+            "vol24_usd": 9, "buyers24": 2, "image_url": "https://cdn.example/cock.png",
+        }]}
+        discover = {"collections": [{
+            "name": "Pudgy Penguins", "slug": "pudgy-penguins", "floor_price": 1,
+            "floor_symbol": "ETH", "volume_24h": 3,
+            "image_url": "https://cdn.example/pudgy.png",
+        }]}
+        doc = build_from({"last_run": last_run, "hood": hood, "nft_discover": discover}, NOW)
+        ada = [row for row in doc["rows"] if row["chain"] == "ADA"]
+        self.assertEqual({row["name"] for row in ada}, set(tickers))
+        for row in ada:
+            self.assertEqual(icons["coins"][row["name"]]["chain"], "cardano")
+            self.assertEqual(row["image"], icons["coins"][row["name"]]["src"])
+            self.assertTrue(row["image"].startswith("dashboard/icons/"))
+            self.assertNotIn("age", row)
+            self.assertIsNone(row["seen_at"])
+            self.assertIsNone(row["change"])
+            self.assertEqual(row["spark"], [])
+            self.assertIn("holders", row["stat"])
+            self.assertNotEqual(row["stat"], "Cardano")
+        hood_cock = next(row for row in doc["rows"] if row["chain"] == "RH" and row["name"] == "COCK")
+        self.assertEqual(hood_cock["image"], "https://cdn.example/cock.png")
+        pudgy = next(row for row in doc["rows"] if row["name"] == "Pudgy Penguins")
+        self.assertEqual(pudgy["kind"], "nft")
+        self.assertIsNone(pudgy["image"])
+        blob = json.dumps(doc)
+        self.assertNotIn("cdn.example/pudgy", blob)
+        self.assertNotIn("dashboard/icons/nft-", blob)
+
+    def test_cardano_seen_at_uses_a_real_first_seen_only(self):
+        last_run = {"at": "2026-11-24T17:00:00Z", "results": [
+            {"ticker": "OLD", "price_ada": 1, "native_holders": 4, "vol_h24_ada": 9},
+            {"ticker": "TRK", "price_ada": 1, "holders": 15, "vol_h24_ada": 9},
+            {"ticker": "VOL", "price_ada": 1, "vol_h24_ada": 2500},
+            {"ticker": "SIDE", "price_ada": 1, "ada_side": 80},
+            {"ticker": "NEW", "price_ada": 1, "vol_h24_ada": 10, "first_seen": "2026-11-01T00:00:00Z"},
+            {"ticker": "BARE", "price_ada": 1, "at": "2026-11-20T00:00:00Z"},
+        ]}
+        doc = build_from({"last_run": last_run}, NOW)
+        by_name = {row["name"]: row for row in doc["rows"] if row["chain"] == "ADA"}
+        self.assertEqual(by_name["OLD"]["stat"], "4 holders")
+        self.assertEqual(by_name["TRK"]["stat"], "15 holders")
+        self.assertEqual(by_name["VOL"]["stat"], "2,500 ADA vol")
+        self.assertIsNone(by_name["VOL"]["seen_at"])
+        self.assertIsNone(by_name["VOL"]["change"])
+        self.assertEqual(by_name["VOL"]["spark"], [])
+        self.assertNotIn("age", by_name["VOL"])
+        self.assertEqual(by_name["SIDE"]["stat"], "ADA side 80")
+        self.assertEqual(by_name["NEW"]["seen_at"], "2026-11-01T00:00:00Z")
+        self.assertIn("seen", [chip["id"] for chip in by_name["NEW"]["chips"]])
+        self.assertIsNone(by_name["BARE"]["seen_at"])
+        self.assertNotIn("seen", [chip["id"] for chip in by_name["BARE"]["chips"]])
+        self.assertEqual(by_name["BARE"]["stat"], "last-run")
+        self.assertNotIn("2026-11-24T17:00:00Z", json.dumps(by_name["BARE"]))
+        self.assertNotIn("2026-11-20T00:00:00Z", json.dumps(by_name["BARE"]))
+
+    def test_sol_placeholder_has_no_token_logo(self):
+        snaps = [_snap(MINT_A, 1000, 80, 4, 1), _snap(MINT_A, 2800, 120, 4, 1)]
+        doc = build_from({"snaps": snaps}, NOW)
+        sol = next(row for row in doc["rows"] if row["name"] == "SOL #1")
+        self.assertIsNone(sol["image"])
+        self.assertNotIn("dashboard/icons/coin-", json.dumps(sol))
+
+    def test_icon_lookup_skips_credited_names_and_prefers_local(self):
+        icons = {
+            "coins": {
+                "COCK": {"chain": "cardano", "src": "dashboard/icons/coin-cock.png"},
+                "GHOST": {"chain": "solana", "src": "dashboard/icons/coin-cock.png"},
+            },
+            "nft_names": {
+                "studio (by maker)": "studio",
+                "sample (one / two)": "sample",
+            },
+            "nfts": {
+                "studio": {"name": "Studio (by maker)", "src": "dashboard/icons/coin-cock.png"},
+                "sample": {"name": "Sample (one / two)", "src": "dashboard/icons/coin-cock.png"},
+            },
+        }
+        local = {"kind": "coin", "name": "COCK", "chain": "ADA", "image": "https://cdn.example/cock.png"}
+        _apply_coin_icon(local, icons)
+        self.assertEqual(local["image"], "dashboard/icons/coin-cock.png")
+        wrong = {"kind": "coin", "name": "COCK", "chain": "RH", "image": "https://cdn.example/cock.png"}
+        _apply_coin_icon(wrong, icons)
+        self.assertEqual(wrong["image"], "https://cdn.example/cock.png")
+        sol = {"kind": "coin", "name": "SOL #3", "chain": "SOL", "image": "dashboard/icons/coin-cock.png"}
+        _apply_coin_icon(sol, icons)
+        self.assertIsNone(sol["image"])
+        named = {"kind": "coin", "name": "GHOST", "chain": "SOL", "image": None}
+        _apply_coin_icon(named, icons)
+        self.assertIsNone(named["image"])
+        nft = {"kind": "nft", "name": "COCK", "chain": "ADA", "image": None}
+        _apply_coin_icon(nft, icons)
+        self.assertIsNone(nft["image"])
+        for name in ("Studio (by maker)", "Sample (one / two)"):
+            row = {"kind": "coin", "name": name, "chain": "ADA", "image": None}
+            icons["coins"][name.upper()] = {"chain": "cardano", "src": "dashboard/icons/coin-cock.png"}
+            _apply_coin_icon(row, icons)
+            self.assertIsNone(row["image"])
+
+    def test_real_icons_skip_creator_credited_nft_names(self):
+        root = os.path.join(os.path.dirname(__file__), "..", "..")
+        with open(os.path.join(root, "dashboard", "icons", "icons.json"), encoding="utf-8") as handle:
+            icons = json.load(handle)
+        credited = [
+            key for key in icons.get("nft_names") or {}
+            if isinstance(key, str) and ("/" in key or " by " in key.lower() or "@" in key)
+        ]
+        self.assertGreaterEqual(len(credited), 1)
+        for key in credited:
+            row = {"kind": "coin", "name": key, "chain": "ETH", "image": None}
+            packed = {
+                "coins": {key.upper(): {"chain": "ethereum", "src": "dashboard/icons/coin-cock.png"}},
+                "nft_names": {key: icons["nft_names"][key]},
+                "nfts": icons.get("nfts") or {},
+            }
+            _apply_coin_icon(row, packed)
+            self.assertIsNone(row["image"])
+
+    def test_same_ticker_on_another_chain_does_not_take_the_icon(self):
+        root = os.path.join(os.path.dirname(__file__), "..", "..")
+        with open(os.path.join(root, "dashboard", "icons", "icons.json"), encoding="utf-8") as handle:
+            icons = json.load(handle)
+        entry = icons["coins"]["COCK"]
+        self.assertEqual(entry["chain"], "cardano")
+        self.assertTrue(str(entry["src"]).startswith("dashboard/icons/"))
+        for chain in ("ETH", "BASE"):
+            row = {"kind": "coin", "name": "COCK", "chain": chain, "image": None}
+            _apply_coin_icon(row)
+            self.assertIsNone(row["image"])
+            self.assertNotEqual(row.get("image"), entry["src"])
+        kept = {"kind": "coin", "name": "COCK", "chain": "ETH", "image": "https://cdn.example/eth-cock.png"}
+        _apply_coin_icon(kept)
+        self.assertEqual(kept["image"], "https://cdn.example/eth-cock.png")
+        ada = {"kind": "coin", "name": "COCK", "chain": "ADA", "image": None}
+        _apply_coin_icon(ada)
+        self.assertEqual(ada["image"], entry["src"])
+
+    def test_dashboard_icons_are_copied_into_dist(self):
+        root = os.path.join(os.path.dirname(__file__), "..", "..")
+        with open(os.path.join(root, "scripts", "build-site.py"), encoding="utf-8") as handle:
+            source = handle.read()
+        self.assertIn('shutil.copytree(ROOT / "dashboard", DIST / "dashboard")', source)
+        self.assertTrue(os.path.isfile(os.path.join(root, "dashboard", "icons", "icons.json")))
+        self.assertTrue(os.path.isfile(os.path.join(root, "dashboard", "icons", "chains", "solana.svg")))
+        self.assertTrue(os.path.isfile(os.path.join(root, "dashboard", "icons", "chains", "cardano.svg")))
 
 
 if __name__ == "__main__":
