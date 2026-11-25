@@ -112,7 +112,7 @@ assert(base.includes(radar.BASE_EMPTY), "BASE filter explains the empty cut");
 assert(!base.includes("SOL #1"), "BASE filter does not keep other rows");
 const scan = radar.scanLine(doc, now);
 assert(scan.includes("xmark") && !scan.includes("filled"), "header X stays hollow when the feed is stale");
-assert(scan.includes("Built Nov 24, 12:30 PM"), "the build time is shown in Toronto");
+assert(scan.includes("Built Nov 24, 12:30 PM ET"), "the build time is shown in Toronto");
 assert(!scan.includes("17:30:00Z"), "the build clock is not a UTC stamp");
 assert(scan.includes("last scan 10m"), "last scan age is computed from the timestamp");
 const old = Object.assign({}, doc, { built_at: "2026-11-24T10:00:00Z" });
@@ -128,7 +128,7 @@ const legend = radar.legendHtml();
 assert(legend.includes("not a buy signal") && legend.includes("Not a Hood tier"), "legend matches the desk flag");
 assert(legend.includes('class="leg-heat"') && legend.includes('class="leg-skull"'), "legend icons keep their chip ids");
 const oldView = radar.renderHtml(old, { filter: "All", sort: "heat" }, now);
-assert(oldView.includes("Built Nov 24, 5:00 AM"), "the stale banner clock is Toronto time");
+assert(oldView.includes("Built Nov 24, 5:00 AM ET"), "the stale banner clock is Toronto time");
 const fmt = radar.renderHtml({
   built_at: "2026-11-24T17:30:00Z",
   last_scan: "2026-11-24T17:50:00Z",
@@ -142,9 +142,14 @@ const fmt = radar.renderHtml({
       image: "https://cdn.example/fiona.png", stat: "buyers", heat: 9
     },
     {
-      id: "sol-x", name: "SOL #1", chain: "SOL", kind: "coin",
-      price: 5.5e-7, price_unit: "USD", change: -1200, size: 2, size_unit: "SOL",
+      id: "sol-x", name: "WIDGET", chain: "SOL", kind: "coin",
+      price: 5.5e-7, price_unit: "USD", change: -99.99, size: 2, size_unit: "SOL",
       image: "dashboard/icons/coin-cock.png", stat: "snaps", heat: 8
+    },
+    {
+      id: "dust-x", name: "DUST", chain: "RH", kind: "coin",
+      price: 4e-13, price_unit: "USD", change: 1, size: 1, size_unit: "USD",
+      stat: "x", heat: 2
     },
     {
       id: "nft-x", name: "Cash Cats", chain: "ETH", kind: "nft",
@@ -168,10 +173,41 @@ assert(fmt.includes('aria-hidden="true">$0.0<span class="subz">₆</span>55'), "
 assert(fmt.includes('aria-label="$0.00000055"'), "the dollar price keeps a plain-decimal name");
 assert(!/e-[0-9]/.test(fmt), "rendered prices and sizes are not scientific notation");
 assert(fmt.includes("0.51 ETH"), "a size under 1 is a plain decimal");
-assert(fmt.includes("+1160×"), "a move above 1000% is a multiple of the percent");
-assert(fmt.includes("-12×"), "a large drop is a negative multiple");
+assert(fmt.includes("+1161×"), "a move above 1000% is the price multiple");
+assert(fmt.includes("-99.9%"), "a drop just above a total loss is not rounded to -100%");
+assert(!fmt.includes("-100%"), "that drop is not shown as a total loss");
+assert(!/-[\d.]+×/.test(fmt), "a drop is not shown as a negative multiple");
 assert(fmt.includes("+10%"), "a move of 1000% or below stays a percent");
 assert(fmt.includes("+1000%"), "1000% itself stays a percent");
+assert(fmt.includes('aria-label="$0.0000000000004"'), "a tiny price keeps an accurate screen-reader decimal");
+function pillText(change) {
+  const html = radar.renderHtml({
+    built_at: "2026-11-24T17:30:00Z",
+    last_scan: "2026-11-24T17:50:00Z",
+    lead_count: 1,
+    x: {},
+    feeds: [],
+    rows: [{ id: "p", name: "P", chain: "RH", kind: "coin", price: 1, price_unit: "USD", change, size: 1, size_unit: "USD", stat: "x", heat: 1 }],
+    gaps: []
+  }, { filter: "All", sort: "heat" }, now);
+  const match = html.match(/class="pill [^"]*">([^<]*)</);
+  return match ? match[1] : "";
+}
+assert(pillText(999.9) === "+999.9%", "999.9% stays a percent, got " + pillText(999.9));
+assert(pillText(1000) === "+1000%", "1000% stays a percent, got " + pillText(1000));
+assert(pillText(1000.1) === "+11×", "1000.1% is an 11× price, got " + pillText(1000.1));
+assert(pillText(9999) === "+101×", "9999% is a 101× price, got " + pillText(9999));
+assert(pillText(116045.9) === "+1161×", "116045.9% is a 1161× price, got " + pillText(116045.9));
+const justBelow = Math.round(1 + 999.9 / 100);
+const atCap = Math.round(1 + 1000 / 100);
+const justAbove = Number(pillText(1000.1).replace(/[+×]/g, ""));
+assert(justAbove >= justBelow && justAbove >= atCap, "the first multiple is smaller than the move just under the cap");
+let previousMultiple = 0;
+for (let n = 1000.1; n <= 12000; n += 37) {
+  const shown = Number(pillText(n).replace("+", "").replace("×", ""));
+  assert(shown >= previousMultiple, "multiple stepped backwards at " + n);
+  previousMultiple = shown;
+}
 function chunk(id) {
   return fmt.split('data-id="' + id + '"')[1].split("</article>")[0];
 }
@@ -179,8 +215,8 @@ const fiona = chunk("fmt-1");
 assert(fiona.includes('referrerpolicy="no-referrer"') && fiona.includes('loading="lazy"'), "remote logos do not send a referrer");
 assert(fiona.includes("https://cdn.example/fiona.png"), "a remote coin logo is still used when no local file matches");
 const solChunk = chunk("sol-x");
-assert(solChunk.includes("dashboard/icons/chains/solana.svg"), "SOL #N uses the chain logo");
-assert(!solChunk.includes("coin-cock"), "SOL #N does not keep a token logo");
+assert(solChunk.includes("dashboard/icons/chains/solana.svg"), "any SOL row uses the chain logo");
+assert(!solChunk.includes("coin-cock"), "a SOL row does not keep a token logo");
 const nftChunk = chunk("nft-x");
 assert(nftChunk.includes("dashboard/icons/chains/ethereum.svg"), "an NFT with no image uses the chain logo");
 assert(!nftChunk.includes("http"), "the NFT mark does not publish a remote image");

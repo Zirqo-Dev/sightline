@@ -72,13 +72,10 @@
   var SUB_DIGITS = "₀₁₂₃₄₅₆₇₈₉";
   var subscriptOk = true;
 
-  function anonSol(row) {
-    return !!(row && row.chain === "SOL" && /^SOL #\d+$/.test(String(row.name || "")));
-  }
   function markSrc(row) {
-    if (anonSol(row)) return CHAIN_LOGO.SOL;
-    if (row.image) return row.image;
-    return CHAIN_LOGO[row.chain] || "";
+    if (row && row.chain === "SOL") return CHAIN_LOGO.SOL;
+    if (row && row.image) return row.image;
+    return (row && CHAIN_LOGO[row.chain]) || "";
   }
   function compact(n) {
     var abs = Math.abs(n);
@@ -92,7 +89,16 @@
     return (n < 0 ? "-" : "") + text;
   }
   function plainDecimal(abs) {
-    return abs.toFixed(12).replace(/0+$/, "").replace(/\.$/, "") || "0";
+    if (!(abs > 0) || !isFinite(abs)) return "0";
+    var exp = Math.floor(Math.log10(abs));
+    if (!isFinite(exp)) return "0";
+    var places = Math.max(12, -exp + 2);
+    if (places > 100) places = 100;
+    var text = abs.toFixed(places).replace(/0+$/, "").replace(/\.$/, "");
+    if (text && text !== "0") return text;
+    var zeros = -exp - 1;
+    var digits = (abs / Math.pow(10, exp)).toFixed(2).replace(".", "").replace(/0+$/, "");
+    return "0." + new Array(zeros + 1).join("0") + (digits || "0");
   }
   function subscriptDigits(value) {
     return String(value).replace(/[0-9]/g, function (digit) {
@@ -160,7 +166,7 @@
         hour: "numeric",
         minute: "2-digit",
         hourCycle: "h12"
-      }).format(new Date(t)).replace(/\u202f/g, " ").replace(/\u00a0/g, " ");
+      }).format(new Date(t)).replace(/\u202f/g, " ").replace(/\u00a0/g, " ") + " ET";
     } catch (err) {
       return new Date(t).toISOString().replace(".000Z", "Z").replace("T", " ");
     }
@@ -182,10 +188,13 @@
     if (n == null) return '<span class="pill flat">—</span>';
     var cls = n > 0 ? "up" : n < 0 ? "down" : "flat";
     var text;
-    if (Math.abs(n) > 1000) {
-      text = (n > 0 ? "+" : "-") + Math.round(Math.abs(n) / 100) + "\u00d7";
+    if (n > 1000) {
+      // Price multiple, not the gain divided by 100. +1000% is 11×, so the
+      // first value past the cap is +11× and does not read as a smaller move.
+      text = "+" + Math.round(1 + n / 100) + "\u00d7";
     } else {
       var rounded = Math.round(n * 10) / 10;
+      if (n > -100 && rounded <= -100) rounded = -99.9;
       text = (rounded > 0 ? "+" : "") + rounded + "%";
     }
     return '<span class="pill ' + cls + '">' + text + "</span>";

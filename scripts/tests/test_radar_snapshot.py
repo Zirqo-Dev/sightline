@@ -609,6 +609,25 @@ class RadarSnapshotTest(unittest.TestCase):
             _apply_coin_icon(row, packed)
             self.assertIsNone(row["image"])
 
+    def test_same_ticker_on_another_chain_does_not_take_the_icon(self):
+        root = os.path.join(os.path.dirname(__file__), "..", "..")
+        with open(os.path.join(root, "dashboard", "icons", "icons.json"), encoding="utf-8") as handle:
+            icons = json.load(handle)
+        entry = icons["coins"]["COCK"]
+        self.assertEqual(entry["chain"], "cardano")
+        self.assertTrue(str(entry["src"]).startswith("dashboard/icons/"))
+        for chain in ("ETH", "BASE"):
+            row = {"kind": "coin", "name": "COCK", "chain": chain, "image": None}
+            _apply_coin_icon(row)
+            self.assertIsNone(row["image"])
+            self.assertNotEqual(row.get("image"), entry["src"])
+        kept = {"kind": "coin", "name": "COCK", "chain": "ETH", "image": "https://cdn.example/eth-cock.png"}
+        _apply_coin_icon(kept)
+        self.assertEqual(kept["image"], "https://cdn.example/eth-cock.png")
+        ada = {"kind": "coin", "name": "COCK", "chain": "ADA", "image": None}
+        _apply_coin_icon(ada)
+        self.assertEqual(ada["image"], entry["src"])
+
     def test_dashboard_icons_are_copied_into_dist(self):
         root = os.path.join(os.path.dirname(__file__), "..", "..")
         with open(os.path.join(root, "scripts", "build-site.py"), encoding="utf-8") as handle:
