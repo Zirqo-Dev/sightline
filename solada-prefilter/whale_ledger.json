@@ -1,11 +1,11 @@
 {
- "at": "2026-11-25T11:12:33Z",
+ "at": "2026-11-25T13:13:17Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14245245,
+ "height": 14246429,
  "baseline_at": "2026-11-14T17:13:24Z",
- "ada_balance": 758.098252,
+ "ada_balance": 565.727562,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 310943305389,
@@ -34,7 +34,7 @@
   "CHADDY": 16848771299364,
   "CLOVE-3": 14424308574545,
   "CNET": 31327824482276,
-  "COCK": 39439186,
+  "COCK": 39455760,
   "COCKLOCK": 50000000,
   "CSWAP": 394,
   "CTO Man": 51188,
@@ -102,7 +102,7 @@
   "WJB": 125951481,
   "cock-whale": 1,
   "cockwhale": 1,
-  "f5808c+f7db6b52": 205464439,
+  "f5808c+f7db6b52": 205608724,
   "fADA~47c42d": 4639030549,
   "fADA~daa59d": 4639030549,
   "tappy0352": 1,
@@ -144,7 +144,7 @@
   "CHADDY": 16848771299364,
   "CLOVE-3": 14424308574545,
   "CNET": 31327824482276,
-  "COCK": 39439186,
+  "COCK": 39455760,
   "COCKLOCK": 50000000,
   "CSWAP": 394,
   "CTO Man": 51188,
@@ -212,7 +212,7 @@
   "WJB": 125951481,
   "cock-whale": 1,
   "cockwhale": 1,
-  "f5808c+f7db6b52": 205464439,
+  "f5808c+f7db6b52": 205608724,
   "fADA~47c42d": 4639030549,
   "fADA~daa59d": 4639030549,
   "tappy0352": 1,
@@ -365,7 +365,7 @@
   {
    "token": "COCK",
    "policy": "49e42316",
-   "qty": 39439186
+   "qty": 39455760
   },
   {
    "token": "COCKLOCK",
@@ -705,7 +705,7 @@
   {
    "token": "f5808c+f7db6b52",
    "policy": "f5808c2c",
-   "qty": 205464439
+   "qty": 205608724
   },
   {
    "token": "fADA~47c42d",
@@ -11151,6 +11151,33 @@
    "closed_at": "2026-11-25T05:06:34Z",
    "filled_token": "COCK",
    "filled_qty": 16687
+  },
+  "aeb242b953#0": {
+   "ref_short": "aeb242b953#0",
+   "token": "ADA",
+   "qty_raw": 123000000,
+   "ada": 123.0,
+   "status": "filled",
+   "opened_tx": "aeb242b953",
+   "opened_at": "2026-11-25T11:35:41Z",
+   "own_stake": true,
+   "closed_tx": "2cddeeb30f",
+   "closed_at": "2026-11-25T11:36:00Z",
+   "filled_ada": -121.0
+  },
+  "9db102feb1#0": {
+   "ref_short": "9db102feb1#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "filled",
+   "opened_tx": "9db102feb1",
+   "opened_at": "2026-11-25T11:38:29Z",
+   "own_stake": true,
+   "closed_tx": "85bf84b735",
+   "closed_at": "2026-11-25T11:40:13Z",
+   "filled_token": "COCK",
+   "filled_qty": 16574
   }
  },
  "rows": [
@@ -33791,6 +33818,60 @@
    "order_ref_short": "f293cc246f#0",
    "order_status": "filled",
    "sold": "ADA"
+  },
+  {
+   "time": "2026-11-25T11:35:41Z",
+   "tx_short": "aeb242b953",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 123000000,
+   "ada_leg": 123.0,
+   "counterparty_tag": null,
+   "order_ref_short": "aeb242b953#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-25T11:36:00Z",
+   "tx_short": "2cddeeb30f",
+   "kind": "order_fill",
+   "token": "ADA",
+   "qty": 123000000,
+   "ada_leg": -121.0,
+   "counterparty_tag": null,
+   "order_ref_short": "aeb242b953#0",
+   "order_status": "filled"
+  },
+  {
+   "time": "2026-11-25T11:36:00Z",
+   "tx_short": "2cddeeb30f",
+   "kind": "lp_add",
+   "token": "LP:minswap_v2",
+   "qty": 144285,
+   "ada_leg": 121.0,
+   "counterparty_tag": null
+  },
+  {
+   "time": "2026-11-25T11:38:29Z",
+   "tx_short": "9db102feb1",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "9db102feb1#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-25T11:40:13Z",
+   "tx_short": "85bf84b735",
+   "kind": "order_fill",
+   "token": "COCK",
+   "qty": 16574,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "9db102feb1#0",
+   "order_status": "filled",
+   "sold": "ADA"
   }
  ],
  "capped": false,
@@ -33801,7 +33882,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 6,
+ "koios_calls": 7,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
