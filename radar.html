@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Sightline Radar</title>
+<link rel="stylesheet" href="preview/fonts.css">
+<link rel="stylesheet" href="radar/radar.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <p class="logo" aria-label="sightline">&gt;sight<span>line</span><i>_</i></p>
+      <button type="button" class="q" id="legend-open" aria-label="Legend">?</button>
+    </div>
+    <p class="scan" id="scan">Snapshot is unavailable.</p>
+    <p class="research">Research only. No buy button. No wallet connect.</p>
+  </header>
+  <div id="app" aria-live="polite"></div>
+</div>
+<dialog id="legend">
+  <div class="legend-h">
+    <p class="legend-title">Indicators</p>
+    <form method="dialog"><button type="submit" class="q" value="close">Close</button></form>
+  </div>
+  <div id="legend-body"></div>
+</dialog>
+<script src="radar/radar.js"></script>
+</body>
+</html>

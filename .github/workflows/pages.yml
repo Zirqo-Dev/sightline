@@ -37,6 +37,8 @@ jobs:
           python3 scripts/validate-desks.py
       - name: Dashboard smoke checks
         run: node scripts/smoke-dashboard.mjs
+      - name: Radar smoke checks
+        run: node scripts/smoke-radar.mjs
       - name: Fill missing icons (best effort)
         continue-on-error: true
         run: |
@@ -51,6 +53,18 @@ jobs:
         env:
           SIGHTLINE_REQUIRE_FEEDS: "1"
         run: python3 scripts/build-site.py
+      - name: Privacy guard on the radar snapshot
+        env:
+          PRIVACY_GUARD_PATTERNS: ${{ secrets.PRIVACY_GUARD_PATTERNS }}
+          PRIVACY_IDENTITY_HASHES: ${{ secrets.PRIVACY_IDENTITY_HASHES }}
+          SIGHTLINE_PRIVATE_TOKEN: ${{ secrets.SIGHTLINE_PRIVATE_TOKEN }}
+          RUGGER_ID_PEPPER: ${{ secrets.RUGGER_ID_PEPPER }}
+        run: |
+          if [ -f dist/radar.json ]; then
+            bash scripts/privacy-guard.sh dist/radar.json
+          else
+            echo "radar.json was not built; the page shows an empty snapshot"
+          fi
       - name: Upload Pages artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
