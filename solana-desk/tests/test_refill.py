@@ -11,6 +11,12 @@ STALL = {
     "R": (0.1993308264770182, -9.800669173522987),
     "S": (0.4021697001625057, -9.597830299837497),
 }
+# Flat books approved for the Nov 25 paper top-up. Cash is under one ticket.
+STALL_10 = {
+    "F": (0.115, -9.885),
+    "R": (0.395, -9.605),
+    "S": (0.363, -9.637),
+}
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -30,10 +36,20 @@ def _book(cash, realized, open_lots=None):
                 peak_equity=C.START_BALANCE_SOL)
 
 
-def _write(d, books):
+def _write(d, books, refills=None):
     doc = dict(cfg_version=C.CFG_VERSION, last_run_ts=T0, voids=[], books=books)
+    if refills is not None:
+        doc["refills"] = refills
     with open(os.path.join(d, "positions.json"), "w") as fh:
         json.dump(doc, fh)
+
+
+def _nov4_event():
+    return dict(id=fills.REFILL_ID, at="2026-11-04T15:00:00Z", reason=fills.REFILL_REASON,
+                target_cash=fills.REFILL_CASH, ticket_sol=C.TICKET_SOL,
+                books={name: dict(cash_before=0.4, added=4.6, cash_after=5.0,
+                                  peak_before=C.START_BALANCE_SOL, peak_after=5.0, halt_cleared=[])
+                       for name in "FRS"})
 
 
 def _sell_row():
@@ -239,6 +255,164 @@ class Refill(unittest.TestCase):
         self.assertEqual([r["book"] for r in trades(self.d) if r["action"] == "refill"], ["F", "R", "S"])
         for name in "FRS":
             self.assertEqual(state["books"][name]["cash"], 5.0)
+
+    def test_nov25_fires_once_and_leaves_past_trades(self):
+        """After the Nov 4 id is stored, a flat book under one ticket tops up to 10 once."""
+        self.assertEqual(fills.REFILL_NOV25_ID, "2026-11-25-cash-10")
+        self.assertEqual(fills.REFILL_NOV25_CASH, 10.0)
+        self.assertEqual(fills.REFILL_CASH, 5.0)
+        prior = _nov4_event()
+        books = {name: _book(cash, pnl) for name, (cash, pnl) in STALL_10.items()}
+        books["F"]["peak_equity"] = 5.0
+        books["R"]["peak_equity"] = 5.0
+        books["S"]["peak_equity"] = 15.0
+        halted = dict(day="2026-11-25", ts="2026-11-25T14:00:00Z", book="S", drawdown=0.9758)
+        books["S"]["would_halt"] = [halted]
+        _write(self.d, books, refills=[prior])
+        ledger.trade(self.d, _sell_row())
+        path = os.path.join(self.d, "trades.csv")
+        before = open(path, "rb").read()
+        now = T0 + 60
+        self.step(now)
+        after = open(path, "rb").read()
+        self.assertTrue(after.startswith(before))
+        state = json.load(open(os.path.join(self.d, "positions.json")))
+        self.assertEqual([r["id"] for r in state["refills"]], [fills.REFILL_ID, fills.REFILL_NOV25_ID])
+        self.assertEqual(state["refills"][0], prior)
+        event = state["refills"][1]
+        self.assertEqual(event["at"], fills.iso(now))
+        self.assertEqual(event["reason"], fills.REFILL_NOV25_REASON)
+        self.assertEqual(event["ticket_sol"], 0.5)
+        self.assertEqual(event["target_cash"], 10.0)
+        for name, (cash, pnl) in STALL_10.items():
+            b = state["books"][name]
+            self.assertEqual(b["cash"], 10.0)
+            self.assertEqual(b["realized_pnl"], pnl)
+            self.assertEqual(b["open"], {})
+            self.assertEqual(b["closed"], [])
+            self.assertEqual(b["peak_equity"], 10.0)
+            self.assertEqual(b["would_halt"], [])
+            info = event["books"][name]
+            self.assertEqual(info["cash_before"], cash)
+            self.assertAlmostEqual(info["added"], 10.0 - cash)
+            self.assertEqual(info["cash_after"], 10.0)
+            self.assertEqual(info["peak_after"], 10.0)
+        self.assertEqual(event["books"]["F"]["peak_before"], 5.0)
+        self.assertEqual(event["books"]["S"]["peak_before"], 15.0)
+        self.assertEqual(event["books"]["S"]["halt_cleared"], [halted])
+        rows = trades(self.d)
+        old = [r for r in rows if r["symbol"] == "OLD"]
+        self.assertEqual(len(old), 1)
+        self.assertEqual(old[0]["pnl"], "-0.11")
+        self.assertEqual(old[0]["action"], "sell")
+        self.assertEqual(old[0]["gross_pnl"], "-0.1")
+        self.assertEqual(old[0]["net_pnl"], "-0.11")
+        refills = [r for r in rows if r["action"] == "refill"]
+        self.assertEqual([r["book"] for r in refills], ["F", "R", "S"])
+        for r in refills:
+            self.assertEqual(r["why"], event["reason"])
+            self.assertEqual(r["pnl"], "")
+            self.assertEqual(r["gross_pnl"], "")
+            self.assertEqual(r["net_pnl"], "")
+            self.assertEqual(r["agent"], "REFILL")
+            self.assertEqual(r["time"], str(now))
+            self.assertAlmostEqual(float(r["sol"]), event["books"][r["book"]]["added"])
+        stats = fills.window_stats(rows, now)
+        self.assertEqual(stats["windows"]["7"]["counted_closes"], 0)
+        self.assertAlmostEqual(stats["windows"]["7"]["older_net_pnl"], -0.11)
+        self.assertEqual(stats["windows"]["7"]["older_closes"], 1)
+        paper = json.load(open(os.path.join(self.d, "paper.json")))
+        self.assertEqual(paper["ticket_size"], 0.5)
+        self.assertEqual([r["id"] for r in paper["refills"]], [fills.REFILL_ID, fills.REFILL_NOV25_ID])
+        notes = [s for s in paper["summaries"] if s["type"] == "refill"]
+        self.assertEqual(len(notes), 2)
+        self.assertIn("F +9.885", notes[1]["note"])
+        self.assertIn("R +9.605", notes[1]["note"])
+        self.assertIn("S +9.637", notes[1]["note"])
+        for name in "FRS":
+            self.assertEqual(paper["books"][name]["cash"], 10.0)
+            self.assertEqual(paper["books"][name]["realized_pnl"], round(STALL_10[name][1], 9))
+        from jsonschema import Draft202012Validator
+        sch = json.load(open(os.path.join(REPO, "schema", "paper-book.schema.json")))
+        self.assertEqual(list(Draft202012Validator(sch).iter_errors(paper)), [])
+
+        self.step(now + 60)
+        again = json.load(open(os.path.join(self.d, "positions.json")))
+        self.assertEqual([r["id"] for r in again["refills"]], [fills.REFILL_ID, fills.REFILL_NOV25_ID])
+        self.assertEqual([r["book"] for r in trades(self.d) if r["action"] == "refill"], ["F", "R", "S"])
+        for name in "FRS":
+            self.assertEqual(again["books"][name]["cash"], 10.0)
+            self.assertEqual(again["books"][name]["would_halt"], [])
+            self.assertEqual(again["books"][name]["realized_pnl"], STALL_10[name][1])
+
+        loaded = fills.load(self.d)
+        self.assertIsNone(fills.apply_cash_refill(self.d, loaded, now + 90))
+        self.assertEqual(len(loaded["refills"]), 2)
+
+    def test_nov25_stays_done_when_cash_falls_below_a_ticket(self):
+        books = {name: _book(cash, pnl) for name, (cash, pnl) in STALL_10.items()}
+        _write(self.d, books, refills=[_nov4_event()])
+        now = T0 + 60
+        self.step(now)
+        state = json.load(open(os.path.join(self.d, "positions.json")))
+        for name in "FRS":
+            state["books"][name]["cash"] = 0.1
+            state["books"][name]["open"] = {}
+        with open(os.path.join(self.d, "positions.json"), "w") as fh:
+            json.dump(state, fh)
+        rows_before = [r for r in trades(self.d) if r["action"] == "refill"]
+        self.step(now + 60)
+        again = json.load(open(os.path.join(self.d, "positions.json")))
+        self.assertEqual([r["id"] for r in again["refills"]], [fills.REFILL_ID, fills.REFILL_NOV25_ID])
+        self.assertEqual([r["book"] for r in trades(self.d) if r["action"] == "refill"],
+                         [r["book"] for r in rows_before])
+        for name, (_cash, pnl) in STALL_10.items():
+            self.assertEqual(again["books"][name]["cash"], 0.1)
+            self.assertEqual(again["books"][name]["realized_pnl"], pnl)
+        past = [r for r in trades(self.d) if r["action"] == "refill"]
+        for r in past:
+            self.assertEqual(r["pnl"], "")
+
+    def test_nov25_skips_when_any_book_can_still_buy_or_is_open(self):
+        books = {name: _book(0.2, -1) for name in "FRS"}
+        books["S"]["cash"] = 0.6
+        _write(self.d, books, refills=[_nov4_event()])
+        self.step(T0 + 60)
+        state = json.load(open(os.path.join(self.d, "positions.json")))
+        self.assertEqual([r["id"] for r in state["refills"]], [fills.REFILL_ID])
+        self.assertEqual(state["books"]["F"]["cash"], 0.2)
+        self.assertEqual(state["books"]["S"]["cash"], 0.6)
+        self.assertFalse(os.path.exists(os.path.join(self.d, "trades.csv")))
+
+        books = {name: _book(0.2, -1) for name in "FRS"}
+        books["F"]["open"] = {"F-old": {"mint": "m", "frac": 1}}
+        _write(self.d, books, refills=[_nov4_event()])
+        state = fills.load(self.d)
+        self.assertIsNone(fills.apply_cash_refill(self.d, state, T0 + 60))
+        self.assertEqual([r["id"] for r in state["refills"]], [fills.REFILL_ID])
+        self.assertEqual(state["books"]["R"]["cash"], 0.2)
+        self.assertEqual(state["books"]["F"]["cash"], 0.2)
+
+    def test_nov25_logged_rows_are_not_appended_twice(self):
+        books = {name: _book(cash, pnl) for name, (cash, pnl) in STALL_10.items()}
+        _write(self.d, books, refills=[_nov4_event()])
+        now = T0 + 60
+        for name, (cash, _) in STALL_10.items():
+            fills._refill_row(self.d, now, name, fills.REFILL_NOV25_CASH - cash, fills.REFILL_NOV25_REASON)
+        self.step(now + 30, run_id="retry")
+        state = json.load(open(os.path.join(self.d, "positions.json")))
+        self.assertEqual([r["id"] for r in state["refills"]], [fills.REFILL_ID, fills.REFILL_NOV25_ID])
+        refills = [r for r in trades(self.d) if r["action"] == "refill"]
+        self.assertEqual([r["book"] for r in refills], ["F", "R", "S"])
+        for r in refills:
+            self.assertEqual(r["why"], fills.REFILL_NOV25_REASON)
+            self.assertEqual(r["pnl"], "")
+            self.assertEqual(r["gross_pnl"], "")
+            self.assertEqual(r["net_pnl"], "")
+        for name in "FRS":
+            self.assertEqual(state["books"][name]["cash"], 10.0)
+        self.step(now + 90)
+        self.assertEqual([r["book"] for r in trades(self.d) if r["action"] == "refill"], ["F", "R", "S"])
 
 
 if __name__ == "__main__":
