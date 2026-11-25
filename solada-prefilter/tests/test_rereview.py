@@ -219,6 +219,8 @@ class RootModePublicKeys(unittest.TestCase):
             os.makedirs(os.path.join(main, "scripts"))
             shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), os.path.join(main, "scripts"))
             shutil.copy(os.path.join(ROOT, "scripts", "privacy_identity.py"), os.path.join(main, "scripts"))
+            shutil.copy(os.path.join(ROOT, "scripts", "privacy_hex.py"), os.path.join(main, "scripts"))
+            shutil.copy(os.path.join(ROOT, "scripts", "privacy-hex-allow.txt"), os.path.join(main, "scripts"))
             with open(os.path.join(main, "scripts", "privacy-public-keys.txt"), "w") as f:
                 f.write(key + "\n")
             shutil.copytree(SRC, os.path.join(main, "solada-prefilter"), ignore=shutil.ignore_patterns("tests", "__pycache__"))
@@ -449,6 +451,8 @@ class DevChecksFileGuard(unittest.TestCase):
             os.makedirs(os.path.join(main, "scripts"))
             shutil.copy(os.path.join(ROOT, "scripts", "privacy-guard.sh"), os.path.join(main, "scripts"))
             shutil.copy(os.path.join(ROOT, "scripts", "privacy_identity.py"), os.path.join(main, "scripts"))
+            shutil.copy(os.path.join(ROOT, "scripts", "privacy_hex.py"), os.path.join(main, "scripts"))
+            shutil.copy(os.path.join(ROOT, "scripts", "privacy-hex-allow.txt"), os.path.join(main, "scripts"))
             shutil.copy(os.path.join(ROOT, "scripts", "privacy-public-keys.txt"), os.path.join(main, "scripts"))
             shutil.copytree(SRC, os.path.join(main, "solada-prefilter"),
                             ignore=shutil.ignore_patterns("tests", "__pycache__"))
