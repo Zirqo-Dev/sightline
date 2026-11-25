@@ -17,12 +17,13 @@ Gross and net PnL are both recorded; pnl stays the net figure. New rows carry co
 v3-exit-aware and the time that model started. Older rows are not rewritten.
 A one-time cash refill (id 2026-11-04-cash-5) tops books F, R, and S to 5 SOL of
 available cash when all three are flat and each is short of a 0.5 SOL ticket.
-It appends action=refill rows with a blank pnl and does not rewrite past trades.
-It rebases each book's peak to the post-refill equity and clears the would_halt
+A later one-time refill (id 2026-11-25-cash-10) tops the same books to 10 SOL
+on that same gate, and only once the Nov 4 id is already stored. Each appends
+action=refill rows with a blank pnl and does not rewrite past trades.
+Each rebases that book's peak to the post-refill equity and clears the would_halt
 log. would_halt is a daily log only: enter() never reads it, and a book skips a
-ticket only when cash is below the ticket cost. After this refill the 30% check
-uses the rebased peak, not the original 10 SOL start. The ticket and the
-v6.5 rules stay as they are.
+ticket only when cash is below the ticket cost. After a refill the 30% check
+uses the rebased peak. The ticket and the v6.5 rules stay as they are.
 desk.observe adds reserve, migration, quote, and held-price fields. Those fields are
 logs. They are not read by exits, books, or the fill price. log=False skips them.
 """
@@ -33,10 +34,15 @@ STATE = "positions.json"
 LAMPORTS = 1e9
 EXCLUDED_SAFETY = {"not_graduated", "missing_data"}  # out of scope / no execution check ran: never fill (S or R)
 CLOSED_KEEP = 200
-# One capital event. Not a new book and not a change to TICKET_SOL or START_BALANCE_SOL.
+# One capital event each. Not a new book and not a change to TICKET_SOL or START_BALANCE_SOL.
+# Nov 4 already ran and stays at 5 SOL. Nov 25 is the next one-time paper top-up, to 10 SOL.
 REFILL_ID = "2026-11-04-cash-5"
 REFILL_REASON = "owner-approved refill Nov 4 2026, rule change"
 REFILL_CASH = 5.0
+REFILL_NOV25_ID = "2026-11-25-cash-10"
+REFILL_NOV25_REASON = "owner-approved refill Nov 25 2026"
+REFILL_NOV25_CASH = 10.0
+_REFILL_IDS = {REFILL_ID, REFILL_NOV25_ID}
 
 def iso(ts): return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(ts))
 
@@ -155,40 +161,39 @@ def exit_haircut_of(pos):
 def equity(b):
     return b["cash"] + sum(net_proceeds(p, p["frac"], p["last_mark"], exit_haircut_of(p)) for p in b["open"].values())
 
-def _refill_already(s):
+def _refill_already(s, refill_id=REFILL_ID):
     prior = s.get("refills")
     if not isinstance(prior, list):
         return False
-    return any(isinstance(r, dict) and r.get("id") == REFILL_ID for r in prior)
+    return any(isinstance(r, dict) and r.get("id") == refill_id for r in prior)
 
-def _logged_refill_books(d):
+def _logged_refill_books(d, reason=REFILL_REASON):
     """Books that already have this refill row. A crashed run must not append it twice."""
     found = set()
     for row in read_trades(d):
-        if row.get("action") == "refill" and row.get("why") == REFILL_REASON and row.get("book") in set("FRS"):
+        if row.get("action") == "refill" and row.get("why") == reason and row.get("book") in set("FRS"):
             found.add(row["book"])
     return found
 
-def _refill_row(d, now, book, added):
+def _refill_row(d, now, book, added, reason=REFILL_REASON):
     ledger.trade(d, dict(time=int(now), book=book, agent="REFILL", mint="", symbol="",
                          action="refill", frac="", sol=round(added, 9), quote_px="",
-                         impact_pct="", fee_sol="", haircut_pct="", why=REFILL_REASON,
+                         impact_pct="", fee_sol="", haircut_pct="", why=reason,
                          pnl="", check_delay_s="", stale="",
                          gross_pnl="", net_pnl="", entry_haircut_pct="", exit_haircut_pct="",
                          verified_impact_bps="", cost_model="", cost_model_started_at=""))
 
-def apply_cash_refill(d, s, now):
-    """Top F, R, and S available cash to REFILL_CASH, once.
+def _apply_one_cash_refill(d, s, now, refill_id, reason, target_cash):
+    """Top F, R, and S available cash to target_cash for one id.
 
     Fires only when this id is not already stored and every book is flat with cash
-    below one ticket (the stall the owner approved on Nov 4 2026). Cash is added.
-    realized_pnl, open lots, closed lots, and existing trades.csv rows stay put.
-    One action=refill row per book carries the timestamp, the amount, and the reason.
-    Blank pnl keeps per-trade returns on the 0.5 SOL ticket.
-    peak_equity becomes the post-refill equity. The old peak and the cleared
-    would_halt rows are stored on the event. Drawdown after that uses the new peak.
+    below one ticket. Cash is set to the target. realized_pnl, open lots, closed
+    lots, and existing trades.csv rows stay put. One action=refill row per book
+    carries the timestamp, the amount added, and the reason. Blank pnl keeps
+    per-trade returns on the 0.5 SOL ticket. peak_equity becomes the post-refill
+    equity. The old peak and the cleared would_halt rows are stored on the event.
     """
-    if _refill_already(s):
+    if _refill_already(s, refill_id):
         return None
     books = s.get("books") or {}
     if any(name not in books for name in "FRS"):
@@ -203,7 +208,7 @@ def apply_cash_refill(d, s, now):
             return None
         if cash >= C.TICKET_SOL:
             return None
-    logged = _logged_refill_books(d)
+    logged = _logged_refill_books(d, reason)
     detail = {}
     for name in "FRS":
         b = books[name]
@@ -212,8 +217,8 @@ def apply_cash_refill(d, s, now):
             peak_before = float(b.get("peak_equity"))
         except (TypeError, ValueError):
             peak_before = C.START_BALANCE_SOL
-        added = REFILL_CASH - before
-        b["cash"] = REFILL_CASH
+        added = target_cash - before
+        b["cash"] = target_cash
         peak_after = equity(b)
         b["peak_equity"] = peak_after
         raw_halt = b.get("would_halt")
@@ -222,13 +227,27 @@ def apply_cash_refill(d, s, now):
         detail[name] = dict(cash_before=before, added=added, cash_after=float(b["cash"]),
                             peak_before=peak_before, peak_after=peak_after, halt_cleared=halt_cleared)
         if name not in logged:
-            _refill_row(d, now, name, added)
-    event = dict(id=REFILL_ID, at=iso(now), reason=REFILL_REASON,
-                 target_cash=REFILL_CASH, ticket_sol=C.TICKET_SOL, books=detail)
+            _refill_row(d, now, name, added, reason)
+    event = dict(id=refill_id, at=iso(now), reason=reason,
+                 target_cash=target_cash, ticket_sol=C.TICKET_SOL, books=detail)
     if not isinstance(s.get("refills"), list):
         s["refills"] = []
     s["refills"].append(event)
     return event
+
+def apply_cash_refill(d, s, now):
+    """Apply the next one-time paper cash refill, at most one id per call.
+
+    Nov 4 (5 SOL) runs first. Nov 25 (id 2026-11-25-cash-10, 10 SOL) runs only
+    when the Nov 4 id is already stored and the books are flat with cash below
+    one ticket again. A top-up leaves cash above the ticket, so the later id
+    waits for a later run. A stored id never fires again. Drawdown after
+    either event uses the rebased peak.
+    """
+    event = _apply_one_cash_refill(d, s, now, REFILL_ID, REFILL_REASON, REFILL_CASH)
+    if event:
+        return event
+    return _apply_one_cash_refill(d, s, now, REFILL_NOV25_ID, REFILL_NOV25_REASON, REFILL_NOV25_CASH)
 
 def _refill_notes(s):
     notes = []
@@ -420,14 +439,14 @@ def enter(d, s, now, run_id, seed, leads, day, log=True):
     return opened
 
 def _drawdown_base(s, name, b):
-    """30% versus the 10 SOL start. After the refill, versus the rebased peak.
+    """30% versus the 10 SOL start. After a refill, versus the rebased peak.
 
     enter() does not read would_halt. A book misses a ticket only when cash is
-    below the ticket cost. The refill clears the log and moves the base so a
-    top-up from about 0.4 SOL to 5 SOL is not a new 50% drawdown.
+    below the ticket cost. A refill clears the log and moves the base so a
+    top-up is not a new drawdown from the previous peak.
     """
     for r in s.get("refills") or []:
-        if not isinstance(r, dict) or r.get("id") != REFILL_ID:
+        if not isinstance(r, dict) or r.get("id") not in _REFILL_IDS:
             continue
         info = (r.get("books") or {}).get(name)
         if isinstance(info, dict) and info.get("peak_after") is not None:
