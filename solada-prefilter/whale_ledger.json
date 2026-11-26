@@ -1,11 +1,11 @@
 {
- "at": "2026-11-26T21:13:34Z",
+ "at": "2026-11-26T23:12:46Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14252232,
+ "height": 14252628,
  "baseline_at": "2026-11-14T17:13:24Z",
- "ada_balance": 1039.758743,
+ "ada_balance": 937.573134,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 310268269623,
@@ -34,7 +34,7 @@
   "CHADDY": 16848771299364,
   "CLOVE-3": 14424308574545,
   "CNET": 31327824482276,
-  "COCK": 39891300,
+  "COCK": 39915613,
   "COCKLOCK": 50000000,
   "CSWAP": 394,
   "CTO Man": 51188,
@@ -144,7 +144,7 @@
   "CHADDY": 16848771299364,
   "CLOVE-3": 14424308574545,
   "CNET": 31327824482276,
-  "COCK": 39891300,
+  "COCK": 39915613,
   "COCKLOCK": 50000000,
   "CSWAP": 394,
   "CTO Man": 51188,
@@ -365,7 +365,7 @@
   {
    "token": "COCK",
    "policy": "49e42316",
-   "qty": 39891300
+   "qty": 39915613
   },
   {
    "token": "COCKLOCK",
@@ -11847,6 +11847,20 @@
    "opened_at": "2026-11-26T20:02:33Z",
    "own_stake": true,
    "closed_at": "2026-11-26T21:13:34Z"
+  },
+  "c450948210#0": {
+   "ref_short": "c450948210#0",
+   "token": "ADA",
+   "qty_raw": 104000000,
+   "ada": 104.0,
+   "status": "filled",
+   "opened_tx": "c450948210",
+   "opened_at": "2026-11-26T22:13:56Z",
+   "own_stake": true,
+   "closed_tx": "c2451f9688",
+   "closed_at": "2026-11-26T22:14:01Z",
+   "filled_token": "COCK",
+   "filled_qty": 24313
   }
  },
  "rows": [
@@ -35905,6 +35919,29 @@
    "counterparty_tag": null,
    "order_ref_short": "2b609436cd#0",
    "order_status": "open"
+  },
+  {
+   "time": "2026-11-26T22:13:56Z",
+   "tx_short": "c450948210",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 104000000,
+   "ada_leg": 104.0,
+   "counterparty_tag": null,
+   "order_ref_short": "c450948210#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-26T22:14:01Z",
+   "tx_short": "c2451f9688",
+   "kind": "order_fill",
+   "token": "COCK",
+   "qty": 24313,
+   "ada_leg": 104.0,
+   "counterparty_tag": null,
+   "order_ref_short": "c450948210#0",
+   "order_status": "filled",
+   "sold": "ADA"
   }
  ],
  "capped": false,
