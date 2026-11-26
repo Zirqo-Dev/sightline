@@ -1,166 +1,23 @@
 {
- "at": "2026-11-26T19:11:25Z",
+ "at": "2026-11-26T21:11:32Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "coordinated_buys",
-   "ticker": "RFLIP",
-   "wallets": [
-    "w-1ea41c1a",
-    "w-2d7337fa",
-    "w-4d0218c5",
-    "w-6f64ecef",
-    "w-7ca6bb3f",
-    "w-9575676a",
-    "w-a974ddbb",
-    "w-ddf5e81d",
-    "w-eb64afb7",
-    "w-f0ab3d56",
-    "w-f7844f67"
-   ],
-   "window_s": 120,
-   "at": "2026-11-26T19:11:25Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "RFLIP",
-   "wallets": [
-    "w-1ea41c1a",
-    "w-2d7337fa",
-    "w-4d0218c5",
-    "w-7ca6bb3f",
-    "w-a974ddbb",
-    "w-eb64afb7",
-    "w-edad8943",
-    "w-f0ab3d56"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-26T19:11:25Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-6f64ecef",
-   "launches": [
-    "FADA",
-    "NJAK",
-    "RFLIP",
-    "SNATCH",
-    "TOMZOEY"
-   ],
-   "at": "2026-11-26T19:11:25Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-9575676a",
-   "launches": [
-    "BEPE",
-    "FERRET",
-    "GTADA",
-    "RAVEN",
-    "RFLIP",
-    "TEMP"
-   ],
-   "at": "2026-11-26T19:11:25Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-f7844f67",
-   "launches": [
-    "DARK",
-    "FERRET",
-    "FLY",
-    "GTADA",
-    "POPPY",
-    "RFLIP"
-   ],
-   "at": "2026-11-26T19:11:25Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "CC",
-   "wallet": "w-4356dcb9",
-   "tags": [],
-   "at": "2026-11-26T19:11:25Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "CC",
-   "wallet": "w-11aff8ad",
-   "tags": [],
-   "at": "2026-11-26T19:11:25Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "CC",
-   "wallet": "w-6820fa6f",
-   "tags": [],
-   "at": "2026-11-26T19:11:25Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "CC",
-   "wallet": "w-9f1ee7fb",
-   "tags": [],
-   "at": "2026-11-26T19:11:25Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "CC",
-   "wallet": "w-017dc881",
-   "tags": [],
-   "at": "2026-11-26T19:11:25Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "CC",
-   "wallet": "w-a240f18d",
-   "tags": [],
-   "at": "2026-11-26T19:11:25Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "CC",
-   "wallet": "w-55bcc34a",
-   "tags": [],
-   "at": "2026-11-26T19:11:25Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "CC",
-   "wallet": "w-90f4913c",
-   "tags": [],
-   "at": "2026-11-26T19:11:25Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "CC",
-   "wallet": "w-fc567005",
-   "tags": [],
-   "at": "2026-11-26T19:11:25Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "RFLIP",
-   "wallet": "w-edad8943",
-   "tags": [],
-   "at": "2026-11-26T19:11:25Z"
-  }
- ],
- "recent": [
-  {
    "kind": "whale_move",
    "ticker": "ASCEND",
    "tag": "w-f3186187",
-   "delta": 875081164,
+   "delta": 267289605,
    "decimals": 6,
-   "qty": 875.0812,
-   "ada_equiv": 1267,
-   "value_basis": "ada_leg_rate",
-   "pct": 0.3,
-   "at": "2026-11-20T03:10:51Z"
-  },
+   "qty": 267.2896,
+   "ada_equiv": 404,
+   "value_basis": "ada_leg",
+   "pct": 0.1,
+   "at": "2026-11-26T21:11:32Z"
+  }
+ ],
+ "recent": [
   {
    "kind": "whale_move",
    "ticker": "HOWDY",
@@ -3469,11 +3326,22 @@
    "wallet": "w-edad8943",
    "tags": [],
    "at": "2026-11-26T19:11:25Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 267289605,
+   "decimals": 6,
+   "qty": 267.2896,
+   "ada_equiv": 404,
+   "value_basis": "ada_leg",
+   "pct": 0.1,
+   "at": "2026-11-26T21:11:32Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 1,
-  "koios": 14
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,
