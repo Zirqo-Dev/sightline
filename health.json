@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-25T23:37:39Z",
+  "generated_at": "2026-11-26T02:37:36Z",
   "status": "red",
   "disable_after_days": 60,
   "red_within_days": 10,
@@ -25,7 +25,7 @@
       "detail": null,
       "data_branch": {
         "name": "desk-data",
-        "last_commit_at": "2026-11-25T23:31:38Z",
+        "last_commit_at": "2026-11-26T02:31:20Z",
         "stale": false
       }
     },
@@ -33,7 +33,7 @@
       "name": "desk-data-guard",
       "file": ".github/workflows/desk-data-guard.yml",
       "status": "amber",
-      "last_run_at": "2026-11-25T23:37:04Z",
+      "last_run_at": "2026-11-26T02:37:04Z",
       "last_conclusion": "in_progress",
       "last_event": "workflow_dispatch",
       "crons": [
@@ -73,7 +73,7 @@
       "name": "Pipeline heartbeat",
       "file": ".github/workflows/heartbeat.yml",
       "status": "amber",
-      "last_run_at": "2026-11-25T23:37:03Z",
+      "last_run_at": "2026-11-26T02:37:03Z",
       "last_conclusion": "in_progress",
       "last_event": "workflow_dispatch",
       "crons": [
@@ -94,7 +94,7 @@
       "name": "lst count",
       "file": ".github/workflows/lst-count.yml",
       "status": "green",
-      "last_run_at": "2026-11-25T23:17:05Z",
+      "last_run_at": "2026-11-26T02:17:05Z",
       "last_conclusion": "success",
       "last_event": "workflow_dispatch",
       "crons": [
@@ -115,7 +115,7 @@
       "name": "NFT snapshot",
       "file": ".github/workflows/nft-snapshot.yml",
       "status": "green",
-      "last_run_at": "2026-11-25T23:27:05Z",
+      "last_run_at": "2026-11-26T02:27:05Z",
       "last_conclusion": "success",
       "last_event": "workflow_dispatch",
       "crons": [],
@@ -172,7 +172,7 @@
       "name": "wallet races",
       "file": ".github/workflows/races.yml",
       "status": "red",
-      "last_run_at": "2026-11-25T23:37:11Z",
+      "last_run_at": "2026-11-26T02:37:11Z",
       "last_conclusion": "in_progress",
       "last_event": "workflow_dispatch",
       "crons": [
@@ -181,7 +181,7 @@
       "interval_minutes": 30,
       "grace_minutes": 15,
       "missed_slot": true,
-      "missed_count": 2,
+      "missed_count": 6,
       "consecutive_failures": 0,
       "days_until_disable": 60,
       "disable_red": false,
@@ -189,8 +189,8 @@
       "detail": null,
       "data_branch": {
         "name": "races-data",
-        "last_commit_at": "2026-11-25T22:30:18Z",
-        "stale": false
+        "last_commit_at": "2026-11-25T23:39:00Z",
+        "stale": true
       }
     },
     {
@@ -214,7 +214,7 @@
       "detail": null,
       "data_branch": {
         "name": "desk-data",
-        "last_commit_at": "2026-11-25T23:31:38Z",
+        "last_commit_at": "2026-11-26T02:31:20Z",
         "stale": false
       }
     },
@@ -279,7 +279,7 @@
       "name": "Solada prefilter",
       "file": ".github/workflows/solada-prefilter.yml",
       "status": "green",
-      "last_run_at": "2026-11-25T23:07:06Z",
+      "last_run_at": "2026-11-26T01:07:05Z",
       "last_conclusion": "success",
       "last_event": "workflow_dispatch",
       "crons": [],
@@ -294,7 +294,7 @@
       "detail": null,
       "data_branch": {
         "name": "desk-data",
-        "last_commit_at": "2026-11-25T23:31:38Z",
+        "last_commit_at": "2026-11-26T02:31:20Z",
         "stale": false
       }
     },
@@ -302,9 +302,9 @@
       "name": "Solana desk scan",
       "file": ".github/workflows/solana-desk-scan.yml",
       "status": "green",
-      "last_run_at": "2026-11-25T23:30:30Z",
+      "last_run_at": "2026-11-26T02:30:18Z",
       "last_conclusion": "success",
-      "last_event": "schedule",
+      "last_event": "workflow_dispatch",
       "crons": [
         "*/30 * * * *"
       ],
@@ -319,7 +319,7 @@
       "detail": null,
       "data_branch": {
         "name": "desk-data",
-        "last_commit_at": "2026-11-25T23:31:38Z",
+        "last_commit_at": "2026-11-26T02:31:20Z",
         "stale": false
       }
     },
@@ -356,7 +356,7 @@
     {
       "code": "webhook_consecutive_failures",
       "level": "red",
-      "count": 4
+      "count": 5
     }
   ]
 }
