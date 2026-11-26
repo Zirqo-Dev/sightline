@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-26T17:37:34Z",
+  "generated_at": "2026-11-26T20:37:39Z",
   "status": "red",
   "disable_after_days": 60,
   "red_within_days": 10,
@@ -25,7 +25,7 @@
       "detail": null,
       "data_branch": {
         "name": "desk-data",
-        "last_commit_at": "2026-11-26T17:31:04Z",
+        "last_commit_at": "2026-11-26T20:31:06Z",
         "stale": false
       }
     },
@@ -33,7 +33,7 @@
       "name": "desk-data-guard",
       "file": ".github/workflows/desk-data-guard.yml",
       "status": "amber",
-      "last_run_at": "2026-11-26T17:37:04Z",
+      "last_run_at": "2026-11-26T20:37:04Z",
       "last_conclusion": "in_progress",
       "last_event": "workflow_dispatch",
       "crons": [
@@ -72,8 +72,8 @@
     {
       "name": "Pipeline heartbeat",
       "file": ".github/workflows/heartbeat.yml",
-      "status": "green",
-      "last_run_at": "2026-11-26T17:37:03Z",
+      "status": "amber",
+      "last_run_at": "2026-11-26T20:37:03Z",
       "last_conclusion": "in_progress",
       "last_event": "workflow_dispatch",
       "crons": [
@@ -81,8 +81,8 @@
       ],
       "interval_minutes": 180,
       "grace_minutes": 45,
-      "missed_slot": false,
-      "missed_count": 0,
+      "missed_slot": true,
+      "missed_count": 1,
       "consecutive_failures": 0,
       "days_until_disable": 60,
       "disable_red": false,
@@ -94,7 +94,7 @@
       "name": "lst count",
       "file": ".github/workflows/lst-count.yml",
       "status": "green",
-      "last_run_at": "2026-11-26T17:17:05Z",
+      "last_run_at": "2026-11-26T20:17:05Z",
       "last_conclusion": "success",
       "last_event": "workflow_dispatch",
       "crons": [
@@ -114,16 +114,16 @@
     {
       "name": "NFT snapshot",
       "file": ".github/workflows/nft-snapshot.yml",
-      "status": "red",
-      "last_run_at": "2026-11-26T17:27:05Z",
-      "last_conclusion": "failure",
+      "status": "green",
+      "last_run_at": "2026-11-26T20:27:05Z",
+      "last_conclusion": "success",
       "last_event": "workflow_dispatch",
       "crons": [],
       "interval_minutes": null,
       "grace_minutes": null,
       "missed_slot": false,
       "missed_count": 0,
-      "consecutive_failures": 1,
+      "consecutive_failures": 0,
       "days_until_disable": 60,
       "disable_red": false,
       "state": "active",
@@ -172,7 +172,7 @@
       "name": "wallet races",
       "file": ".github/workflows/races.yml",
       "status": "red",
-      "last_run_at": "2026-11-26T17:37:11Z",
+      "last_run_at": "2026-11-26T20:37:11Z",
       "last_conclusion": "in_progress",
       "last_event": "workflow_dispatch",
       "crons": [
@@ -189,24 +189,24 @@
       "detail": null,
       "data_branch": {
         "name": "races-data",
-        "last_commit_at": "2026-11-26T16:46:33Z",
-        "stale": false
+        "last_commit_at": "2026-11-26T17:38:59Z",
+        "stale": true
       }
     },
     {
       "name": "Solana forensics",
       "file": ".github/workflows/run-forensics.yml",
-      "status": "red",
-      "last_run_at": "2026-11-25T22:46:58Z",
+      "status": "green",
+      "last_run_at": "2026-11-26T18:31:15Z",
       "last_conclusion": "success",
-      "last_event": "pull_request",
+      "last_event": "schedule",
       "crons": [
         "30 8 * * *"
       ],
       "interval_minutes": 1440,
       "grace_minutes": 360,
-      "missed_slot": true,
-      "missed_count": 1,
+      "missed_slot": false,
+      "missed_count": 0,
       "consecutive_failures": 0,
       "days_until_disable": 60,
       "disable_red": false,
@@ -214,7 +214,7 @@
       "detail": null,
       "data_branch": {
         "name": "desk-data",
-        "last_commit_at": "2026-11-26T17:31:04Z",
+        "last_commit_at": "2026-11-26T20:31:06Z",
         "stale": false
       }
     },
@@ -279,7 +279,7 @@
       "name": "Solada prefilter",
       "file": ".github/workflows/solada-prefilter.yml",
       "status": "green",
-      "last_run_at": "2026-11-26T17:07:06Z",
+      "last_run_at": "2026-11-26T19:07:05Z",
       "last_conclusion": "success",
       "last_event": "workflow_dispatch",
       "crons": [],
@@ -294,7 +294,7 @@
       "detail": null,
       "data_branch": {
         "name": "desk-data",
-        "last_commit_at": "2026-11-26T17:31:04Z",
+        "last_commit_at": "2026-11-26T20:31:06Z",
         "stale": false
       }
     },
@@ -302,7 +302,7 @@
       "name": "Solana desk scan",
       "file": ".github/workflows/solana-desk-scan.yml",
       "status": "green",
-      "last_run_at": "2026-11-26T17:30:18Z",
+      "last_run_at": "2026-11-26T20:30:18Z",
       "last_conclusion": "success",
       "last_event": "workflow_dispatch",
       "crons": [
@@ -319,7 +319,7 @@
       "detail": null,
       "data_branch": {
         "name": "desk-data",
-        "last_commit_at": "2026-11-26T17:31:04Z",
+        "last_commit_at": "2026-11-26T20:31:06Z",
         "stale": false
       }
     },
@@ -356,7 +356,7 @@
     {
       "code": "webhook_consecutive_failures",
       "level": "red",
-      "count": 13
+      "count": 14
     }
   ]
 }
