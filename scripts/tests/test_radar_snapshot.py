@@ -2,7 +2,9 @@
 import datetime
 import json
 import os
+import subprocess
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -79,9 +81,15 @@ class RadarSnapshotTest(unittest.TestCase):
         for banned in ("desk", "first_pick", "kill", "dead", "skull", "outcome", "verdict", "first snap"):
             self.assertNotIn(banned, row_blob)
         blob = json.dumps(doc)
-        public = _without_dex(doc)
-        self.assertNotIn(MINT_A, public)
-        self.assertNotIn(MINT_B, public)
+        self.assertEqual(sol[0]["id"], "sol-" + MINT_A)
+        self.assertEqual(sol[1]["id"], "sol-" + MINT_B)
+        quiet = json.loads(blob)
+        for row in quiet["rows"]:
+            row.pop("id", None)
+            row.pop("dex_url", None)
+        quiet_blob = json.dumps(quiet)
+        self.assertNotIn(MINT_A, quiet_blob)
+        self.assertNotIn(MINT_B, quiet_blob)
         self.assertTrue(sol[0]["dex_url"].startswith("https://dexscreener.com/solana/"))
         self.assertIn(MINT_A, sol[0]["dex_url"])
         self.assertIn(MINT_B, sol[1]["dex_url"])
@@ -120,10 +128,10 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertEqual(cat["chain"], "RH")
         self.assertNotIn("desk", [chip["id"] for chip in cat["chips"]])
         blob = json.dumps(doc)
-        self.assertNotIn(ETH_ADDR, _without_dex(doc))
+        self.assertNotIn(ETH_ADDR, blob)
         self.assertNotIn('"ca"', blob)
-        self.assertTrue(cat["dex_url"].startswith("https://dexscreener.com/robinhood/"))
-        self.assertIn(ETH_ADDR, cat["dex_url"])
+        self.assertNotIn("dex_url", cat)
+        self.assertNotIn("dexscreener.com/robinhood", blob)
 
     def test_lst_and_outcome_fields_stay_out(self):
         doc = build_from({
@@ -157,10 +165,10 @@ class RadarSnapshotTest(unittest.TestCase):
         public = _without_dex(doc)
         for banned in ("onset", "d_bps", "verdict", "nh04", "coverage", "freeze_log", MINT_A, "w-aaaaaaaa"):
             self.assertNotIn(banned, blob)
-        self.assertNotIn(ETH_ADDR, public)
-        self.assertIn(ETH_ADDR, blob)
+        self.assertNotIn(ETH_ADDR, blob)
         eth = next(row for row in doc["rows"] if row["chain"] == "ETH")
-        self.assertTrue(eth["dex_url"].startswith("https://dexscreener.com/ethereum/"))
+        self.assertNotIn("dex_url", eth)
+        self.assertNotIn("dexscreener.com/ethereum", blob)
         lst = next(feed for feed in doc["feeds"] if feed["id"] == "LST")
         self.assertEqual(lst["status"], "green")
         self.assertEqual(lst["at"], "2026-11-24T18:17:19Z")
@@ -209,13 +217,18 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertEqual(len(names), 2)
         self.assertTrue(any("dropped 3 series" in gap for gap in doc["gaps"]))
         blob = json.dumps(doc)
-        public = _without_dex(doc)
+        quiet = json.loads(blob)
+        for row in quiet["rows"]:
+            row.pop("id", None)
+            row.pop("dex_url", None)
+        quiet_blob = json.dumps(quiet)
         for mint in (kept_ratio, kept_token, over, dust, single):
-            self.assertNotIn(mint, public)
+            self.assertNotIn(mint, quiet_blob)
         for mint in (over, dust, single):
             self.assertNotIn(mint, blob)
         for mint in (kept_ratio, kept_token):
             self.assertIn("https://dexscreener.com/solana/" + mint, blob)
+            self.assertTrue(any(mint in row["id"] for row in doc["rows"]))
 
     def test_creator_handle_and_duplicate_tickers(self):
         other = "0x" + ("cd" * 20)
@@ -689,6 +702,70 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertEqual(wal["detail"], "Wallet races · last recorded run failed")
         self.assertEqual(wal["at"], "2026-11-24T12:00:00Z")
         self.assertNotIn("v6.5", json.dumps(doc))
+
+    def test_two_pools_with_one_symbol_have_separate_ids(self):
+        pool_a = "1" * 32
+        pool_b = "2" * 32
+        snaps = [
+            dict(_snap(MINT_A, 1000, 80, 4, 1), symbol="WGT", name="Widget", pool=pool_a),
+            dict(_snap(MINT_A, 2800, 120, 4, 1), symbol="WGT", name="Widget", pool=pool_a),
+            dict(_snap(MINT_B, 1000, 40, 2, 1), symbol="WGT", name="Other", pool=pool_b),
+            dict(_snap(MINT_B, 2800, 50, 2, 1), symbol="WGT", name="Other", pool=pool_b),
+        ]
+        doc = build_from({"snaps": snaps}, NOW)
+        rows = [row for row in doc["rows"] if row["name"] == "WGT"]
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(len({row["id"] for row in rows}), 2)
+        self.assertTrue(any(pool_a in row["id"] for row in rows))
+        self.assertTrue(any(pool_b in row["id"] for row in rows))
+
+    def test_publish_privacy_guard_on_a_built_radar_json(self):
+        pool = "1" * 32
+        long_hex = "ab" * 32
+        wide = "0x" + ("cd" * 32)
+        snaps = [
+            dict(_snap(MINT_A, 1000, 80, 4, 1), symbol="WGT", pool=pool),
+            dict(_snap(MINT_A, 2800, 120, 4, 1), symbol="WGT", pool=pool),
+        ]
+        doc = build_from({
+            "snaps": snaps,
+            "hood": {"network": "robinhood", "generated_at": "2026-11-24T18:00:00Z", "tokens": [{
+                "symbol": "CAT", "tier": "WATCH", "price_usd": 1, "chg_h24": 1,
+                "vol24_usd": 9, "buyers24": 2, "ca": ETH_ADDR, "main_pool": wide,
+            }]},
+            "last_run": {"at": "2026-11-24T17:00:00Z", "results": [{
+                "ticker": "NJAK", "price_ada": 1, "vol_h24_ada": 10, "native_holders": 3,
+                "unit": long_hex,
+            }]},
+            "units": [
+                {"chain": "eip155:1", "slug": "sample", "name": "Sample", "floor_eth": 1,
+                 "snapshot_t": "2026-11-23T12:00:00Z", "contract": ETH_ADDR},
+                {"chain": "eip155:1", "slug": "sample", "name": "Sample", "floor_eth": 1.1,
+                 "snapshot_t": "2026-11-24T12:00:00Z", "contract": ETH_ADDR},
+            ],
+        }, NOW)
+        blob = json.dumps(doc)
+        self.assertNotIn(ETH_ADDR, blob)
+        self.assertNotIn(long_hex, blob)
+        self.assertNotIn(wide, blob)
+        self.assertNotIn("0x", blob)
+        self.assertNotIn("dexscreener.com/robinhood", blob)
+        self.assertNotIn("dexscreener.com/ethereum", blob)
+        self.assertNotIn("dexscreener.com/cardano", blob)
+        self.assertIn("https://dexscreener.com/solana/" + pool, blob)
+        root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "radar.json")
+            with open(path, "w", encoding="utf-8") as handle:
+                json.dump(doc, handle)
+            proc = subprocess.run(
+                ["bash", os.path.join(root, "scripts", "privacy-guard.sh"), path],
+                cwd=root, capture_output=True, text=True,
+            )
+        report = proc.stdout + proc.stderr
+        self.assertNotIn("long hex", report)
+        if "identity hashes were not loaded" not in report:
+            self.assertEqual(proc.returncode, 0, report)
 
     def test_dashboard_icons_are_copied_into_dist(self):
         root = os.path.join(os.path.dirname(__file__), "..", "..")

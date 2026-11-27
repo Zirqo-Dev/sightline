@@ -50,13 +50,7 @@ _SKIP_NAMES = {"captures.jsonl", "privacy-hex-allow.txt"}
 _DUMMY = "bb22cc33dd44ee55ff6677889900"
 _CYCLES = ("0123456789abcdef", "abcdef0123456789")
 _DEAD = {"dead", "beef", "cafe", "c0ffee", "deadbeef"}
-_SHAPES = {"bare-64", "0x-40", "0x-64", "collection-id", "utxo", "digest-path", "prereg-line", "dex-url"}
-# One public DexScreener link. The hex, when there is one, is the path id only.
-_DEX_URL = re.compile(
-    r"^https://dexscreener\.com/"
-    r"(?P<slug>solana|ethereum|base|cardano|robinhood)/"
-    r"(?P<id>[^/?#\s]+)$"
-)
+_SHAPES = {"bare-64", "0x-40", "0x-64", "collection-id", "utxo", "digest-path", "prereg-line"}
 _EXPLORERS = (
     "etherscan.io",
     "basescan.org",
@@ -140,30 +134,6 @@ def _shape_ok(shape, whole, token, kind):
     if shape == "prereg-line":
         match = _PREREG_LINE.fullmatch(text)
         return bool(match) and kind == "bare-64" and match.group(1).lower() == token.lower()
-    if shape == "dex-url":
-        return _dex_url_ok(text, token, kind)
-    return False
-
-
-def _dex_url_ok(text, token, kind):
-    """True when the whole value is one DexScreener link and the hex is its id."""
-    match = _DEX_URL.fullmatch(text or "")
-    if not match:
-        return False
-    slug = match.group("slug")
-    ident = match.group("id")
-    if slug == "solana":
-        return False
-    if slug in ("ethereum", "base"):
-        return kind == "0x-40" and ident.lower() == token.lower()
-    if slug == "robinhood":
-        if len(ident) == 42:
-            return kind == "0x-40" and ident.lower() == token.lower()
-        if len(ident) == 66:
-            return kind == "0x-64" and ident.lower() == token.lower()
-        return False
-    if slug == "cardano" and kind == "bare-64" and re.fullmatch(r"[0-9a-fA-F]{56,128}", ident):
-        return token.lower() in ident.lower()
     return False
 
 

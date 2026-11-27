@@ -116,35 +116,6 @@ class Rules(unittest.TestCase):
         found, _blob = hits(self.rules, "note.txt", "sha256 %s\n" % digest)
         self.assertEqual(len(found), 1)
 
-    def test_radar_dex_url_allows_one_link_and_nothing_else(self):
-        eth = "0x" + "ab" * 20
-        pool = "0x" + "cd" * 32
-        cardano = "ab" * 36
-        ok = {
-            "rows": [
-                {"dex_url": "https://dexscreener.com/ethereum/" + eth},
-                {"dex_url": "https://dexscreener.com/robinhood/" + pool},
-                {"dex_url": "https://dexscreener.com/cardano/" + cardano},
-                {"dex_url": "https://dexscreener.com/solana/" + "1" * 32},
-            ]
-        }
-        found, _blob = hits(self.rules, "dist/radar.json", json.dumps(ok))
-        self.assertEqual(found, [])
-        found, _blob = hits(self.rules, "desk.json", json.dumps({"dex_url": "https://dexscreener.com/ethereum/" + eth}))
-        self.assertEqual(len(found), 1)
-        found, _blob = hits(self.rules, "dist/radar.json", json.dumps({"name": "https://dexscreener.com/ethereum/" + eth}))
-        self.assertEqual(len(found), 1)
-        found, _blob = hits(self.rules, "dist/radar.json", json.dumps({"dex_url": eth}))
-        self.assertEqual(len(found), 1)
-        found, _blob = hits(self.rules, "dist/radar.json", json.dumps({
-            "dex_url": "https://dexscreener.com/ethereum/" + eth + "?x=" + pool,
-        }))
-        self.assertGreaterEqual(len(found), 1)
-        found, _blob = hits(self.rules, "dist/radar.json", json.dumps({
-            "dex_url": "https://etherscan.io/address/" + eth,
-        }))
-        self.assertEqual(len(found), 1)
-
     def test_cdn_urls_allow_bare_64_and_explorers_do_not(self):
         image = token_of("cdn-image")
         addr = "0x" + "ab" * 20

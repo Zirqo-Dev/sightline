@@ -59,24 +59,9 @@ _BANNED_KEYS = {
 }
 _SYMBOL = re.compile(r"[A-Za-z0-9][A-Za-z0-9 ._$-]{0,19}")
 _FULL_ADDR = re.compile(r"^0x[0-9a-fA-F]{40}$")
-_EVM_REF = re.compile(r"^0x[0-9a-fA-F]{40}$|^0x[0-9a-fA-F]{64}$")
-_CARDANO_ASSET = re.compile(r"^[0-9a-fA-F]{56,128}$")
-_DEX_URL = re.compile(
-    r"^https://dexscreener.com/"
-    r"(solana/[1-9A-HJ-NP-Za-km-z]{32,44}"
-    r"|ethereum/0x[0-9a-fA-F]{40}"
-    r"|base/0x[0-9a-fA-F]{40}"
-    r"|cardano/[0-9a-fA-F]{56,128}"
-    r"|robinhood/0x[0-9a-fA-F]{64}"
-    r"|robinhood/0x[0-9a-fA-F]{40})$"
-)
-_HOOD_SLUG = {
-    "robinhood": "robinhood",
-    "solana": "solana",
-    "base": "base",
-    "ethereum": "ethereum",
-    "eth": "ethereum",
-}
+# Solana ids are base58. A link that would carry 0x or a 64-hex asset id is not published.
+_SOL_DEX = re.compile(r"^https://dexscreener.com/solana/[1-9A-HJ-NP-Za-km-z]{32,44}$")
+_SOL_ROW_ID = re.compile(r"^sol-[1-9A-HJ-NP-Za-km-z]{32,44}(?:-[a-z0-9]+)?$")
 
 
 def parse_time(value):
@@ -267,32 +252,14 @@ def _public_id(prefix, slug, name):
     return prefix + token
 
 
-def _dex_url(slug, ident):
-    """A DexScreener pair or token link. Anything else is dropped."""
-    if not isinstance(slug, str) or not isinstance(ident, str) or not ident:
+def _sol_dex(ident):
+    """A Solana DexScreener link. Base58 pair or mint only. No 0x and no long hex."""
+    if not isinstance(ident, str) or not _MINT.fullmatch(ident):
         return None
-    url = "https://dexscreener.com/%s/%s" % (slug, ident)
-    if not _DEX_URL.fullmatch(url) or _STAKE.search(url):
+    url = "https://dexscreener.com/solana/" + ident
+    if not _SOL_DEX.fullmatch(url) or _ETH.search(url) or _STAKE.search(url):
         return None
     return url
-
-
-def _evm_ref(value):
-    if not isinstance(value, str):
-        return None
-    text = value.strip()
-    if _EVM_REF.fullmatch(text):
-        return text
-    return None
-
-
-def _cardano_asset(value):
-    if not isinstance(value, str):
-        return None
-    text = value.strip()
-    if _CARDANO_ASSET.fullmatch(text):
-        return text.lower()
-    return None
 
 
 def _token_label(value, limit):
@@ -312,15 +279,6 @@ def _token_label(value, limit):
     return text
 
 
-def _hood_slug(network):
-    """Robinhood-chain coins use the DexScreener robinhood slug unless the file names another chain."""
-    if network is None or (isinstance(network, str) and not network.strip()):
-        return "robinhood"
-    if not isinstance(network, str):
-        return None
-    return _HOOD_SLUG.get(network.strip().lower())
-
-
 def _walk(value, key=None):
     if isinstance(value, dict):
         for item_key, item in value.items():
@@ -332,9 +290,9 @@ def _walk(value, key=None):
         for item in value:
             _walk(item, key)
     elif isinstance(value, str):
-        if key == "dex_url":
-            if not _DEX_URL.fullmatch(value) or _STAKE.search(value):
-                raise ValueError("banned dex")
+        if key == "dex_url" and _SOL_DEX.fullmatch(value) and not _ETH.search(value) and not _STAKE.search(value):
+            return
+        if key == "id" and _SOL_ROW_ID.fullmatch(value) and not _ETH.search(value) and not _STAKE.search(value):
             return
         if _MINT.search(value) or _ETH.search(value) or _STAKE.search(value):
             raise ValueError("banned string")
@@ -857,12 +815,15 @@ def _solana_rows(manifest_lines, snap_lines, death_lines=None):
             row["name"] = "SOL #%d" % anon
         if token_name:
             row["token_name"] = token_name
-        slug = re.sub(r"[^a-z0-9]+", "-", str(row["name"]).lower()).strip("-") or str(index)
-        row["id"] = "sol-" + slug
+        ident = meta.get("pool") or (mint if isinstance(mint, str) and _MINT.fullmatch(mint) else None)
+        if ident:
+            row["id"] = "sol-" + ident
+        else:
+            slug = re.sub(r"[^a-z0-9]+", "-", str(row["name"]).lower()).strip("-") or str(index)
+            row["id"] = "sol-" + slug
         row["why"] = row["name"]
         row["image"] = None
-        ident = meta.get("pool") or (mint if isinstance(mint, str) and _MINT.fullmatch(mint) else None)
-        url = _dex_url("solana", ident)
+        url = _sol_dex(ident)
         if url:
             row["dex_url"] = url
         try:
@@ -917,9 +878,6 @@ def _hood_coins(doc):
             facts.append("24h volume $%s." % format(round(vol), ","))
         spark = token.get("last5_byr24")
         spark_vals = spark if isinstance(spark, list) else []
-        slug = _hood_slug(doc.get("network") if isinstance(doc, dict) else None)
-        ident = _evm_ref(token.get("main_pool")) or _evm_ref(token.get("ca"))
-        dex = _dex_url(slug, ident) if slug else None
         rows.append({
             "id": "rh-" + re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-"),
             "name": name,
@@ -944,7 +902,6 @@ def _hood_coins(doc):
             "why": "%s · %s" % (name, token.get("tier")),
             "source": "HoodScout daily",
             "_raw": raw_score(change, vol or liq, buyers),
-            "dex_url": dex,
         })
     return _finish(rows, 10)
 
@@ -1108,7 +1065,6 @@ def _cardano_rows(last_run, flags, kill, whale, now):
             "why": name,
             "source": "Cardano last-run",
             "_raw": raw_score(None, vol or side, holders),
-            "dex_url": _dex_url("cardano", _cardano_asset(item.get("unit"))),
         })
     return _finish(rows, 8)
 
@@ -1136,7 +1092,7 @@ def _eth_rows(units):
         when = parse_time(line.get("snapshot_t"))
         if floor is None or when is None:
             continue
-        series.setdefault(slug, []).append((when, floor, raw_name.strip(), _evm_ref(line.get("contract"))))
+        series.setdefault(slug, []).append((when, floor, raw_name.strip(), None))
     rows = []
     for slug, points in series.items():
         points.sort(key=lambda item: item[0])
@@ -1155,8 +1111,6 @@ def _eth_rows(units):
         for when, floor, _raw_name, _contract in points:
             if (last_at - when).total_seconds() >= 20 * 3600:
                 prior = floor
-        idents = {item[3] for item in points if item[3]}
-        dex = _dex_url("ethereum", next(iter(idents))) if len(idents) == 1 else None
         change = None if not prior else (last_floor / prior - 1.0) * 100.0
         seen_at = _iso(points[0][0])
         labels = {}
@@ -1192,7 +1146,6 @@ def _eth_rows(units):
             "why": name,
             "source": "ETH floor snaps",
             "_raw": raw_score(change, last_floor, None),
-            "dex_url": dex,
         })
     return _finish(rows, 6), len(hidden) + loose
 

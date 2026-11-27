@@ -36,7 +36,7 @@ for (const size of sizes) {
 }
 assert(css.includes(".chip,.sort,.row-btn,.dex,.note-x{min-height:44px}"), "filter, sort, row, and link controls are at least 44px");
 assert(css.includes(".q{min-width:44px;padding:8px 0"), "header legend button keeps a square tap target");
-assert(css.includes(".legend-close{padding:8px 12px}"), "close has horizontal padding");
+assert(css.includes(".legend-close{min-height:44px;min-width:44px;padding:8px 12px}"), "the legend close control is at least 44px");
 assert(html.includes('class="q legend-close"'), "close uses its own class");
 assert(css.includes(".mark img.logo{position:absolute;inset:0"), "the logo sits in the mark");
 assert(css.includes("opacity:0"), "the logo stays hidden until it decodes");
@@ -297,9 +297,19 @@ const named = radar.renderHtml({
 assert(named.includes(">WGT<"), "a recorded symbol replaces the placeholder");
 assert(named.includes("Widget"), "the recorded name is still visible");
 assert(named.includes('href="https://dexscreener.com/solana/11111111111111111111111111111111"'), "the solana row links to the pair");
-assert(named.includes('href="https://dexscreener.com/cardano/'), "the named coin links with its chain slug");
+assert(!named.includes("dexscreener.com/cardano"), "a cardano asset id is not a link");
+assert(!named.includes("0x"), "a link does not carry an 0x address");
 assert(named.includes('target="_blank"'), "the dex link opens a new tab");
-assert((named.match(/class="dex"/g) || []).length === 2, "each of these rows has one dex link");
+assert((named.match(/class="dex"/g) || []).length === 1, "only the solana row has a dex link");
+const twins = radar.renderHtml({
+  built_at: doc.built_at, last_scan: doc.last_scan, x: {}, feeds: [], gaps: [],
+  rows: [
+    { id: "sol-" + "1".repeat(32), name: "WGT", chain: "SOL", kind: "coin", price: 1, price_unit: "SOL", change: 2, size: 9, size_unit: "SOL", size_kind: "liq", heat: 4, stat: "snaps" },
+    { id: "sol-" + "2".repeat(32), name: "WGT", chain: "SOL", kind: "coin", price: 1, price_unit: "SOL", change: 1, size: 4, size_unit: "SOL", size_kind: "liq", heat: 3, stat: "snaps" }
+  ]
+}, { filter: "SOL", sort: "heat", open: "sol-" + "1".repeat(32) }, now);
+const expanded = twins.match(/aria-expanded="true"/g) || [];
+assert(expanded.length === 1, "one tap opens one row when two pools share a symbol, got " + expanded.length);
 
 const walDoc = {
   built_at: "2026-11-24T17:30:00Z",

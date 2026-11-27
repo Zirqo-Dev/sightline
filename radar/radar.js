@@ -347,7 +347,7 @@
   function dexLink(row) {
     var url = row && row.dex_url;
     if (typeof url !== "string") return "";
-    if (!/^https:\/\/dexscreener\.com\/(solana|ethereum|base|cardano|robinhood)\//.test(url)) return "";
+    if (!/^https:\/\/dexscreener\.com\/solana\/[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(url)) return "";
     return '<a class="dex" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">DexScreener</a>';
   }
   function rowHtml(row, rank, open, now) {
