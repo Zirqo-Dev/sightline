@@ -6,18 +6,33 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  # Rebuild after a successful data run on main. No new cron.
+  # GitHub matches the workflow file name. run-solada.yml only pings the
+  # webhook; the Cardano file itself is written by solada-prefilter.yml.
+  workflow_run:
+    workflows: ["solana-desk-scan.yml", "run-solada.yml", "nft-snapshot.yml"]
+    types: [completed]
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# One Pages run at a time. cancel-in-progress stays false so a deploy is not
+# killed mid-flight. A burst of upstream completions waits in this group.
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
   build:
+    # Pull requests and manual runs still build. A workflow_run deploys only
+    # after a successful upstream run on main, in this repository.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -66,13 +81,23 @@ jobs:
             echo "radar.json was not built; the page shows an empty snapshot"
           fi
       - name: Upload Pages artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: >-
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_run' &&
+           github.event.workflow_run.conclusion == 'success' &&
+           github.event.workflow_run.head_branch == 'main' &&
+           github.event.workflow_run.head_repository.full_name == github.repository)
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     needs: build
     runs-on: ubuntu-latest
     environment:

@@ -1,6 +1,5 @@
 /* Sightline Radar preview. Reads radar.json. Research only. */
 (function (root) {
-  var FILTERS = ["All", "Coins", "NFTs", "SOL", "BASE", "RH", "ADA", "ETH"];
   var BASE_EMPTY = "No Base coin feed is published. This cut stays empty.";
 
   function svg(body) {
@@ -28,7 +27,7 @@
   };
   var LEGEND = [
     ["seen", "Seen at", "How old the name was when the desk first logged it."],
-    ["pool", "New pool", "Under an hour old, or a HoodScout NFT marked new."],
+    ["pool", "New pool", "Under an hour old."],
     ["desk", "Desk flag", "The Cardano screen passed this name. Not a Hood tier and not a Solana pick."],
     ["whale", "Whale", "A tracked whale moved. The detail uses the codename."],
     ["buzz", "X buzz", "Hollow while the feed is stale. Fresh buzz stays off the rows."],
@@ -72,7 +71,6 @@
   var subscriptOk = true;
 
   function markSrc(row) {
-    if (row && row.chain === "SOL") return CHAIN_LOGO.SOL;
     if (row && row.image) return row.image;
     return (row && CHAIN_LOGO[row.chain]) || "";
   }
@@ -155,33 +153,10 @@
     if (hours < 48) return hours + "h";
     return Math.round(hours / 24) + "d";
   }
-  function clock(iso) {
-    var t = Date.parse(iso);
-    if (!isFinite(t)) return "no time";
-    try {
-      return new Intl.DateTimeFormat("en-US", {
-        timeZone: "America/Toronto",
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        hourCycle: "h12"
-      }).format(new Date(t)).replace(/\u202f/g, " ").replace(/\u00a0/g, " ") + " ET";
-    } catch (err) {
-      return new Date(t).toISOString().replace(".000Z", "Z").replace("T", " ");
-    }
-  }
   function xStale(doc, now) {
     var asof = doc.x && Date.parse(doc.x.asof);
     if (!isFinite(asof)) return true;
     return (now - asof) > 48 * 60 * 60 * 1000;
-  }
-  function snapStale(doc, now) {
-    var built = Date.parse(doc && doc.built_at);
-    if (!isFinite(built)) return "missing";
-    if (now - built > 2 * 60 * 60 * 1000) return "old";
-    if (built - now > 10 * 60 * 1000) return "future";
-    return "";
   }
   function pill(change) {
     var n = finite(change);
@@ -215,11 +190,20 @@
     return '<svg class="spark" viewBox="0 0 64 22" aria-hidden="true"><polyline points="' + pts + '" fill="none" stroke="' + tone + '" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>';
   }
   function accept(row, filter) {
-    if (!filter || filter === "All") return true;
-    if (filter === "Coins") return row.kind === "coin";
-    if (filter === "NFTs") return row.kind === "nft";
-    return row.chain === filter;
+    if (!row) return false;
+    if (filter === "NFT") return row.kind === "nft";
+    if (row.kind === "nft") return false;
+    if (!filter || filter === "All") return row.kind === "coin";
+    return row.chain === filter && row.kind === "coin";
   }
+  var FILTER_IDS = { All: 1, SOL: 1, RH: 1, ADA: 1, NFT: 1 };
+  var SORTS = [
+    ["hotter", "\u25b2 HOTTER"],
+    ["heat", "HEAT"],
+    ["fresh", "FRESH"],
+    ["degen", "DEGEN"]
+  ];
+  var SORT_IDS = { hotter: 1, heat: 1, fresh: 1, degen: 1 };
   var FEED_NAMES = {
     SOL: "Solana desk scan",
     WAL: "Wallet races",
@@ -230,119 +214,158 @@
     LST: "LST count",
     X: "X buzz"
   };
-  var SORT_KEYS = ["heat", "move", "vol", "buyers"];
-  var RELEASE_STATUS = "Release status unavailable";
-  var PAPER_HEADING = "Paper observations";
-  var PAPER_SENTENCE = "Paper Solana token pools observed in 30-minute snapshots.";
+  var FEED_FOR = { SOL: "SOL", RH: "HS", ADA: "ADA", NFT: "NFT" };
+  var TIERS = [
+    ["scorching", "Scorching", "heat 75+"],
+    ["hot", "Hot", "heat 55\u201375"],
+    ["warm", "Warm", "heat 40\u201355"]
+  ];
+  // HOTTER score, higher first. Same knobs as scripts/radar_snapshot.py.
+  // score = heat + 8 * freshness + marker - 25 * red_flags
+  // freshness = 0 when seen_at is missing, else max(0, (48 - age_hours) / 48)
+  // marker = 20 for ▲▲ hotter, 10 for ▲ heating, else 0
+  // A missing heat sorts last and does not use the score.
+  // Ties break toward the younger seen_at, then the ticker.
+  var FRESH_BONUS = 8;
+  var FLAG_PENALTY = 25;
 
   function feedName(feed) {
     return FEED_NAMES[feed && feed.id] || (feed && (feed.name || feed.label)) || "Collector";
   }
+  function ageHours(iso, now) {
+    var t = Date.parse(iso);
+    if (!isFinite(t)) return null;
+    return (now - t) / 3600000;
+  }
+  function nameCmp(a, b) {
+    return String(a && a.name || "").localeCompare(String(b && b.name || ""));
+  }
+  function hasChip(row, id) {
+    var chips = (row && row.chips) || [];
+    for (var i = 0; i < chips.length; i++) {
+      if (chips[i] && chips[i].id === id) return true;
+    }
+    return false;
+  }
+  function fading(row, now) {
+    if (row && row.buys_drop === true) return true;
+    var age = ageHours(row && row.seen_at, now);
+    if (age == null) return null;
+    if (age > 48) return true;
+    if (row && row.buys_drop === false) return false;
+    return null;
+  }
+  function redFlags(row, now) {
+    var flags = [];
+    if (!row) return flags;
+    if (row.thin_book === true) flags.push({ id: "thin_book", label: "thin book" });
+    if (row.crowd_flag === true) flags.push({ id: "crowd", label: "crowded" });
+    if (row.line_state === "crossed") flags.push({ id: "line", label: "kill line crossed" });
+    else if (row.line_state === "near") flags.push({ id: "line", label: "kill line near" });
+    if (fading(row, now) === true) flags.push({ id: "fade", label: "fading" });
+    return flags;
+  }
+  function isSmart(row, now) {
+    var heat = finite(row && row.heat);
+    if (heat == null) return false;
+    var mark = row.heat_mark;
+    if (!(heat >= 55 || mark === "heating" || mark === "hotter")) return false;
+    if (row.thin_book == null || row.crowd_flag == null) return false;
+    if (row.line_state !== "clear" && row.line_state !== "near" && row.line_state !== "crossed") return false;
+    if (fading(row, now) == null) return false;
+    return redFlags(row, now).length === 0;
+  }
+  function hotterScore(row, now) {
+    var heat = finite(row && row.heat);
+    if (heat == null) return null;
+    var age = ageHours(row.seen_at, now);
+    var fresh = age == null ? 0 : Math.max(0, (48 - age) / 48);
+    var mark = row.heat_mark === "hotter" ? 20 : row.heat_mark === "heating" ? 10 : 0;
+    return heat + FRESH_BONUS * fresh + mark - FLAG_PENALTY * redFlags(row, now).length;
+  }
+  function place(row, now) {
+    if (row.line_state === "crossed" || hasChip(row, "skull")) return "graveyard";
+    var age = ageHours(row.seen_at, now);
+    if (age != null && age > 48) return "old";
+    var heat = finite(row.heat);
+    if (heat == null || heat < 40) return "cool";
+    if (heat >= 75) return "scorching";
+    if (heat >= 55) return "hot";
+    return "warm";
+  }
+  function bySort(sort, now) {
+    return function (a, b) {
+      if (sort === "fresh") {
+        var ah = ageHours(a.seen_at, now);
+        var bh = ageHours(b.seen_at, now);
+        if (ah == null && bh == null) return nameCmp(a, b);
+        if (ah == null) return 1;
+        if (bh == null) return -1;
+        if (ah !== bh) return ah - bh;
+        return nameCmp(a, b);
+      }
+      if (sort === "degen") {
+        var ad = finite(a.degen);
+        var bd = finite(b.degen);
+        if (ad == null && bd == null) return nameCmp(a, b);
+        if (ad == null) return 1;
+        if (bd == null) return -1;
+        if (ad !== bd) return bd - ad;
+        return nameCmp(a, b);
+      }
+      if (sort === "heat") {
+        var aheat = finite(a.heat);
+        var bheat = finite(b.heat);
+        if (aheat == null && bheat == null) return nameCmp(a, b);
+        if (aheat == null) return 1;
+        if (bheat == null) return -1;
+        if (aheat !== bheat) return bheat - aheat;
+        return nameCmp(a, b);
+      }
+      var ascore = hotterScore(a, now);
+      var bscore = hotterScore(b, now);
+      if (ascore == null && bscore == null) return nameCmp(a, b);
+      if (ascore == null) return 1;
+      if (bscore == null) return -1;
+      if (ascore !== bscore) return bscore - ascore;
+      var aAge = ageHours(a.seen_at, now);
+      var bAge = ageHours(b.seen_at, now);
+      if (aAge == null && bAge == null) return nameCmp(a, b);
+      if (aAge == null) return 1;
+      if (bAge == null) return -1;
+      if (aAge !== bAge) return aAge - bAge;
+      return nameCmp(a, b);
+    };
+  }
+  function pillAge(ms) {
+    var mins = Math.max(0, Math.floor(ms / 60000));
+    if (mins < 90) return mins + "m";
+    var hours = Math.round(mins / 60);
+    if (hours < 48) return hours + "h";
+    return Math.round(hours / 24) + "d";
+  }
+  function freshness(doc, now) {
+    var built = Date.parse(doc && doc.built_at);
+    if (!isFinite(built)) return { kind: "stale", text: "STALE" };
+    var delta = now - built;
+    if (delta < -10 * 60 * 1000) return { kind: "stale", text: "STALE" };
+    var label = pillAge(Math.abs(delta));
+    if (delta < 45 * 60 * 1000) return { kind: "live", text: "LIVE \u00b7 " + label };
+    return { kind: "stale", text: "STALE \u00b7 " + label };
+  }
   function xText(doc, now) {
     var hollow = xStale(doc, now);
     var xAge = doc.x && doc.x.asof ? ageLabel(doc.x.asof, now) : "";
-    return (hollow ? "X buzz stale" : "X buzz") + (xAge ? " · " + xAge : "");
-  }
-  function ageSentence(doc, now) {
-    var kind = snapStale(doc, now);
-    var built = clock(doc && doc.built_at);
-    if (kind) {
-      if (built && built !== "no time") {
-        return "This snapshot is stale. Built " + built + ". It does not describe current collection health.";
-      }
-      return "This snapshot is stale. It does not describe current collection health.";
-    }
-    return "Snapshot age " + (ageLabel(doc.built_at, now) || "0m") + ".";
+    return (hollow ? "X buzz stale" : "X buzz") + (xAge ? " \u00b7 " + xAge : "");
   }
   function feedLine(feed, now) {
     var name = feedName(feed);
     var age = feed && feed.at ? ageLabel(feed.at, now) : "";
-    var word = feed && feed.status === "red" ? "last recorded run failed"
+    var word = feed && feed.status === "green" ? "last recorded"
+      : feed && feed.status === "red" ? "last recorded run failed"
       : feed && feed.status === "amber" ? "last recorded run degraded"
       : "last recorded status unknown";
-    return name + " · " + word + (age ? " · " + age : "");
-  }
-  function scanLine(doc, now) {
-    return esc(ageSentence(doc, now));
-  }
-  function exceptions(doc, now) {
-    return (doc.feeds || []).filter(function (feed) {
-      return feed && feed.id !== "X" && feed.status !== "green";
-    }).map(function (feed) {
-      return feedLine(feed, now);
-    });
-  }
-  function rowsFor(doc, filter) {
-    return ((doc && doc.rows) || []).filter(function (row) { return accept(row, filter); });
-  }
-  function metricOffer(rows, key, field, label) {
-    if (!rows.length) {
-      if (key === "heat") return { key: key, ok: true, label: label, field: field };
-      return { key: key, ok: false, label: label, reason: label + " · no values" };
-    }
-    var missing = 0;
-    for (var i = 0; i < rows.length; i++) {
-      if (finite(rows[i][field]) == null) missing += 1;
-    }
-    if (missing) return { key: key, ok: false, label: label, reason: label + " · " + missing + " missing" };
-    return { key: key, ok: true, label: label, field: field };
-  }
-  function volOffer(rows) {
-    if (!rows.length) return { key: "vol", ok: false, label: "vol", reason: "vol · no values" };
-    var units = {};
-    var missing = 0;
-    for (var i = 0; i < rows.length; i++) {
-      if (finite(rows[i].size) == null) {
-        missing += 1;
-        continue;
-      }
-      units[(rows[i].size_kind || "size") + ":" + (rows[i].size_unit || "")] = true;
-    }
-    var keys = Object.keys(units);
-    if (keys.length > 1) return { key: "vol", ok: false, label: "vol", reason: "vol · mixed units" };
-    if (!keys.length) return { key: "vol", ok: false, label: "vol", reason: "vol · no values" };
-    var spec = keys[0];
-    if (spec !== "liq:SOL" && spec.indexOf("vol:") !== 0) {
-      return { key: "vol", ok: false, label: "vol", reason: "vol · not volume" };
-    }
-    var label = spec === "liq:SOL" ? "SOL reserve" : "vol";
-    if (missing) return { key: "vol", ok: false, label: label, reason: label + " · " + missing + " missing" };
-    return { key: "vol", ok: true, label: label, field: "size" };
-  }
-  function sortOffer(rows, key) {
-    if (key === "heat") return metricOffer(rows, "heat", "heat", "heat");
-    if (key === "move") return metricOffer(rows, "move", "change", "move");
-    if (key === "buyers") return metricOffer(rows, "buyers", "buyers", "buyers");
-    return volOffer(rows);
-  }
-  function resolveSort(rows, wanted) {
-    var offers = SORT_KEYS.map(function (key) { return sortOffer(rows, key); });
-    var chosen = null;
-    for (var i = 0; i < offers.length; i++) {
-      if (offers[i].key === wanted && offers[i].ok) chosen = offers[i];
-    }
-    if (!chosen) {
-      for (var j = 0; j < offers.length; j++) {
-        if (offers[j].ok) {
-          chosen = offers[j];
-          break;
-        }
-      }
-    }
-    return { offers: offers, active: chosen ? chosen.key : "heat", offer: chosen };
-  }
-  function ordered(rows, offer) {
-    var field = offer && offer.field ? offer.field : "heat";
-    var copy = rows.slice();
-    copy.sort(function (a, b) {
-      var av = finite(a[field]);
-      var bv = finite(b[field]);
-      if (av == null && bv == null) return String(a.name).localeCompare(String(b.name));
-      if (av == null) return 1;
-      if (bv == null) return -1;
-      return bv - av;
-    });
-    return copy;
+    return name + " \u00b7 " + word + (age ? " \u00b7 " + age : "");
   }
   function dexLink(row) {
     var url = row && row.dex_url;
@@ -350,36 +373,62 @@
     if (!/^https:\/\/dexscreener\.com\/solana\/[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(url)) return "";
     return '<a class="dex" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">DexScreener</a>';
   }
+  function degenHtml(row) {
+    var n = finite(row && row.degen);
+    if (n == null) return '<span class="deg"><span class="deg-label">\u2014</span></span>';
+    var level = Math.max(1, Math.min(5, Math.round(n)));
+    var dots = "";
+    for (var i = 1; i <= 5; i++) {
+      dots += '<i class="pip' + (i <= level ? " on d" + level : "") + '"></i>';
+    }
+    var label = row.degen_label || "";
+    return '<span class="deg d' + level + '">' + dots + '<span class="deg-label">' + esc(label) + "</span></span>";
+  }
+  function markerHtml(row) {
+    if (row.heat_mark === "hotter") return '<span class="heat-mark">\u25b2\u25b2 hotter</span>';
+    if (row.heat_mark === "heating") return '<span class="heat-mark">\u25b2 heating</span>';
+    return "";
+  }
   function rowHtml(row, rank, open, now) {
     var seen = ageLabel(row.seen_at, now);
-    var chips = (row.chips || []).map(function (chip) {
+    var ageH = ageHours(row.seen_at, now);
+    var chips = (row.chips || []).filter(function (chip) {
+      if (!chip || chip.id !== "pool") return true;
+      return ageH != null && ageH < 1;
+    }).map(function (chip) {
       var label = chip.label;
       if (chip.id === "seen" && seen) label = "seen " + seen;
       return '<span class="sig sig-' + esc(chip.id) + '">' + icon(chip.id) + esc(label) + "</span>";
     }).join("");
+    var flags = redFlags(row, now).map(function (flag) {
+      return '<span class="sig sig-flag">' + esc(flag.label) + "</span>";
+    }).join("");
+    var smart = isSmart(row, now) ? '<span class="smart">SMART</span>' : "";
     var hintText = row.token_name && row.token_name !== row.name ? row.token_name : (row.hint || "");
-    var hint = hintText ? '<span class="hint">' + esc(hintText) + "</span>" : (row.show_age && seen ? '<span class="hint">' + esc(seen) + "</span>" : "");
+    var hint = hintText ? '<span class="hint">' + esc(hintText) + "</span>" : "";
     var heat = finite(row.heat);
-    var heatChip = heat == null ? "" : '<span class="sig sig-heat">' + icon("heat") + "heat " + esc(heat) + "</span>";
+    var heatText = heat == null ? "\u2014" : String(heat);
     var letter = esc(String(row.name || "?").trim().charAt(0) || "?");
     var src = markSrc(row);
     var img = src ? '<img alt="" class="logo" src="' + esc(src) + '" referrerpolicy="no-referrer" loading="lazy" decoding="async">' : "";
     var mark = '<span class="mark"><span class="initial">' + letter + "</span>" + img + "</span>";
-    var bar = finite(row.buy_pct);
-    var barHtml = bar == null ? "" : '<span class="bar" aria-hidden="true"><i style="width:' + Math.round(bar * 100) + '%"></i></span>';
     var detail = "";
     if (open) {
       var facts = (row.facts || []).map(function (fact) { return "<li>" + esc(fact) + "</li>"; }).join("");
+      var whyBits = (row.degen_why || []).join(", ");
       detail = '<div class="detail"><p class="why">' + esc(row.why || row.name) + "</p>"
+        + (whyBits ? '<p class="why">degen ' + esc(whyBits) + "</p>" : "")
         + (facts ? '<ul class="facts">' + facts + "</ul>" : "")
         + '<p class="src">' + esc(row.source || "") + "</p></div>";
     }
+    var ageBit = seen ? '<span class="age">' + esc(seen) + "</span>" : "";
     return '<article class="entry" data-chain="' + esc(row.chain) + '">'
       + '<button type="button" class="row-btn" data-id="' + esc(row.id) + '" aria-expanded="' + (open ? "true" : "false") + '">'
-      + '<span class="rank">' + rank + "</span>" + mark
+      + '<span class="rank">' + (rank == null ? "" : rank) + "</span>" + mark
       + '<span class="main"><span class="name-line"><span class="name">' + esc(row.name) + "</span>"
-      + hint + '<span class="tag">' + esc(row.chain) + "</span>" + chips + heatChip + "</span>"
-      + '<span class="stat-line"><span class="stat">' + esc(row.stat || "") + "</span>" + barHtml + spark(row.spark) + "</span></span>"
+      + hint + '<span class="tag">' + esc(row.chain) + "</span>" + ageBit + markerHtml(row) + smart + "</span>"
+      + '<span class="meter-line">' + degenHtml(row) + '<span class="heat-n">heat ' + esc(heatText) + "</span></span>"
+      + '<span class="stat-line">' + chips + flags + spark(row.spark) + "</span></span>"
       + '<span class="metrics"><span class="price">' + priceHtml(finite(row.price), row.price_unit) + "</span>"
       + pill(row.change) + '<span class="size">' + esc(sizeText(row)) + "</span></span></button>"
       + dexLink(row)
@@ -387,51 +436,41 @@
   }
   function summaryHtml(doc, now) {
     if (!doc || !Array.isArray(doc.rows)) {
-      return '<p class="scan" id="scan">Snapshot is unavailable.</p><p class="release">' + esc(RELEASE_STATUS) + "</p>";
+      return '<p class="scan" id="scan">Snapshot is unavailable.</p>';
     }
-    var stale = snapStale(doc, now);
-    var lines = exceptions(doc, now).map(function (line) {
-      return '<p class="exception">' + esc(line) + "</p>";
-    }).join("");
-    return '<p class="scan' + (stale ? " stale" : "") + '" id="scan">' + esc(ageSentence(doc, now)) + "</p>"
-      + lines
-      + '<p class="release">' + esc(RELEASE_STATUS) + "</p>";
+    var fresh = freshness(doc, now);
+    return '<p class="fresh fresh-' + fresh.kind + '" id="scan">' + esc(fresh.text) + "</p>";
+  }
+  function scanLine(doc, now) {
+    if (!doc || !Array.isArray(doc.rows)) return "Snapshot is unavailable.";
+    return freshness(doc, now).text;
   }
   function blankState() {
-    return { filter: "All", sort: "heat", open: null, feedNote: null, detailsOpen: false };
+    return { filter: "All", sort: "hotter", open: null };
   }
   function reduce(state, action, doc, now) {
     var next = blankState();
     state = state || {};
-    next.filter = state.filter || "All";
-    next.sort = state.sort || "heat";
+    next.filter = FILTER_IDS[state.filter] ? state.filter : "All";
+    next.sort = SORT_IDS[state.sort] ? state.sort : "hotter";
     next.open = state.open || null;
-    next.feedNote = state.feedNote || null;
-    next.detailsOpen = !!state.detailsOpen;
     action = action || {};
     if (action.type === "filter") {
-      if (action.id && action.id !== next.filter) {
-        next.filter = action.id;
-        next.feedNote = null;
-      }
-      next.sort = resolveSort(rowsFor(doc, next.filter), next.sort).active;
+      if (FILTER_IDS[action.id]) next.filter = action.id;
     } else if (action.type === "sort") {
-      var offer = sortOffer(rowsFor(doc, next.filter), action.id);
-      if (offer.ok) next.sort = action.id;
-    } else if (action.type === "feed") {
-      var feed = ((doc && doc.feeds) || []).filter(function (item) { return item.id === action.id; })[0];
-      if (feed) {
-        next.feedNote = { id: feed.id, text: feed.id === "X" ? xText(doc, now) : feedLine(feed, now) };
-        next.detailsOpen = true;
-      }
-    } else if (action.type === "dismiss-note") {
-      next.feedNote = null;
+      if (SORT_IDS[action.id]) next.sort = action.id;
     } else if (action.type === "toggle-row") {
       next.open = next.open === action.id ? null : action.id;
-    } else if (action.type === "details") {
-      next.detailsOpen = !!action.open;
     }
     return next;
+  }
+  function bucket(rows, now) {
+    var out = { scorching: [], hot: [], warm: [], cool: [], graveyard: [], old: [] };
+    rows.forEach(function (row) {
+      var key = place(row, now);
+      (out[key] || out.cool).push(row);
+    });
+    return out;
   }
   function renderHtml(doc, state, now) {
     state = state || {};
@@ -439,84 +478,103 @@
     if (!doc || !Array.isArray(doc.rows)) {
       return '<p class="empty">Radar snapshot is not published yet.</p>';
     }
-    var filter = state.filter || "All";
-    var filtered = rowsFor(doc, filter);
-    var resolved = resolveSort(filtered, state.sort || "heat");
-    var rows = ordered(filtered, resolved.offer);
-    var total = doc.rows.length;
-    var noted = state.feedNote && state.feedNote.id;
-    var feeds = (doc.feeds || []).map(function (feed) {
-      var status = feed.id === "X" ? (xStale(doc, now) ? "hollow" : "green") : (feed.status || "unknown");
-      var on = noted === feed.id;
-      return '<button type="button" class="feed is-' + esc(status) + (on ? " noted" : "") + '" data-feed="' + esc(feed.id) + '"'
-        + (on ? ' aria-controls="feed-note"' : "") + ">"
-        + "<i></i><span>" + esc(feed.label) + "</span></button>";
+    var filter = FILTER_IDS[state.filter] ? state.filter : "All";
+    var sort = SORT_IDS[state.sort] ? state.sort : "hotter";
+    var filtered = (doc.rows || []).filter(function (row) { return accept(row, filter); });
+    var ordered = filtered.slice().sort(bySort(sort, now));
+    var groups = bucket(ordered, now);
+    var chips = [["All", "ALL"], ["SOL", "SOL"], ["RH", "RH"], ["ADA", "ADA"], ["NFT", "NFT"]].map(function (item) {
+      var on = item[0] === filter;
+      var count = (doc.rows || []).filter(function (row) { return accept(row, item[0]); }).length;
+      var feedId = FEED_FOR[item[0]];
+      var feed = feedId && (doc.feeds || []).filter(function (entry) { return entry.id === feedId; })[0];
+      var dot = feed && feed.status === "red" ? '<i class="dot"></i>' : "";
+      return '<button type="button" class="chip' + (on ? " on" : "") + '" data-filter="' + esc(item[0]) + '" aria-pressed="' + (on ? "true" : "false") + '">'
+        + dot + esc(item[1]) + " " + count + "</button>";
     }).join("");
-    var note = "";
-    if (state.feedNote && state.feedNote.text) {
-      note = '<p class="note" id="feed-note" data-for="' + esc(state.feedNote.id) + '"><span>' + esc(state.feedNote.text) + "</span>"
-        + '<button type="button" class="note-x" data-dismiss-note>Dismiss</button></p>';
-    }
-    var healthy = (doc.feeds || []).filter(function (feed) {
-      return feed && (feed.status === "green" || feed.id === "X");
-    }).map(function (feed) {
-      if (feed.id === "X") {
-        var hollow = xStale(doc, now);
-        return '<li><span class="' + (hollow ? "xmark" : "xmark filled") + '">' + icon("buzz") + "</span> " + esc(xText(doc, now)) + "</li>";
-      }
-      var age = feed.at ? ageLabel(feed.at, now) : "";
-      return "<li>" + esc(feedName(feed) + " · last recorded" + (age ? " · " + age : "")) + "</li>";
+    var sorts = SORTS.map(function (item) {
+      var on = item[0] === sort;
+      return '<button type="button" class="sort' + (on ? " on" : "") + '" data-sort="' + esc(item[0]) + '" aria-pressed="' + (on ? "true" : "false") + '">' + esc(item[1]) + "</button>";
     }).join("");
-    var scanAge = ageLabel(doc.last_scan, now) || "no time";
-    var chips = FILTERS.map(function (name) {
-      var on = name === filter;
-      return '<button type="button" class="chip' + (on ? " on" : "") + '" data-filter="' + esc(name) + '" aria-pressed="' + (on ? "true" : "false") + '">' + esc(name) + "</button>";
-    }).join("");
-    var sorts = resolved.offers.map(function (offer) {
-      var on = offer.ok && offer.key === resolved.active;
-      var label = offer.ok ? offer.label : offer.reason;
-      return '<button type="button" class="sort' + (on ? " on" : "") + '" data-sort="' + esc(offer.key) + '" aria-pressed="' + (on ? "true" : "false") + '"'
-        + (offer.ok ? "" : ' aria-disabled="true"') + ">" + esc(label) + "</button>";
-    }).join("");
-    var list;
-    var paperShown = false;
-    if (filter === "BASE" && !rows.length) {
-      list = '<p class="empty">' + esc(BASE_EMPTY) + "</p>";
-    } else if (!rows.length) {
-      list = '<p class="empty">Nothing in this cut.</p>';
-    } else {
-      list = rows.map(function (row, index) {
-        var lead = "";
-        if (row.chain === "SOL" && !paperShown) {
-          paperShown = true;
-          lead = '<h2 class="paper-h">' + esc(PAPER_HEADING) + "</h2><p class=\"paper-p\">" + esc(PAPER_SENTENCE) + "</p>";
-        }
-        return lead + rowHtml(row, index + 1, state.open === row.id, now);
+    var ladder = [];
+    TIERS.forEach(function (tier) { ladder = ladder.concat(groups[tier[0]]); });
+    var scorching = groups.scorching.length;
+    var heating = ladder.filter(function (row) { return row.heat_mark === "heating" || row.heat_mark === "hotter"; }).length;
+    var casino = ladder.filter(function (row) { return finite(row.degen) === 5; }).length;
+    var smartN = ladder.filter(function (row) { return isSmart(row, now); }).length;
+    var tiles = '<div class="tiles">'
+      + '<p class="tile"><b>' + scorching + '</b><span>scorching</span></p>'
+      + '<p class="tile"><b>' + heating + '</b><span>heating</span></p>'
+      + '<p class="tile"><b>' + casino + '</b><span>casino-tier</span></p>'
+      + '<p class="tile"><b>' + smartN + '</b><span>smart picks</span></p>'
+      + "</div>";
+    var key = '<p class="degen-key"><span class="d1">1 MID</span><span class="d2">2 SPICY</span><span class="d3">3 DEGEN</span><span class="d4">4 FULL SEND</span><span class="d5">5 CASINO</span></p>';
+    var rank = 0;
+    var sections = TIERS.map(function (tier) {
+      var rows = groups[tier[0]];
+      if (!rows.length) return "";
+      var body = rows.map(function (row) {
+        rank += 1;
+        return rowHtml(row, rank, state.open === row.id, now);
       }).join("");
+      return '<section class="tier tier-' + tier[0] + '"><h2>' + icon("heat") + esc(tier[1]) + ' <span>' + esc(tier[2]) + '</span> <b>' + rows.length + "</b></h2>" + body + "</section>";
+    }).join("");
+    if (!sections && !groups.cool.length && !groups.graveyard.length && !groups.old.length) {
+      sections = '<p class="empty">Nothing in this cut.</p>';
     }
-    var gaps = (doc.gaps || []).map(function (gap) { return "<li>" + esc(gap) + "</li>"; }).join("");
-    var hidden = doc.hidden_note ? '<p class="hidden-note" id="hidden-note">' + esc(doc.hidden_note) + "</p>" : "";
+    function fold(id, title, detail, rows) {
+      if (!rows.length) return "";
+      var body = rows.map(function (row) { return rowHtml(row, null, state.open === row.id, now); }).join("");
+      return '<details class="fold"><summary>' + esc(title) + ' <span class="fold-d">' + esc(detail) + '</span> <b>' + rows.length + "</b></summary>" + body + "</details>";
+    }
+    var folds = fold("graveyard", "Graveyard", "kill line crossed", groups.graveyard)
+      + fold("old", "Old guard", "seen over 48h", groups.old)
+      + fold("cool", "Cool", "heat under 40", groups.cool);
+    var nftCount = (doc.rows || []).filter(function (row) { return row.kind === "nft"; }).length;
+    var nftLink = "";
+    if (filter !== "NFT" && nftCount) {
+      nftLink = '<button type="button" class="fold-link" data-filter="NFT">NFTs <span class="fold-d">own ladder</span> <b>' + nftCount + "</b></button>";
+    }
     return '<div class="filters" role="group" aria-label="Filter" data-active="' + esc(filter) + '">' + chips + "</div>"
-      + '<div class="sorts" role="group" aria-label="Sort" data-active="' + esc(resolved.active) + '">' + sorts + "</div>"
-      + '<p class="tally" id="tally">' + filtered.length + " of " + total + " leads</p>"
+      + '<div class="sorts" role="group" aria-label="Sort" data-active="' + esc(sort) + '">' + sorts + "</div>"
+      + tiles + key
       + '<p class="caption">Heat is a ranking, not a buy signal.</p>'
-      + '<div class="list">' + list + "</div>"
-      + '<details class="more"' + (state.detailsOpen ? " open" : "") + "><summary>Last-recorded details</summary>"
-      + '<p class="metric">Last scan ' + esc(scanAge) + " · " + total + " leads</p>"
-      + '<div class="feeds" role="group" aria-label="Feed health">' + feeds + "</div>"
-      + note
-      + (healthy ? '<ul class="healthy">' + healthy + "</ul>" : "")
-      + hidden
-      + (gaps ? '<ul class="gap-list">' + gaps + "</ul>" : "")
-      + "</details>";
+      + '<div class="list">' + sections + "</div>"
+      + folds + nftLink;
   }
-  function legendHtml() {
+  function legendHtml(doc, now) {
+    now = now == null ? Date.now() : now;
     function items(list) {
       return list.map(function (item) {
         return '<li class="leg-' + esc(item[0]) + '">' + icon(item[0]) + "<p><strong>" + esc(item[1]) + "</strong> " + esc(item[2]) + "</p></li>";
       }).join("");
     }
-    return '<ul class="legend">' + items(LEGEND) + '</ul><p class="not-live">Not on live rows</p><ul class="legend">' + items(NOT_LIVE) + "</ul>";
+    var feeds = "";
+    if (doc && Array.isArray(doc.feeds)) {
+      feeds = (doc.feeds || []).map(function (feed) {
+        var text = feed && feed.id === "X" ? xText(doc, now) : feedLine(feed, now);
+        return "<li>" + esc(text) + "</li>";
+      }).join("");
+    }
+    var unnamed = "";
+    if (doc && doc.unnamed_hidden) {
+      unnamed = '<p class="hidden-note" id="unnamed-note">' + esc(doc.unnamed_hidden) + " unnamed rows left off the ladder.</p>";
+    }
+    var hidden = "";
+    if (doc && doc.hidden_note) {
+      hidden = '<p class="hidden-note" id="hidden-note">' + esc(doc.hidden_note) + "</p>";
+    }
+    var rules = '<p class="not-live">Smart</p><ul class="legend"><li><p><strong>SMART</strong> Hot or heating, and no red flag. A missing input gives no badge.</p></li>'
+      + "<li><p><strong>Thin book</strong> Liquidity under 10% of volume, when both numbers are on the row.</p></li>"
+      + "<li><p><strong>Crowded</strong> Top-heavy, snipers, or coordinated.</p></li>"
+      + "<li><p><strong>Kill line</strong> Crossed, or within 25% of the line. A Solana snap uses an 80% price drop, and 60% is near.</p></li>"
+      + "<li><p><strong>Fading</strong> Buys falling, or seen over 48h. Prior heat is not stored.</p></li></ul>";
+    return '<ul class="legend">' + items(LEGEND) + '</ul><p class="not-live">Not on live rows</p><ul class="legend">' + items(NOT_LIVE) + "</ul>"
+      + rules
+      + '<p class="not-live">Feed health</p>'
+      + (feeds ? '<ul class="healthy">' + feeds + "</ul>" : "<p>Feed health appears when a snapshot is loaded.</p>")
+      + unnamed + hidden
+      + '<p class="hidden-note">' + esc(BASE_EMPTY) + "</p>";
   }
 
   var state = blankState();
@@ -528,8 +586,6 @@
       if (!el || !el.getAttribute) return null;
       if (el.hasAttribute("data-filter")) return "filter";
       if (el.hasAttribute("data-sort")) return "sort:" + el.getAttribute("data-sort");
-      if (el.hasAttribute("data-feed")) return "feed:" + el.getAttribute("data-feed");
-      if (el.hasAttribute("data-dismiss-note")) return "dismiss";
       if (el.hasAttribute("data-id")) return "row:" + el.getAttribute("data-id");
       if (el.id) return "id:" + el.id;
     } catch (err) {
@@ -542,12 +598,9 @@
     var el = null;
     if (key === "filter") el = document.querySelector('[data-filter="' + state.filter + '"]');
     else if (key.indexOf("sort:") === 0) el = document.querySelector('[data-sort="' + key.slice(5) + '"]');
-    else if (key.indexOf("feed:") === 0) el = document.querySelector('[data-feed="' + key.slice(5) + '"]');
-    else if (key === "dismiss") el = document.querySelector("[data-dismiss-note]");
     else if (key.indexOf("row:") === 0) el = document.querySelector('[data-id="' + key.slice(4) + '"]');
     else if (key.indexOf("id:") === 0) el = document.getElementById(key.slice(3));
     if (!el && key.indexOf("sort:") === 0) el = document.querySelector('[data-sort="' + state.sort + '"]');
-    if (!el && key === "dismiss") el = document.querySelector('[data-filter="' + state.filter + '"]');
     if (el && el.focus) {
       try { el.focus({ preventScroll: true }); } catch (err) { el.focus(); }
     }
@@ -556,17 +609,16 @@
     var app = document.getElementById("app");
     var summary = document.getElementById("summary");
     var scan = document.getElementById("scan");
+    var legendBody = document.getElementById("legend-body");
     var key = focusedKey();
     var y = 0;
     try { y = root.scrollY || 0; } catch (err) { y = 0; }
     if (!app && !summary) return;
     var now = Date.now();
-    if (doc && Array.isArray(doc.rows)) {
-      state.sort = resolveSort(rowsFor(doc, state.filter || "All"), state.sort || "heat").active;
-    }
     if (summary) summary.innerHTML = summaryHtml(doc, now);
     else if (!doc && scan) scan.textContent = "Snapshot is unavailable.";
-    else if (scan) scan.textContent = ageSentence(doc, now);
+    else if (scan) scan.textContent = scanLine(doc, now);
+    if (legendBody) legendBody.innerHTML = legendHtml(doc, now);
     if (app) app.innerHTML = renderHtml(doc, state, now);
     restoreFocus(key);
     try {
@@ -599,7 +651,7 @@
     var openLegend = document.getElementById("legend-open");
     var legend = document.getElementById("legend");
     var legendBody = document.getElementById("legend-body");
-    if (legendBody) legendBody.innerHTML = legendHtml();
+    if (legendBody) legendBody.innerHTML = legendHtml(null, Date.now());
     if (openLegend && legend) {
       openLegend.addEventListener("click", function () {
         if (typeof legend.showModal === "function") legend.showModal();
@@ -617,17 +669,7 @@
     });
     var app = document.getElementById("app");
     if (!app) return;
-    app.addEventListener("toggle", function (event) {
-      var target = event.target;
-      if (!target || !target.classList || !target.classList.contains("more")) return;
-      state.detailsOpen = !!target.open;
-    }, true);
     app.addEventListener("click", function (event) {
-      if (event.target.closest("[data-dismiss-note]")) {
-        state = reduce(state, { type: "dismiss-note" }, doc, Date.now());
-        paint();
-        return;
-      }
       var filter = event.target.closest("[data-filter]");
       if (filter) {
         state = reduce(state, { type: "filter", id: filter.getAttribute("data-filter") }, doc, Date.now());
@@ -637,12 +679,6 @@
       var sortBtn = event.target.closest("[data-sort]");
       if (sortBtn) {
         state = reduce(state, { type: "sort", id: sortBtn.getAttribute("data-sort") }, doc, Date.now());
-        paint();
-        return;
-      }
-      var feed = event.target.closest("[data-feed]");
-      if (feed && doc) {
-        state = reduce(state, { type: "feed", id: feed.getAttribute("data-feed") }, doc, Date.now());
         paint();
         return;
       }
@@ -682,16 +718,16 @@
     renderHtml: renderHtml,
     summaryHtml: summaryHtml,
     scanLine: scanLine,
-    ageSentence: ageSentence,
     legendHtml: legendHtml,
     paint: paint,
     reduce: reduce,
-    sortOffer: sortOffer,
+    hotterScore: hotterScore,
+    redFlags: redFlags,
+    isSmart: isSmart,
+    place: place,
     BASE_EMPTY: BASE_EMPTY,
     LEGEND: LEGEND,
-    NOT_LIVE: NOT_LIVE,
-    PAPER_SENTENCE: PAPER_SENTENCE,
-    RELEASE_STATUS: RELEASE_STATUS
+    NOT_LIVE: NOT_LIVE
   };
   if (root.document && root.document.getElementById && root.document.getElementById("app")) boot();
 })(typeof globalThis !== "undefined" ? globalThis : this);
