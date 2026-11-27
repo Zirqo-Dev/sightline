@@ -1,11 +1,11 @@
 {
- "at": "2026-11-27T21:12:59Z",
+ "at": "2026-11-27T23:12:03Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14256149,
+ "height": 14256857,
  "baseline_at": "2026-11-14T17:13:24Z",
- "ada_balance": 1711.617324,
+ "ada_balance": 806.191175,
  "positions": {
   "6e917b+fda00259": 2790905,
   "ASCEND": 312721070315,
@@ -65,7 +65,7 @@
   "MISS": 8375000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1400000583988,
+  "NIGHT": 1402649773346,
   "NIKY": 26285265786372,
   "NSNEK": 3127235605656,
   "NVL": 2,
@@ -175,7 +175,7 @@
   "MISS": 8375000,
   "MOGE": 13956342138051,
   "MSNEK": 8285367129130,
-  "NIGHT": 1400000583988,
+  "NIGHT": 1402649773346,
   "NIKY": 26285265786372,
   "NSNEK": 3127235605656,
   "NVL": 2,
@@ -520,7 +520,7 @@
   {
    "token": "NIGHT",
    "policy": "0691b2fe",
-   "qty": 1400000583988
+   "qty": 1402649773346
   },
   {
    "token": "NIKY",
@@ -37611,6 +37611,36 @@
    "counterparty_tag": null,
    "order_ref_short": "d1829a0864#0",
    "order_status": "open"
+  },
+  {
+   "time": "2026-11-27T21:33:20Z",
+   "tx_short": "fae5b8a499",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 588504161,
+   "ada_leg": 201.657311,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-27T21:38:42Z",
+   "tx_short": "f4321ade4e",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 588444039,
+   "ada_leg": 201.662703,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-27T22:28:11Z",
+   "tx_short": "13398206d1",
+   "kind": "swap",
+   "token": "NIGHT",
+   "qty": 1472241158,
+   "ada_leg": 502.106135,
+   "counterparty_tag": null,
+   "direction": "buy"
   }
  ],
  "capped": false,
@@ -37621,7 +37651,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 6,
+ "koios_calls": 7,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
