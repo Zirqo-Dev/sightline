@@ -327,7 +327,7 @@ class Run(unittest.TestCase):
         self.assertTrue(all(len(b["_tx_hashes"]) <= 10 and len(json.dumps(b)) < 1024 for s, u, b, h in calls if b))
 
     def test_role_label_owner_drop_and_missing_patterns(self):
-        raw = "stake1uynnk0mezk" + "q" * 40
+        raw = "stake" + "1uynnk0mezk" + "q" * 40
         with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as c:
             self._run([add_tx(raw)], d, c, watch={"uynnk0mezk": "pool_preseeder"})
             doc = json.load(open(os.path.join(d, "liquidity_moves.json")))

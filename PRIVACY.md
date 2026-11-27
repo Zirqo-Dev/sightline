@@ -6,7 +6,7 @@ This repo is public and published via GitHub Pages. It holds **paper and researc
 
 Never write the owner's name, handles, emails, or wallets, or any tracked person's real handles or "founder" wording, into any file, desk data, or commit message in this repo. Say "the owner". Use codenames for whales. Raw identities go only in the private repo.
 
-- Never commit owner wallet addresses, stake keys, real holdings, balances, or real transactions.
+- Never commit owner wallet addresses, stake keys, real holdings, balances, or real transactions. A short Cardano fragment counts too: `addr1` or `stake1`, then bech32, with an ellipsis (`..`, `...`, or `…`) or with at least two bech32 characters and no ellipsis. It is not cut out of a longer id. A one-character kind mark is left as it is. An allowlisted platform address is masked and stays. The publish scrub replaces any other match with a `w-` tag, the first 8 hex digits of SHA-256 of the exact fragment.
 - Keep those in private bot memory, not in any file here (including notes, headlines, history and followups).
 - Third-party research data (token mints, policy IDs, platform/pool addresses, launcher/sniper keys) is fine.
 - The whale roster's private file (`whales/roster.json`, wallets and social accounts) must never be committed. `solada-prefilter/whale_roster.json` is the public tally: codename, role, status, scores, and `eligible_for_active` with its reason. No wallets, stake keys, address tags, or handles. The guard rejects a file named `roster.json`, a private roster document, and a public tally that contains a wallet, a handle, or the previous field wording. `eligible_for_active` does not promote a whale. Promotion stays a manual owner decision.
