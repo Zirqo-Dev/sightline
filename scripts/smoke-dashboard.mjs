@@ -105,10 +105,9 @@ assert(html.includes("not installed"), "unknown panel placeholder");
 assert(html.includes("dashboard/panels/heatmap.js"), "placeholder names the missing file");
 assert(html.includes("Swarm heatmap"), "placeholder keeps the title");
 
-const addr = "addr" + "1";
-const snippet = addr + "q9ac..u9wwut";
-const snippetEllipsis = addr + "q9ac…u9wwut";
-const compact = addr + "q9…wwut";
+const snippet = "addr1" + "x".repeat(8) + ".." + "x".repeat(4);
+const snippetEllipsis = "addr1" + "x".repeat(8) + "…" + "x".repeat(4);
+const compact = "addr1" + "x".repeat(2) + "…" + "x".repeat(4);
 const fragment = "u8a2m6";
 assert(S.walletLabel(snippet) === compact, "long snippet compacts to first 7, ellipsis, last 4, got " + S.walletLabel(snippet));
 assert(S.walletLabel(snippet) === S.walletLabel(snippetEllipsis), "dot and ellipsis forms share a tag label");
