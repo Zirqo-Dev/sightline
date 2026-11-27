@@ -5,7 +5,7 @@
   "measured_factor": true,
   "min_sample": 8,
   "dormant_count": 15,
-  "asof": "2026-11-27T09:18:10Z",
+  "asof": "2026-11-27T11:16:43Z",
   "note": "Research tally. A hit is an observed checkpoint where every measured series (price and liquidity) moves the whale's way at +1h, +6h, or +24h. A wrong-way observation is a miss. No observation is unobserved and is not a miss. n_observed is hits plus misses. Rates stay blank under 8 observed checkpoints on that horizon in that tally. scores.live is the forward quote path, or the lead's published private-cache tally. scores.backfill is approximate: nearest desk-data ADA/qty within 20 minutes at 1h, 60 minutes at 6h, and 3 hours at 24h, plus pool ADA when a snapshot is in that window. Backfill never replaces live. eligible_for_active needs at least 25 live observed checkpoints and a live hit rate above 55% at both 6h and 24h. promising_backfill means the approximate tally alone would clear that bar. Nothing is promoted automatically. Not a buy signal.",
   "whales": [
     {
@@ -16,8 +16,8 @@
       "eligible_reason": "not eligible: live 6h observed 308, rate 0.38 (need > 0.55); live 24h observed 215, rate 0.386 (need > 0.55); promotion is a manual owner decision",
       "promising_backfill": false,
       "scores": {
-        "events": 2551,
-        "accumulate": 2527,
+        "events": 2552,
+        "accumulate": 2528,
         "trim": 0,
         "exit": 24,
         "live": {
@@ -269,7 +269,7 @@
       "role": "watch",
       "status": "candidate",
       "eligible_for_active": false,
-      "eligible_reason": "not eligible: live 6h observed 5 (need 25), rate blank (need > 0.55); live 24h observed 0 (need 25), rate blank (need > 0.55); promotion is a manual owner decision",
+      "eligible_reason": "not eligible: live 6h observed 6 (need 25), rate blank (need > 0.55); live 24h observed 0 (need 25), rate blank (need > 0.55); promotion is a manual owner decision",
       "promising_backfill": false,
       "scores": {
         "events": 26,
@@ -283,7 +283,7 @@
             "hit_rate": null
           },
           "h6": {
-            "n_observed": 5,
+            "n_observed": 6,
             "hits": 0,
             "hit_rate": null
           },
@@ -316,8 +316,8 @@
         "priced_h1": 2,
         "hits_h1": 0,
         "hit_rate_h1": null,
-        "n_observed_h6": 5,
-        "priced_h6": 5,
+        "n_observed_h6": 6,
+        "priced_h6": 6,
         "hits_h6": 0,
         "hit_rate_h6": null,
         "n_observed_h24": 0,
