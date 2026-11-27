@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-11-27T04:00:40Z",
+ "generated_at": "2026-11-27T04:30:30Z",
  "cfg_version": "v1-v6.5",
  "open": [
   {
@@ -25,11 +25,11 @@
     "px": 22.69826640628426
    },
    "frac": 0.333333,
-   "last_mark": 46.705035501907744,
+   "last_mark": 46.80482666875854,
    "thesis": "safety:risk_score",
    "result": {
     "pnl": 0.231681414,
-    "pct": 105.76,
+    "pct": 106.2,
     "unit": "SOL",
     "net_pnl": 0.231681414,
     "gross_pnl": 0.237134547
@@ -39,18 +39,11 @@
    "entry_token_reserve": 882480.0,
    "entry_k": 17607240960.0,
    "entry_reserve_error": null,
-   "last_sol_reserve": 28735.0,
-   "last_token_reserve": 613849.0,
-   "last_k": 17638951015.0,
+   "last_sol_reserve": 28766.0,
+   "last_token_reserve": 613174.0,
+   "last_k": 17638563284.0,
    "last_reserve_error": null,
    "reserve_snaps": [
-    {
-     "t": "2026-11-26T04:30:30Z",
-     "sol": 24613.0,
-     "token": 715939.0,
-     "k": 17621406607.0,
-     "pool": "BJbmxBiGv7sQRZa9soKci4StfrqTxLiWFFBWPoVKSqVQ"
-    },
     {
      "t": "2026-11-26T05:00:32Z",
      "sol": 24720.0,
@@ -379,6 +372,13 @@
      "token": 613849.0,
      "k": 17638951015.0,
      "pool": "BJbmxBiGv7sQRZa9soKci4StfrqTxLiWFFBWPoVKSqVQ"
+    },
+    {
+     "t": "2026-11-27T04:30:30Z",
+     "sol": 28766.0,
+     "token": 613174.0,
+     "k": 17638563284.0,
+     "pool": "BJbmxBiGv7sQRZa9soKci4StfrqTxLiWFFBWPoVKSqVQ"
     }
    ],
    "entry_pool": "BJbmxBiGv7sQRZa9soKci4StfrqTxLiWFFBWPoVKSqVQ",
@@ -390,9 +390,121 @@
    "entry_quote_px": 22.69826640628426,
    "entry_quote_impact": 0.0037226541396531976,
    "entry_quote_error": null,
-   "max_price_held": 46.705035501907744,
+   "max_price_held": 46.80482666875854,
    "min_price_held": 22.69826640628426,
-   "max_price_held_pct": 105.7648,
+   "max_price_held_pct": 106.2044,
+   "min_price_held_pct": 0.0
+  },
+  {
+   "id": "S-20261127T0430-AgBxpump",
+   "ticker": "Christmas",
+   "mint": "AgBxPNBFmBks58rtVnp2ZW5WHtE2968qTPWgDEvbpump",
+   "book": "S",
+   "status": "open",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-11-27T04:30:30Z",
+   "window_ends_at": "2026-11-27T06:30:30Z",
+   "entry": {
+    "px": 0.0005178562706173447
+   },
+   "frac": 1.0,
+   "last_mark": 0.0005178562706173447,
+   "thesis": "safety:too_fresh",
+   "result": {
+    "pnl": 0.0,
+    "pct": 0.0,
+    "unit": "SOL",
+    "net_pnl": 0.0,
+    "gross_pnl": 0.0
+   },
+   "obs_v": 1,
+   "entry_sol_reserve": 84.9158,
+   "entry_token_reserve": 174768887.0,
+   "entry_k": 14840639854.714602,
+   "entry_reserve_error": null,
+   "last_sol_reserve": 84.9158,
+   "last_token_reserve": 174768887.0,
+   "last_k": 14840639854.714602,
+   "last_reserve_error": null,
+   "reserve_snaps": [
+    {
+     "t": "2026-11-27T04:30:30Z",
+     "sol": 84.9158,
+     "token": 174768887.0,
+     "k": 14840639854.714602,
+     "pool": "H8kdVdY8JhPztcxsNvR85mXrqwMYpZs6FDANhYhhtXWh"
+    }
+   ],
+   "entry_pool": "H8kdVdY8JhPztcxsNvR85mXrqwMYpZs6FDANhYhhtXWh",
+   "pool_created_at": "2026-11-27T04:26:10Z",
+   "pool_age_at_entry_s": 260.0,
+   "graduated_pump": true,
+   "boost_window": true,
+   "entry_quote_out": 965518867627,
+   "entry_quote_px": 0.0005178562706173447,
+   "entry_quote_impact": 0.020360829983850692,
+   "entry_quote_error": null,
+   "max_price_held": 0.0005178562706173447,
+   "min_price_held": 0.0005178562706173447,
+   "max_price_held_pct": 0.0,
+   "min_price_held_pct": 0.0
+  },
+  {
+   "id": "S-20261127T0430-5hkBpump",
+   "ticker": "Christmas",
+   "mint": "5hkBYuFQDpAAqemCiVqXCuU6Ya5dqKhtRobzJsg6pump",
+   "book": "S",
+   "status": "open",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-11-27T04:30:30Z",
+   "window_ends_at": "2026-11-27T06:30:30Z",
+   "entry": {
+    "px": 4.969377888540797e-05
+   },
+   "frac": 1.0,
+   "last_mark": 4.969377888540797e-05,
+   "thesis": "safety:too_fresh",
+   "result": {
+    "pnl": 0.0,
+    "pct": 0.0,
+    "unit": "SOL",
+    "net_pnl": 0.0,
+    "gross_pnl": 0.0
+   },
+   "obs_v": 1,
+   "entry_sol_reserve": 14.7903,
+   "entry_token_reserve": 599129173.0,
+   "entry_k": 8861300207.4219,
+   "entry_reserve_error": null,
+   "last_sol_reserve": 14.7903,
+   "last_token_reserve": 599129173.0,
+   "last_k": 8861300207.4219,
+   "last_reserve_error": null,
+   "reserve_snaps": [
+    {
+     "t": "2026-11-27T04:30:30Z",
+     "sol": 14.7903,
+     "token": 599129173.0,
+     "k": 8861300207.4219,
+     "pool": "GMLZNmevJP1fJDrUMmeJGhxqDdQuHLeDibLhxrNWqvbo"
+    }
+   ],
+   "entry_pool": "GMLZNmevJP1fJDrUMmeJGhxqDdQuHLeDibLhxrNWqvbo",
+   "pool_created_at": "2026-11-27T04:19:24Z",
+   "pool_age_at_entry_s": 666.0,
+   "graduated_pump": true,
+   "boost_window": false,
+   "entry_quote_out": 10061621619740,
+   "entry_quote_px": 4.969377888540797e-05,
+   "entry_quote_impact": 0.029503546341086546,
+   "entry_quote_error": null,
+   "max_price_held": 4.969377888540797e-05,
+   "min_price_held": 4.969377888540797e-05,
+   "max_price_held_pct": 0.0,
    "min_price_held_pct": 0.0
   }
  ],
@@ -35589,12 +35701,12 @@
    "realized_gross_pnl": -15.347275813
   },
   "S": {
-   "cash": 7.169962712,
-   "equity": 7.510835324,
+   "cash": 6.159123439,
+   "equity": 7.489885114,
    "realized_pnl": -16.897567857,
-   "open": 1,
+   "open": 3,
    "closed": 113,
-   "fills_today": 7,
+   "fills_today": 9,
    "would_halt": [],
    "realized_gross_pnl": -15.696508472
   }
