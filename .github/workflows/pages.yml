@@ -7,10 +7,10 @@ on:
     branches: [main]
   workflow_dispatch:
   # Rebuild after a successful data run on main. No new cron.
-  # GitHub matches the workflow file name. run-solada.yml only pings the
-  # webhook; the Cardano file itself is written by solada-prefilter.yml.
+  # workflow_run matches the workflow name. run-solada.yml only pings the
+  # webhook; the Cardano file itself is written by Solada prefilter.
   workflow_run:
-    workflows: ["solana-desk-scan.yml", "run-solada.yml", "nft-snapshot.yml"]
+    workflows: ["solana-desk-scan.yml", "run-solada.yml", "nft-snapshot.yml", "Solada prefilter"]
     types: [completed]
 
 permissions:
