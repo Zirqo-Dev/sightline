@@ -89,7 +89,7 @@ Icons are local files under `dashboard/icons/`, listed in `dashboard/icons/icons
 
 On a phone (600px and under), tables become two-line rows. Level and status pills stay on one line. Long cells ellipsize; tap the row to read the rest.
 
-Wallet addresses, stake keys, key fragments and mints in notes, headlines, rules and other prose render as a compact tag: the first 7 characters, an ellipsis, then the last 4 (`addr1q9…wwut`). A fragment of 12 characters or fewer, such as `u8a2m6`, stays whole. The tag color is a hash of the normalized value, so the same wallet looks the same on every desk. Hover or tap shows the snippet exactly as it is stored. Tags do not wrap. The owner's wallet is not masked here; `scripts/privacy-guard.sh` still blocks it before a deploy.
+Wallet addresses, stake keys, key fragments and mints in notes, headlines, rules and other prose render as a compact tag: the first 7 characters, an ellipsis, then the last 4. A fragment of 12 characters or fewer, such as `u8a2m6`, stays whole. The tag color is a hash of the normalized value, so the same wallet looks the same on every desk. Hover or tap shows the snippet exactly as it is stored. Tags do not wrap. The owner's wallet is not masked here; `scripts/privacy-guard.sh` still blocks it before a deploy.
 
 ## Build and hosting
 
