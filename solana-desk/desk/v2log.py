@@ -173,6 +173,41 @@ def public_id(value):
     return value
 
 
+def _public_token_text(value, limit):
+    """A token name or symbol from the pair already fetched. Not an address and not a handle."""
+    if not isinstance(value, str):
+        return None
+    text = " ".join(value.split())
+    if not text or len(text) > limit:
+        return None
+    if any(ord(ch) < 32 for ch in text):
+        return None
+    if _PRIVACY_RE.search(text) or "@" in text or "/" in text or "\\" in text:
+        return None
+    lowered = text.lower()
+    if lowered.startswith("http:") or lowered.startswith("https:") or "stake1" in lowered or "addr1" in lowered:
+        return None
+    if public_id(text):
+        return None
+    if re.fullmatch(r"0x[0-9a-fA-F]{40}", text) or re.fullmatch(r"0x[0-9a-fA-F]{64}", text):
+        return None
+    return text
+
+
+def token_labels(pair):
+    """Name and symbol on the base token of a pair this scan already fetched.
+
+    Logging only. Not an entry, exit, skip, or size input. Missing or rejected
+    text is omitted so the row stays a placeholder until a later snap records one.
+    """
+    if not isinstance(pair, dict):
+        return None, None
+    base = pair.get("baseToken")
+    if not isinstance(base, dict):
+        return None, None
+    return _public_token_text(base.get("name"), 64), _public_token_text(base.get("symbol"), 20)
+
+
 def _swaps(h1):
     """buys + sells when both were present as numbers. None when the input is incomplete."""
     if not isinstance(h1, dict) or "buys" not in h1 or "sells" not in h1:
@@ -853,14 +888,22 @@ def _emit_candidate(row):
     return out
 
 
-def _snap_row(mint, pool, now, sol, token, k, h1, scan_id, origin, error):
+def _snap_row(mint, pool, now, sol, token, k, h1, scan_id, origin, error, name=None, symbol=None):
+    """One reserve row. Name and symbol are optional labels from the same pair."""
     t_s = _t_s(now)
-    return {
+    row = {
         "v": V, "scan_id": scan_id, "mint": mint, "pool": pool,
         "t": _iso(t_s) if t_s is not None else None, "t_s": t_s,
         "sol": sol, "token": token, "k": k, "txns_h1": h1,
         "origin": origin, "error": error,
     }
+    label = _public_token_text(name, 64)
+    ticker = _public_token_text(symbol, 20)
+    if label:
+        row["name"] = label
+    if ticker:
+        row["symbol"] = ticker
+    return row
 
 
 def _touch_pool(pools, mint, at, pool, sol, token, k, h1, scan_id, error=None):
@@ -1170,6 +1213,7 @@ def _record(data_dir, seen, fetched, now, run_id, *, sources, pre_filters, fetch
             _write_observation(
                 data_dir, pools, row["mint"], row.get("_fetch_at", now), run_id, "scan",
                 max_bytes, row["inputs"], written_stems,
+                name=row.get("_token_name"), symbol=row.get("_token_symbol"),
             )
         except Exception:
             log_errors += 1
@@ -1249,6 +1293,7 @@ def _candidate_row(pools, mint, source, index, selected, rec, pool_lookup, looke
         k_series = list((info or {}).get("k_series") or [])
         snap_stems = list((info or {}).get("snap_stems") or [])
         looked_up = False
+    token_name, token_symbol = token_labels(pair) if pool_lookup == "ok" and isinstance(pair, dict) else (None, None)
     rules = rules_from_logged(inputs, k_series, looked_up and pool_lookup == "ok")
     picked = bool(isinstance(info, dict) and info.get("s2_picked"))
     first_pick = bool(s2_pick(rules, pool_lookup) and not picked)
@@ -1264,7 +1309,7 @@ def _candidate_row(pools, mint, source, index, selected, rec, pool_lookup, looke
         "pair_at_s": pair_s, "rug_at_s": rug_at,
         "inputs": inputs, "reserve": reserve, "rules": rules,
         "snap_stems": snap_stems, "first_pick": first_pick,
-        "_fetch_at": fetch_at,
+        "_fetch_at": fetch_at, "_token_name": token_name, "_token_symbol": token_symbol,
     }
     row.update(_k_public(k_series))
     return row
@@ -1283,16 +1328,17 @@ def _follow_snapshot(pools, mint, pair, error, at, run_id, data_dir, max_bytes, 
             public_id(pools.get(mint, {}).get("pool")) if isinstance(pools.get(mint), dict) else None
         )
     info = _touch_pool(pools, mint, at, pool, sol, token, k, h1, str(run_id), error=err)
+    label, ticker = token_labels(pair) if isinstance(pair, dict) else (None, None)
     path = append_jsonl(
         data_dir, SNAPS,
-        _snap_row(mint, pool, at, sol, token, k, h1, str(run_id), "follow", err),
+        _snap_row(mint, pool, at, sol, token, k, h1, str(run_id), "follow", err, name=label, symbol=ticker),
         at, max_bytes=max_bytes,
     )
     _note_stem(info, path, written)
     _write_death(data_dir, mint, info, at, run_id, max_bytes, sol, token, k, h1, pool, err)
 
 
-def _write_observation(data_dir, pools, mint, at, run_id, origin, max_bytes, inputs, written):
+def _write_observation(data_dir, pools, mint, at, run_id, origin, max_bytes, inputs, written, name=None, symbol=None):
     info = pools.get(mint) or {}
     sol, token, k = inputs.get("sol"), inputs.get("token"), inputs.get("k")
     pool = inputs.get("pairAddress")
@@ -1300,7 +1346,7 @@ def _write_observation(data_dir, pools, mint, at, run_id, origin, max_bytes, inp
     err = inputs.get("reserve_error")
     path = append_jsonl(
         data_dir, SNAPS,
-        _snap_row(mint, pool, at, sol, token, k, h1, str(run_id), origin, err),
+        _snap_row(mint, pool, at, sol, token, k, h1, str(run_id), origin, err, name=name, symbol=symbol),
         at, max_bytes=max_bytes,
     )
     if isinstance(info, dict):

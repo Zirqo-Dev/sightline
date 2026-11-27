@@ -18,6 +18,8 @@
     "k": {"type": ["number", "null"]},
     "txns_h1": {"type": ["object", "null"], "additionalProperties": {"type": ["number", "null"]}},
     "origin": {"enum": ["scan", "follow"]},
-    "error": {"type": ["string", "null"], "maxLength": 32}
+    "error": {"type": ["string", "null"], "maxLength": 32},
+    "name": {"type": "string", "minLength": 1, "maxLength": 64},
+    "symbol": {"type": "string", "minLength": 1, "maxLength": 20}
   }
 }

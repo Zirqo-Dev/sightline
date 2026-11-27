@@ -4,9 +4,10 @@
 The phone reads radar.json. This step runs inside the existing Pages build.
 It does not change a schedule, a secret, or a scan log.
 
-Solana scan lines have no ticker. Rows are named SOL #1, SOL #2, … from
-the raw pool snaps. Mint and pool addresses are dropped before the file is
-written. Ages are absolute timestamps; the page computes the labels.
+Solana snap lines may carry a token name and symbol recorded by the scan.
+A row uses that symbol, then that name. SOL #1, SOL #2, … are only the
+fallback when neither was recorded. A DexScreener link is the pair or mint
+already on the snap. Ages are absolute timestamps; the page computes the labels.
 
 A coin with no picture uses a committed dashboard icon when the ticker and
 the chain both match. SOL #N rows stay picture-less. NFT rows publish no image.
@@ -26,6 +27,7 @@ are grouped by the raw slug. The file records only how many collections were
 left out.
 """
 import datetime
+import hashlib
 import json
 import math
 import pathlib
@@ -58,6 +60,8 @@ _BANNED_KEYS = {
 }
 _SYMBOL = re.compile(r"[A-Za-z0-9][A-Za-z0-9 ._$-]{0,19}")
 _FULL_ADDR = re.compile(r"^0x[0-9a-fA-F]{40}$")
+# Solana links are base58. A link that would carry 0x or a 64-hex asset id is not published.
+_SOL_DEX = re.compile(r"^https://dexscreener\.com/solana/[1-9A-HJ-NP-Za-km-z]{32,44}$")
 
 
 def parse_time(value):
@@ -248,17 +252,57 @@ def _public_id(prefix, slug, name):
     return prefix + token
 
 
-def _walk(value):
+def _sol_dex(ident):
+    """A Solana DexScreener link. Base58 pair or mint only. No 0x and no long hex."""
+    if not isinstance(ident, str) or not _MINT.fullmatch(ident):
+        return None
+    url = "https://dexscreener.com/solana/" + ident
+    if not _SOL_DEX.fullmatch(url) or _ETH.search(url) or _STAKE.search(url):
+        return None
+    return url
+
+
+def _sol_row_id(ident):
+    """Stable id from the pool, or the mint when no pool was recorded.
+
+    The address is not the id. Ten hex characters of SHA-256 keep two pools
+    with the same symbol apart without a base58 exemption on the row id.
+    """
+    if not isinstance(ident, str) or not ident:
+        return None
+    return "sol-" + hashlib.sha256(ident.encode("utf-8")).hexdigest()[:10]
+
+
+def _token_label(value, limit):
+    """A recorded token name or symbol. Addresses and handles are not labels."""
+    if not isinstance(value, str):
+        return None
+    text = " ".join(value.split())
+    if not text or len(text) > limit:
+        return None
+    if _MINT.search(text) or _ETH.search(text) or _STAKE.search(text):
+        return None
+    if "@" in text or "/" in text or "\\" in text:
+        return None
+    lowered = text.lower()
+    if "http:" in lowered or "https:" in lowered:
+        return None
+    return text
+
+
+def _walk(value, key=None):
     if isinstance(value, dict):
-        for key, item in value.items():
-            lowered = str(key).lower()
+        for item_key, item in value.items():
+            lowered = str(item_key).lower()
             if lowered in _BANNED_KEYS or "d_bps" in lowered or "onset" in lowered or "verdict" in lowered:
                 raise ValueError("banned key")
-            _walk(item)
+            _walk(item, item_key)
     elif isinstance(value, list):
         for item in value:
-            _walk(item)
+            _walk(item, key)
     elif isinstance(value, str):
+        if key == "dex_url" and _SOL_DEX.fullmatch(value) and not _ETH.search(value) and not _STAKE.search(value):
+            return
         if _MINT.search(value) or _ETH.search(value) or _STAKE.search(value):
             raise ValueError("banned string")
         lowered = value.lower()
@@ -331,12 +375,13 @@ def _workflow(doc, filename, title):
     return None
 
 
-def _feed(feed_id, label, status, at, now, detail):
+def _feed(feed_id, label, status, at, now, detail, name=None):
     """Age is not baked. The page computes it from `at`."""
     del now
     return {
         "id": feed_id,
         "label": label,
+        "name": name or label,
         "status": status,
         "at": at,
         "detail": detail,
@@ -396,6 +441,8 @@ def _disambiguate(rows):
                 row.pop("_hint", None)
             continue
         used = set()
+        original = [row.get("id") for row in group]
+        shared = {item for item in original if original.count(item) > 1}
         for index, row in enumerate(group, start=1):
             hint = row.pop("_hint", None)
             if hint and hint not in used:
@@ -403,6 +450,8 @@ def _disambiguate(rows):
                 used.add(hint)
             else:
                 row["show_age"] = True
+            if row.get("id") not in shared:
+                continue
             suffix = re.sub(r"[^a-z0-9]+", "-", (hint or str(index)).lower()).strip("-") or str(index)
             row["id"] = "%s-%s" % (row.get("id") or "row", suffix)
     seen = {}
@@ -611,6 +660,8 @@ def _finish(rows, limit):
     out = []
     for row in ranked[:limit]:
         row.pop("_raw", None)
+        if not row.get("dex_url"):
+            row.pop("dex_url", None)
         _apply_coin_icon(row, icons)
         try:
             out.append(_public_row(row))
@@ -643,6 +694,7 @@ def _solana_rows(manifest_lines, snap_lines, death_lines=None):
             slot["holders"] = holders
     seen_mints = set()
     series = {}
+    recorded = {}
     for line in snap_lines or []:
         if not isinstance(line, dict):
             continue
@@ -654,6 +706,19 @@ def _solana_rows(manifest_lines, snap_lines, death_lines=None):
         if not isinstance(mint, str) or sol is None or token is None or when is None:
             continue
         seen_mints.add(mint)
+        slot = recorded.setdefault(mint, {"t": None, "name": None, "symbol": None, "pool": None})
+        pool = line.get("pool") if isinstance(line.get("pool"), str) and _MINT.fullmatch(line.get("pool")) else None
+        recorded_name = _token_label(line.get("name"), 64)
+        recorded_symbol = _token_label(line.get("symbol"), 20)
+        newer = slot["t"] is None or when >= slot["t"]
+        if newer:
+            slot["t"] = when
+        if pool and (newer or not slot["pool"]):
+            slot["pool"] = pool
+        if recorded_name and (newer or not slot["name"]):
+            slot["name"] = recorded_name
+        if recorded_symbol and (newer or not slot["symbol"]):
+            slot["symbol"] = recorded_symbol
         if sol < 0.05 or token < 1:
             continue
         buys, sells = _txns(line.get("txns_h1"))
@@ -739,17 +804,42 @@ def _solana_rows(manifest_lines, snap_lines, death_lines=None):
             "source": "Solana 30-minute snaps",
             "_raw": raw_score(move, last["sol"], interest),
             "_mint": mint,
+            "_labels": recorded.get(mint) or {},
         })
     assign_heat(rows)
     ranked = sorted(rows, key=lambda row: (-row["heat"], -row["_raw"]))[:8]
     out = []
+    anon = 0
     for index, row in enumerate(ranked, start=1):
-        row.pop("_mint", None)
+        mint = row.pop("_mint", None)
+        meta = row.pop("_labels", None) or {}
         row.pop("_raw", None)
-        row["name"] = "SOL #%d" % index
-        row["id"] = "sol-%d" % index
+        symbol = meta.get("symbol")
+        token_name = meta.get("name")
+        if symbol and token_name and token_name.casefold() == symbol.casefold():
+            token_name = None
+        if symbol:
+            row["name"] = symbol
+        elif token_name:
+            row["name"] = token_name
+            token_name = None
+        else:
+            anon += 1
+            row["name"] = "SOL #%d" % anon
+        if token_name:
+            row["token_name"] = token_name
+        ident = meta.get("pool") or (mint if isinstance(mint, str) and _MINT.fullmatch(mint) else None)
+        row_id = _sol_row_id(ident)
+        if row_id:
+            row["id"] = row_id
+        else:
+            slug = re.sub(r"[^a-z0-9]+", "-", str(row["name"]).lower()).strip("-") or str(index)
+            row["id"] = "sol-" + slug
         row["why"] = row["name"]
         row["image"] = None
+        url = _sol_dex(ident)
+        if url:
+            row["dex_url"] = url
         try:
             out.append(_public_row(row))
         except ValueError:
@@ -1016,13 +1106,13 @@ def _eth_rows(units):
         when = parse_time(line.get("snapshot_t"))
         if floor is None or when is None:
             continue
-        series.setdefault(slug, []).append((when, floor, raw_name.strip()))
+        series.setdefault(slug, []).append((when, floor, raw_name.strip(), None))
     rows = []
     for slug, points in series.items():
         points.sort(key=lambda item: item[0])
-        last_at, last_floor, last_name = points[-1]
+        last_at, last_floor, last_name, _last_contract = points[-1]
         label = ""
-        for _when, _floor, raw_name in points:
+        for _when, _floor, raw_name, _contract in points:
             if raw_name:
                 label = raw_name
         if not label:
@@ -1032,7 +1122,7 @@ def _eth_rows(units):
         if not name or not row_id:
             continue
         prior = None
-        for when, floor, _raw_name in points:
+        for when, floor, _raw_name, _contract in points:
             if (last_at - when).total_seconds() >= 20 * 3600:
                 prior = floor
         change = None if not prior else (last_floor / prior - 1.0) * 100.0
@@ -1064,7 +1154,7 @@ def _eth_rows(units):
             "buyers": None,
             "buy_pct": None,
             "stat": "floor",
-            "spark": _sample([floor for _when, floor, _raw_name in points]),
+            "spark": _sample([floor for _when, floor, _raw_name, _contract in points]),
             "chips": _chips(chip_ids, labels),
             "facts": facts,
             "why": name,
@@ -1093,7 +1183,7 @@ def build_from(payloads, now=None):
     feeds = []
     wanted = (
         ("SOL", "SOL", "solana-desk-scan.yml", "Solana desk scan"),
-        ("WAL", "WAL", "races.yml", "wallet races"),
+        ("WAL", "WAL", "races.yml", "Wallet races"),
         ("FOR", "FOR", "run-forensics.yml", "Solana forensics"),
         ("NFT", "NFT", "nft-snapshot.yml", "NFT snapshot"),
         ("ADA", "ADA", "solada-prefilter.yml", "Solada prefilter"),
@@ -1102,10 +1192,14 @@ def build_from(payloads, now=None):
     for feed_id, label, filename, title in wanted:
         row = _workflow(health, filename, title)
         if row is None:
-            feeds.append(_feed(feed_id, label, "unknown", None, now, "%s is missing from health.json" % title))
+            feeds.append(_feed(feed_id, label, "unknown", None, now, "%s is missing from health.json" % title, title))
             gaps.append("%s health row is missing." % label)
         else:
-            feeds.append(_feed(feed_id, label, row["status"], row["at"], now, "%s · %s" % (title, row["status"])))
+            if feed_id == "WAL" and row["status"] == "red":
+                detail = "Wallet races · last recorded run failed"
+            else:
+                detail = "%s · %s" % (title, row["status"])
+            feeds.append(_feed(feed_id, label, row["status"], row["at"], now, detail, title))
             if row["at"]:
                 scan_times.append(row["at"])
     hood = payloads.get("hood") if isinstance(payloads.get("hood"), dict) else {}
@@ -1113,7 +1207,7 @@ def build_from(payloads, now=None):
     discover = payloads.get("nft_discover") if isinstance(payloads.get("nft_discover"), dict) else {}
     discover_at = discover.get("generated_at") if isinstance(discover.get("generated_at"), str) else None
     hood_stamp = hood_at or discover_at
-    feeds.append(_feed("HS", "HS", _hood_status(hood_stamp, now), hood_stamp, now, "HoodScout daily"))
+    feeds.append(_feed("HS", "HS", _hood_status(hood_stamp, now), hood_stamp, now, "HoodScout daily", "HoodScout"))
     if hood_stamp:
         scan_times.append(hood_stamp)
     else:
@@ -1129,7 +1223,7 @@ def build_from(payloads, now=None):
         lst_status = "unknown"
     if lst.get("runs_ok") is False or lst.get("chain_ok") is False:
         lst_status = "red"
-    feeds.append(_feed("LST", "LST", lst_status, lst_at or (lst_row or {}).get("at"), now, "LST status"))
+    feeds.append(_feed("LST", "LST", lst_status, lst_at or (lst_row or {}).get("at"), now, "LST count", "LST count"))
     buzz_at = payloads.get("buzz_asof")
     if not isinstance(buzz_at, str):
         buzz_doc = payloads.get("buzz") if isinstance(payloads.get("buzz"), dict) else {}
@@ -1138,7 +1232,7 @@ def build_from(payloads, now=None):
     if buzz_at and _fresh(buzz_at, now, 48):
         buzz_stale = False
     feeds.append(_feed("X", "X", "hollow" if buzz_stale else "green", buzz_at, now,
-                       "X buzz stale" if buzz_stale else "X buzz"))
+                       "X buzz stale" if buzz_stale else "X buzz", "X buzz"))
     if buzz_stale:
         gaps.append("X buzz is stale, so the header mark stays hollow and no row shows fresh buzz.")
     last_run = payloads.get("last_run") if isinstance(payloads.get("last_run"), dict) else {}
@@ -1155,7 +1249,10 @@ def build_from(payloads, now=None):
     if not sol_rows:
         gaps.append("No Solana 30-minute snaps were readable for this snapshot.")
     else:
-        gaps.append("Solana scan lines have no ticker. Names are SOL #1, SOL #2, and so on.")
+        unnamed = [row["name"] for row in sol_rows if _SOL_ANON.fullmatch(row.get("name") or "")]
+        if unnamed:
+            shown = ", ".join(unnamed[:8])
+            gaps.append("Solana rows with no recorded name stay %s." % shown)
     if hood:
         rows.extend(_hood_coins(hood))
         gaps.append("HoodScout speculative and dead tiers are not on this list.")
