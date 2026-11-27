@@ -54,6 +54,11 @@ label:sha256
 # Bare 64-hex on this CDN only. 0x addresses and block explorers are not allowed.
 url:cdn.dexscreener.com
 
+# Radar snapshot only. The whole dex_url value is one DexScreener link, and the
+# hex is that link's pair or token id. A raw address, a second address, another
+# key, or another file still fails. Solana ids are not hex and need no rule.
+path:radar.json field:dex_url shape:dex-url
+
 # Permanent one-cell hold. Not an allowlist of the value and not a mint-column rule.
 # The owner ruled on Nov 20, 2026 that this cell is not the owner's wallet,
 # and that its origin is unexplained. No until means the hold does not expire.
