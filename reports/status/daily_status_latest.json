@@ -3,29 +3,29 @@
   "as_of": {
     "reason": null,
     "source": "solana-desk/positions.json last_run_ts",
-    "value": "2026-11-26T08:30:32Z"
+    "value": "2026-11-27T08:30:34Z"
   },
   "books": {
     "F": {
       "all_closes": {
         "mean": {
-          "percent": "-23.043708080",
+          "percent": "-22.319319462",
           "reason": null,
           "source": "solana-desk/trades.csv",
           "unit": "fraction of that lot's ticket; percent is the fraction times 100",
-          "value": "-0.230437081"
+          "value": "-0.223193195"
         },
         "median": {
-          "percent": "-41.286650800",
+          "percent": "-41.362638500",
           "reason": null,
           "source": "solana-desk/trades.csv",
           "unit": "fraction of that lot's ticket; percent is the fraction times 100",
-          "value": "-0.412866508"
+          "value": "-0.413626385"
         },
         "n": {
           "reason": null,
           "source": "solana-desk/trades.csv",
-          "value": 145
+          "value": 154
         },
         "note": "Every realized close in trades.csv, pre-v3 and post-v3 together. The day-14 void window is not applied. pnl is the logged net.",
         "ticket_assumed_lots": {
@@ -37,12 +37,12 @@
         "ticket_logged_lots": {
           "reason": null,
           "source": "solana-desk/trades.csv buy sol",
-          "value": 145
+          "value": 154
         },
         "total_pnl_sol": {
           "reason": null,
           "source": "solana-desk/trades.csv",
-          "value": "-16.706688358"
+          "value": "-17.185875986"
         }
       },
       "id": "F",
@@ -54,34 +54,15 @@
       "open_count": {
         "reason": null,
         "source": "solana-desk/positions.json",
-        "value": 1
+        "value": 0
       },
-      "open_positions": [
-        {
-          "entry_code": "pass",
-          "exit_codes": [
-            "pool_gone",
-            "no_route_3x",
-            "hard_stop",
-            "liquidity_pulled",
-            "time_stop",
-            "trailing_stop"
-          ],
-          "exit_codes_source": "solana-desk/desk/exits.py why strings still armed for this steps value, thresholds from solana-desk/desk/config.py EXIT",
-          "frac": 0.3333333333333334,
-          "id": "F-20261126T0030-Bnw5pump",
-          "mint": "Bnw5JRPek5JvJhzUiB9yrs2cmzt4bLeFqSRzDzSppump",
-          "opened_at": "2026-11-26T00:30:31Z",
-          "steps": 2,
-          "symbol": "UHI"
-        }
-      ],
+      "open_positions": [],
       "post_v3": {
         "cost_model": "v3-exit-aware",
         "excluded_after_cutoff": {
           "reason": null,
           "source": "solana-desk/trades.csv",
-          "value": 27
+          "value": 36
         },
         "excluded_void_entry": {
           "reason": null,
@@ -140,23 +121,23 @@
     "R": {
       "all_closes": {
         "mean": {
-          "percent": "-22.602509805",
+          "percent": "-23.648073678",
           "reason": null,
           "source": "solana-desk/trades.csv",
           "unit": "fraction of that lot's ticket; percent is the fraction times 100",
-          "value": "-0.226025098"
+          "value": "-0.236480737"
         },
         "median": {
-          "percent": "-41.999260600",
+          "percent": "-41.698268300",
           "reason": null,
           "source": "solana-desk/trades.csv",
           "unit": "fraction of that lot's ticket; percent is the fraction times 100",
-          "value": "-0.419992606"
+          "value": "-0.416982683"
         },
         "n": {
           "reason": null,
           "source": "solana-desk/trades.csv",
-          "value": 147
+          "value": 156
         },
         "note": "Every realized close in trades.csv, pre-v3 and post-v3 together. The day-14 void window is not applied. pnl is the logged net.",
         "ticket_assumed_lots": {
@@ -168,12 +149,12 @@
         "ticket_logged_lots": {
           "reason": null,
           "source": "solana-desk/trades.csv buy sol",
-          "value": 147
+          "value": 156
         },
         "total_pnl_sol": {
           "reason": null,
           "source": "solana-desk/trades.csv",
-          "value": "-16.612844707"
+          "value": "-18.445497469"
         }
       },
       "id": "R",
@@ -184,29 +165,29 @@
       },
       "not_overlapping_f": {
         "mean": {
-          "percent": "-27.499211353",
+          "percent": "-28.600649379",
           "reason": null,
           "source": "solana-desk/trades.csv",
           "unit": "fraction of that lot's ticket; percent is the fraction times 100",
-          "value": "-0.274992114"
+          "value": "-0.286006494"
         },
         "median": {
-          "percent": "-43.053613200",
+          "percent": "-42.931643000",
           "reason": null,
           "source": "solana-desk/trades.csv",
           "unit": "fraction of that lot's ticket; percent is the fraction times 100",
-          "value": "-0.430536132"
+          "value": "-0.429316430"
         },
         "n": {
           "reason": null,
           "source": "solana-desk/trades.csv",
-          "value": 43
+          "value": 47
         },
         "note": "Realized R closes whose mint and open time are not also an F close. The day-14 void window is not applied.",
         "overlapping_f": {
           "reason": null,
           "source": "solana-desk/trades.csv",
-          "value": 104
+          "value": 109
         },
         "ticket_assumed_lots": {
           "reason": null,
@@ -217,45 +198,26 @@
         "ticket_logged_lots": {
           "reason": null,
           "source": "solana-desk/trades.csv buy sol",
-          "value": 43
+          "value": 47
         },
         "total_pnl_sol": {
           "reason": null,
           "source": "solana-desk/trades.csv",
-          "value": "-5.912330441"
+          "value": "-6.721152604"
         }
       },
       "open_count": {
         "reason": null,
         "source": "solana-desk/positions.json",
-        "value": 1
+        "value": 0
       },
-      "open_positions": [
-        {
-          "entry_code": "random_match",
-          "exit_codes": [
-            "pool_gone",
-            "no_route_3x",
-            "hard_stop",
-            "liquidity_pulled",
-            "time_stop",
-            "trailing_stop"
-          ],
-          "exit_codes_source": "solana-desk/desk/exits.py why strings still armed for this steps value, thresholds from solana-desk/desk/config.py EXIT",
-          "frac": 0.3333333333333334,
-          "id": "R-20261126T0030-Bnw5pump",
-          "mint": "Bnw5JRPek5JvJhzUiB9yrs2cmzt4bLeFqSRzDzSppump",
-          "opened_at": "2026-11-26T00:30:31Z",
-          "steps": 2,
-          "symbol": "UHI"
-        }
-      ],
+      "open_positions": [],
       "post_v3": {
         "cost_model": "v3-exit-aware",
         "excluded_after_cutoff": {
           "reason": null,
           "source": "solana-desk/trades.csv",
-          "value": 22
+          "value": 31
         },
         "excluded_void_entry": {
           "reason": null,
@@ -314,23 +276,23 @@
     "S": {
       "all_closes": {
         "mean": {
-          "percent": "-34.666894657",
+          "percent": "-30.676830878",
           "reason": null,
           "source": "solana-desk/trades.csv",
           "unit": "fraction of that lot's ticket; percent is the fraction times 100",
-          "value": "-0.346668947"
+          "value": "-0.306768309"
         },
         "median": {
-          "percent": "-58.969454400",
+          "percent": "-50.978885100",
           "reason": null,
           "source": "solana-desk/trades.csv",
           "unit": "fraction of that lot's ticket; percent is the fraction times 100",
-          "value": "-0.589694544"
+          "value": "-0.509788851"
         },
         "n": {
           "reason": null,
           "source": "solana-desk/trades.csv",
-          "value": 95
+          "value": 120
         },
         "note": "Every realized close in trades.csv, pre-v3 and post-v3 together. The day-14 void window is not applied. pnl is the logged net.",
         "ticket_assumed_lots": {
@@ -342,12 +304,12 @@
         "ticket_logged_lots": {
           "reason": null,
           "source": "solana-desk/trades.csv buy sol",
-          "value": 95
+          "value": 120
         },
         "total_pnl_sol": {
           "reason": null,
           "source": "solana-desk/trades.csv",
-          "value": "-16.466774962"
+          "value": "-18.406098527"
         }
       },
       "id": "S",
@@ -359,48 +321,11 @@
       "open_count": {
         "reason": null,
         "source": "solana-desk/positions.json",
-        "value": 3
+        "value": 1
       },
       "open_positions": [
         {
-          "entry_code": "safety:risk_score",
-          "exit_codes": [
-            "pool_gone",
-            "no_route_3x",
-            "hard_stop",
-            "liquidity_pulled",
-            "time_stop",
-            "take_profit_100",
-            "trailing_stop"
-          ],
-          "exit_codes_source": "solana-desk/desk/exits.py why strings still armed for this steps value, thresholds from solana-desk/desk/config.py EXIT",
-          "frac": 0.6666666666666667,
-          "id": "S-20261125T1900-Ya9Ppump",
-          "mint": "Ya9PEJA9UZmbT5aim46TA6cPCkTNfsqEn1aEVrnpump",
-          "opened_at": "2026-11-25T19:00:35Z",
-          "steps": 1,
-          "symbol": "ATX"
-        },
-        {
           "entry_code": "safety:top10_heavy",
-          "exit_codes": [
-            "pool_gone",
-            "no_route_3x",
-            "hard_stop",
-            "liquidity_pulled",
-            "time_stop",
-            "trailing_stop"
-          ],
-          "exit_codes_source": "solana-desk/desk/exits.py why strings still armed for this steps value, thresholds from solana-desk/desk/config.py EXIT",
-          "frac": 0.3333333333333334,
-          "id": "S-20261126T0200-Fo2Hpump",
-          "mint": "Fo2HAwr7ZAUM2bSZ7MWSi16e3aWGpbw5MsUDYCttpump",
-          "opened_at": "2026-11-26T02:00:33Z",
-          "steps": 2,
-          "symbol": "PUMPCHAN"
-        },
-        {
-          "entry_code": "safety:too_fresh",
           "exit_codes": [
             "pool_gone",
             "no_route_3x",
@@ -411,11 +336,11 @@
           ],
           "exit_codes_source": "solana-desk/desk/exits.py why strings still armed for this steps value, thresholds from solana-desk/desk/config.py EXIT",
           "frac": 1.0,
-          "id": "S-20261126T0730-AC6jogog",
-          "mint": "AC6jhfpFFFYUciEX563ouCiMCZTxvDi1mr6zXhAMogog",
-          "opened_at": "2026-11-26T07:30:30Z",
+          "id": "S-20261127T0800-6jS9pump",
+          "mint": "6jS9L2H6XaSbVaB7jZn86uHZoPGxSUbuKKNNoBAEpump",
+          "opened_at": "2026-11-27T08:00:36Z",
           "steps": 0,
-          "symbol": "OG"
+          "symbol": "LOOM"
         }
       ],
       "post_v3": {
@@ -423,7 +348,7 @@
         "excluded_after_cutoff": {
           "reason": null,
           "source": "solana-desk/trades.csv",
-          "value": 20
+          "value": 45
         },
         "excluded_void_entry": {
           "reason": null,
@@ -490,7 +415,7 @@
       "days": {
         "reason": null,
         "source": "report date to the UTC date of CUTOFF_DEFAULT",
-        "value": -15
+        "value": -16
       },
       "label": "day-14 verdict"
     },
@@ -508,12 +433,12 @@
       "days": {
         "reason": null,
         "source": "report date to the UTC date of DAY28_AT",
-        "value": -1
+        "value": -2
       },
       "label": "day-28 checkpoint"
     }
   },
-  "date": "2026-11-26",
+  "date": "2026-11-27",
   "date_reason": null,
   "exit_program": {
     "exits_source": "solana-desk/desk/exits.py",
@@ -577,7 +502,7 @@
       }
     ],
     "solada_prefilter": {
-      "at": "2026-11-26T07:14:29Z",
+      "at": "2026-11-27T07:15:35Z",
       "data_failures": {
         "match": 5,
         "webhook": 1
@@ -591,15 +516,15 @@
         "checks": 216,
         "data_fail_by_source": {
           "dexscreener": 0,
-          "jupiter": 0,
-          "rugcheck": 1
+          "jupiter": 1,
+          "rugcheck": 3
         },
-        "data_failure_rate": 0.0046,
-        "day": "2026-11-26",
-        "eligibility_skips": 15,
-        "error_rate": 0.0046,
+        "data_failure_rate": 0.0185,
+        "day": "2026-11-27",
+        "eligibility_skips": 11,
+        "error_rate": 0.0185,
         "expected_runs": 48,
-        "last_run_utc": "20261126T0830",
+        "last_run_utc": "20261127T0830",
         "leads_this_run": 12,
         "loop_ran": true,
         "max_gap_min": 30.1,
@@ -621,10 +546,10 @@
     }
   },
   "freshness": {
-    "desk_as_of": "2026-11-26T08:30:32Z",
+    "desk_as_of": "2026-11-27T08:30:34Z",
     "desk_as_of_source": "solana-desk/positions.json last_run_ts",
-    "expected_evening": "2026-11-26T00:00:00Z",
-    "expected_evening_local": "2026-11-25T19:00:00-05:00",
+    "expected_evening": "2026-11-27T00:00:00Z",
+    "expected_evening_local": "2026-11-26T19:00:00-05:00",
     "reason": null,
     "rule": "stale when the newest Solana desk timestamp is older than 19:00 America/Toronto on the Toronto date of 00:40 UTC on the report date",
     "source": "scripts/status/daily_status.py expected evening; Solana desk files for the timestamp",
@@ -1031,7 +956,7 @@
     {
       "path": "solada-prefilter/last-run.json",
       "root": "data",
-      "sha256": "e767ab98775d109e520a6ff253d0f4506b6487c854c9181f32a86430b9b7e9ff",
+      "sha256": "9fa597b26ace4472e2a2f7d30cc93d96a4bbacdc53deb1681cbdc2495ab22831",
       "used": true
     },
     {
@@ -1067,19 +992,19 @@
     {
       "path": "solana-desk/health.json",
       "root": "data",
-      "sha256": "71dd32b8278aab060f51674efe6231ef86fcf9b78f296de60119cbfd3a53a40e",
+      "sha256": "9f30994ca67a9d30d5aad14bfe74f0c1edb9d162a1c7c5599181fa432a38a36b",
       "used": true
     },
     {
       "path": "solana-desk/paper.json",
       "root": "data",
-      "sha256": "f7eb26cf3712a7219e74f1557342241e6d53025bb21a7711538052f58db4ca66",
+      "sha256": "d62c65e1109766d154761cddd524d4e2de90a96327b2782254e070dff275dd36",
       "used": true
     },
     {
       "path": "solana-desk/positions.json",
       "root": "data",
-      "sha256": "a13a06a984e3df74226b52be1d8517e0247acb4fb2a7c077cc2a80cf71b37db7",
+      "sha256": "bfe1d5d21943f6a3c92c1d8018f2c2290dc6424a1300cfbd3b7b8703bc2fc20c",
       "used": true
     },
     {
@@ -1097,7 +1022,7 @@
     {
       "path": "solana-desk/trades.csv",
       "root": "data",
-      "sha256": "b798dbdeebe761cb901ac8f4002200fb9000791fe7d0425bb8344618d380d5f8",
+      "sha256": "9a4fb5bba21228e1bf8b3dc4aaaf9133998c0305b6cedc9b0d72614f399a49c6",
       "used": true
     },
     {
