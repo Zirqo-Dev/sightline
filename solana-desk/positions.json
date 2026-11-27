@@ -1,6 +1,6 @@
 {
  "cfg_version": "v1-v6.5",
- "last_run_ts": 1795757433,
+ "last_run_ts": 1795759235,
  "voids": [
   {
    "ts": "2026-10-31T02:00:29Z",
@@ -24378,7 +24378,7 @@
    "realized_gross": -15.347275812693777
   },
   "S": {
-   "cash": 6.154372544353255,
+   "cash": 5.145776417893287,
    "open": {
     "S-20261127T0500-8EFHpump": {
      "entry": 0.0002962944568237546,
@@ -24387,7 +24387,7 @@
      "liq0": 51.8555,
      "opened": 1795755636,
      "frac": 1.0,
-     "last_mark": 0.0002766729264911364,
+     "last_mark": 0.0002756790286615109,
      "stale": 0,
      "no_route_count": 0,
      "mint": "8EFHM7U4yFAoVy3fE96qDikANCqbDY7agvByCb2Apump",
@@ -24407,9 +24407,9 @@
      "entry_token_reserve": 258091060.0,
      "entry_k": 13383440961.83,
      "entry_reserve_error": null,
-     "last_sol_reserve": 53.5028,
-     "last_token_reserve": 252026027.0,
-     "last_k": 13484098117.3756,
+     "last_sol_reserve": 53.3737,
+     "last_token_reserve": 252481489.0,
+     "last_k": 13475871249.4393,
      "last_reserve_error": null,
      "reserve_snaps": [
       {
@@ -24425,6 +24425,13 @@
        "token": 252026027.0,
        "k": 13484098117.3756,
        "pool": "5HYj9mTv5PfBTPQaQbdv2Ucj91W32e72eSeJxibH1tqv"
+      },
+      {
+       "t": "2026-11-27T06:00:35Z",
+       "sol": 53.3737,
+       "token": 252481489.0,
+       "k": 13475871249.4393,
+       "pool": "5HYj9mTv5PfBTPQaQbdv2Ucj91W32e72eSeJxibH1tqv"
       }
      ],
      "entry_pool": "5HYj9mTv5PfBTPQaQbdv2Ucj91W32e72eSeJxibH1tqv",
@@ -24437,14 +24444,122 @@
      "entry_quote_impact": 0.029511189201520734,
      "entry_quote_error": null,
      "max_price_held": 0.0002962944568237546,
-     "min_price_held": 0.0002766729264911364,
+     "min_price_held": 0.0002756790286615109,
      "max_price_held_pct": 0.0,
-     "min_price_held_pct": -6.6223,
-     "exit_haircut": 0.008162734653956432
+     "min_price_held_pct": -6.9578,
+     "exit_haircut": 0.008160199928860192
+    },
+    "S-20261127T0600-8XEdpump": {
+     "entry": 0.00024959821289098085,
+     "peak": 0.00024959821289098085,
+     "steps": 0,
+     "liq0": 41.2401,
+     "opened": 1795759235,
+     "frac": 1.0,
+     "last_mark": 0.00024959821289098085,
+     "stale": 0,
+     "no_route_count": 0,
+     "mint": "8XEddj5r2MkiKgFgMGUev3WMAyk5td2NXD6z3bRypump",
+     "symbol": "Pilly",
+     "tokens": 2003219471040,
+     "run_id": "20261127T0600",
+     "why": "safety:too_fresh",
+     "book": "S",
+     "pnl": 0.0,
+     "gross_pnl": 0.0,
+     "entry_haircut": 0.008994722101767844,
+     "entry_cost": 0.5045073610508839,
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z",
+     "obs_v": 1,
+     "entry_sol_reserve": 41.2401,
+     "entry_token_reserve": 308688227.0,
+     "entry_k": 12730333350.3027,
+     "entry_reserve_error": null,
+     "last_sol_reserve": 41.2401,
+     "last_token_reserve": 308688227.0,
+     "last_k": 12730333350.3027,
+     "last_reserve_error": null,
+     "reserve_snaps": [
+      {
+       "t": "2026-11-27T06:00:35Z",
+       "sol": 41.2401,
+       "token": 308688227.0,
+       "k": 12730333350.3027,
+       "pool": "8oLTQEnpmCeafWPxntxcV8nxfa1Xv4w4BGceJX31ZMe1"
+      }
+     ],
+     "entry_pool": "8oLTQEnpmCeafWPxntxcV8nxfa1Xv4w4BGceJX31ZMe1",
+     "pool_created_at": "2026-11-27T05:50:13Z",
+     "pool_age_at_entry_s": 622.0,
+     "graduated_pump": true,
+     "boost_window": false,
+     "entry_quote_out": 2003219471040,
+     "entry_quote_px": 0.00024959821289098085,
+     "entry_quote_impact": 0.012730719996182934,
+     "entry_quote_error": null,
+     "max_price_held": 0.00024959821289098085,
+     "min_price_held": 0.00024959821289098085,
+     "max_price_held_pct": 0.0,
+     "min_price_held_pct": 0.0
+    },
+    "S-20261127T0600-4nLopump": {
+     "entry": 0.00032497895816656407,
+     "peak": 0.00032497895816656407,
+     "steps": 0,
+     "liq0": 57.4366,
+     "opened": 1795759235,
+     "frac": 1.0,
+     "last_mark": 0.00032497895816656407,
+     "stale": 0,
+     "no_route_count": 0,
+     "mint": "4nLoFx9pBjmjE6GZUrNd9LqEM5siQemwiX7jAMQfpump",
+     "symbol": "VEXEN",
+     "tokens": 1538561151223,
+     "run_id": "20261127T0600",
+     "why": "safety:dev_holds",
+     "book": "S",
+     "pnl": 0.0,
+     "gross_pnl": 0.0,
+     "entry_haircut": 0.008157530818170207,
+     "entry_cost": 0.5040887654090851,
+     "cost_model": "v3-exit-aware",
+     "cost_model_started_at": "2026-10-29T00:30:25Z",
+     "obs_v": 1,
+     "entry_sol_reserve": 57.4366,
+     "entry_token_reserve": 235202431.0,
+     "entry_k": 13509227948.3746,
+     "entry_reserve_error": null,
+     "last_sol_reserve": 57.4366,
+     "last_token_reserve": 235202431.0,
+     "last_k": 13509227948.3746,
+     "last_reserve_error": null,
+     "reserve_snaps": [
+      {
+       "t": "2026-11-27T06:00:35Z",
+       "sol": 57.4366,
+       "token": 235202431.0,
+       "k": 13509227948.3746,
+       "pool": "5d9FNehmYPxZoAR68p3XBZZ2QpaLTMMRDmnRZvUoupiQ"
+      }
+     ],
+     "entry_pool": "5d9FNehmYPxZoAR68p3XBZZ2QpaLTMMRDmnRZvUoupiQ",
+     "pool_created_at": "2026-11-27T01:37:53Z",
+     "pool_age_at_entry_s": 15762.0,
+     "graduated_pump": true,
+     "boost_window": false,
+     "entry_quote_out": 1538561151223,
+     "entry_quote_px": 0.00032497895816656407,
+     "entry_quote_impact": 0.027812670078589164,
+     "entry_quote_error": null,
+     "max_price_held": 0.00032497895816656407,
+     "min_price_held": 0.00032497895816656407,
+     "max_price_held_pct": 0.0,
+     "min_price_held_pct": 0.0
     }
    },
    "fills_day": "2026-11-27",
-   "fills_today": 10,
+   "fills_today": 12,
    "realized_pnl": -17.57662530690356,
    "closed": [
     {

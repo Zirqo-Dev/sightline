@@ -7,7 +7,7 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-11-27T05:30:33Z",
+ "generated_at": "2026-11-27T06:00:35Z",
  "cfg_version": "v1-v6.5",
  "open": [
   {
@@ -25,11 +25,11 @@
     "px": 0.0002962944568237546
    },
    "frac": 1.0,
-   "last_mark": 0.0002766729264911364,
+   "last_mark": 0.0002756790286615109,
    "thesis": "safety:too_old",
    "result": {
     "pnl": 0.0,
-    "pct": -6.62,
+    "pct": -6.96,
     "unit": "SOL",
     "net_pnl": 0.0,
     "gross_pnl": 0.0
@@ -39,9 +39,9 @@
    "entry_token_reserve": 258091060.0,
    "entry_k": 13383440961.83,
    "entry_reserve_error": null,
-   "last_sol_reserve": 53.5028,
-   "last_token_reserve": 252026027.0,
-   "last_k": 13484098117.3756,
+   "last_sol_reserve": 53.3737,
+   "last_token_reserve": 252481489.0,
+   "last_k": 13475871249.4393,
    "last_reserve_error": null,
    "reserve_snaps": [
     {
@@ -57,6 +57,13 @@
      "token": 252026027.0,
      "k": 13484098117.3756,
      "pool": "5HYj9mTv5PfBTPQaQbdv2Ucj91W32e72eSeJxibH1tqv"
+    },
+    {
+     "t": "2026-11-27T06:00:35Z",
+     "sol": 53.3737,
+     "token": 252481489.0,
+     "k": 13475871249.4393,
+     "pool": "5HYj9mTv5PfBTPQaQbdv2Ucj91W32e72eSeJxibH1tqv"
     }
    ],
    "entry_pool": "5HYj9mTv5PfBTPQaQbdv2Ucj91W32e72eSeJxibH1tqv",
@@ -69,9 +76,121 @@
    "entry_quote_impact": 0.029511189201520734,
    "entry_quote_error": null,
    "max_price_held": 0.0002962944568237546,
-   "min_price_held": 0.0002766729264911364,
+   "min_price_held": 0.0002756790286615109,
    "max_price_held_pct": 0.0,
-   "min_price_held_pct": -6.6223
+   "min_price_held_pct": -6.9578
+  },
+  {
+   "id": "S-20261127T0600-8XEdpump",
+   "ticker": "Pilly",
+   "mint": "8XEddj5r2MkiKgFgMGUev3WMAyk5td2NXD6z3bRypump",
+   "book": "S",
+   "status": "open",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-11-27T06:00:35Z",
+   "window_ends_at": "2026-11-27T08:00:35Z",
+   "entry": {
+    "px": 0.00024959821289098085
+   },
+   "frac": 1.0,
+   "last_mark": 0.00024959821289098085,
+   "thesis": "safety:too_fresh",
+   "result": {
+    "pnl": 0.0,
+    "pct": 0.0,
+    "unit": "SOL",
+    "net_pnl": 0.0,
+    "gross_pnl": 0.0
+   },
+   "obs_v": 1,
+   "entry_sol_reserve": 41.2401,
+   "entry_token_reserve": 308688227.0,
+   "entry_k": 12730333350.3027,
+   "entry_reserve_error": null,
+   "last_sol_reserve": 41.2401,
+   "last_token_reserve": 308688227.0,
+   "last_k": 12730333350.3027,
+   "last_reserve_error": null,
+   "reserve_snaps": [
+    {
+     "t": "2026-11-27T06:00:35Z",
+     "sol": 41.2401,
+     "token": 308688227.0,
+     "k": 12730333350.3027,
+     "pool": "8oLTQEnpmCeafWPxntxcV8nxfa1Xv4w4BGceJX31ZMe1"
+    }
+   ],
+   "entry_pool": "8oLTQEnpmCeafWPxntxcV8nxfa1Xv4w4BGceJX31ZMe1",
+   "pool_created_at": "2026-11-27T05:50:13Z",
+   "pool_age_at_entry_s": 622.0,
+   "graduated_pump": true,
+   "boost_window": false,
+   "entry_quote_out": 2003219471040,
+   "entry_quote_px": 0.00024959821289098085,
+   "entry_quote_impact": 0.012730719996182934,
+   "entry_quote_error": null,
+   "max_price_held": 0.00024959821289098085,
+   "min_price_held": 0.00024959821289098085,
+   "max_price_held_pct": 0.0,
+   "min_price_held_pct": 0.0
+  },
+  {
+   "id": "S-20261127T0600-4nLopump",
+   "ticker": "VEXEN",
+   "mint": "4nLoFx9pBjmjE6GZUrNd9LqEM5siQemwiX7jAMQfpump",
+   "book": "S",
+   "status": "open",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-11-27T06:00:35Z",
+   "window_ends_at": "2026-11-27T08:00:35Z",
+   "entry": {
+    "px": 0.00032497895816656407
+   },
+   "frac": 1.0,
+   "last_mark": 0.00032497895816656407,
+   "thesis": "safety:dev_holds",
+   "result": {
+    "pnl": 0.0,
+    "pct": 0.0,
+    "unit": "SOL",
+    "net_pnl": 0.0,
+    "gross_pnl": 0.0
+   },
+   "obs_v": 1,
+   "entry_sol_reserve": 57.4366,
+   "entry_token_reserve": 235202431.0,
+   "entry_k": 13509227948.3746,
+   "entry_reserve_error": null,
+   "last_sol_reserve": 57.4366,
+   "last_token_reserve": 235202431.0,
+   "last_k": 13509227948.3746,
+   "last_reserve_error": null,
+   "reserve_snaps": [
+    {
+     "t": "2026-11-27T06:00:35Z",
+     "sol": 57.4366,
+     "token": 235202431.0,
+     "k": 13509227948.3746,
+     "pool": "5d9FNehmYPxZoAR68p3XBZZ2QpaLTMMRDmnRZvUoupiQ"
+    }
+   ],
+   "entry_pool": "5d9FNehmYPxZoAR68p3XBZZ2QpaLTMMRDmnRZvUoupiQ",
+   "pool_created_at": "2026-11-27T01:37:53Z",
+   "pool_age_at_entry_s": 15762.0,
+   "graduated_pump": true,
+   "boost_window": false,
+   "entry_quote_out": 1538561151223,
+   "entry_quote_px": 0.00032497895816656407,
+   "entry_quote_impact": 0.027812670078589164,
+   "entry_quote_error": null,
+   "max_price_held": 0.00032497895816656407,
+   "min_price_held": 0.00032497895816656407,
+   "max_price_held_pct": 0.0,
+   "min_price_held_pct": 0.0
   }
  ],
  "closed": [
@@ -35820,12 +35939,12 @@
    "realized_gross_pnl": -15.347275813
   },
   "S": {
-   "cash": 6.154372544,
-   "equity": 6.61743992,
+   "cash": 5.145776418,
+   "equity": 6.598585324,
    "realized_pnl": -17.576625307,
-   "open": 1,
+   "open": 3,
    "closed": 116,
-   "fills_today": 10,
+   "fills_today": 12,
    "would_halt": [
     {
      "day": "2026-11-27",
