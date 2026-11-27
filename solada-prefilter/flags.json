@@ -1,64 +1,9 @@
 {
- "at": "2026-11-27T03:11:30Z",
+ "at": "2026-11-27T05:10:54Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
- "new": [
-  {
-   "kind": "coordinated_buys",
-   "ticker": "LONELY",
-   "wallets": [
-    "w-2c1bf583",
-    "w-2f98eded",
-    "w-47d26455",
-    "w-500b8237",
-    "w-6f64ecef",
-    "w-7546180b",
-    "w-90fa2e66",
-    "w-a89732d0",
-    "w-acb1d589"
-   ],
-   "window_s": 120,
-   "at": "2026-11-27T03:11:30Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "LONELY",
-   "wallets": [
-    "w-2c1bf583",
-    "w-2f98eded",
-    "w-47d26455",
-    "w-500b8237",
-    "w-7546180b",
-    "w-90fa2e66",
-    "w-a89732d0",
-    "w-acb1d589"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-27T03:11:30Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-6f64ecef",
-   "launches": [
-    "BREAD",
-    "FADA",
-    "LONELY",
-    "NJAK",
-    "RFLIP",
-    "SNATCH",
-    "TOMZOEY"
-   ],
-   "at": "2026-11-27T03:11:30Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "LONELY",
-   "wallet": "w-a89732d0",
-   "tags": [],
-   "at": "2026-11-27T03:11:30Z"
-  }
- ],
+ "new": [],
  "recent": [
   {
    "kind": "repeat_early_buyer",
@@ -3408,8 +3353,7 @@
   }
  ],
  "api_calls": {
-  "blockfrost": 1,
-  "koios": 11
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,
