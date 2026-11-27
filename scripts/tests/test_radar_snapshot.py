@@ -10,7 +10,8 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from scripts.radar_snapshot import (
-    FETCH_TIMEOUT_S, _SOL_DEX, _apply_coin_icon, _sol_row_id, build_from, buy_streak, second_leg,
+    FETCH_TIMEOUT_S, _SOL_DEX, _apply_coin_icon, _dex_names, _sol_row_id, build_from, buy_streak,
+    degen_score, heat_mark, kill_line_state, price_line, second_leg, thin_vs_volume,
 )
 
 NOW = datetime.datetime(2026, 11, 24, 18, 0, tzinfo=datetime.timezone.utc)
@@ -61,10 +62,15 @@ class RadarSnapshotTest(unittest.TestCase):
             _snap(MINT_B, 1000, 10, 1, 4),
             _snap(MINT_B, 2800, 10, 1, 4),
         ]
+        for snap in snaps:
+            snap["symbol"] = "ALP" if snap["mint"] == MINT_A else "BEE"
+            snap["name"] = "Alpha" if snap["mint"] == MINT_A else "Bee"
         deaths = [{"type": "label", "mint": MINT_A, "dead": True, "reason": "price"}]
         doc = build_from({"manifest": manifest, "snaps": snaps, "deaths": deaths}, NOW)
         sol = [row for row in doc["rows"] if row["chain"] == "SOL"]
-        self.assertEqual([row["name"] for row in sol], ["SOL #1", "SOL #2"])
+        self.assertEqual([row["name"] for row in sol], ["ALP", "BEE"])
+        self.assertNotIn("unnamed_hidden", doc)
+        self.assertFalse(any(str(row["name"]).startswith("SOL #") for row in doc["rows"]))
         self.assertEqual(sol[0]["seen_at"], "1970-01-01T00:06:40Z")
         self.assertNotIn("age", sol[0])
         self.assertNotIn("next_read", doc)
@@ -216,6 +222,11 @@ class RadarSnapshotTest(unittest.TestCase):
             {"mint": dust, "t_s": 2, "sol": 1, "token": 0.5, "txns_h1": {"buys": 3, "sells": 1}},
             _snap(single, 1, 10, 3, 1),
         ]
+        for snap in snaps:
+            if snap["mint"] == kept_ratio:
+                snap["symbol"] = "KEEP"
+            elif snap["mint"] == kept_token:
+                snap["symbol"] = "TOK"
         doc = build_from({"snaps": snaps}, NOW)
         names = [row["name"] for row in doc["rows"] if row["chain"] == "SOL"]
         self.assertEqual(len(names), 2)
@@ -292,12 +303,12 @@ class RadarSnapshotTest(unittest.TestCase):
         apes = next(row for row in doc["rows"] if row["name"] == "Bored Apes")
         self.assertEqual(apes["name"], "Bored Apes")
         self.assertIsNone(apes["image"])
-        sol = next(row for row in doc["rows"] if row["name"] == "SOL #1")
-        self.assertEqual(sol["chain"], "SOL")
-        self.assertEqual(sol["price_unit"], "SOL")
-        self.assertEqual(sol["size_unit"], "SOL")
+        self.assertFalse(any(row["chain"] == "SOL" for row in doc["rows"]))
+        self.assertEqual(doc["unnamed_hidden"], 1)
+        self.assertNotIn(MINT_A, json.dumps(doc))
+        self.assertNotIn("SOL #", json.dumps(doc))
         self.assertTrue(any(feed["id"] == "SOL" and feed["label"] == "SOL" for feed in doc["feeds"]))
-        self.assertTrue(any("SOL #1" in gap for gap in doc["gaps"]))
+        self.assertFalse(any("SOL #" in gap for gap in doc["gaps"]))
         nvda = [row for row in doc["rows"] if row["name"] == "NVDA"]
         self.assertEqual(len(nvda), 2)
         self.assertEqual(len({row["id"] for row in nvda}), 2)
@@ -589,12 +600,13 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertNotIn("2026-11-24T17:00:00Z", json.dumps(by_name["BARE"]))
         self.assertNotIn("2026-11-20T00:00:00Z", json.dumps(by_name["BARE"]))
 
-    def test_sol_placeholder_has_no_token_logo(self):
+    def test_unnamed_solana_row_is_left_off_the_ladder(self):
         snaps = [_snap(MINT_A, 1000, 80, 4, 1), _snap(MINT_A, 2800, 120, 4, 1)]
         doc = build_from({"snaps": snaps}, NOW)
-        sol = next(row for row in doc["rows"] if row["name"] == "SOL #1")
-        self.assertIsNone(sol["image"])
-        self.assertNotIn("dashboard/icons/coin-", json.dumps(sol))
+        self.assertFalse(any(row["chain"] == "SOL" for row in doc["rows"]))
+        self.assertEqual(doc["unnamed_hidden"], 1)
+        self.assertNotIn(MINT_A, json.dumps(doc))
+        self.assertNotIn("SOL #", json.dumps(doc))
 
     def test_icon_lookup_skips_credited_names_and_prefers_local(self):
         icons = {
@@ -622,7 +634,7 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertIsNone(sol["image"])
         named = {"kind": "coin", "name": "GHOST", "chain": "SOL", "image": None}
         _apply_coin_icon(named, icons)
-        self.assertIsNone(named["image"])
+        self.assertEqual(named["image"], "dashboard/icons/coin-cock.png")
         nft = {"kind": "nft", "name": "COCK", "chain": "ADA", "image": None}
         _apply_coin_icon(nft, icons)
         self.assertIsNone(nft["image"])
@@ -772,6 +784,155 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertNotIn("long hex", report)
         if "identity hashes were not loaded" not in report:
             self.assertEqual(proc.returncode, 0, report)
+
+    def test_degen_one_case_per_rule(self):
+        fresh = NOW - datetime.timedelta(hours=23)
+        stale = NOW - datetime.timedelta(hours=25)
+        base, why = degen_score("WGT", None, NOW)
+        self.assertEqual((base, why), (1, []))
+        score, why = degen_score("WGT", fresh.strftime("%Y-%m-%dT%H:%M:%SZ"), NOW)
+        self.assertEqual(score, 2)
+        self.assertEqual(why, ["fresh"])
+        score, why = degen_score("WGT", stale.strftime("%Y-%m-%dT%H:%M:%SZ"), NOW)
+        self.assertNotIn("fresh", why)
+        score, why = degen_score("WGT", None, NOW, sol_reserve=149)
+        self.assertIn("thin", why)
+        score, why = degen_score("WGT", None, NOW, sol_reserve=150)
+        self.assertNotIn("thin", why)
+        score, why = degen_score("WGT", None, NOW, usd_volume=499_999)
+        self.assertIn("thin", why)
+        score, why = degen_score("WGT", None, NOW, usd_volume=500_000)
+        self.assertNotIn("thin", why)
+        score, why = degen_score("WGT", None, NOW, holders=499)
+        self.assertIn("thin", why)
+        score, why = degen_score("WGT", None, NOW, holders=500)
+        self.assertNotIn("thin", why)
+        score, why = degen_score("WGT", None, NOW, sol_reserve=None, usd_volume=None, holders=None)
+        self.assertNotIn("thin", why)
+        score, why = degen_score("WGT", None, NOW, crowd=True)
+        self.assertIn("crowd", why)
+        score, why = degen_score("WGT", None, NOW, crowd=False)
+        self.assertNotIn("crowd", why)
+        score, why = degen_score("WGT", None, NOW, multiple=10)
+        self.assertEqual(why, ["parabolic"])
+        score, why = degen_score("WGT", None, NOW, multiple=100)
+        self.assertEqual(why, ["parabolic"])
+        score, why = degen_score("WGT", None, NOW, multiple=100.01)
+        self.assertEqual(why, ["parabolic_100x"])
+        self.assertEqual(score, 3)
+        score, why = degen_score("WGT", None, NOW, multiple=9.99)
+        self.assertNotIn("parabolic", why)
+        score, why = degen_score("", None, NOW)
+        self.assertIn("unknown_name", why)
+        score, why = degen_score("NVDA", None, NOW)
+        self.assertEqual(why, ["unknown_clone"])
+        score, why = degen_score("mstr", None, NOW)
+        self.assertIn("unknown_clone", why)
+        score, why = degen_score("WGT", None, NOW)
+        self.assertNotIn("unknown_clone", why)
+        capped, why = degen_score(
+            "NVDA", fresh.strftime("%Y-%m-%dT%H:%M:%SZ"), NOW,
+            sol_reserve=10, holders=10, crowd=True, multiple=200,
+        )
+        self.assertEqual(capped, 5)
+        self.assertIn("parabolic_100x", why)
+        self.assertEqual(heat_mark(True, True, 0.1), "hotter")
+        self.assertEqual(heat_mark(True, False, 0.1), "heating")
+        self.assertEqual(heat_mark(False, False, 0.80), "heating")
+        self.assertIsNone(heat_mark(False, False, 0.79))
+        self.assertIsNone(heat_mark(False, False, None))
+
+    def test_smart_inputs_do_not_invent_a_flag(self):
+        self.assertIsNone(thin_vs_volume(None, 1000))
+        self.assertIsNone(thin_vs_volume(10, None))
+        self.assertTrue(thin_vs_volume(9, 100))
+        self.assertFalse(thin_vs_volume(10, 100))
+        self.assertEqual(price_line(1, 0.2), "crossed")
+        self.assertEqual(price_line(1, 0.4), "near")
+        self.assertEqual(price_line(1, 0.5), "clear")
+        self.assertEqual(price_line(None, 1), "unknown")
+        self.assertEqual(kill_line_state({"hit": True, "value": 10, "line": 4}), "crossed")
+        self.assertEqual(kill_line_state({"hit": False, "value": 4.5, "line": 4}), "near")
+        self.assertEqual(kill_line_state({"hit": False, "value": 8, "line": 4}), "clear")
+        self.assertEqual(kill_line_state({"hit": False}), "unknown")
+        self.assertEqual(kill_line_state(None), "clear")
+        t0 = NOW.timestamp() - 3600
+        snaps = [
+            dict(_snap(MINT_A, t0, 200, 4, 2), symbol="ALP"),
+            dict(_snap(MINT_A, t0 + 1800, 210, 5, 2), symbol="ALP"),
+        ]
+        manifest = [{"type": "candidate", "mint": MINT_A, "t_s": t0, "inputs": {
+            "age_s": 600, "holders": [[2, 0, 0]],
+        }}]
+        doc = build_from({"snaps": snaps, "manifest": manifest}, NOW)
+        row = next(item for item in doc["rows"] if item["name"] == "ALP")
+        self.assertEqual(row["line_state"], "clear")
+        self.assertIs(row["thin_book"], False)
+        self.assertIs(row["crowd_flag"], False)
+        self.assertIs(row["buys_drop"], False)
+        self.assertEqual(row["heat_mark"], "heating")
+        self.assertTrue(row["smart"])
+        self.assertEqual(row["red_flags"], [])
+        self.assertGreaterEqual(row["degen"], 1)
+        self.assertIn(row["degen_label"], ("MID", "SPICY", "DEGEN", "FULL SEND", "CASINO"))
+
+    def test_dex_lookup_names_a_row_and_a_failure_stays_hidden(self):
+        calls = []
+
+        def lookup(mint):
+            calls.append(mint)
+            if mint == MINT_A:
+                return {"symbol": "ALP", "name": "Alpha", "image": "https://cdn.example/alp.png"}
+            raise RuntimeError("down")
+
+        t0 = 1_700_000_000
+        snaps = [
+            _snap(MINT_A, t0, 80, 4, 1),
+            _snap(MINT_A, t0 + 1800, 90, 4, 1),
+            _snap(MINT_B, t0, 40, 2, 1),
+            _snap(MINT_B, t0 + 1800, 42, 2, 1),
+        ]
+        doc = build_from({"snaps": snaps}, NOW, dex_lookup=lookup)
+        names = [row["name"] for row in doc["rows"] if row["chain"] == "SOL"]
+        self.assertEqual(names, ["ALP"])
+        self.assertEqual(doc["unnamed_hidden"], 1)
+        self.assertEqual(calls, [MINT_A, MINT_B])
+        self.assertNotIn(MINT_B, json.dumps(doc))
+        self.assertNotIn("SOL #", json.dumps(doc))
+        named = next(row for row in doc["rows"] if row["name"] == "ALP")
+        self.assertEqual(named["image"], "https://cdn.example/alp.png")
+        self.assertNotIn(MINT_A, json.dumps({key: value for key, value in named.items() if key != "dex_url"}))
+        parsed = _dex_names({
+            "pairs": [{
+                "chainId": "solana",
+                "baseToken": {"address": MINT_A, "symbol": "ALP", "name": "Alpha"},
+                "info": {"imageUrl": "https://cdn.example/alp.png"},
+            }],
+        }, MINT_A)
+        self.assertEqual(parsed["symbol"], "ALP")
+        hidden = _dex_names({
+            "pairs": [{
+                "chainId": "solana",
+                "baseToken": {"address": MINT_A, "symbol": MINT_A, "name": "Alpha"},
+                "info": {"imageUrl": "https://cdn.example/" + MINT_A + ".png"},
+            }],
+        }, MINT_A)
+        self.assertEqual(hidden["symbol"], None)
+        self.assertIsNone(hidden["image"])
+
+    def test_pages_workflow_run_deploys_only_a_successful_main_run(self):
+        root = os.path.join(os.path.dirname(__file__), "..", "..")
+        with open(os.path.join(root, ".github", "workflows", "pages.yml"), encoding="utf-8") as handle:
+            text = handle.read()
+        self.assertIn("workflow_run:", text)
+        self.assertIn("solana-desk-scan.yml", text)
+        self.assertIn("run-solada.yml", text)
+        self.assertIn("nft-snapshot.yml", text)
+        self.assertIn("types: [completed]", text)
+        self.assertNotIn("schedule:", text)
+        self.assertIn("github.event.workflow_run.conclusion == 'success'", text)
+        self.assertIn("github.event.workflow_run.head_branch == 'main'", text)
+        self.assertIn("cancel-in-progress: false", text)
 
     def test_dashboard_icons_are_copied_into_dist(self):
         root = os.path.join(os.path.dirname(__file__), "..", "..")

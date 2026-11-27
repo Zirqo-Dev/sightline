@@ -5,9 +5,14 @@ The phone reads radar.json. This step runs inside the existing Pages build.
 It does not change a schedule, a secret, or a scan log.
 
 Solana snap lines may carry a token name and symbol recorded by the scan.
-A row uses that symbol, then that name. SOL #1, SOL #2, … are only the
-fallback when neither was recorded. A DexScreener link is the pair or mint
-already on the snap. Ages are absolute timestamps; the page computes the labels.
+A row uses that symbol, then that name. A row that still has neither after
+one public DexScreener token lookup (at most 10 calls) is left off the
+ladder. The file records only how many were left off. A DexScreener link is
+the pair or mint already on the snap. Ages are absolute timestamps; the page
+computes the labels.
+
+Degen and the smart-layer inputs are baked here from fields already on the
+row. The page applies the HOTTER score, the 48h fold, and the SMART badge.
 
 A coin with no picture uses a committed dashboard icon when the ticker and
 the chain both match. SOL #N rows stay picture-less. NFT rows publish no image.
@@ -34,6 +39,7 @@ import pathlib
 import re
 import sys
 import unicodedata
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -141,6 +147,292 @@ def second_leg(prices):
                 if later >= dip * 1.12 and later > dip:
                     return True
     return False
+
+
+# Degen meter. Start at 1, add only for an input that is present, cap at 5.
+# Fresh is seen_at under 24h. Thin is an OR of the three size checks.
+# Parabolic uses the price multiple (1 + change/100): 10x through 100x is +1,
+# and a multiple over 100x is +2. A stock-ticker clone is an exact ticker.
+DEGEN_CAP = 5
+FRESH_H = 24
+THIN_SOL = 150.0
+THIN_USD = 500_000.0
+THIN_HOLDERS = 500.0
+CLONE_TICKERS = frozenset({"NVDA", "MSTR"})
+DEGEN_LABELS = {1: "MID", 2: "SPICY", 3: "DEGEN", 4: "FULL SEND", 5: "CASINO"}
+# Smart layer. These knobs are the whole rule. The page uses the same numbers.
+OLD_GUARD_H = 48
+THIN_LIQ_TO_VOL = 0.10
+KILL_DROP = 0.80
+NEAR_DROP = 0.60
+NEAR_LINE = 1.25
+# HOTTER score, higher first. The page is the copy that ages with the clock.
+# score = heat + FRESH_BONUS * freshness + marker - FLAG_PENALTY * flags
+# freshness = 0 when seen_at is missing, else max(0, (48 - age_hours) / 48)
+# marker = 20 for ▲▲, 10 for ▲, 0 otherwise
+# A missing heat sorts last and does not use the score.
+FRESH_BONUS = 8.0
+MARKER_HOTTER = 20.0
+MARKER_HEATING = 10.0
+FLAG_PENALTY = 25.0
+DEX_TOKENS_URL = "https://api.dexscreener.com/latest/dex/tokens/"
+MAX_DEX_CALLS = 10
+
+
+def degen_score(name, seen_at, now, sol_reserve=None, usd_volume=None, holders=None,
+                crowd=False, multiple=None):
+    """Return (score, why). Missing numbers add nothing. The floor is 1."""
+    score = 1
+    why = []
+    seen = parse_time(seen_at) if isinstance(seen_at, str) else None
+    if seen is not None and now is not None:
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=datetime.timezone.utc)
+        if (now - seen).total_seconds() < FRESH_H * 3600:
+            score += 1
+            why.append("fresh")
+    thin = False
+    if sol_reserve is not None and sol_reserve < THIN_SOL:
+        thin = True
+    if usd_volume is not None and usd_volume < THIN_USD:
+        thin = True
+    if holders is not None and holders < THIN_HOLDERS:
+        thin = True
+    if thin:
+        score += 1
+        why.append("thin")
+    if crowd:
+        score += 1
+        why.append("crowd")
+    if multiple is not None and multiple > 0:
+        if multiple > 100:
+            score += 2
+            why.append("parabolic_100x")
+        elif multiple >= 10:
+            score += 1
+            why.append("parabolic")
+    ticker = name.strip().upper() if isinstance(name, str) else ""
+    if not ticker:
+        score += 1
+        why.append("unknown_name")
+    elif ticker in CLONE_TICKERS:
+        score += 1
+        why.append("unknown_clone")
+    return min(DEGEN_CAP, score), why
+
+
+def heat_mark(streak, leg, buy_pct):
+    """▲▲ when both legs are on. ▲ when either is on, or buy_pct is at least 0.80."""
+    if streak and leg:
+        return "hotter"
+    if streak or leg or (buy_pct is not None and buy_pct >= 0.80):
+        return "heating"
+    return None
+
+
+def price_multiple(change):
+    """Price multiple from a percent change. None when the change was not measured."""
+    if change is None:
+        return None
+    return 1.0 + (change / 100.0)
+
+
+def price_line(first, last):
+    """Solana kill line from the snap prices already on the row.
+
+    Crossed at an 80% drop (the desk's reserve-price death line). Near at a
+    60% drop. A missing price is unknown, not a flag.
+    """
+    if first is None or last is None or first <= 0:
+        return "unknown"
+    drop = 1.0 - (last / first)
+    if drop >= KILL_DROP:
+        return "crossed"
+    if drop >= NEAR_DROP:
+        return "near"
+    return "clear"
+
+
+def kill_line_state(row):
+    """Cardano kill_status row. Crossed, near, clear, or unknown.
+
+    Near means the value is still above the line and within 25% of it.
+    A row that does not carry both numbers cannot clear the near check.
+    """
+    if not isinstance(row, dict):
+        return "clear"
+    value = _num(row.get("value"))
+    line = _num(row.get("line"))
+    if row.get("hit") is True:
+        return "crossed"
+    if value is None or line is None:
+        return "unknown"
+    if value <= line:
+        return "crossed"
+    if line > 0 and value <= line * NEAR_LINE:
+        return "near"
+    return "clear"
+
+
+def thin_vs_volume(liq, vol):
+    """True when liquidity is under 10% of volume. None when either input is missing."""
+    if liq is None or vol is None or vol <= 0:
+        return None
+    return (liq / vol) < THIN_LIQ_TO_VOL
+
+
+def buys_falling(values):
+    """True when the last buy count is under the first. None without two counts."""
+    nums = []
+    for value in values or []:
+        number = _num(value)
+        if number is not None:
+            nums.append(number)
+    if len(nums) < 2:
+        return None
+    return nums[-1] < nums[0]
+
+
+def _age_hours(seen_at, now):
+    seen = parse_time(seen_at) if isinstance(seen_at, str) else None
+    if seen is None or now is None:
+        return None
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=datetime.timezone.utc)
+    return (now - seen).total_seconds() / 3600.0
+
+
+def fading_flag(buys_drop, seen_at, now):
+    """True, False, or None.
+
+    Fading is a buy-count drop or an age over 48h. Prior heat is not stored,
+    so a heat drop is not an input. None means the row cannot be cleared.
+    """
+    if buys_drop is True:
+        return True
+    age = _age_hours(seen_at, now)
+    if age is None:
+        return None
+    if age > OLD_GUARD_H:
+        return True
+    if buys_drop is False:
+        return False
+    return None
+
+
+def red_flag_ids(row, now):
+    """Ids only. A missing input is not an id."""
+    flags = []
+    if row.get("thin_book") is True:
+        flags.append("thin_book")
+    if row.get("crowd_flag") is True:
+        flags.append("crowd")
+    if row.get("line_state") == "crossed":
+        flags.append("line_crossed")
+    elif row.get("line_state") == "near":
+        flags.append("line_near")
+    fade = fading_flag(row.get("buys_drop"), row.get("seen_at"), now)
+    if fade is True:
+        flags.append("fade")
+    return flags
+
+
+def row_is_smart(row, now):
+    """Hot or heating, every smart check decided, and no red flag."""
+    heat = _num(row.get("heat"))
+    if heat is None:
+        return False
+    mark = row.get("heat_mark")
+    if not (heat >= 55 or mark in ("heating", "hotter")):
+        return False
+    if row.get("thin_book") is None or row.get("crowd_flag") is None:
+        return False
+    if row.get("line_state") not in ("clear", "near", "crossed"):
+        return False
+    if fading_flag(row.get("buys_drop"), row.get("seen_at"), now) is None:
+        return False
+    return not red_flag_ids(row, now)
+
+
+def _sync_line_chip(row):
+    """A crossed line keeps the skull chip. Near does not."""
+    if row.get("line_state") != "crossed":
+        return
+    chips = row.setdefault("chips", [])
+    if any(isinstance(chip, dict) and chip.get("id") == "skull" for chip in chips):
+        return
+    chips.append({"id": "skull", "label": "kill line"})
+
+
+def _stamp_meter(row, now, name, sol_reserve=None, usd_volume=None, holders=None,
+                 crowd=False, multiple=None, streak=False, leg=False, buy_pct=None,
+                 thin_book=False, crowd_flag=False, line_state="clear", buys_drop=False):
+    """Bake degen and the smart inputs. None on a check means it was not decided."""
+    score, why = degen_score(
+        name, row.get("seen_at"), now,
+        sol_reserve=sol_reserve, usd_volume=usd_volume, holders=holders,
+        crowd=bool(crowd), multiple=multiple,
+    )
+    row["degen"] = score
+    row["degen_label"] = DEGEN_LABELS[score]
+    row["degen_why"] = why
+    row["heat_mark"] = heat_mark(streak, leg, buy_pct)
+    row["thin_book"] = thin_book
+    row["crowd_flag"] = crowd_flag
+    row["line_state"] = line_state
+    row["buys_drop"] = buys_drop
+    _sync_line_chip(row)
+    row["red_flags"] = red_flag_ids(row, now)
+    row["smart"] = row_is_smart(row, now)
+    return row
+
+
+def _dex_names(payload, mint):
+    """Symbol, name, and a safe image from one token payload. No address is returned."""
+    pairs = payload.get("pairs") if isinstance(payload, dict) else None
+    if not isinstance(pairs, list):
+        return None
+    for pair in pairs:
+        if not isinstance(pair, dict) or str(pair.get("chainId") or "") != "solana":
+            continue
+        base = pair.get("baseToken") if isinstance(pair.get("baseToken"), dict) else {}
+        if base.get("address") != mint:
+            continue
+        symbol = _token_label(base.get("symbol"), 20)
+        name = _token_label(base.get("name"), 64)
+        info = pair.get("info") if isinstance(pair.get("info"), dict) else {}
+        image = _https(info.get("imageUrl"))
+        if image and _image_hides(image):
+            image = None
+        if not symbol and not name:
+            continue
+        return {"symbol": symbol, "name": name, "image": image}
+    return None
+
+
+class _DexStop(Exception):
+    """The public token endpoint asked us to stop. The build continues."""
+
+
+def _dex_lookup_live(mint):
+    """One keyless token call. None on any failure. Raises _DexStop on HTTP 429."""
+    if not isinstance(mint, str) or not _MINT.fullmatch(mint):
+        return None
+    url = DEX_TOKENS_URL + urllib.parse.quote(mint)
+    try:
+        req = urllib.request.Request(url, headers=UA)
+        with urllib.request.urlopen(req, timeout=FETCH_TIMEOUT_S) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        if getattr(exc, "code", None) == 429:
+            raise _DexStop()
+        return None
+    except Exception:
+        return None
+    try:
+        return _dex_names(payload, mint)
+    except Exception:
+        return None
 
 
 def top10_pct(holders):
@@ -538,9 +830,8 @@ def _chips(ids, labels):
     return [{"id": chip_id, "label": labels[chip_id]} for chip_id in ids if chip_id in labels]
 
 
-# Radar chain label -> icons.json chain. SOL is omitted on purpose: those rows
-# are anonymized placeholders and must not pick up a token picture.
-_CHAIN_FOR_ICON = {"ADA": "cardano", "ETH": "ethereum", "BASE": "base"}
+# Radar chain label -> icons.json chain. A named SOL ticker may use a local file.
+_CHAIN_FOR_ICON = {"ADA": "cardano", "ETH": "ethereum", "BASE": "base", "SOL": "solana"}
 _SOL_ANON = re.compile(r"SOL #\d+")
 _SLASH_CREDIT = re.compile(r"\([^)]*/[^)]*\)")
 _SEEN_KEYS = ("first_seen", "seen_at", "first_logged_at", "first_seen_at")
@@ -616,17 +907,24 @@ def _local_coin_icon(icons, ticker, chain):
 
 
 def _apply_coin_icon(row, icons=None):
-    """Prefer a local coin file. Never a token logo on a SOL #N row or an NFT."""
+    """Prefer a local coin file. A SOL #N name stays picture-less. NFTs do too."""
     if not isinstance(row, dict) or row.get("kind") != "coin":
         return row
     name = row.get("name") if isinstance(row.get("name"), str) else ""
-    if row.get("chain") == "SOL" or _SOL_ANON.fullmatch(name or ""):
+    if _SOL_ANON.fullmatch(name or ""):
         row["image"] = None
         return row
     icons = _icons_doc() if icons is None else icons
     local = _local_coin_icon(icons, name, row.get("chain"))
     if local:
         row["image"] = local
+        return row
+    image = row.get("image")
+    if isinstance(image, str) and image.startswith("dashboard/"):
+        row["image"] = None
+        return row
+    if image and not _https(image):
+        row["image"] = None
     return row
 
 
@@ -653,7 +951,7 @@ def _cardano_stat(holders, vol, side):
     return "last-run"
 
 
-def _finish(rows, limit):
+def _finish(rows, limit, now=None):
     assign_heat(rows)
     ranked = sorted(rows, key=lambda row: (-row["heat"], row["name"]))
     icons = _icons_doc()
@@ -662,6 +960,9 @@ def _finish(rows, limit):
         row.pop("_raw", None)
         if not row.get("dex_url"):
             row.pop("dex_url", None)
+        # Heat is known only after assign_heat, so the badge is decided here.
+        row["red_flags"] = red_flag_ids(row, now)
+        row["smart"] = row_is_smart(row, now)
         _apply_coin_icon(row, icons)
         try:
             out.append(_public_row(row))
@@ -670,8 +971,12 @@ def _finish(rows, limit):
     return out
 
 
-def _solana_rows(manifest_lines, snap_lines, death_lines=None):
-    """Rows from pool snaps only. Death labels and S2 picks are not read."""
+def _solana_rows(manifest_lines, snap_lines, death_lines=None, now=None, dex_lookup=None):
+    """Rows from pool snaps only. Death labels and S2 picks are not read.
+
+    A series with no ticker after the scan-time name and the optional
+    DexScreener lookup is not returned. The third value is how many.
+    """
     del death_lines
     first = {}
     for line in manifest_lines or []:
@@ -805,12 +1110,20 @@ def _solana_rows(manifest_lines, snap_lines, death_lines=None):
             "_raw": raw_score(move, last["sol"], interest),
             "_mint": mint,
             "_labels": recorded.get(mint) or {},
+            "_sol": last["sol"],
+            "_multiple": (prices[-1] / prices[0]) if prices and prices[0] else None,
+            "_crowd": None if share is None else share >= 30,
+            "_line": price_line(prices[0], prices[-1]) if prices else "unknown",
+            "_buys": buys_falling([item.get("buys") for item in points]),
+            "_streak": "streak" in labels,
+            "_leg": "leg" in labels,
+            "_buy_pct": buy_pct,
         })
     assign_heat(rows)
     ranked = sorted(rows, key=lambda row: (-row["heat"], -row["_raw"]))[:8]
-    out = []
-    anon = 0
-    for index, row in enumerate(ranked, start=1):
+    named = []
+    pending = []
+    for row in ranked:
         mint = row.pop("_mint", None)
         meta = row.pop("_labels", None) or {}
         row.pop("_raw", None)
@@ -818,17 +1131,66 @@ def _solana_rows(manifest_lines, snap_lines, death_lines=None):
         token_name = meta.get("name")
         if symbol and token_name and token_name.casefold() == symbol.casefold():
             token_name = None
+        row["name"] = ""
         if symbol:
             row["name"] = symbol
         elif token_name:
             row["name"] = token_name
             token_name = None
-        else:
-            anon += 1
-            row["name"] = "SOL #%d" % anon
         if token_name:
             row["token_name"] = token_name
         ident = meta.get("pool") or (mint if isinstance(mint, str) and _MINT.fullmatch(mint) else None)
+        row["_ident"] = ident
+        row["_mint_lookup"] = mint if isinstance(mint, str) else None
+        if row["name"]:
+            named.append(row)
+        else:
+            pending.append(row)
+    hidden = 0
+    calls = 0
+    stop = False
+    for row in pending:
+        found = None
+        mint = row.get("_mint_lookup")
+        if dex_lookup is not None and not stop and calls < MAX_DEX_CALLS and mint:
+            calls += 1
+            try:
+                found = dex_lookup(mint)
+            except _DexStop:
+                stop = True
+                found = None
+            except Exception:
+                found = None
+        if isinstance(found, dict):
+            symbol = _token_label(found.get("symbol"), 20)
+            token_name = _token_label(found.get("name"), 64)
+            if symbol and token_name and token_name.casefold() == symbol.casefold():
+                token_name = None
+            if symbol:
+                row["name"] = symbol
+                if token_name:
+                    row["token_name"] = token_name
+            elif token_name:
+                row["name"] = token_name
+            image = found.get("image")
+            if isinstance(image, str) and _https(image) and not _image_hides(image):
+                row["image"] = image
+        if not row.get("name"):
+            hidden += 1
+            continue
+        named.append(row)
+    out = []
+    for index, row in enumerate(named, start=1):
+        ident = row.pop("_ident", None)
+        row.pop("_mint_lookup", None)
+        sol_reserve = row.pop("_sol", None)
+        multiple = row.pop("_multiple", None)
+        crowd = row.pop("_crowd", None)
+        line_state = row.pop("_line", "unknown")
+        buys_drop = row.pop("_buys", None)
+        streak = row.pop("_streak", False)
+        leg = row.pop("_leg", False)
+        buy_pct = row.pop("_buy_pct", None)
         row_id = _sol_row_id(ident)
         if row_id:
             row["id"] = row_id
@@ -836,18 +1198,26 @@ def _solana_rows(manifest_lines, snap_lines, death_lines=None):
             slug = re.sub(r"[^a-z0-9]+", "-", str(row["name"]).lower()).strip("-") or str(index)
             row["id"] = "sol-" + slug
         row["why"] = row["name"]
-        row["image"] = None
         url = _sol_dex(ident)
         if url:
             row["dex_url"] = url
+        _stamp_meter(
+            row, now, row["name"],
+            sol_reserve=sol_reserve, multiple=multiple, crowd=bool(crowd),
+            streak=streak, leg=leg, buy_pct=buy_pct,
+            # Snaps have a SOL reserve and no USD volume, so the liq/vol
+            # comparison is not an input on this chain.
+            thin_book=False, crowd_flag=crowd, line_state=line_state, buys_drop=buys_drop,
+        )
+        _apply_coin_icon(row)
         try:
             out.append(_public_row(row))
         except ValueError:
             continue
-    return out, len(rejected)
+    return out, len(rejected), hidden
 
 
-def _hood_coins(doc):
+def _hood_coins(doc, now=None):
     tokens = doc.get("tokens") if isinstance(doc, dict) else None
     rows = []
     for token in tokens or []:
@@ -874,7 +1244,7 @@ def _hood_coins(doc):
         if seen_at:
             labels["seen"] = "seen"
             chip_ids.append("seen")
-        if days is not None and days < 1:
+        if days is not None and days * 24 < 1:
             labels["pool"] = "new pool"
             chip_ids.append("pool")
         if token.get("watch_reason") == "thin_depth":
@@ -917,10 +1287,17 @@ def _hood_coins(doc):
             "source": "HoodScout daily",
             "_raw": raw_score(change, vol or liq, buyers),
         })
-    return _finish(rows, 10)
+        _stamp_meter(
+            rows[-1], now, name,
+            usd_volume=vol, multiple=price_multiple(change), buy_pct=buy_pct,
+            # No holder-concentration field and no kill line are published here.
+            thin_book=thin_vs_volume(liq, vol), crowd_flag=False, line_state="clear",
+            buys_drop=buys_falling(spark_vals),
+        )
+    return _finish(rows, 10, now)
 
 
-def _hood_nfts(doc):
+def _hood_nfts(doc, now=None):
     """Kept HoodScout NFT rows, and how many collections were left out."""
     collections = doc.get("collections") if isinstance(doc, dict) else None
     rows = []
@@ -944,14 +1321,15 @@ def _hood_nfts(doc):
         symbol = item.get("floor_symbol") if isinstance(item.get("floor_symbol"), str) else "ETH"
         if _ETH.fullmatch(symbol) or len(symbol) > 8:
             symbol = "ETH"
-        seen_at = _seen_from_days(doc.get("generated_at"), _num(item.get("age_days")))
+        days = _num(item.get("age_days"))
+        seen_at = _seen_from_days(doc.get("generated_at"), days)
         labels = {}
         chip_ids = []
         if seen_at:
             labels["seen"] = "seen"
             chip_ids.append("seen")
-        if item.get("flag_new") is True:
-            labels["pool"] = "new"
+        if item.get("flag_new") is True and days is not None and days * 24 < 1:
+            labels["pool"] = "new pool"
             chip_ids.append("pool")
         facts = ["HoodScout NFT row."]
         if change is None:
@@ -983,10 +1361,14 @@ def _hood_nfts(doc):
             "source": "HoodScout NFT",
             "_raw": raw_score(change, vol, sales),
         })
-    return _finish(rows, 6), hidden
+        _stamp_meter(
+            rows[-1], now, name, multiple=price_multiple(change),
+            thin_book=False, crowd_flag=False, line_state="clear", buys_drop=False,
+        )
+    return _finish(rows, 6, now), hidden
 
 
-def _cardano_rows(last_run, flags, kill, whale, now):
+def _cardano_rows(last_run, flags, kill, whale, now, flags_loaded=False, kill_loaded=False):
     results = last_run.get("results") if isinstance(last_run, dict) else None
     passed = set()
     for ticker in (last_run or {}).get("passed_k_y") or []:
@@ -1080,10 +1462,26 @@ def _cardano_rows(last_run, flags, kill, whale, now):
             "source": "Cardano last-run",
             "_raw": raw_score(None, vol or side, holders),
         })
-    return _finish(rows, 8)
+        crowd_on = bool({"sniper_full_exit", "coordinated_buys", "holder_concentration", "concentration_jump"} & set(kinds))
+        if not kill_loaded:
+            line_state = "unknown"
+        elif isinstance(kill_row, dict):
+            line_state = kill_line_state(kill_row)
+        else:
+            line_state = "clear"
+        _stamp_meter(
+            rows[-1], now, name,
+            holders=holders, crowd=crowd_on, multiple=None,
+            thin_book=thin_vs_volume(side, vol),
+            crowd_flag=crowd_on if flags_loaded else None,
+            line_state=line_state,
+            # Cardano rows have no buy series. Age is the fading input.
+            buys_drop=False,
+        )
+    return _finish(rows, 8, now)
 
 
-def _eth_rows(units):
+def _eth_rows(units, now=None):
     """One row per raw slug. A credited slug is counted and never grouped."""
     series = {}
     hidden = set()
@@ -1161,7 +1559,11 @@ def _eth_rows(units):
             "source": "ETH floor snaps",
             "_raw": raw_score(change, last_floor, None),
         })
-    return _finish(rows, 6), len(hidden) + loose
+        _stamp_meter(
+            rows[-1], now, name, multiple=price_multiple(change),
+            thin_book=False, crowd_flag=False, line_state="clear", buys_drop=False,
+        )
+    return _finish(rows, 6, now), len(hidden) + loose
 
 
 def _stamp(values):
@@ -1172,7 +1574,7 @@ def _stamp(values):
     return max(parsed).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def build_from(payloads, now=None):
+def build_from(payloads, now=None, dex_lookup=None):
     """Build the public snapshot from already-parsed sources. Unknown keys are dropped."""
     now = now or datetime.datetime.now(datetime.timezone.utc)
     if now.tzinfo is None:
@@ -1242,29 +1644,30 @@ def build_from(payloads, now=None):
     if isinstance(nft_at, str):
         scan_times.append(nft_at)
     rows = []
-    sol_rows, sol_dropped = _solana_rows(payloads.get("manifest"), payloads.get("snaps"))
+    sol_rows, sol_dropped, sol_unnamed = _solana_rows(
+        payloads.get("manifest"), payloads.get("snaps"), now=now, dex_lookup=dex_lookup,
+    )
     rows.extend(sol_rows)
     if sol_dropped:
         gaps.append("Solana reserve filter dropped %d series (dust or a move over 25×)." % sol_dropped)
-    if not sol_rows:
+    if not sol_rows and not sol_unnamed:
         gaps.append("No Solana 30-minute snaps were readable for this snapshot.")
-    else:
-        unnamed = [row["name"] for row in sol_rows if _SOL_ANON.fullmatch(row.get("name") or "")]
-        if unnamed:
-            shown = ", ".join(unnamed[:8])
-            gaps.append("Solana rows with no recorded name stay %s." % shown)
     if hood:
-        rows.extend(_hood_coins(hood))
+        rows.extend(_hood_coins(hood, now))
         gaps.append("HoodScout speculative and dead tiers are not on this list.")
     nft_doc = discover or (payloads.get("nft_latest") if isinstance(payloads.get("nft_latest"), dict) else {})
-    nft_rows, nft_hidden = _hood_nfts(nft_doc) if nft_doc else ([], 0)
+    nft_rows, nft_hidden = _hood_nfts(nft_doc, now) if nft_doc else ([], 0)
     rows.extend(nft_rows)
     if last_run:
         allowed = roster_names(payloads.get("whale_roster"))
-        rows.extend(_cardano_rows(last_run, payloads.get("flags"), payloads.get("kill"), _whale_name(last_run, allowed), now))
+        rows.extend(_cardano_rows(
+            last_run, payloads.get("flags"), payloads.get("kill"), _whale_name(last_run, allowed), now,
+            flags_loaded=isinstance(payloads.get("flags"), dict),
+            kill_loaded=isinstance(payloads.get("kill"), dict),
+        ))
     else:
         gaps.append("Cardano last-run was not readable.")
-    eth_rows, eth_hidden = _eth_rows(payloads.get("units"))
+    eth_rows, eth_hidden = _eth_rows(payloads.get("units"), now)
     rows.extend(eth_rows)
     hidden = nft_hidden + eth_hidden
     gaps.append("Base has no coin feed. The BASE cut stays empty.")
@@ -1284,6 +1687,8 @@ def build_from(payloads, now=None):
         "gaps": gaps,
         "heat_note": "Heat is a ranking, not a buy signal.",
     }
+    if sol_unnamed:
+        doc["unnamed_hidden"] = sol_unnamed
     if hidden:
         doc["hidden_note"] = "%d collections hidden for creator attribution" % hidden
     _walk(doc)
@@ -1373,7 +1778,7 @@ def write_snapshot(dest, now=None):
     dest = pathlib.Path(dest)
     payloads = load_live(now)
     errors = payloads.pop("_errors", [])
-    doc = build_from(payloads, now)
+    doc = build_from(payloads, now, dex_lookup=_dex_lookup_live)
     if errors:
         doc["gaps"] = list(doc["gaps"]) + ["Unreadable source: %s." % item for item in errors]
         _walk(doc)
