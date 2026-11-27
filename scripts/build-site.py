@@ -167,7 +167,23 @@ DESK_DATA = "https://raw.githubusercontent.com/Zirqo-Dev/sightline/desk-data/"
 # under solada-prefilter/. The first publish put them only at those paths, so
 # /whale_ledger.json, /kill_status.json, and /solada/<name>.json 404 on Pages.
 # The fetch itself succeeds. FEED_ALIASES copies the same bytes to the URLs that 404.
-_CARDANO_ID = re.compile(r"stake1[0-9a-z]{20,}|addr1[0-9a-z]{20,}")
+# Long ids stay the old rule: 20+ letters or digits after the prefix.
+# A short fragment is bech32 after addr1 or stake1, and is not part of a longer id.
+# With an ellipsis (.. ... or …) the bech32 run can be one character. Without one it
+# is at least two, so a one-character kind mark such as addr1q stays. Case is folded
+# so the publish scrub matches the privacy guard. An allowlisted platform address
+# is kept whole.
+_ELLIPSIS = r"(?:\.{2,3}|" + "\u2026" + ")"
+_B32 = r"[02-9ac-hj-np-z]"
+_CARDANO_ID = re.compile(
+    r"(?<![0-9a-z])(?:"
+    r"(?:stake1|addr1)" + _B32 + r"{1,80}" + _ELLIPSIS + _B32 + r"{0,80}"
+    r"|(?:stake1|addr1)[0-9a-z]{20,}"
+    r"|(?:stake1|addr1)" + _B32 + r"{2,49}"
+    r")(?![0-9a-z])",
+    re.IGNORECASE,
+)
+_SCRUB_SUFFIXES = {".json", ".md", ".jsonl", ".csv", ".txt", ".html", ".js", ".css", ".mjs"}
 FEED_ALIASES = {
     "x_buzz.json": ("solada/x_buzz.json",),
     "solada-prefilter/whale_ledger.json": ("whale_ledger.json", "solada/whale_ledger.json"),
@@ -216,6 +232,11 @@ def platform_addresses():
     return out
 
 
+def cardano_tag(token):
+    """Stable public id for one Cardano fragment. Same text, same tag."""
+    return "w-" + hashlib.sha256(token.encode()).hexdigest()[:8]
+
+
 def scrub_public_feed(data, platform=None):
     """Replace stake keys and non-platform addresses with a stable w- id."""
     keep = platform if platform is not None else platform_addresses()
@@ -225,9 +246,34 @@ def scrub_public_feed(data, platform=None):
         token = match.group(0)
         if token in keep:
             return token
-        return "w-" + hashlib.sha256(token.encode()).hexdigest()[:8]
+        return cardano_tag(token)
 
     return _CARDANO_ID.sub(repl, text).encode("utf-8")
+
+
+def scrub_public_tree(dest):
+    """Scrub text files already copied into the published tree.
+
+    The v75 archive is copied as-is from main, so this is what keeps a short
+    fragment in that frozen tree off the site. Feeds are scrubbed before they
+    are written. A file that does not change is left byte for byte.
+    """
+    root = pathlib.Path(dest)
+    changed = 0
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in _SCRUB_SUFFIXES:
+            continue
+        raw = path.read_bytes()
+        if b"\0" in raw[:4096]:
+            continue
+        try:
+            cleaned = scrub_public_feed(raw)
+        except UnicodeDecodeError:
+            continue
+        if cleaned != raw:
+            path.write_bytes(cleaned)
+            changed += 1
+    return changed
 
 
 def publish_aliases(dest, rel, data):
@@ -322,7 +368,8 @@ def main():
     if not (archive / "index.html").is_file():
         sys.exit("build-site: archive/v75/index.html is missing (frozen PR #75 dashboard)")
     shutil.copytree(archive, DIST / "archive" / "v75")
-    print("  archive v75")
+    archive_scrubbed = scrub_public_tree(DIST / "archive" / "v75")
+    print(f"  archive v75 ({archive_scrubbed} file(s) scrubbed)")
     (DIST / ".nojekyll").write_text("", encoding="utf-8")
     shutil.copy(ROOT / "desks.json", DIST / "desks.json")
     desks = json.loads((ROOT / "desks.json").read_text(encoding="utf-8"))["desks"]

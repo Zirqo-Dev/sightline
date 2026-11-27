@@ -31,11 +31,16 @@ fi
 patterns=(
   '"wallet_snapshot"'
   '"held"[[:space:]]*:[[:space:]]*true'
-  # Generic full-length Cardano wallet ids (no owner-specific values live in this file).
+  # Generic Cardano wallet ids (no owner-specific values live in this file).
   # Full stake keys and full addresses (addr1, including enterprise/script addr1v) are
-  # never published. Known platform addresses are listed in privacy-public-keys.txt and masked.
+  # never published. A short fragment is the same prefix plus bech32, with or without
+  # an ellipsis (.. ... or …). Without an ellipsis the bech32 run is at least 2 and at
+  # most 49, and it is not part of a longer id. A one-character kind mark stays.
+  # Known platform addresses are listed in privacy-public-keys.txt and masked first.
   'stake1[02-9ac-hj-np-z]{50,}'
   'addr1[02-9ac-hj-np-z]{50,}'
+  '(^|[^0-9a-z])(stake1|addr1)[02-9ac-hj-np-z]{1,80}(\.\.\.?|…)[02-9ac-hj-np-z]{0,80}'
+  '(^|[^0-9a-z])(stake1|addr1)[02-9ac-hj-np-z]{2,49}([^0-9a-z]|$)'
 )
 n_generic=${#patterns[@]}  # patterns above are generic; any added below are owner-specific
 # Owner-specific wallet patterns come ONLY from the PRIVACY_GUARD_PATTERNS secret (one ERE per line)

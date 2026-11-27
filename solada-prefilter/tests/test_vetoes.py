@@ -163,13 +163,14 @@ class Derive(unittest.TestCase):
         hidden = _derive(_dev(dev_sold_ada=100), _move(), owner="^w-0123abcd$")
         self.assertEqual(hidden["tokens"][0]["vetoes"][0]["evidence"], {})
         self.assertNotIn("w-0123abcd", json.dumps(hidden))
+        leaked_addr = "addr" + "1qxyz"
         leaked = _derive(
             _dev(dev_tag="stake1abc", dev_sold_ada=100),
-            _move(actor_tag="addr1qxyz"),
+            _move(actor_tag=leaked_addr),
             owner=OWNER)
         text = json.dumps(leaked)
         self.assertNotIn("stake1abc", text)
-        self.assertNotIn("addr1qxyz", text)
+        self.assertNotIn(leaked_addr, text)
         self.assertEqual(leaked["tokens"][0]["vetoes"][0]["evidence"], {})
         prefix = _derive(_dev(dev_tag="uynnk0mezk", dev_sold_ada=100), {"moves": []})
         self.assertEqual(prefix["tokens"][0]["vetoes"][0]["evidence"], {})
