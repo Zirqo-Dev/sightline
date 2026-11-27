@@ -426,8 +426,8 @@
       + '<button type="button" class="row-btn" data-id="' + esc(row.id) + '" aria-expanded="' + (open ? "true" : "false") + '">'
       + '<span class="rank">' + (rank == null ? "" : rank) + "</span>" + mark
       + '<span class="main"><span class="name-line"><span class="name">' + esc(row.name) + "</span>"
-      + hint + '<span class="tag">' + esc(row.chain) + "</span>" + ageBit + markerHtml(row) + smart + "</span>"
-      + '<span class="meter-line">' + degenHtml(row) + '<span class="heat-n">heat ' + esc(heatText) + "</span></span>"
+      + hint + '<span class="tag">' + esc(row.chain) + "</span>" + ageBit + markerHtml(row) + smart
+      + '<span class="meter">' + degenHtml(row) + '<span class="heat-n">heat ' + esc(heatText) + "</span></span></span>"
       + '<span class="stat-line">' + chips + flags + spark(row.spark) + "</span></span>"
       + '<span class="metrics"><span class="price">' + priceHtml(finite(row.price), row.price_unit) + "</span>"
       + pill(row.change) + '<span class="size">' + esc(sizeText(row)) + "</span></span></button>"
