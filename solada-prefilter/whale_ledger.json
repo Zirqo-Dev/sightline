@@ -1,14 +1,14 @@
 {
- "at": "2026-11-27T17:12:42Z",
+ "at": "2026-11-27T19:12:49Z",
  "whale_tag": "w-f3186187",
  "basis": "koios",
  "note": "Research data for Snek. qty = raw on-chain units. Each tx is applied once (dedupe by tx hash). tokens[].policy is the first 8 hex of the policy. A holding is a duplicate only when the full unit (policy id + asset name) matches; that copy is dup_of / same_qty_as and is left out of positions_counted. Different policy ids are different assets, even when the ticker and the quantity match.",
- "height": 14255855,
+ "height": 14256149,
  "baseline_at": "2026-11-14T17:13:24Z",
- "ada_balance": 440.145017,
+ "ada_balance": 1711.617324,
  "positions": {
   "6e917b+fda00259": 2790905,
-  "ASCEND": 312278871939,
+  "ASCEND": 312721070315,
   "ATM": 19024975734573,
   "BABYBOLT": 13368031015248,
   "BANK": 127518706,
@@ -34,7 +34,7 @@
   "CHADDY": 16848771299364,
   "CLOVE-3": 14424308574545,
   "CNET": 31327824482276,
-  "COCK": 40096323,
+  "COCK": 40113379,
   "COCKLOCK": 50000000,
   "CSWAP": 394,
   "CTO Man": 51188,
@@ -86,7 +86,7 @@
   "SHARKY": 7293645927304,
   "SNEK": 14023505,
   "SOLABLUE": 1438534570029,
-  "SOLADA": 26000000,
+  "SOLADA": 25000000,
   "STABLE": 20165843834023,
   "STRIKE": 330805,
   "SUNDAE": 65,
@@ -118,7 +118,7 @@
  },
  "positions_counted": {
   "6e917b+fda00259": 2790905,
-  "ASCEND": 312278871939,
+  "ASCEND": 312721070315,
   "ATM": 19024975734573,
   "BABYBOLT": 13368031015248,
   "BANK": 127518706,
@@ -144,7 +144,7 @@
   "CHADDY": 16848771299364,
   "CLOVE-3": 14424308574545,
   "CNET": 31327824482276,
-  "COCK": 40096323,
+  "COCK": 40113379,
   "COCKLOCK": 50000000,
   "CSWAP": 394,
   "CTO Man": 51188,
@@ -196,7 +196,7 @@
   "SHARKY": 7293645927304,
   "SNEK": 14023505,
   "SOLABLUE": 1438534570029,
-  "SOLADA": 26000000,
+  "SOLADA": 25000000,
   "STABLE": 20165843834023,
   "STRIKE": 330805,
   "SUNDAE": 65,
@@ -235,7 +235,7 @@
   {
    "token": "ASCEND",
    "policy": "eb7a93eb",
-   "qty": 312278871939
+   "qty": 312721070315
   },
   {
    "token": "ATM",
@@ -365,7 +365,7 @@
   {
    "token": "COCK",
    "policy": "49e42316",
-   "qty": 40096323
+   "qty": 40113379
   },
   {
    "token": "COCKLOCK",
@@ -625,7 +625,7 @@
   {
    "token": "SOLADA",
    "policy": "e7c77b27",
-   "qty": 26000000
+   "qty": 25000000
   },
   {
    "token": "STABLE",
@@ -12348,6 +12348,55 @@
    "closed_at": "2026-11-27T16:43:36Z",
    "filled_token": "ASCEND",
    "filled_qty": 475761788
+  },
+  "22e9727168#0": {
+   "ref_short": "22e9727168#0",
+   "token": "ADA",
+   "qty_raw": 204000000,
+   "ada": 204.0,
+   "status": "filled",
+   "opened_tx": "22e9727168",
+   "opened_at": "2026-11-27T17:37:13Z",
+   "own_stake": true,
+   "closed_tx": "5edc13eec9",
+   "closed_at": "2026-11-27T17:38:09Z",
+   "filled_token": "ASCEND",
+   "filled_qty": 126387504
+  },
+  "8c4393d892#0": {
+   "ref_short": "8c4393d892#0",
+   "token": "SOLADA",
+   "qty_raw": 1000000,
+   "ada": 4.5,
+   "status": "filled",
+   "opened_tx": "8c4393d892",
+   "opened_at": "2026-11-27T17:38:35Z",
+   "own_stake": true,
+   "closed_tx": "5eab9dc12e",
+   "closed_at": "2026-11-27T17:38:35Z",
+   "filled_ada": 2047.252715
+  },
+  "75c801efb8#0": {
+   "ref_short": "75c801efb8#0",
+   "token": "ADA",
+   "qty_raw": 504000000,
+   "ada": 504.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "75c801efb8",
+   "opened_at": "2026-11-27T17:39:47Z",
+   "own_stake": true,
+   "closed_at": "2026-11-27T19:12:49Z"
+  },
+  "d1829a0864#0": {
+   "ref_short": "d1829a0864#0",
+   "token": "ADA",
+   "qty_raw": 73000000,
+   "ada": 73.0,
+   "status": "closed_elsewhere",
+   "opened_tx": "d1829a0864",
+   "opened_at": "2026-11-27T18:29:49Z",
+   "own_stake": true,
+   "closed_at": "2026-11-27T19:12:49Z"
   }
  },
  "rows": [
@@ -37475,6 +37524,93 @@
    "order_ref_short": "d4297fb16c#1",
    "order_status": "filled",
    "sold": "NIGHT"
+  },
+  {
+   "time": "2026-11-27T17:37:13Z",
+   "tx_short": "22e9727168",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 204000000,
+   "ada_leg": 204.0,
+   "counterparty_tag": null,
+   "order_ref_short": "22e9727168#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-27T17:38:09Z",
+   "tx_short": "5edc13eec9",
+   "kind": "order_fill",
+   "token": "ASCEND",
+   "qty": 126387504,
+   "ada_leg": 204.0,
+   "counterparty_tag": null,
+   "order_ref_short": "22e9727168#0",
+   "order_status": "filled",
+   "sold": "ADA"
+  },
+  {
+   "time": "2026-11-27T17:38:35Z",
+   "tx_short": "8c4393d892",
+   "kind": "order_open",
+   "token": "SOLADA",
+   "qty": 1000000,
+   "ada_leg": 4.5,
+   "counterparty_tag": null,
+   "order_ref_short": "8c4393d892#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-27T17:38:35Z",
+   "tx_short": "5eab9dc12e",
+   "kind": "order_fill",
+   "token": "SOLADA",
+   "qty": 1000000,
+   "ada_leg": 2047.252715,
+   "counterparty_tag": null,
+   "order_ref_short": "8c4393d892#0",
+   "order_status": "filled"
+  },
+  {
+   "time": "2026-11-27T17:39:47Z",
+   "tx_short": "c68c9ea9b3",
+   "kind": "swap",
+   "token": "ASCEND",
+   "qty": 315810872,
+   "ada_leg": 502.0,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-27T17:39:47Z",
+   "tx_short": "75c801efb8",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 504000000,
+   "ada_leg": 504.0,
+   "counterparty_tag": null,
+   "order_ref_short": "75c801efb8#0",
+   "order_status": "open"
+  },
+  {
+   "time": "2026-11-27T18:29:49Z",
+   "tx_short": "1ad5725611",
+   "kind": "swap",
+   "token": "COCK",
+   "qty": 17056,
+   "ada_leg": 71.0,
+   "counterparty_tag": null,
+   "direction": "buy"
+  },
+  {
+   "time": "2026-11-27T18:29:49Z",
+   "tx_short": "d1829a0864",
+   "kind": "order_open",
+   "token": "ADA",
+   "qty": 73000000,
+   "ada_leg": 73.0,
+   "counterparty_tag": null,
+   "order_ref_short": "d1829a0864#0",
+   "order_status": "open"
   }
  ],
  "capped": false,
@@ -37485,7 +37621,7 @@
   "token_drift": {},
   "ok": true
  },
- "koios_calls": 8,
+ "koios_calls": 7,
  "blockfrost_fallbacks": 0,
  "blockfrost_calls": 0,
  "blockfrost_available": true
