@@ -23,6 +23,14 @@ def _snap(mint, t, sol, buys, sells):
     }
 
 
+def _without_dex(doc):
+    """The public file minus DexScreener links, which are allowed to carry a pair or mint."""
+    copy = json.loads(json.dumps(doc))
+    for row in copy.get("rows") or []:
+        row.pop("dex_url", None)
+    return json.dumps(copy)
+
+
 class RadarSnapshotTest(unittest.TestCase):
     def test_streak_and_second_leg_rules(self):
         self.assertTrue(buy_streak([{"buys": 3, "sells": 1}, {"buys": 2, "sells": 1}]))
@@ -71,8 +79,12 @@ class RadarSnapshotTest(unittest.TestCase):
         for banned in ("desk", "first_pick", "kill", "dead", "skull", "outcome", "verdict", "first snap"):
             self.assertNotIn(banned, row_blob)
         blob = json.dumps(doc)
-        self.assertNotIn(MINT_A, blob)
-        self.assertNotIn(MINT_B, blob)
+        public = _without_dex(doc)
+        self.assertNotIn(MINT_A, public)
+        self.assertNotIn(MINT_B, public)
+        self.assertTrue(sol[0]["dex_url"].startswith("https://dexscreener.com/solana/"))
+        self.assertIn(MINT_A, sol[0]["dex_url"])
+        self.assertIn(MINT_B, sol[1]["dex_url"])
         self.assertNotIn("NIX", blob)
         self.assertNotRegex(sol[0]["name"], r"[1-9A-HJ-NP-Za-km-z]{32,44}")
         self.assertLess(abs(sol[0]["change"]), 1000)
@@ -108,8 +120,10 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertEqual(cat["chain"], "RH")
         self.assertNotIn("desk", [chip["id"] for chip in cat["chips"]])
         blob = json.dumps(doc)
-        self.assertNotIn(ETH_ADDR, blob)
+        self.assertNotIn(ETH_ADDR, _without_dex(doc))
         self.assertNotIn('"ca"', blob)
+        self.assertTrue(cat["dex_url"].startswith("https://dexscreener.com/robinhood/"))
+        self.assertIn(ETH_ADDR, cat["dex_url"])
 
     def test_lst_and_outcome_fields_stay_out(self):
         doc = build_from({
@@ -140,8 +154,13 @@ class RadarSnapshotTest(unittest.TestCase):
             ]},
         }, NOW)
         blob = json.dumps(doc)
-        for banned in ("onset", "d_bps", "verdict", "nh04", "coverage", "freeze_log", MINT_A, ETH_ADDR, "w-aaaaaaaa"):
+        public = _without_dex(doc)
+        for banned in ("onset", "d_bps", "verdict", "nh04", "coverage", "freeze_log", MINT_A, "w-aaaaaaaa"):
             self.assertNotIn(banned, blob)
+        self.assertNotIn(ETH_ADDR, public)
+        self.assertIn(ETH_ADDR, blob)
+        eth = next(row for row in doc["rows"] if row["chain"] == "ETH")
+        self.assertTrue(eth["dex_url"].startswith("https://dexscreener.com/ethereum/"))
         lst = next(feed for feed in doc["feeds"] if feed["id"] == "LST")
         self.assertEqual(lst["status"], "green")
         self.assertEqual(lst["at"], "2026-11-24T18:17:19Z")
@@ -190,8 +209,13 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertEqual(len(names), 2)
         self.assertTrue(any("dropped 3 series" in gap for gap in doc["gaps"]))
         blob = json.dumps(doc)
+        public = _without_dex(doc)
         for mint in (kept_ratio, kept_token, over, dust, single):
+            self.assertNotIn(mint, public)
+        for mint in (over, dust, single):
             self.assertNotIn(mint, blob)
+        for mint in (kept_ratio, kept_token):
+            self.assertIn("https://dexscreener.com/solana/" + mint, blob)
 
     def test_creator_handle_and_duplicate_tickers(self):
         other = "0x" + ("cd" * 20)
@@ -235,8 +259,8 @@ class RadarSnapshotTest(unittest.TestCase):
         self.assertNotIn("https://cdn.example/companions-by-wfit/a.png", blob)
         self.assertNotIn("Made by apes", blob)
         self.assertNotIn("Killed by death", blob)
-        self.assertNotIn(ETH_ADDR, blob)
-        self.assertNotIn(other, blob)
+        self.assertNotIn(ETH_ADDR, _without_dex(doc))
+        self.assertNotIn(other, _without_dex(doc))
         self.assertEqual(doc["hidden_note"], "6 collections hidden for creator attribution")
         self.assertNotIn("WFit", doc["hidden_note"])
         names = {row["name"] for row in doc["rows"]}
@@ -627,6 +651,44 @@ class RadarSnapshotTest(unittest.TestCase):
         ada = {"kind": "coin", "name": "COCK", "chain": "ADA", "image": None}
         _apply_coin_icon(ada)
         self.assertEqual(ada["image"], entry["src"])
+
+    def test_recorded_solana_name_symbol_and_dex_link(self):
+        pool = "1" * 32
+        snaps = [
+            dict(_snap(MINT_A, 1000, 80, 4, 1), name="Widget", symbol="WGT", pool=pool),
+            dict(_snap(MINT_A, 2800, 120, 4, 1), name="Widget", symbol="WGT", pool=pool),
+            dict(_snap(MINT_B, 1000, 40, 2, 1), name="user@mail", symbol="@nope"),
+            dict(_snap(MINT_B, 2800, 50, 2, 1), name="Widget Name Only"),
+        ]
+        doc = build_from({"snaps": snaps}, NOW)
+        named = next(row for row in doc["rows"] if row["name"] == "WGT")
+        self.assertEqual(named["token_name"], "Widget")
+        self.assertEqual(named["dex_url"], "https://dexscreener.com/solana/" + pool)
+        self.assertNotIn(MINT_A, json.dumps({key: value for key, value in named.items() if key != "dex_url"}))
+        self.assertIsNone(named["image"])
+        other = next(row for row in doc["rows"] if row["name"] == "Widget Name Only")
+        self.assertNotIn("user@mail", json.dumps(doc))
+        self.assertNotIn("@nope", json.dumps(doc))
+        self.assertNotIn("token_name", other)
+        self.assertTrue(other["dex_url"].endswith(MINT_B))
+        self.assertFalse(any(row["name"].startswith("SOL #") for row in doc["rows"]))
+        blob = json.dumps(doc)
+        self.assertNotIn("v6.5", blob)
+        self.assertNotIn("eligible", blob.lower())
+
+    def test_wallet_feed_names_the_failed_run(self):
+        doc = build_from({"health": {"workflows": [{
+            "file": ".github/workflows/races.yml",
+            "name": "wallet races",
+            "status": "red",
+            "last_run_at": "2026-11-24T12:00:00Z",
+        }]}}, NOW)
+        wal = next(feed for feed in doc["feeds"] if feed["id"] == "WAL")
+        self.assertEqual(wal["name"], "Wallet races")
+        self.assertEqual(wal["status"], "red")
+        self.assertEqual(wal["detail"], "Wallet races · last recorded run failed")
+        self.assertEqual(wal["at"], "2026-11-24T12:00:00Z")
+        self.assertNotIn("v6.5", json.dumps(doc))
 
     def test_dashboard_icons_are_copied_into_dist(self):
         root = os.path.join(os.path.dirname(__file__), "..", "..")

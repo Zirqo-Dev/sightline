@@ -899,5 +899,39 @@ class FollowPolicy(unittest.TestCase):
         self.assertEqual(hydrated["k"], hydrated["sol"] * hydrated["token"])
 
 
+class TokenLabels(unittest.TestCase):
+    def test_snap_records_name_symbol_mint_and_pool(self):
+        d = tempfile.mkdtemp()
+        good = pair(MINT_A)
+        good["baseToken"]["name"] = "Widget"
+        good["baseToken"]["symbol"] = "WGT"
+        bad = pair(MINT_B)
+        bad["baseToken"]["name"] = "user@mail"
+        bad["baseToken"]["symbol"] = "@nope"
+        v2log.record(
+            d, [(MINT_A, "token-profiles"), (MINT_B, "token-profiles")],
+            [fetched(MINT_A, good, rc_for()), fetched(MINT_B, bad, rc_for())],
+            T0, "20261101T0000",
+            sources=run.LEAD_PATHS, pre_filters=run.LEAD_PRE_FILTERS,
+            fetch_pair=None, sleep=lambda _s: None, leads_per_run=12,
+        )
+        snaps = []
+        for name in os.listdir(os.path.join(d, "v2")):
+            if name.startswith("pool-snaps-"):
+                snaps.extend(lines(os.path.join(d, "v2", name)))
+        kept = next(row for row in snaps if row["mint"] == MINT_A)
+        self.assertEqual(kept["name"], "Widget")
+        self.assertEqual(kept["symbol"], "WGT")
+        self.assertEqual(kept["mint"], MINT_A)
+        self.assertEqual(kept["pool"], POOL)
+        dropped = next(row for row in snaps if row["mint"] == MINT_B)
+        self.assertNotIn("name", dropped)
+        self.assertNotIn("symbol", dropped)
+        self.assertNotIn("user@mail", json.dumps(snaps))
+        cand = next(row for row in manifest(d) if row.get("type") == "candidate" and row.get("mint") == MINT_A)
+        self.assertNotIn("name", cand["inputs"])
+        self.assertNotIn("symbol", cand["inputs"])
+
+
 if __name__ == "__main__":
     unittest.main()

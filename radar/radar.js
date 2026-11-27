@@ -1,7 +1,6 @@
 /* Sightline Radar preview. Reads radar.json. Research only. */
 (function (root) {
   var FILTERS = ["All", "Coins", "NFTs", "SOL", "BASE", "RH", "ADA", "ETH"];
-  var SORTS = [["heat", "heat"], ["move", "move"], ["vol", "vol"], ["buyers", "buyers"]];
   var BASE_EMPTY = "No Base coin feed is published. This cut stays empty.";
 
   function svg(body) {
@@ -143,6 +142,7 @@
   function sizeText(row) {
     var n = finite(row.size);
     if (n == null) return "—";
+    if (row.size_kind === "liq" && row.size_unit === "SOL") return compact(n) + " SOL reserve";
     var body = row.size_unit === "USD" ? "$" + compact(n) : compact(n) + (row.size_unit ? " " + row.size_unit : "");
     return body;
   }
@@ -220,12 +220,123 @@
     if (filter === "NFTs") return row.kind === "nft";
     return row.chain === filter;
   }
-  function ordered(rows, sort) {
+  var FEED_NAMES = {
+    SOL: "Solana desk scan",
+    WAL: "Wallet races",
+    FOR: "Solana forensics",
+    NFT: "NFT snapshot",
+    ADA: "Solada prefilter",
+    HS: "HoodScout",
+    LST: "LST count",
+    X: "X buzz"
+  };
+  var SORT_KEYS = ["heat", "move", "vol", "buyers"];
+  var RELEASE_STATUS = "Release status unavailable";
+  var PAPER_HEADING = "Paper observations";
+  var PAPER_SENTENCE = "Paper Solana token pools observed in 30-minute snapshots.";
+
+  function feedName(feed) {
+    return FEED_NAMES[feed && feed.id] || (feed && (feed.name || feed.label)) || "Collector";
+  }
+  function xText(doc, now) {
+    var hollow = xStale(doc, now);
+    var xAge = doc.x && doc.x.asof ? ageLabel(doc.x.asof, now) : "";
+    return (hollow ? "X buzz stale" : "X buzz") + (xAge ? " · " + xAge : "");
+  }
+  function ageSentence(doc, now) {
+    var kind = snapStale(doc, now);
+    var built = clock(doc && doc.built_at);
+    if (kind) {
+      if (built && built !== "no time") {
+        return "This snapshot is stale. Built " + built + ". It does not describe current collection health.";
+      }
+      return "This snapshot is stale. It does not describe current collection health.";
+    }
+    return "Snapshot age " + (ageLabel(doc.built_at, now) || "0m") + ".";
+  }
+  function feedLine(feed, now) {
+    var name = feedName(feed);
+    var age = feed && feed.at ? ageLabel(feed.at, now) : "";
+    var word = feed && feed.status === "red" ? "last recorded run failed"
+      : feed && feed.status === "amber" ? "last recorded run degraded"
+      : "last recorded status unknown";
+    return name + " · " + word + (age ? " · " + age : "");
+  }
+  function scanLine(doc, now) {
+    return esc(ageSentence(doc, now));
+  }
+  function exceptions(doc, now) {
+    return (doc.feeds || []).filter(function (feed) {
+      return feed && feed.id !== "X" && feed.status !== "green";
+    }).map(function (feed) {
+      return feedLine(feed, now);
+    });
+  }
+  function rowsFor(doc, filter) {
+    return ((doc && doc.rows) || []).filter(function (row) { return accept(row, filter); });
+  }
+  function metricOffer(rows, key, field, label) {
+    if (!rows.length) {
+      if (key === "heat") return { key: key, ok: true, label: label, field: field };
+      return { key: key, ok: false, label: label, reason: label + " · no values" };
+    }
+    var missing = 0;
+    for (var i = 0; i < rows.length; i++) {
+      if (finite(rows[i][field]) == null) missing += 1;
+    }
+    if (missing) return { key: key, ok: false, label: label, reason: label + " · " + missing + " missing" };
+    return { key: key, ok: true, label: label, field: field };
+  }
+  function volOffer(rows) {
+    if (!rows.length) return { key: "vol", ok: false, label: "vol", reason: "vol · no values" };
+    var units = {};
+    var missing = 0;
+    for (var i = 0; i < rows.length; i++) {
+      if (finite(rows[i].size) == null) {
+        missing += 1;
+        continue;
+      }
+      units[(rows[i].size_kind || "size") + ":" + (rows[i].size_unit || "")] = true;
+    }
+    var keys = Object.keys(units);
+    if (keys.length > 1) return { key: "vol", ok: false, label: "vol", reason: "vol · mixed units" };
+    if (!keys.length) return { key: "vol", ok: false, label: "vol", reason: "vol · no values" };
+    var spec = keys[0];
+    if (spec !== "liq:SOL" && spec.indexOf("vol:") !== 0) {
+      return { key: "vol", ok: false, label: "vol", reason: "vol · not volume" };
+    }
+    var label = spec === "liq:SOL" ? "SOL reserve" : "vol";
+    if (missing) return { key: "vol", ok: false, label: label, reason: label + " · " + missing + " missing" };
+    return { key: "vol", ok: true, label: label, field: "size" };
+  }
+  function sortOffer(rows, key) {
+    if (key === "heat") return metricOffer(rows, "heat", "heat", "heat");
+    if (key === "move") return metricOffer(rows, "move", "change", "move");
+    if (key === "buyers") return metricOffer(rows, "buyers", "buyers", "buyers");
+    return volOffer(rows);
+  }
+  function resolveSort(rows, wanted) {
+    var offers = SORT_KEYS.map(function (key) { return sortOffer(rows, key); });
+    var chosen = null;
+    for (var i = 0; i < offers.length; i++) {
+      if (offers[i].key === wanted && offers[i].ok) chosen = offers[i];
+    }
+    if (!chosen) {
+      for (var j = 0; j < offers.length; j++) {
+        if (offers[j].ok) {
+          chosen = offers[j];
+          break;
+        }
+      }
+    }
+    return { offers: offers, active: chosen ? chosen.key : "heat", offer: chosen };
+  }
+  function ordered(rows, offer) {
+    var field = offer && offer.field ? offer.field : "heat";
     var copy = rows.slice();
-    var key = sort === "move" ? "change" : sort === "vol" ? "size" : sort === "buyers" ? "buyers" : "heat";
     copy.sort(function (a, b) {
-      var av = finite(a[key]);
-      var bv = finite(b[key]);
+      var av = finite(a[field]);
+      var bv = finite(b[field]);
       if (av == null && bv == null) return String(a.name).localeCompare(String(b.name));
       if (av == null) return 1;
       if (bv == null) return -1;
@@ -233,16 +344,11 @@
     });
     return copy;
   }
-  function scanLine(doc, now) {
-    var hollow = xStale(doc, now);
-    var xClass = hollow ? "xmark" : "xmark filled";
-    var xAge = doc.x && doc.x.asof ? ageLabel(doc.x.asof, now) : "";
-    var xText = hollow ? "X buzz stale" + (xAge ? " · " + xAge : "") : "X buzz" + (xAge ? " · " + xAge : "");
-    var scanAge = ageLabel(doc.last_scan, now) || "no time";
-    return '<span class="buddy">[•_•]</span> Built ' + esc(clock(doc.built_at))
-      + " · last scan " + esc(scanAge)
-      + " · " + esc(doc.lead_count == null ? 0 : doc.lead_count) + " leads<br>"
-      + '<span class="' + xClass + '">' + icon("buzz") + "</span> " + esc(xText);
+  function dexLink(row) {
+    var url = row && row.dex_url;
+    if (typeof url !== "string") return "";
+    if (!/^https:\/\/dexscreener\.com\/(solana|ethereum|base|cardano|robinhood)\//.test(url)) return "";
+    return '<a class="dex" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">DexScreener</a>';
   }
   function rowHtml(row, rank, open, now) {
     var seen = ageLabel(row.seen_at, now);
@@ -251,13 +357,14 @@
       if (chip.id === "seen" && seen) label = "seen " + seen;
       return '<span class="sig sig-' + esc(chip.id) + '">' + icon(chip.id) + esc(label) + "</span>";
     }).join("");
-    var hint = row.hint ? '<span class="hint">' + esc(row.hint) + "</span>" : (row.show_age && seen ? '<span class="hint">' + esc(seen) + "</span>" : "");
+    var hintText = row.token_name && row.token_name !== row.name ? row.token_name : (row.hint || "");
+    var hint = hintText ? '<span class="hint">' + esc(hintText) + "</span>" : (row.show_age && seen ? '<span class="hint">' + esc(seen) + "</span>" : "");
     var heat = finite(row.heat);
     var heatChip = heat == null ? "" : '<span class="sig sig-heat">' + icon("heat") + "heat " + esc(heat) + "</span>";
     var letter = esc(String(row.name || "?").trim().charAt(0) || "?");
     var src = markSrc(row);
-    var img = src ? '<img alt="" src="' + esc(src) + '" referrerpolicy="no-referrer" loading="lazy" onerror="this.remove()">' : "";
-    var mark = '<span class="mark">' + letter + img + "</span>";
+    var img = src ? '<img alt="" class="logo" src="' + esc(src) + '" referrerpolicy="no-referrer" loading="lazy" decoding="async">' : "";
+    var mark = '<span class="mark"><span class="initial">' + letter + "</span>" + img + "</span>";
     var bar = finite(row.buy_pct);
     var barHtml = bar == null ? "" : '<span class="bar" aria-hidden="true"><i style="width:' + Math.round(bar * 100) + '%"></i></span>';
     var detail = "";
@@ -267,7 +374,7 @@
         + (facts ? '<ul class="facts">' + facts + "</ul>" : "")
         + '<p class="src">' + esc(row.source || "") + "</p></div>";
     }
-    return '<article class="entry">'
+    return '<article class="entry" data-chain="' + esc(row.chain) + '">'
       + '<button type="button" class="row-btn" data-id="' + esc(row.id) + '" aria-expanded="' + (open ? "true" : "false") + '">'
       + '<span class="rank">' + rank + "</span>" + mark
       + '<span class="main"><span class="name-line"><span class="name">' + esc(row.name) + "</span>"
@@ -275,7 +382,56 @@
       + '<span class="stat-line"><span class="stat">' + esc(row.stat || "") + "</span>" + barHtml + spark(row.spark) + "</span></span>"
       + '<span class="metrics"><span class="price">' + priceHtml(finite(row.price), row.price_unit) + "</span>"
       + pill(row.change) + '<span class="size">' + esc(sizeText(row)) + "</span></span></button>"
+      + dexLink(row)
       + detail + "</article>";
+  }
+  function summaryHtml(doc, now) {
+    if (!doc || !Array.isArray(doc.rows)) {
+      return '<p class="scan" id="scan">Snapshot is unavailable.</p><p class="release">' + esc(RELEASE_STATUS) + "</p>";
+    }
+    var stale = snapStale(doc, now);
+    var lines = exceptions(doc, now).map(function (line) {
+      return '<p class="exception">' + esc(line) + "</p>";
+    }).join("");
+    return '<p class="scan' + (stale ? " stale" : "") + '" id="scan">' + esc(ageSentence(doc, now)) + "</p>"
+      + lines
+      + '<p class="release">' + esc(RELEASE_STATUS) + "</p>";
+  }
+  function blankState() {
+    return { filter: "All", sort: "heat", open: null, feedNote: null, detailsOpen: false };
+  }
+  function reduce(state, action, doc, now) {
+    var next = blankState();
+    state = state || {};
+    next.filter = state.filter || "All";
+    next.sort = state.sort || "heat";
+    next.open = state.open || null;
+    next.feedNote = state.feedNote || null;
+    next.detailsOpen = !!state.detailsOpen;
+    action = action || {};
+    if (action.type === "filter") {
+      if (action.id && action.id !== next.filter) {
+        next.filter = action.id;
+        next.feedNote = null;
+      }
+      next.sort = resolveSort(rowsFor(doc, next.filter), next.sort).active;
+    } else if (action.type === "sort") {
+      var offer = sortOffer(rowsFor(doc, next.filter), action.id);
+      if (offer.ok) next.sort = action.id;
+    } else if (action.type === "feed") {
+      var feed = ((doc && doc.feeds) || []).filter(function (item) { return item.id === action.id; })[0];
+      if (feed) {
+        next.feedNote = { id: feed.id, text: feed.id === "X" ? xText(doc, now) : feedLine(feed, now) };
+        next.detailsOpen = true;
+      }
+    } else if (action.type === "dismiss-note") {
+      next.feedNote = null;
+    } else if (action.type === "toggle-row") {
+      next.open = next.open === action.id ? null : action.id;
+    } else if (action.type === "details") {
+      next.detailsOpen = !!action.open;
+    }
+    return next;
   }
   function renderHtml(doc, state, now) {
     state = state || {};
@@ -284,47 +440,75 @@
       return '<p class="empty">Radar snapshot is not published yet.</p>';
     }
     var filter = state.filter || "All";
+    var filtered = rowsFor(doc, filter);
+    var resolved = resolveSort(filtered, state.sort || "heat");
+    var rows = ordered(filtered, resolved.offer);
+    var total = doc.rows.length;
+    var noted = state.feedNote && state.feedNote.id;
     var feeds = (doc.feeds || []).map(function (feed) {
       var status = feed.id === "X" ? (xStale(doc, now) ? "hollow" : "green") : (feed.status || "unknown");
-      return '<button type="button" class="feed is-' + esc(status) + '" data-feed="' + esc(feed.id) + '">'
+      var on = noted === feed.id;
+      return '<button type="button" class="feed is-' + esc(status) + (on ? " noted" : "") + '" data-feed="' + esc(feed.id) + '"'
+        + (on ? ' aria-controls="feed-note"' : "") + ">"
         + "<i></i><span>" + esc(feed.label) + "</span></button>";
     }).join("");
-    var staleKind = snapStale(doc, now);
-    var banner = "";
-    if (staleKind === "old") {
-      banner = '<p class="banner">This snapshot is more than 2 hours old. Built ' + esc(clock(doc.built_at)) + ".</p>";
-    } else if (staleKind) {
-      banner = '<p class="banner">This snapshot is stale.</p>';
+    var note = "";
+    if (state.feedNote && state.feedNote.text) {
+      note = '<p class="note" id="feed-note" data-for="' + esc(state.feedNote.id) + '"><span>' + esc(state.feedNote.text) + "</span>"
+        + '<button type="button" class="note-x" data-dismiss-note>Dismiss</button></p>';
     }
+    var healthy = (doc.feeds || []).filter(function (feed) {
+      return feed && (feed.status === "green" || feed.id === "X");
+    }).map(function (feed) {
+      if (feed.id === "X") {
+        var hollow = xStale(doc, now);
+        return '<li><span class="' + (hollow ? "xmark" : "xmark filled") + '">' + icon("buzz") + "</span> " + esc(xText(doc, now)) + "</li>";
+      }
+      var age = feed.at ? ageLabel(feed.at, now) : "";
+      return "<li>" + esc(feedName(feed) + " · last recorded" + (age ? " · " + age : "")) + "</li>";
+    }).join("");
+    var scanAge = ageLabel(doc.last_scan, now) || "no time";
     var chips = FILTERS.map(function (name) {
-      var on = name === filter ? " on" : "";
-      return '<button type="button" class="chip' + on + '" data-filter="' + esc(name) + '" aria-pressed="' + (on ? "true" : "false") + '">' + esc(name) + "</button>";
+      var on = name === filter;
+      return '<button type="button" class="chip' + (on ? " on" : "") + '" data-filter="' + esc(name) + '" aria-pressed="' + (on ? "true" : "false") + '">' + esc(name) + "</button>";
     }).join("");
-    var sort = state.sort || "heat";
-    var sorts = SORTS.map(function (pair) {
-      var on = pair[0] === sort ? " on" : "";
-      return '<button type="button" class="sort' + on + '" data-sort="' + pair[0] + '" aria-pressed="' + (on ? "true" : "false") + '">' + esc(pair[1]) + "</button>";
+    var sorts = resolved.offers.map(function (offer) {
+      var on = offer.ok && offer.key === resolved.active;
+      var label = offer.ok ? offer.label : offer.reason;
+      return '<button type="button" class="sort' + (on ? " on" : "") + '" data-sort="' + esc(offer.key) + '" aria-pressed="' + (on ? "true" : "false") + '"'
+        + (offer.ok ? "" : ' aria-disabled="true"') + ">" + esc(label) + "</button>";
     }).join("");
-    var rows = ordered((doc.rows || []).filter(function (row) { return accept(row, filter); }), sort);
     var list;
+    var paperShown = false;
     if (filter === "BASE" && !rows.length) {
       list = '<p class="empty">' + esc(BASE_EMPTY) + "</p>";
     } else if (!rows.length) {
       list = '<p class="empty">Nothing in this cut.</p>';
     } else {
       list = rows.map(function (row, index) {
-        return rowHtml(row, index + 1, state.open === row.id, now);
+        var lead = "";
+        if (row.chain === "SOL" && !paperShown) {
+          paperShown = true;
+          lead = '<h2 class="paper-h">' + esc(PAPER_HEADING) + "</h2><p class=\"paper-p\">" + esc(PAPER_SENTENCE) + "</p>";
+        }
+        return lead + rowHtml(row, index + 1, state.open === row.id, now);
       }).join("");
     }
-    var note = state.feedNote ? '<p class="note" id="feed-note">' + esc(state.feedNote) + "</p>" : '<p class="note" id="feed-note"></p>';
     var gaps = (doc.gaps || []).map(function (gap) { return "<li>" + esc(gap) + "</li>"; }).join("");
-    return banner + '<div class="feeds" role="group" aria-label="Feed health">' + feeds + "</div>" + note
-      + '<div class="filters" role="group" aria-label="Filter">' + chips + "</div>"
-      + '<div class="sorts" role="group" aria-label="Sort">' + sorts + "</div>"
+    var hidden = doc.hidden_note ? '<p class="hidden-note" id="hidden-note">' + esc(doc.hidden_note) + "</p>" : "";
+    return '<div class="filters" role="group" aria-label="Filter" data-active="' + esc(filter) + '">' + chips + "</div>"
+      + '<div class="sorts" role="group" aria-label="Sort" data-active="' + esc(resolved.active) + '">' + sorts + "</div>"
+      + '<p class="tally" id="tally">' + filtered.length + " of " + total + " leads</p>"
       + '<p class="caption">Heat is a ranking, not a buy signal.</p>'
-      + (doc.hidden_note ? '<p class="hidden-note" id="hidden-note">' + esc(doc.hidden_note) + "</p>" : "")
       + '<div class="list">' + list + "</div>"
-      + (gaps ? '<details class="gaps"><summary>Data notes</summary><ul>' + gaps + "</ul></details>" : "");
+      + '<details class="more"' + (state.detailsOpen ? " open" : "") + "><summary>Last-recorded details</summary>"
+      + '<p class="metric">Last scan ' + esc(scanAge) + " · " + total + " leads</p>"
+      + '<div class="feeds" role="group" aria-label="Feed health">' + feeds + "</div>"
+      + note
+      + (healthy ? '<ul class="healthy">' + healthy + "</ul>" : "")
+      + hidden
+      + (gaps ? '<ul class="gap-list">' + gaps + "</ul>" : "")
+      + "</details>";
   }
   function legendHtml() {
     function items(list) {
@@ -335,20 +519,59 @@
     return '<ul class="legend">' + items(LEGEND) + '</ul><p class="not-live">Not on live rows</p><ul class="legend">' + items(NOT_LIVE) + "</ul>";
   }
 
-  var state = { filter: "All", sort: "heat", open: null, feedNote: "" };
+  var state = blankState();
   var doc = null;
 
+  function focusedKey() {
+    try {
+      var el = document.activeElement;
+      if (!el || !el.getAttribute) return null;
+      if (el.hasAttribute("data-filter")) return "filter";
+      if (el.hasAttribute("data-sort")) return "sort:" + el.getAttribute("data-sort");
+      if (el.hasAttribute("data-feed")) return "feed:" + el.getAttribute("data-feed");
+      if (el.hasAttribute("data-dismiss-note")) return "dismiss";
+      if (el.hasAttribute("data-id")) return "row:" + el.getAttribute("data-id");
+      if (el.id) return "id:" + el.id;
+    } catch (err) {
+      return null;
+    }
+    return null;
+  }
+  function restoreFocus(key) {
+    if (!key || !document.querySelector) return;
+    var el = null;
+    if (key === "filter") el = document.querySelector('[data-filter="' + state.filter + '"]');
+    else if (key.indexOf("sort:") === 0) el = document.querySelector('[data-sort="' + key.slice(5) + '"]');
+    else if (key.indexOf("feed:") === 0) el = document.querySelector('[data-feed="' + key.slice(5) + '"]');
+    else if (key === "dismiss") el = document.querySelector("[data-dismiss-note]");
+    else if (key.indexOf("row:") === 0) el = document.querySelector('[data-id="' + key.slice(4) + '"]');
+    else if (key.indexOf("id:") === 0) el = document.getElementById(key.slice(3));
+    if (!el && key.indexOf("sort:") === 0) el = document.querySelector('[data-sort="' + state.sort + '"]');
+    if (!el && key === "dismiss") el = document.querySelector('[data-filter="' + state.filter + '"]');
+    if (el && el.focus) {
+      try { el.focus({ preventScroll: true }); } catch (err) { el.focus(); }
+    }
+  }
   function paint() {
     var app = document.getElementById("app");
+    var summary = document.getElementById("summary");
     var scan = document.getElementById("scan");
-    if (!app) return;
-    if (!doc) {
-      if (scan) scan.textContent = "Snapshot is unavailable.";
-      app.innerHTML = renderHtml(null, state);
-      return;
+    var key = focusedKey();
+    var y = 0;
+    try { y = root.scrollY || 0; } catch (err) { y = 0; }
+    if (!app && !summary) return;
+    var now = Date.now();
+    if (doc && Array.isArray(doc.rows)) {
+      state.sort = resolveSort(rowsFor(doc, state.filter || "All"), state.sort || "heat").active;
     }
-    if (scan) scan.innerHTML = scanLine(doc, Date.now());
-    app.innerHTML = renderHtml(doc, state, Date.now());
+    if (summary) summary.innerHTML = summaryHtml(doc, now);
+    else if (!doc && scan) scan.textContent = "Snapshot is unavailable.";
+    else if (scan) scan.textContent = ageSentence(doc, now);
+    if (app) app.innerHTML = renderHtml(doc, state, now);
+    restoreFocus(key);
+    try {
+      if (root.scrollTo) root.scrollTo(0, y);
+    } catch (err) { /* the smoke document has no scroller */ }
   }
   function glyphsOk() {
     try {
@@ -382,36 +605,63 @@
         if (typeof legend.showModal === "function") legend.showModal();
       });
     }
+    document.addEventListener("keydown", function (event) {
+      if (event.key !== " " && event.code !== "Space") return;
+      var btn = event.target && event.target.closest && event.target.closest("button");
+      if (!btn || btn.disabled) return;
+      var box = document.getElementById("app");
+      var summaryBox = document.getElementById("summary");
+      if ((!box || !box.contains(btn)) && (!summaryBox || !summaryBox.contains(btn))) return;
+      event.preventDefault();
+      btn.click();
+    });
     var app = document.getElementById("app");
     if (!app) return;
+    app.addEventListener("toggle", function (event) {
+      var target = event.target;
+      if (!target || !target.classList || !target.classList.contains("more")) return;
+      state.detailsOpen = !!target.open;
+    }, true);
     app.addEventListener("click", function (event) {
+      if (event.target.closest("[data-dismiss-note]")) {
+        state = reduce(state, { type: "dismiss-note" }, doc, Date.now());
+        paint();
+        return;
+      }
       var filter = event.target.closest("[data-filter]");
       if (filter) {
-        state.filter = filter.getAttribute("data-filter");
+        state = reduce(state, { type: "filter", id: filter.getAttribute("data-filter") }, doc, Date.now());
         paint();
         return;
       }
       var sortBtn = event.target.closest("[data-sort]");
       if (sortBtn) {
-        state.sort = sortBtn.getAttribute("data-sort");
+        state = reduce(state, { type: "sort", id: sortBtn.getAttribute("data-sort") }, doc, Date.now());
         paint();
         return;
       }
       var feed = event.target.closest("[data-feed]");
       if (feed && doc) {
-        var id = feed.getAttribute("data-feed");
-        var row = (doc.feeds || []).filter(function (item) { return item.id === id; })[0];
-        var age = row && row.at ? ageLabel(row.at, Date.now()) : "";
-        state.feedNote = row ? row.label + " · " + (row.detail || row.status) + (age ? " · " + age : "") : "";
+        state = reduce(state, { type: "feed", id: feed.getAttribute("data-feed") }, doc, Date.now());
         paint();
         return;
       }
       var hit = event.target.closest("[data-id]");
       if (!hit) return;
-      var id = hit.getAttribute("data-id");
-      state.open = state.open === id ? null : id;
+      state = reduce(state, { type: "toggle-row", id: hit.getAttribute("data-id") }, doc, Date.now());
       paint();
     });
+    document.addEventListener("load", function (event) {
+      var img = event.target;
+      if (!img || img.tagName !== "IMG" || !img.classList || !img.classList.contains("logo")) return;
+      if (img.naturalWidth > 0) img.classList.add("is-ready");
+      else img.remove();
+    }, true);
+    document.addEventListener("error", function (event) {
+      var img = event.target;
+      if (!img || img.tagName !== "IMG" || !img.classList || !img.classList.contains("logo")) return;
+      img.remove();
+    }, true);
     var params = new URLSearchParams(location.search);
     fetch("radar.json", { cache: "no-store" }).then(function (res) {
       if (!res.ok) throw new Error("missing");
@@ -430,12 +680,18 @@
 
   root.SightlineRadar = {
     renderHtml: renderHtml,
+    summaryHtml: summaryHtml,
     scanLine: scanLine,
+    ageSentence: ageSentence,
     legendHtml: legendHtml,
     paint: paint,
+    reduce: reduce,
+    sortOffer: sortOffer,
     BASE_EMPTY: BASE_EMPTY,
     LEGEND: LEGEND,
-    NOT_LIVE: NOT_LIVE
+    NOT_LIVE: NOT_LIVE,
+    PAPER_SENTENCE: PAPER_SENTENCE,
+    RELEASE_STATUS: RELEASE_STATUS
   };
   if (root.document && root.document.getElementById && root.document.getElementById("app")) boot();
 })(typeof globalThis !== "undefined" ? globalThis : this);
