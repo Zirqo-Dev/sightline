@@ -56,6 +56,7 @@ assert(js.includes("It does not describe current collection health."), "a stale 
 assert(js.includes("Release status unavailable"), "release status stays unavailable");
 assert(js.includes("Wallet races"), "wallet races are named as workflow health");
 assert(js.includes("Paper Solana token pools observed in 30-minute snapshots."), "solana rows are paper observations");
+assert(js.includes("dexscreener\\.com"), "the solana link pattern escapes the dot");
 assert(js.includes('rel="noopener noreferrer"'), "dex links do not grant the new tab access");
 assert(!/v6\.5|sealed outcome|Snek/i.test(js + html), "the page does not surface a sealed outcome or a banned label");
 assert(!js.includes("next_read") && !js.includes("Next read"), "the next read is not hardcoded");

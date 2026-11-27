@@ -27,6 +27,7 @@ are grouped by the raw slug. The file records only how many collections were
 left out.
 """
 import datetime
+import hashlib
 import json
 import math
 import pathlib
@@ -59,9 +60,8 @@ _BANNED_KEYS = {
 }
 _SYMBOL = re.compile(r"[A-Za-z0-9][A-Za-z0-9 ._$-]{0,19}")
 _FULL_ADDR = re.compile(r"^0x[0-9a-fA-F]{40}$")
-# Solana ids are base58. A link that would carry 0x or a 64-hex asset id is not published.
-_SOL_DEX = re.compile(r"^https://dexscreener.com/solana/[1-9A-HJ-NP-Za-km-z]{32,44}$")
-_SOL_ROW_ID = re.compile(r"^sol-[1-9A-HJ-NP-Za-km-z]{32,44}(?:-[a-z0-9]+)?$")
+# Solana links are base58. A link that would carry 0x or a 64-hex asset id is not published.
+_SOL_DEX = re.compile(r"^https://dexscreener\.com/solana/[1-9A-HJ-NP-Za-km-z]{32,44}$")
 
 
 def parse_time(value):
@@ -262,6 +262,17 @@ def _sol_dex(ident):
     return url
 
 
+def _sol_row_id(ident):
+    """Stable id from the pool, or the mint when no pool was recorded.
+
+    The address is not the id. Ten hex characters of SHA-256 keep two pools
+    with the same symbol apart without a base58 exemption on the row id.
+    """
+    if not isinstance(ident, str) or not ident:
+        return None
+    return "sol-" + hashlib.sha256(ident.encode("utf-8")).hexdigest()[:10]
+
+
 def _token_label(value, limit):
     """A recorded token name or symbol. Addresses and handles are not labels."""
     if not isinstance(value, str):
@@ -291,8 +302,6 @@ def _walk(value, key=None):
             _walk(item, key)
     elif isinstance(value, str):
         if key == "dex_url" and _SOL_DEX.fullmatch(value) and not _ETH.search(value) and not _STAKE.search(value):
-            return
-        if key == "id" and _SOL_ROW_ID.fullmatch(value) and not _ETH.search(value) and not _STAKE.search(value):
             return
         if _MINT.search(value) or _ETH.search(value) or _STAKE.search(value):
             raise ValueError("banned string")
@@ -432,6 +441,8 @@ def _disambiguate(rows):
                 row.pop("_hint", None)
             continue
         used = set()
+        original = [row.get("id") for row in group]
+        shared = {item for item in original if original.count(item) > 1}
         for index, row in enumerate(group, start=1):
             hint = row.pop("_hint", None)
             if hint and hint not in used:
@@ -439,6 +450,8 @@ def _disambiguate(rows):
                 used.add(hint)
             else:
                 row["show_age"] = True
+            if row.get("id") not in shared:
+                continue
             suffix = re.sub(r"[^a-z0-9]+", "-", (hint or str(index)).lower()).strip("-") or str(index)
             row["id"] = "%s-%s" % (row.get("id") or "row", suffix)
     seen = {}
@@ -816,8 +829,9 @@ def _solana_rows(manifest_lines, snap_lines, death_lines=None):
         if token_name:
             row["token_name"] = token_name
         ident = meta.get("pool") or (mint if isinstance(mint, str) and _MINT.fullmatch(mint) else None)
-        if ident:
-            row["id"] = "sol-" + ident
+        row_id = _sol_row_id(ident)
+        if row_id:
+            row["id"] = row_id
         else:
             slug = re.sub(r"[^a-z0-9]+", "-", str(row["name"]).lower()).strip("-") or str(index)
             row["id"] = "sol-" + slug

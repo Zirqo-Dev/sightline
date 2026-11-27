@@ -9,7 +9,9 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from scripts.radar_snapshot import FETCH_TIMEOUT_S, _apply_coin_icon, build_from, buy_streak, second_leg
+from scripts.radar_snapshot import (
+    FETCH_TIMEOUT_S, _SOL_DEX, _apply_coin_icon, _sol_row_id, build_from, buy_streak, second_leg,
+)
 
 NOW = datetime.datetime(2026, 11, 24, 18, 0, tzinfo=datetime.timezone.utc)
 MINT_A = "Mint1111111111111111111111111111pump"
@@ -81,8 +83,10 @@ class RadarSnapshotTest(unittest.TestCase):
         for banned in ("desk", "first_pick", "kill", "dead", "skull", "outcome", "verdict", "first snap"):
             self.assertNotIn(banned, row_blob)
         blob = json.dumps(doc)
-        self.assertEqual(sol[0]["id"], "sol-" + MINT_A)
-        self.assertEqual(sol[1]["id"], "sol-" + MINT_B)
+        self.assertEqual(sol[0]["id"], _sol_row_id(MINT_A))
+        self.assertEqual(sol[1]["id"], _sol_row_id(MINT_B))
+        self.assertNotIn(MINT_A, sol[0]["id"])
+        self.assertEqual(len(sol[0]["id"]), 14)
         quiet = json.loads(blob)
         for row in quiet["rows"]:
             row.pop("id", None)
@@ -228,7 +232,8 @@ class RadarSnapshotTest(unittest.TestCase):
             self.assertNotIn(mint, blob)
         for mint in (kept_ratio, kept_token):
             self.assertIn("https://dexscreener.com/solana/" + mint, blob)
-            self.assertTrue(any(mint in row["id"] for row in doc["rows"]))
+            self.assertTrue(any(row["id"] == _sol_row_id(mint) for row in doc["rows"]))
+            self.assertFalse(any(mint in row["id"] for row in doc["rows"]))
 
     def test_creator_handle_and_duplicate_tickers(self):
         other = "0x" + ("cd" * 20)
@@ -715,9 +720,10 @@ class RadarSnapshotTest(unittest.TestCase):
         doc = build_from({"snaps": snaps}, NOW)
         rows = [row for row in doc["rows"] if row["name"] == "WGT"]
         self.assertEqual(len(rows), 2)
-        self.assertEqual(len({row["id"] for row in rows}), 2)
-        self.assertTrue(any(pool_a in row["id"] for row in rows))
-        self.assertTrue(any(pool_b in row["id"] for row in rows))
+        self.assertEqual({row["id"] for row in rows}, {_sol_row_id(pool_a), _sol_row_id(pool_b)})
+        self.assertNotIn(pool_a, json.dumps([row["id"] for row in rows]))
+        self.assertIsNone(_SOL_DEX.fullmatch("https://dexscreenerXcom/solana/" + pool_a))
+        self.assertTrue(_SOL_DEX.fullmatch("https://dexscreener.com/solana/" + pool_a))
 
     def test_publish_privacy_guard_on_a_built_radar_json(self):
         pool = "1" * 32
