@@ -1,126 +1,23 @@
 {
- "at": "2026-11-26T23:11:24Z",
+ "at": "2026-11-27T01:11:13Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "coordinated_buys",
-   "ticker": "BREAD",
-   "wallets": [
-    "w-271c9cde",
-    "w-3da04746",
-    "w-6f64ecef",
-    "w-77159f5f",
-    "w-79620ea4",
-    "w-8e9050e1",
-    "w-9337d76e",
-    "w-94a26743",
-    "w-ce2c53b6",
-    "w-e6ebe976",
-    "w-ee882960",
-    "w-ef56a1c1",
-    "w-f9c7c829"
-   ],
-   "window_s": 120,
-   "at": "2026-11-26T23:11:24Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "BREAD",
-   "wallets": [
-    "w-3da04746",
-    "w-77159f5f",
-    "w-8e9050e1",
-    "w-94a26743",
-    "w-e6ebe976",
-    "w-ee882960",
-    "w-ef56a1c1",
-    "w-f9c7c829"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-26T23:11:24Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-271c9cde",
-   "launches": [
-    "1STAR",
-    "ANAL",
-    "BREAD",
-    "JENSEN",
-    "MIDHOSKY",
-    "OIN",
-    "POPPY",
-    "SNATCH"
-   ],
-   "at": "2026-11-26T23:11:24Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-6f64ecef",
-   "launches": [
-    "BREAD",
-    "FADA",
-    "NJAK",
-    "RFLIP",
-    "SNATCH",
-    "TOMZOEY"
-   ],
-   "at": "2026-11-26T23:11:24Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-9337d76e",
-   "launches": [
-    "1STAR",
-    "3NATIVE",
-    "BREAD",
-    "FADA",
-    "GTADA",
-    "JENSEN",
-    "KURO",
-    "SNATCH"
-   ],
-   "at": "2026-11-26T23:11:24Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-ce2c53b6",
-   "launches": [
-    "1STAR",
-    "BREAD",
-    "JENSEN",
-    "SNATCH"
-   ],
-   "at": "2026-11-26T23:11:24Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "BREAD",
-   "wallet": "w-ee882960",
-   "tags": [],
-   "at": "2026-11-26T23:11:24Z"
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 66383455,
+   "decimals": 6,
+   "qty": 66.3835,
+   "ada_equiv": 102,
+   "value_basis": "ada_leg",
+   "pct": 0.0,
+   "at": "2026-11-27T01:11:13Z"
   }
  ],
  "recent": [
-  {
-   "kind": "coordinated_buys",
-   "ticker": "PRINCESS",
-   "wallets": [
-    "w-095576b3",
-    "w-38a48248",
-    "w-6153c4e0",
-    "w-72db8230",
-    "w-79620ea4",
-    "w-82cf81f1",
-    "w-97373b3f",
-    "w-a96d4d9a",
-    "w-b01aa343"
-   ],
-   "window_s": 120,
-   "at": "2026-11-20T15:11:08Z"
-  },
   {
    "kind": "fresh_wallet_swarm",
    "ticker": "PRINCESS",
@@ -3448,11 +3345,22 @@
    "wallet": "w-ee882960",
    "tags": [],
    "at": "2026-11-26T23:11:24Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "ASCEND",
+   "tag": "w-f3186187",
+   "delta": 66383455,
+   "decimals": 6,
+   "qty": 66.3835,
+   "ada_equiv": 102,
+   "value_basis": "ada_leg",
+   "pct": 0.0,
+   "at": "2026-11-27T01:11:13Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 1,
-  "koios": 11
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,
