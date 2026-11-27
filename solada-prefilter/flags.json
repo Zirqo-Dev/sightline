@@ -1,71 +1,65 @@
 {
- "at": "2026-11-27T01:11:13Z",
+ "at": "2026-11-27T03:11:30Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "whale_move",
-   "ticker": "ASCEND",
-   "tag": "w-f3186187",
-   "delta": 66383455,
-   "decimals": 6,
-   "qty": 66.3835,
-   "ada_equiv": 102,
-   "value_basis": "ada_leg",
-   "pct": 0.0,
-   "at": "2026-11-27T01:11:13Z"
+   "kind": "coordinated_buys",
+   "ticker": "LONELY",
+   "wallets": [
+    "w-2c1bf583",
+    "w-2f98eded",
+    "w-47d26455",
+    "w-500b8237",
+    "w-6f64ecef",
+    "w-7546180b",
+    "w-90fa2e66",
+    "w-a89732d0",
+    "w-acb1d589"
+   ],
+   "window_s": 120,
+   "at": "2026-11-27T03:11:30Z"
+  },
+  {
+   "kind": "fresh_wallet_swarm",
+   "ticker": "LONELY",
+   "wallets": [
+    "w-2c1bf583",
+    "w-2f98eded",
+    "w-47d26455",
+    "w-500b8237",
+    "w-7546180b",
+    "w-90fa2e66",
+    "w-a89732d0",
+    "w-acb1d589"
+   ],
+   "max_age_blocks": 4320,
+   "at": "2026-11-27T03:11:30Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-6f64ecef",
+   "launches": [
+    "BREAD",
+    "FADA",
+    "LONELY",
+    "NJAK",
+    "RFLIP",
+    "SNATCH",
+    "TOMZOEY"
+   ],
+   "at": "2026-11-27T03:11:30Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "LONELY",
+   "wallet": "w-a89732d0",
+   "tags": [],
+   "at": "2026-11-27T03:11:30Z"
   }
  ],
  "recent": [
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "PRINCESS",
-   "wallets": [
-    "w-38a48248",
-    "w-82cf81f1",
-    "w-a96d4d9a",
-    "w-b01aa343"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-20T15:11:08Z"
-  },
-  {
-   "kind": "coordinated_buys",
-   "ticker": "YY",
-   "wallets": [
-    "w-4c42030d",
-    "w-7748cd2e",
-    "w-79620ea4",
-    "w-97373b3f"
-   ],
-   "window_s": 120,
-   "at": "2026-11-20T15:11:08Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-095576b3",
-   "launches": [
-    "BEPE",
-    "FERRET",
-    "NSNEK",
-    "OIN",
-    "PRINCESS"
-   ],
-   "at": "2026-11-20T15:11:08Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-23d4671d",
-   "launches": [
-    "BULL",
-    "DARK",
-    "FERRET",
-    "PRINCESS",
-    "QUANT"
-   ],
-   "at": "2026-11-20T15:11:08Z"
-  },
   {
    "kind": "repeat_early_buyer",
    "wallet": "w-5ef30b9c",
@@ -3357,10 +3351,65 @@
    "value_basis": "ada_leg",
    "pct": 0.0,
    "at": "2026-11-27T01:11:13Z"
+  },
+  {
+   "kind": "coordinated_buys",
+   "ticker": "LONELY",
+   "wallets": [
+    "w-2c1bf583",
+    "w-2f98eded",
+    "w-47d26455",
+    "w-500b8237",
+    "w-6f64ecef",
+    "w-7546180b",
+    "w-90fa2e66",
+    "w-a89732d0",
+    "w-acb1d589"
+   ],
+   "window_s": 120,
+   "at": "2026-11-27T03:11:30Z"
+  },
+  {
+   "kind": "fresh_wallet_swarm",
+   "ticker": "LONELY",
+   "wallets": [
+    "w-2c1bf583",
+    "w-2f98eded",
+    "w-47d26455",
+    "w-500b8237",
+    "w-7546180b",
+    "w-90fa2e66",
+    "w-a89732d0",
+    "w-acb1d589"
+   ],
+   "max_age_blocks": 4320,
+   "at": "2026-11-27T03:11:30Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-6f64ecef",
+   "launches": [
+    "BREAD",
+    "FADA",
+    "LONELY",
+    "NJAK",
+    "RFLIP",
+    "SNATCH",
+    "TOMZOEY"
+   ],
+   "at": "2026-11-27T03:11:30Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "LONELY",
+   "wallet": "w-a89732d0",
+   "tags": [],
+   "at": "2026-11-27T03:11:30Z"
   }
  ],
  "api_calls": {
-  "koios": 1
+  "blockfrost": 1,
+  "koios": 11
  },
  "thresholds": {
   "enabled": true,
