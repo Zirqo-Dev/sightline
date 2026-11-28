@@ -1,48 +1,70 @@
 {
- "at": "2026-11-28T09:10:36Z",
+ "at": "2026-11-28T11:11:18Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
- "new": [],
- "recent": [
+ "new": [
+  {
+   "kind": "coordinated_buys",
+   "ticker": "MEKE",
+   "wallets": [
+    "w-17f891a1",
+    "w-3e4f0a4d",
+    "w-3f04e072",
+    "w-3f62526d",
+    "w-4b2dfb84",
+    "w-6c2a52a3",
+    "w-6f64ecef",
+    "w-8b0c701e",
+    "w-cd262208",
+    "w-f49e97f4",
+    "w-fd954cd4"
+   ],
+   "window_s": 120,
+   "at": "2026-11-28T11:11:18Z"
+  },
+  {
+   "kind": "fresh_wallet_swarm",
+   "ticker": "MEKE",
+   "wallets": [
+    "w-17f891a1",
+    "w-3e4f0a4d",
+    "w-3f04e072",
+    "w-3f62526d",
+    "w-4b2dfb84",
+    "w-6c2a52a3",
+    "w-8b0c701e",
+    "w-cd262208",
+    "w-f49e97f4",
+    "w-fd954cd4"
+   ],
+   "max_age_blocks": 4320,
+   "at": "2026-11-28T11:11:18Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-6f64ecef",
+   "launches": [
+    "BREAD",
+    "FADA",
+    "LONELY",
+    "MEKE",
+    "NJAK",
+    "RFLIP",
+    "SNATCH",
+    "TOMZOEY"
+   ],
+   "at": "2026-11-28T11:11:18Z"
+  },
   {
    "kind": "sniper_full_exit",
-   "ticker": "YY",
-   "wallet": "w-7748cd2e",
+   "ticker": "MEKE",
+   "wallet": "w-3f04e072",
    "tags": [],
-   "at": "2026-11-20T15:11:08Z"
-  },
-  {
-   "kind": "ada_side_drop",
-   "ticker": "YY",
-   "from": 5,
-   "to": 0,
-   "at": "2026-11-20T15:11:08Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "ASCEND",
-   "tag": "w-f3186187",
-   "delta": 318888604,
-   "decimals": 6,
-   "qty": 318.8886,
-   "ada_equiv": 454,
-   "value_basis": "ada_leg_rate",
-   "pct": 0.1,
-   "at": "2026-11-20T15:11:08Z"
-  },
-  {
-   "kind": "whale_move",
-   "ticker": "PERP COIN",
-   "tag": "w-f3186187",
-   "delta": -2577685,
-   "decimals": 0,
-   "qty": -2577685.0,
-   "ada_equiv": 837,
-   "value_basis": "ada_leg",
-   "pct": 43.0,
-   "at": "2026-11-20T17:11:04Z"
-  },
+   "at": "2026-11-28T11:11:18Z"
+  }
+ ],
+ "recent": [
   {
    "kind": "whale_move",
    "ticker": "ASCEND",
@@ -3412,10 +3434,70 @@
    "value_basis": "ada_leg",
    "pct": 0.0,
    "at": "2026-11-28T03:11:34Z"
+  },
+  {
+   "kind": "coordinated_buys",
+   "ticker": "MEKE",
+   "wallets": [
+    "w-17f891a1",
+    "w-3e4f0a4d",
+    "w-3f04e072",
+    "w-3f62526d",
+    "w-4b2dfb84",
+    "w-6c2a52a3",
+    "w-6f64ecef",
+    "w-8b0c701e",
+    "w-cd262208",
+    "w-f49e97f4",
+    "w-fd954cd4"
+   ],
+   "window_s": 120,
+   "at": "2026-11-28T11:11:18Z"
+  },
+  {
+   "kind": "fresh_wallet_swarm",
+   "ticker": "MEKE",
+   "wallets": [
+    "w-17f891a1",
+    "w-3e4f0a4d",
+    "w-3f04e072",
+    "w-3f62526d",
+    "w-4b2dfb84",
+    "w-6c2a52a3",
+    "w-8b0c701e",
+    "w-cd262208",
+    "w-f49e97f4",
+    "w-fd954cd4"
+   ],
+   "max_age_blocks": 4320,
+   "at": "2026-11-28T11:11:18Z"
+  },
+  {
+   "kind": "repeat_early_buyer",
+   "wallet": "w-6f64ecef",
+   "launches": [
+    "BREAD",
+    "FADA",
+    "LONELY",
+    "MEKE",
+    "NJAK",
+    "RFLIP",
+    "SNATCH",
+    "TOMZOEY"
+   ],
+   "at": "2026-11-28T11:11:18Z"
+  },
+  {
+   "kind": "sniper_full_exit",
+   "ticker": "MEKE",
+   "wallet": "w-3f04e072",
+   "tags": [],
+   "at": "2026-11-28T11:11:18Z"
   }
  ],
  "api_calls": {
-  "koios": 1
+  "blockfrost": 1,
+  "koios": 13
  },
  "thresholds": {
   "enabled": true,
