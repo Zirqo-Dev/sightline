@@ -1,82 +1,23 @@
 {
- "at": "2026-11-28T11:11:18Z",
+ "at": "2026-11-28T13:11:42Z",
  "flag_only": true,
  "note": "Heuristic flags for Snek's review. Not triggers: they do not count toward rules k/y/aa or kill lines and never fire the webhook alone.",
  "baseline": false,
  "new": [
   {
-   "kind": "coordinated_buys",
-   "ticker": "MEKE",
-   "wallets": [
-    "w-17f891a1",
-    "w-3e4f0a4d",
-    "w-3f04e072",
-    "w-3f62526d",
-    "w-4b2dfb84",
-    "w-6c2a52a3",
-    "w-6f64ecef",
-    "w-8b0c701e",
-    "w-cd262208",
-    "w-f49e97f4",
-    "w-fd954cd4"
-   ],
-   "window_s": 120,
-   "at": "2026-11-28T11:11:18Z"
-  },
-  {
-   "kind": "fresh_wallet_swarm",
-   "ticker": "MEKE",
-   "wallets": [
-    "w-17f891a1",
-    "w-3e4f0a4d",
-    "w-3f04e072",
-    "w-3f62526d",
-    "w-4b2dfb84",
-    "w-6c2a52a3",
-    "w-8b0c701e",
-    "w-cd262208",
-    "w-f49e97f4",
-    "w-fd954cd4"
-   ],
-   "max_age_blocks": 4320,
-   "at": "2026-11-28T11:11:18Z"
-  },
-  {
-   "kind": "repeat_early_buyer",
-   "wallet": "w-6f64ecef",
-   "launches": [
-    "BREAD",
-    "FADA",
-    "LONELY",
-    "MEKE",
-    "NJAK",
-    "RFLIP",
-    "SNATCH",
-    "TOMZOEY"
-   ],
-   "at": "2026-11-28T11:11:18Z"
-  },
-  {
-   "kind": "sniper_full_exit",
-   "ticker": "MEKE",
-   "wallet": "w-3f04e072",
-   "tags": [],
-   "at": "2026-11-28T11:11:18Z"
+   "kind": "whale_move",
+   "ticker": "STRIKE",
+   "tag": "w-f3186187",
+   "delta": 218516,
+   "decimals": 6,
+   "qty": 0.2185,
+   "ada_equiv": 1,
+   "value_basis": "decimals_x_price",
+   "dust": true,
+   "at": "2026-11-28T13:11:42Z"
   }
  ],
  "recent": [
-  {
-   "kind": "whale_move",
-   "ticker": "ASCEND",
-   "tag": "w-f3186187",
-   "delta": 1125929404,
-   "decimals": 6,
-   "qty": 1125.9294,
-   "ada_equiv": 1608,
-   "value_basis": "ada_leg_rate",
-   "pct": 0.4,
-   "at": "2026-11-20T17:11:04Z"
-  },
   {
    "kind": "whale_move",
    "ticker": "ASCEND",
@@ -3493,11 +3434,22 @@
    "wallet": "w-3f04e072",
    "tags": [],
    "at": "2026-11-28T11:11:18Z"
+  },
+  {
+   "kind": "whale_move",
+   "ticker": "STRIKE",
+   "tag": "w-f3186187",
+   "delta": 218516,
+   "decimals": 6,
+   "qty": 0.2185,
+   "ada_equiv": 1,
+   "value_basis": "decimals_x_price",
+   "dust": true,
+   "at": "2026-11-28T13:11:42Z"
   }
  ],
  "api_calls": {
-  "blockfrost": 1,
-  "koios": 13
+  "koios": 1
  },
  "thresholds": {
   "enabled": true,
