@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-11-28T02:37:29Z",
-  "status": "red",
+  "generated_at": "2026-11-28T03:12:41Z",
+  "status": "amber",
   "disable_after_days": 60,
   "red_within_days": 10,
   "workflows": [
@@ -25,24 +25,24 @@
       "detail": null,
       "data_branch": {
         "name": "desk-data",
-        "last_commit_at": "2026-11-28T02:32:47Z",
+        "last_commit_at": "2026-11-28T03:01:22Z",
         "stale": false
       }
     },
     {
       "name": "desk-data-guard",
       "file": ".github/workflows/desk-data-guard.yml",
-      "status": "amber",
-      "last_run_at": "2026-11-28T02:37:04Z",
-      "last_conclusion": "in_progress",
-      "last_event": "workflow_dispatch",
+      "status": "green",
+      "last_run_at": "2026-11-28T02:43:44Z",
+      "last_conclusion": "success",
+      "last_event": "schedule",
       "crons": [
         "17 * * * *"
       ],
       "interval_minutes": 60,
       "grace_minutes": 15,
-      "missed_slot": true,
-      "missed_count": 1,
+      "missed_slot": false,
+      "missed_count": 0,
       "consecutive_failures": 0,
       "days_until_disable": 60,
       "disable_red": false,
@@ -72,17 +72,17 @@
     {
       "name": "Pipeline heartbeat",
       "file": ".github/workflows/heartbeat.yml",
-      "status": "amber",
-      "last_run_at": "2026-11-28T02:37:03Z",
+      "status": "green",
+      "last_run_at": "2026-11-28T03:12:16Z",
       "last_conclusion": "in_progress",
-      "last_event": "workflow_dispatch",
+      "last_event": "schedule",
       "crons": [
         "7 */3 * * *"
       ],
       "interval_minutes": 180,
       "grace_minutes": 45,
-      "missed_slot": true,
-      "missed_count": 1,
+      "missed_slot": false,
+      "missed_count": 0,
       "consecutive_failures": 0,
       "days_until_disable": 60,
       "disable_red": false,
@@ -171,8 +171,8 @@
     {
       "name": "wallet races",
       "file": ".github/workflows/races.yml",
-      "status": "red",
-      "last_run_at": "2026-11-28T02:37:11Z",
+      "status": "amber",
+      "last_run_at": "2026-11-28T03:12:21Z",
       "last_conclusion": "in_progress",
       "last_event": "workflow_dispatch",
       "crons": [
@@ -181,7 +181,7 @@
       "interval_minutes": 30,
       "grace_minutes": 15,
       "missed_slot": true,
-      "missed_count": 5,
+      "missed_count": 1,
       "consecutive_failures": 0,
       "days_until_disable": 60,
       "disable_red": false,
@@ -189,8 +189,8 @@
       "detail": null,
       "data_branch": {
         "name": "races-data",
-        "last_commit_at": "2026-11-27T23:45:18Z",
-        "stale": true
+        "last_commit_at": "2026-11-28T02:38:57Z",
+        "stale": false
       }
     },
     {
@@ -214,7 +214,7 @@
       "detail": null,
       "data_branch": {
         "name": "desk-data",
-        "last_commit_at": "2026-11-28T02:32:47Z",
+        "last_commit_at": "2026-11-28T03:01:22Z",
         "stale": false
       }
     },
@@ -279,8 +279,8 @@
       "name": "Solada prefilter",
       "file": ".github/workflows/solada-prefilter.yml",
       "status": "green",
-      "last_run_at": "2026-11-28T01:07:05Z",
-      "last_conclusion": "success",
+      "last_run_at": "2026-11-28T03:07:05Z",
+      "last_conclusion": "in_progress",
       "last_event": "workflow_dispatch",
       "crons": [],
       "interval_minutes": null,
@@ -294,7 +294,7 @@
       "detail": null,
       "data_branch": {
         "name": "desk-data",
-        "last_commit_at": "2026-11-28T02:32:47Z",
+        "last_commit_at": "2026-11-28T03:01:22Z",
         "stale": false
       }
     },
@@ -302,9 +302,9 @@
       "name": "Solana desk scan",
       "file": ".github/workflows/solana-desk-scan.yml",
       "status": "green",
-      "last_run_at": "2026-11-28T02:32:33Z",
+      "last_run_at": "2026-11-28T03:00:22Z",
       "last_conclusion": "success",
-      "last_event": "schedule",
+      "last_event": "workflow_dispatch",
       "crons": [
         "*/30 * * * *"
       ],
@@ -319,7 +319,7 @@
       "detail": null,
       "data_branch": {
         "name": "desk-data",
-        "last_commit_at": "2026-11-28T02:32:47Z",
+        "last_commit_at": "2026-11-28T03:01:22Z",
         "stale": false
       }
     },
