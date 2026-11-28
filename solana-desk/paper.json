@@ -7,73 +7,9 @@
  "disclaimer": "Paper trading only. No real orders. Research only, not advice.",
  "ticket_size": 0.5,
  "default_window_hours": 2.0,
- "generated_at": "2026-11-28T13:00:38Z",
+ "generated_at": "2026-11-28T13:30:34Z",
  "cfg_version": "v1-v6.5",
- "open": [
-  {
-   "id": "S-20261128T1230-57uopump",
-   "ticker": "EDITOR",
-   "mint": "57uooyjwYX2kpSGN3QnBLWAwk4KMZYbkp5e8f7i7pump",
-   "book": "S",
-   "status": "open",
-   "size": 0.5,
-   "cost_model": "v3-exit-aware",
-   "cost_model_started_at": "2026-10-29T00:30:25Z",
-   "opened_at": "2026-11-28T12:30:32Z",
-   "window_ends_at": "2026-11-28T14:30:32Z",
-   "entry": {
-    "px": 0.0003741074590834401
-   },
-   "frac": 1.0,
-   "last_mark": 0.0003003448537385954,
-   "thesis": "safety:risk_score",
-   "result": {
-    "pnl": 0.0,
-    "pct": -19.72,
-    "unit": "SOL",
-    "net_pnl": 0.0,
-    "gross_pnl": 0.0
-   },
-   "obs_v": 1,
-   "entry_sol_reserve": 63.1044,
-   "entry_token_reserve": 219048504.0,
-   "entry_k": 13822924415.8176,
-   "entry_reserve_error": null,
-   "last_sol_reserve": 54.1074,
-   "last_token_reserve": 247327112.0,
-   "last_k": 13382226979.8288,
-   "last_reserve_error": null,
-   "reserve_snaps": [
-    {
-     "t": "2026-11-28T12:30:32Z",
-     "sol": 63.1044,
-     "token": 219048504.0,
-     "k": 13822924415.8176,
-     "pool": "g1ccjEpT6Vty8p9xdTTPSc7BYUJvmi9vQygrzHvWtG4"
-    },
-    {
-     "t": "2026-11-28T13:00:38Z",
-     "sol": 54.1074,
-     "token": 247327112.0,
-     "k": 13382226979.8288,
-     "pool": "g1ccjEpT6Vty8p9xdTTPSc7BYUJvmi9vQygrzHvWtG4"
-    }
-   ],
-   "entry_pool": "g1ccjEpT6Vty8p9xdTTPSc7BYUJvmi9vQygrzHvWtG4",
-   "pool_created_at": "2026-11-28T12:09:41Z",
-   "pool_age_at_entry_s": 1251.0,
-   "graduated_pump": true,
-   "boost_window": false,
-   "entry_quote_out": 1336514383394,
-   "entry_quote_px": 0.0003741074590834401,
-   "entry_quote_impact": 0.019256108699695386,
-   "entry_quote_error": null,
-   "max_price_held": 0.0003741074590834401,
-   "min_price_held": 0.0003003448537385954,
-   "max_price_held_pct": 0.0,
-   "min_price_held_pct": -19.717
-  }
- ],
+ "open": [],
  "closed": [
   {
    "id": "F-20261028T1330-96AUWRAY",
@@ -38953,6 +38889,90 @@
    "min_price_held": 8.248059870567081e-05,
    "max_price_held_pct": 0.0,
    "min_price_held_pct": -65.5409
+  },
+  {
+   "id": "S-20261128T1230-57uopump",
+   "ticker": "EDITOR",
+   "mint": "57uooyjwYX2kpSGN3QnBLWAwk4KMZYbkp5e8f7i7pump",
+   "book": "S",
+   "status": "closed",
+   "size": 0.5,
+   "cost_model": "v3-exit-aware",
+   "cost_model_started_at": "2026-10-29T00:30:25Z",
+   "opened_at": "2026-11-28T12:30:32Z",
+   "closed_at": "2026-11-28T13:30:34Z",
+   "entry": {
+    "px": 0.0003741074590834401
+   },
+   "exit": {
+    "px": 6.0841139467205114e-05
+   },
+   "exit_reason": "liquidity_pulled",
+   "result": {
+    "pnl": -0.424483537,
+    "pct": -84.22,
+    "unit": "SOL",
+    "net_pnl": -0.424483537,
+    "net_pct": -84.22,
+    "gross_pnl": -0.418684942,
+    "gross_pct": -83.74
+   },
+   "thesis": "safety:risk_score",
+   "obs_v": 1,
+   "entry_sol_reserve": 63.1044,
+   "entry_token_reserve": 219048504.0,
+   "entry_k": 13822924415.8176,
+   "entry_reserve_error": null,
+   "exit_sol_reserve": 18.6303,
+   "exit_token_reserve": 488148655.0,
+   "exit_k": 9094355887.2465,
+   "exit_reserve_error": null,
+   "last_sol_reserve": 18.6303,
+   "last_token_reserve": 488148655.0,
+   "last_k": 9094355887.2465,
+   "last_reserve_error": null,
+   "reserve_snaps": [
+    {
+     "t": "2026-11-28T12:30:32Z",
+     "sol": 63.1044,
+     "token": 219048504.0,
+     "k": 13822924415.8176,
+     "pool": "g1ccjEpT6Vty8p9xdTTPSc7BYUJvmi9vQygrzHvWtG4"
+    },
+    {
+     "t": "2026-11-28T13:00:38Z",
+     "sol": 54.1074,
+     "token": 247327112.0,
+     "k": 13382226979.8288,
+     "pool": "g1ccjEpT6Vty8p9xdTTPSc7BYUJvmi9vQygrzHvWtG4"
+    },
+    {
+     "t": "2026-11-28T13:30:34Z",
+     "sol": 18.6303,
+     "token": 488148655.0,
+     "k": 9094355887.2465,
+     "pool": "g1ccjEpT6Vty8p9xdTTPSc7BYUJvmi9vQygrzHvWtG4"
+    }
+   ],
+   "entry_pool": "g1ccjEpT6Vty8p9xdTTPSc7BYUJvmi9vQygrzHvWtG4",
+   "exit_pool": "g1ccjEpT6Vty8p9xdTTPSc7BYUJvmi9vQygrzHvWtG4",
+   "same_pool": true,
+   "pool_created_at": "2026-11-28T12:09:41Z",
+   "pool_age_at_entry_s": 1251.0,
+   "graduated_pump": true,
+   "boost_window": false,
+   "entry_quote_out": 1336514383394,
+   "entry_quote_px": 0.0003741074590834401,
+   "entry_quote_impact": 0.019256108699695386,
+   "entry_quote_error": null,
+   "exit_quote_out": 81315058,
+   "exit_quote_px": 6.0841139467205114e-05,
+   "exit_quote_impact": 0.0032065065789906437,
+   "exit_quote_error": null,
+   "max_price_held": 0.0003741074590834401,
+   "min_price_held": 6.0841139467205114e-05,
+   "max_price_held_pct": 0.0,
+   "min_price_held_pct": -83.737
   }
  ],
  "books": {
@@ -38997,11 +39017,11 @@
    "realized_gross_pnl": -15.81741147
   },
   "S": {
-   "cash": 4.681047116,
-   "equity": 5.079304814,
-   "realized_pnl": -19.050161861,
-   "open": 1,
-   "closed": 133,
+   "cash": 4.760556215,
+   "equity": 4.760556215,
+   "realized_pnl": -19.474645398,
+   "open": 0,
+   "closed": 134,
    "fills_today": 11,
    "would_halt": [
     {
@@ -39017,7 +39037,7 @@
      "drawdown": 0.3897
     }
    ],
-   "realized_gross_pnl": -17.660669752
+   "realized_gross_pnl": -18.079354694
   }
  },
  "costs": {
@@ -39044,16 +39064,16 @@
   "started_at": "2026-10-29T00:30:25Z",
   "windows": {
    "7": {
-    "counted_closes": 171,
-    "net_pnl": -11.073716085,
+    "counted_closes": 172,
+    "net_pnl": -11.498199622,
     "wins": 74,
     "older_closes": 0,
     "older_net_pnl": 0,
     "older_labels": {}
    },
    "28": {
-    "counted_closes": 494,
-    "net_pnl": -37.078934613,
+    "counted_closes": 495,
+    "net_pnl": -37.50341815,
     "wins": 214,
     "older_closes": 0,
     "older_net_pnl": 0,
@@ -39089,11 +39109,6 @@
    "at": "2026-11-25T16:30:42Z",
    "type": "refill",
    "note": "owner-approved refill Nov 25 2026: F +9.885060316, R +9.604974011, S +9.637371313"
-  },
-  {
-   "at": "2026-11-07T02:30:26Z",
-   "type": "void",
-   "note": "data_failures_over_10pct"
   },
   {
    "at": "2026-11-07T03:00:32Z",
@@ -39137,6 +39152,11 @@
   },
   {
    "at": "2026-11-28T13:00:38Z",
+   "type": "void",
+   "note": "data_failures_over_10pct"
+  },
+  {
+   "at": "2026-11-28T13:30:34Z",
    "type": "void",
    "note": "data_failures_over_10pct"
   },
